@@ -14726,8 +14726,11 @@ void Sidebar::auto_calc_flushing_volumes_internal(const int modify_id, const int
                                  << ", expected_size=" << expectedMatrixSize;
     }
 
-    if (modify_id >= 0 && modify_id < multi_colours.size()) {
-        for (int i = 0; i < multi_colours.size(); ++i) {
+    // Defence in depth: never index past the matrix / flush-volume buffers.
+    const size_t flush_count = std::min<size_t>(multi_colours.size(),
+                               std::min<size_t>(m_number_of_extruders, min_flush_volumes.size()));
+    if (modify_id >= 0 && modify_id < (int)flush_count) {
+        for (int i = 0; i < (int)flush_count; ++i) {
             if (preset_bundle->is_mixed_filament((size_t)i))
                 continue;
             // from to modify
