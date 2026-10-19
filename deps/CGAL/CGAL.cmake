@@ -2,7 +2,7 @@ if (IN_GIT_REPO)
     set(CGAL_DIRECTORY_FLAG --directory ${BINARY_DIR_REL}/dep_CGAL-prefix/src/dep_CGAL)
 endif ()
 
-Snapmaker_Orca_add_cmake_project(
+orcaslicer_add_cmake_project(
     CGAL
     # GIT_REPOSITORY https://github.com/CGAL/cgal.git
     # GIT_TAG        28811b671a12b5caa9e3688569dadbc6b3728fe6 # v6.2.1
