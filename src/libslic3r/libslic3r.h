@@ -1,7 +1,16 @@
 #ifndef _libslic3r_h_
 #define _libslic3r_h_
 
+// Snapmaker: branding/version macros come from common_func.hpp; libslic3r_version.h (generated)
+// includes it first and only fills in what it does not define (e.g. SoftFever_VERSION).
 #include "common_func/common_func.hpp"
+#include "libslic3r_version.h"
+#include <deque>
+#include <iterator>
+#include <functional>
+#include <initializer_list>
+#include <limits>
+#include <utility>
 #define SLIC3R_APP_FULL_NAME "Snapmaker Orca"
 #define GCODEVIEWER_APP_NAME "Snapmaker_Orca G-code Viewer"
 #define GCODEVIEWER_APP_KEY  "Snapmaker_OrcaGcodeViewer"
@@ -32,7 +41,6 @@
 #include <boost/container/deque.hpp>
 #endif // _WIN32
 
-#include "Technologies.hpp"
 #include "Semver.hpp"
 
 #if 0
@@ -66,6 +74,10 @@ static constexpr size_t MAXIMUM_EXTRUDER_NUMBER = 64;
 
 // Combined upper limit for physical + mixed filaments.
 static constexpr size_t MAXIMUM_FILAMENT_NUMBER = 64;
+// Orca: how many filament slots syncing an AMS setup may create. This was derived from
+// EnforcerBlockerType::ExtruderMax, but that cap now covers 32 paintable filaments, so the AMS
+// limit is pinned here to keep sync behaving as it does for projects without mixed-color filaments.
+static constexpr size_t MAXIMUM_AMS_SYNC_FILAMENT_NUMBER = 16;
 
 // Orca: maximum line width is 5 times the nozzle diameter
 static constexpr float MAX_LINE_WIDTH_MULTIPLIER = 5;
@@ -91,6 +103,9 @@ static constexpr double INSET_OVERLAP_TOLERANCE = 0.4;
 static constexpr double EXTERNAL_INFILL_MARGIN = 3;
 static constexpr double BRIDGE_INFILL_MARGIN = 1;
 static constexpr double WIPE_TOWER_MARGIN = 1.;
+// Margin for system placement of the wipe tower (defaults, re-placement, CLI). Positions
+// within WIPE_TOWER_MARGIN stay valid: a user drag down to that limit is respected.
+static constexpr double WIPE_TOWER_AUTO_MARGIN = 15.;
 //FIXME Better to use an inline function with an explicit return type.
 //inline coord_t scale_(coordf_t v) { return coord_t(floor(v / SCALING_FACTOR + 0.5f)); }
 #define scale_(val) ((val) / SCALING_FACTOR)
@@ -421,8 +436,6 @@ inline IntegerOnly<I, I> fast_round_up(double a)
     // https://stackoverflow.com/questions/9902968/why-does-math-round0-49999999999999994-return-1
     return a == 0.49999999999999994 ? I(0) : I(floor(a + 0.5));
 }
-
-template<class T> using SamePair = std::pair<T, T>;
 
 } // namespace Slic3r
 

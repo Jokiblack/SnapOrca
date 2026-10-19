@@ -4,6 +4,18 @@
 #include <boost/format.hpp>
 #include <boost/algorithm/string/predicate.hpp>
 
+#include <string>
+#include "libslic3r/Semver.hpp"
+#include "slic3r/GUI/MsgDialog.hpp"
+#include <wx/hyperlink.h>
+#include <vector>
+#include "slic3r/GUI/GUI_Utils.hpp"
+#include <wx/gdicmn.h>
+#include <wx/panel.h>
+#include "slic3r/GUI/Widgets/Label.hpp"
+#include <wx/scrolwin.h>
+#include "slic3r/GUI/Widgets/Button.hpp"
+#include <unordered_map>
 #include <wx/settings.h>
 #include <wx/sizer.h>
 #include <wx/event.h>
@@ -13,6 +25,7 @@
 #include <wx/checkbox.h>
 #include <wx/utils.h>
 #include <wx/window.h>
+#include <wx/string.h>
 
 #include "libslic3r/libslic3r.h"
 #include "libslic3r/Utils.hpp"
@@ -132,39 +145,19 @@ MsgUpdateConfig::MsgUpdateConfig(const std::vector<Update> &updates, bool force_
     m_sizer_right->Add(0, 0, 1, wxTOP, FromDIP(15));
 
     auto m_scrollwindw_release_note = new wxScrolledWindow(this, wxID_ANY, wxDefaultPosition, wxSize(FromDIP(560), FromDIP(430)),wxVSCROLL);
-    m_scrollwindw_release_note->SetScrollRate(0, 5);
+    m_scrollwindw_release_note->SetScrollRate(0, FromDIP(20));
     m_scrollwindw_release_note->SetBackgroundColour(wxColour(0xF8, 0xF8, 0xF8));
     m_scrollwindw_release_note->SetMaxSize(wxSize(FromDIP(560), FromDIP(430)));
     m_scrollwindw_release_note->SetWindowStyle(wxVSCROLL);
 
 	auto sizer_button = new wxBoxSizer(wxHORIZONTAL);
     sizer_button->Add(0, 0, 1, wxEXPAND, 5);
-
-
-	StateColor btn_bg_green(std::pair<wxColour, int>(wxColour(0, 137, 123), StateColor::Pressed),
-                            std::pair<wxColour, int>(wxColour(38, 166, 154), StateColor::Hovered), std::pair<wxColour, int>(AMS_CONTROL_BRAND_COLOUR, StateColor::Normal));
-
-    StateColor btn_bg_white(std::pair<wxColour, int>(wxColour(206, 206, 206), StateColor::Pressed),
-                            std::pair<wxColour, int>(wxColour(238, 238, 238), StateColor::Hovered),
-                            std::pair<wxColour, int>(*wxWHITE, StateColor::Normal));
-
   
 	auto m_butto_ok = new Button(this, _L("OK"));
-    m_butto_ok->SetBackgroundColor(btn_bg_green);
-    m_butto_ok->SetBorderColor(*wxWHITE);
-    m_butto_ok->SetTextColor(*wxWHITE);
-    m_butto_ok->SetFont(Label::Body_12);
-    m_butto_ok->SetSize(wxSize(FromDIP(58), FromDIP(24)));
-    m_butto_ok->SetMinSize(wxSize(FromDIP(58), FromDIP(24)));
-    m_butto_ok->SetCursor(wxCURSOR_HAND);
+    m_butto_ok->SetStyle(ButtonStyle::Confirm, ButtonType::Choice);
 
     auto m_button_cancel = new Button(this, _L("Cancel"));
-    m_button_cancel->SetBackgroundColor(*wxWHITE);
-    m_button_cancel->SetBorderColor(wxColour(38, 46, 48));
-    m_button_cancel->SetFont(Label::Body_12);
-    m_button_cancel->SetSize(wxSize(FromDIP(58), FromDIP(24)));
-    m_button_cancel->SetMinSize(wxSize(FromDIP(58), FromDIP(24)));
-    m_button_cancel->SetCursor(wxCURSOR_HAND);
+    m_button_cancel->SetStyle(ButtonStyle::Regular, ButtonType::Choice);
 
     sizer_button->Add(m_butto_ok, 0, wxALL, 5);
     sizer_button->Add(m_button_cancel, 0, wxALL, 5);
@@ -224,9 +217,9 @@ MsgUpdateConfig::MsgUpdateConfig(const std::vector<Update> &updates, bool force_
     m_scrollwindw_release_note->SetSizer(content_sizer);
     m_scrollwindw_release_note->Layout();
 
-    SetSizer(m_sizer_main);
+
+    SetSizerAndFit(m_sizer_main);
     Layout();
-    m_sizer_main->Fit(this);
 
     Centre(wxBOTH);
 	wxGetApp().UpdateDlgDarkUI(this);

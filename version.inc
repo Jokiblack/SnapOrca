@@ -10,7 +10,8 @@ endif()
 if(NOT DEFINED BBL_INTERNAL_TESTING)
 set(BBL_INTERNAL_TESTING "0")
 endif()
-set(Snapmaker_VERSION "2.4.1")
+# SnapOrca build: OrcaSlicer 2.5.0-alpha + Snapmaker Orca (U1) changes (Jokiblack/SnapOrca fork)
+set(Snapmaker_VERSION "2.5.0-alpha-snaporca")
 set(MIN_FIRM_VER "1.0.0")
 string(REGEX MATCH "^([0-9]+)\\.([0-9]+)\\.([0-9]+)"
        Snapmaker_VERSION_MATCH ${Snapmaker_VERSION})
@@ -18,7 +19,7 @@ set(ORCA_VERSION_MAJOR ${CMAKE_MATCH_1})
 set(ORCA_VERSION_MINOR ${CMAKE_MATCH_2})
 set(ORCA_VERSION_PATCH ${CMAKE_MATCH_3})
 
-set(SLIC3R_VERSION "01.10.01.50")
+set(SLIC3R_VERSION "02.08.01.55")
 
 if (NOT DEFINED ORCA_UPDATER_SIG_KEY)
     set(ORCA_UPDATER_SIG_KEY "" CACHE STRING "Base64url encoded updater signature key")

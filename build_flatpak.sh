@@ -5,6 +5,7 @@
 # Based on the GitHub Actions workflow in .github/workflows/build_all.yml
 
 set -e
+SECONDS=0
 
 # Colors for output
 RED='\033[0;31m'
@@ -28,6 +29,8 @@ fi
 LOW_MEMORY=false
 FORCE_CLEAN=false
 ENABLE_CCACHE=false
+DISABLE_ROFILES_FUSE=false
+NO_DEBUGINFO=true
 CACHE_DIR=".flatpak-builder"
 
 # Help function
@@ -44,6 +47,8 @@ show_help() {
     echo "  -c, --cleanup          Clean build directory before building"
     echo "  -f, --force-clean      Force clean build (disables caching)"
     echo "  --ccache               Enable ccache for faster rebuilds (requires ccache in SDK)"
+    echo "  --disable-rofiles-fuse Disable rofiles-fuse (workaround for FUSE issues)"
+    echo "  --with-debuginfo       Include debug info (slower builds, needed for Flathub)"
     echo "  --cache-dir DIR        Flatpak builder cache directory [default: $CACHE_DIR]"
     echo "  -i, --install-runtime  Install required Flatpak runtime and SDK"
     echo "  -h, --help             Show this help message"
@@ -89,6 +94,14 @@ while [[ $# -gt 0 ]]; do
             ;;
         --ccache)
             ENABLE_CCACHE=true
+            shift
+            ;;
+        --disable-rofiles-fuse)
+            DISABLE_ROFILES_FUSE=true
+            shift
+            ;;
+        --with-debuginfo)
+            NO_DEBUGINFO=false
             shift
             ;;
         --cache-dir)
@@ -211,22 +224,22 @@ echo -e "${GREEN}All required dependencies found${NC}"
 # Install runtime and SDK if requested
 if [[ "$INSTALL_RUNTIME" == true ]]; then
     echo -e "${YELLOW}Installing GNOME runtime and SDK...${NC}"
-    flatpak install --user -y flathub org.gnome.Platform//49
-    flatpak install --user -y flathub org.gnome.Sdk//49
+    flatpak install --user -y flathub org.gnome.Platform//50
+    flatpak install --user -y flathub org.gnome.Sdk//50
 fi
 
 # Check if required runtime is available
-if ! flatpak info --user org.gnome.Platform//49 &> /dev/null; then
-    echo -e "${RED}Error: GNOME Platform 49 runtime is not installed.${NC}"
+if ! flatpak info --user org.gnome.Platform//50 &> /dev/null; then
+    echo -e "${RED}Error: GNOME Platform 50 runtime is not installed.${NC}"
     echo "Run with -i flag to install it automatically, or install manually:"
-    echo "flatpak install --user flathub org.gnome.Platform//49"
+    echo "flatpak install --user flathub org.gnome.Platform//50"
     exit 1
 fi
 
-if ! flatpak info --user org.gnome.Sdk//49 &> /dev/null; then
-    echo -e "${RED}Error: GNOME SDK 49 is not installed.${NC}"
+if ! flatpak info --user org.gnome.Sdk//50 &> /dev/null; then
+    echo -e "${RED}Error: GNOME SDK 50 is not installed.${NC}"
     echo "Run with -i flag to install it automatically, or install manually:"
-    echo "flatpak install --user flathub org.gnome.Sdk//49"
+    echo "flatpak install --user flathub org.gnome.Sdk//50"
     exit 1
 fi
 
@@ -267,10 +280,13 @@ mkdir -p "$BUILD_DIR"
 rm -rf "$BUILD_DIR/build-dir"
 
 # Check if flatpak manifest exists
-if [[ ! -f "./scripts/flatpak/io.github.Snapmaker.Snapmaker_Orca.yml" ]]; then
-    echo -e "${RED}Error: Flatpak manifest not found at scripts/flatpak/io.github.Snapmaker.Snapmaker_Orca.yml${NC}"
+if [[ ! -f "./scripts/flatpak/com.orcaslicer.OrcaSlicer.yml" ]]; then
+    echo -e "${RED}Error: Flatpak manifest not found at scripts/flatpak/com.orcaslicer.OrcaSlicer.yml${NC}"
     exit 1
 fi
+
+echo -e "${YELLOW}Packing deps/ for the manifest...${NC}"
+./scripts/flatpak/make_deps_tar.sh
 
 # Build the Flatpak
 echo -e "${YELLOW}Building Flatpak package...${NC}"
@@ -304,6 +320,7 @@ BUILDER_ARGS=(
     --verbose
     --state-dir="$CACHE_DIR"
     --jobs="$JOBS"
+    --mirror-screenshots-url=https://dl.flathub.org/media/
 )
 
 # Add force-clean only if explicitly requested (disables caching)
@@ -320,27 +337,46 @@ if [[ "$ENABLE_CCACHE" == true ]]; then
     echo -e "${GREEN}Using ccache for compiler caching${NC}"
 fi
 
+# Disable rofiles-fuse if requested (workaround for FUSE issues)
+if [[ "$DISABLE_ROFILES_FUSE" == true ]]; then
+    BUILDER_ARGS+=(--disable-rofiles-fuse)
+    echo -e "${YELLOW}rofiles-fuse disabled${NC}"
+fi
+
+# Use a temp manifest with no-debuginfo if requested
+MANIFEST="scripts/flatpak/com.orcaslicer.OrcaSlicer.yml"
+if [[ "$NO_DEBUGINFO" == true ]]; then
+    MANIFEST="scripts/flatpak/com.orcaslicer.OrcaSlicer.no-debug.yml"
+    sed '/^build-options:/a\  no-debuginfo: true\n  strip: true' \
+        scripts/flatpak/com.orcaslicer.OrcaSlicer.yml > "$MANIFEST"
+    echo -e "${YELLOW}Debug info disabled (using temp manifest)${NC}"
+fi
+
 if ! flatpak-builder \
     "${BUILDER_ARGS[@]}" \
     "$BUILD_DIR/build-dir" \
-    scripts/flatpak/io.github.Snapmaker.Snapmaker_Orca.yml; then
+    "$MANIFEST"; then
     echo -e "${RED}Error: flatpak-builder failed${NC}"
     echo -e "${YELLOW}Check the build log above for details${NC}"
+    rm -f "scripts/flatpak/com.orcaslicer.OrcaSlicer.no-debug.yml"
     exit 1
 fi
+
+# Clean up temp manifest
+rm -f "scripts/flatpak/com.orcaslicer.OrcaSlicer.no-debug.yml"
 
 # Create bundle (app only; runtime comes from Flathub — matches GitHub flatpak-github-actions)
 FLATHUB_RUNTIME_REPO="https://flathub.org/repo/flathub.flatpakrepo"
 echo -e "${YELLOW}Creating Flatpak bundle...${NC}"
 echo -e "${BLUE}Using --runtime-repo (GNOME Platform from Flathub, not embedded in the .flatpak).${NC}"
 echo -e "${BLUE}Expected bundle size ~130-180MB after manifest strips static deps from /app.${NC}"
-echo -e "${BLUE}Users must have Flathub and org.gnome.Platform//49 installed (use -i or flatpak install).${NC}"
+echo -e "${BLUE}Users must have Flathub and org.gnome.Platform//50 installed (use -i or flatpak install).${NC}"
 if ! flatpak build-bundle \
     --runtime-repo="$FLATHUB_RUNTIME_REPO" \
     --arch="$ARCH" \
     "$BUILD_DIR/repo" \
     "$BUNDLE_NAME" \
-    io.github.Snapmaker.Snapmaker_Orca; then
+    com.orcaslicer.OrcaSlicer; then
     echo -e "${RED}Error: Failed to create Flatpak bundle${NC}"
     exit 1
 fi
@@ -354,16 +390,16 @@ if [[ "$FORCE_CLEAN" != true ]]; then
     echo -e "Build cache: ${GREEN}$CACHE_DIR${NC} (preserved for faster future builds)"
 fi
 echo ""
-echo -e "${BLUE}To install the Flatpak (Flathub + GNOME 49 runtime required):${NC}"
+echo -e "${BLUE}To install the Flatpak (Flathub + GNOME 50 runtime required):${NC}"
 echo -e "flatpak remote-add --if-not-exists flathub $FLATHUB_RUNTIME_REPO"
-echo -e "flatpak install --user flathub org.gnome.Platform//49 org.gnome.Sdk//49  # if missing"
+echo -e "flatpak install --user flathub org.gnome.Platform//50 org.gnome.Sdk//50  # if missing"
 echo -e "flatpak install --user $BUNDLE_NAME"
 echo ""
-echo -e "${BLUE}To run Snapmaker_Orca:${NC}"
-echo -e "flatpak run io.github.Snapmaker.Snapmaker_Orca"
+echo -e "${BLUE}To run OrcaSlicer:${NC}"
+echo -e "flatpak run com.orcaslicer.OrcaSlicer"
 echo ""
 echo -e "${BLUE}To uninstall:${NC}"
-echo -e "flatpak uninstall --user io.github.Snapmaker.Snapmaker_Orca"
+echo -e "flatpak uninstall --user com.orcaslicer.OrcaSlicer"
 echo ""
 if [[ "$FORCE_CLEAN" != true ]]; then
     echo -e "${BLUE}Cache Management:${NC}"
@@ -371,3 +407,6 @@ if [[ "$FORCE_CLEAN" != true ]]; then
     echo -e "• To force a clean build: $0 -f"
     echo -e "• To clean cache manually: rm -rf $CACHE_DIR"
 fi
+
+elapsed=$SECONDS
+printf "\nBuild completed in %dh %dm %ds\n" $((elapsed/3600)) $((elapsed%3600/60)) $((elapsed%60))

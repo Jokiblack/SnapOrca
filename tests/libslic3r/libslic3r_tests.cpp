@@ -1,5 +1,10 @@
-#include <catch_main.hpp>
+#include <catch2/catch_all.hpp>
+#include <vector>
+#include "libslic3r/libslic3r.h"
+#include <string>
+#include <cstdio>
 
+#include <catch2/catch_test_macros.hpp>
 #include "libslic3r/Utils.hpp"
 // The nanoSVG C implementation used to be defined inline here. It is now
 // provided solely by the shared tests/nanosvg_impl.cpp OBJECT library that

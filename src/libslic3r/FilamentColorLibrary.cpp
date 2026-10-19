@@ -281,24 +281,24 @@ int FilamentColorModeToConfig(FilamentColorMode mode)
     return static_cast<int>(FilamentColorMode::Segment);
 }
 
-bool FilamentColor::Empty() const
+bool SMFilamentColor::Empty() const
 {
     return colors.empty();
 }
 
-FilamentColorMode FilamentColor::NormalizedMode() const
+FilamentColorMode SMFilamentColor::NormalizedMode() const
 {
     if (colors.size() > 1 && mode == FilamentColorMode::Gradient)
         return FilamentColorMode::Gradient;
     return FilamentColorMode::Segment;
 }
 
-bool FilamentColor::IsGradient() const
+bool SMFilamentColor::IsGradient() const
 {
     return NormalizedMode() == FilamentColorMode::Gradient;
 }
 
-std::string FilamentColor::PrimaryColor(const std::string& fallbackColor) const
+std::string SMFilamentColor::PrimaryColor(const std::string& fallbackColor) const
 {
     for (const std::string& color : colors)
     {
@@ -309,22 +309,22 @@ std::string FilamentColor::PrimaryColor(const std::string& fallbackColor) const
     return NormalizeFilamentHexColor(fallbackColor, "#26A69A");
 }
 
-std::string FilamentColor::ToMultiColorsString() const
+std::string SMFilamentColor::ToMultiColorsString() const
 {
     return JoinFilamentMultiColors(colors);
 }
 
-bool FilamentColor::Matches(const FilamentColor& other) const
+bool SMFilamentColor::Matches(const SMFilamentColor& other) const
 {
-    FilamentColor left = FromColors(colors, mode);
-    FilamentColor right = FromColors(other.colors, other.mode);
+    SMFilamentColor left = FromColors(colors, mode);
+    SMFilamentColor right = FromColors(other.colors, other.mode);
     return left.colors == right.colors && left.NormalizedMode() == right.NormalizedMode();
 }
 
-FilamentColor FilamentColor::FromColors(const std::vector<std::string>& colors, FilamentColorMode mode,
+SMFilamentColor SMFilamentColor::FromColors(const std::vector<std::string>& colors, FilamentColorMode mode,
                                         const std::string& fallbackColor)
 {
-    FilamentColor filamentColor;
+    SMFilamentColor filamentColor;
     filamentColor.colors = NormalizeColorList(colors);
     if (filamentColor.colors.empty())
     {
@@ -336,7 +336,7 @@ FilamentColor FilamentColor::FromColors(const std::vector<std::string>& colors, 
     return filamentColor;
 }
 
-FilamentColor FilamentColor::FromMultiColors(const std::string& multiColors, FilamentColorMode mode,
+SMFilamentColor SMFilamentColor::FromMultiColors(const std::string& multiColors, FilamentColorMode mode,
                                              const std::string& fallbackColor)
 {
     return FromColors(SplitFilamentMultiColors(multiColors), mode, fallbackColor);

@@ -1,15 +1,31 @@
 #include "ModelMall.hpp"
 #include "GUI_App.hpp"
 
+#include "slic3r/GUI/GUI_Utils.hpp"
+#include <wx/intl.h>
+#include <wx/gdicmn.h>
+#include <wx/toplevel.h>
+#include <wx/dialog.h>
+#include <wx/panel.h>
+#include <wx/string.h>
+#include <wx/anybutton.h>
+#include <wx/event.h>
+#include "slic3r/GUI/Widgets/WebView.hpp"
+#include <wx/log.h>
+#include <wx/webview.h>
+#include <nlohmann/json.hpp>
+#include <exception>
 #include <wx/wx.h>
 #include <wx/sizer.h>
 #include <wx/statbox.h>
 #include "wx/evtloop.h"
 
-#include "libslic3r/Model.hpp"
 #include "MainFrame.hpp"
-#include "GUI_App.hpp"
 #include "Plater.hpp"
+
+using json = nlohmann::json;
+
+namespace Slic3r::GUI { class Plater; }
 
 namespace Slic3r {
 namespace GUI {
@@ -75,14 +91,14 @@ namespace GUI {
         m_control_back->SetToolTip(_L("Click to return") + "(" + _L("Alt+") + _L("Left Arrow") + ")");
         m_control_forward->SetToolTip(_L("Click to continue") + "(" + _L("Alt+") + _L("Right Arrow") + ")");
 #endif
-        
+
         m_control_refresh->SetToolTip(_L("Refresh"));
         /* auto m_textCtrl1 = new wxTextCtrl(m_web_control_panel, wxID_ANY, wxEmptyString, wxDefaultPosition, wxSize(600, 30), 0);
          auto m_button1 = new wxButton(m_web_control_panel, wxID_ANY, wxT("GO"), wxDefaultPosition, wxDefaultSize, 0);
          m_button1->Bind(wxEVT_BUTTON, [this,m_textCtrl1](auto& e) {
              go_to_url(m_textCtrl1->GetValue());
          });*/
-        
+
         m_sizer_web_control->Add( m_control_back, 0, wxALIGN_CENTER | wxLEFT, FromDIP(26) );
         m_sizer_web_control->Add(m_control_forward, 0, wxALIGN_CENTER | wxLEFT, FromDIP(26));
         m_sizer_web_control->Add(m_control_refresh, 0, wxALIGN_CENTER | wxLEFT, FromDIP(26));
@@ -129,11 +145,11 @@ namespace GUI {
             json     j = json::parse(strInput.utf8_string());
 
             wxString strCmd = j["command"];
-            
+
             if(strCmd == "request_close_publish_window") {
                 this->Hide();
             }
-          
+
         }
         catch (std::exception&) {
             // wxMessageBox(e.what(), "json Exception", MB_OK);
@@ -183,7 +199,7 @@ namespace GUI {
         WebView::LoadUrl(m_browser, url);
     }
 
-    void ModelMallDialog::show_control(bool show) 
+    void ModelMallDialog::show_control(bool show)
     {
         m_web_control_panel->Show(show);
         Layout();

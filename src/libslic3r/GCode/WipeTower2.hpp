@@ -4,34 +4,63 @@
 #define WipeTower2_
 
 #include <cmath>
+#include <cstddef>
+#include <limits>
+#include <math.h>
 #include <string>
 #include <sstream>
 #include <utility>
 #include <algorithm>
+#include <vector>
 
 #include "libslic3r/BoundingBox.hpp"
 #include "libslic3r/Point.hpp"
 #include "libslic3r/Polygon.hpp"
 #include "WipeTower.hpp"
+#include "libslic3r/BoundingBox.hpp"
+#include "libslic3r/PrintConfig.hpp"
 namespace Slic3r
 {
 
 class WipeTowerWriter2;
 class PrintRegionConfig;
+class ConfigBase;
 
 class WipeTower2
 {
 public:
     friend class WipeTowerWriter2;
     static const std::string never_skip_tag() { return "_GCODE_WIPE_TOWER_NEVER_SKIP_TAG"; }
+    // Marks the wait-for-temp-on-wipe-tower M109 so the interface-temp deduplication pass
+    // in WipeTowerIntegration::append_tcr2 does not strip it.
+    static const std::string wait_for_temp_tag() { return ";_WAIT_FOR_TEMP_ON_WIPE_TOWER"; }
 	static std::pair<double, double> get_wipe_tower_cone_base(double width, double height, double depth, double angle_deg);
-	static std::vector<std::vector<float>> extract_wipe_volumes(const PrintConfig& config);
+	// First-layer outline of a cone-wall tower in tower-local (scaled) coordinates: body box
+	// unioned with the cone's base ellipse — the model first_layer_wipe_tower_corners uses,
+	// and generate_support_cone_wall stays within it. Brim not included.
+	static Polygon cone_base_polygon(double width, double depth, double height, double angle_deg);
+	static std::vector<std::vector<float>> extract_wipe_volumes(const ConfigBase& config);
+	// Estimated total flush volume of a SEMM print with the given number of filaments,
+	// used to reserve wipe tower space before the tower is generated.
+	static float estimate_semm_flush_volume(const ConfigBase& config, size_t filaments_cnt);
 
     
     // Construct ToolChangeResult from current state of WipeTower2 and WipeTowerWriter2.
     // WipeTowerWriter2 is moved from !
-    WipeTower::ToolChangeResult construct_tcr(WipeTowerWriter2& writer,bool priming,
-        size_t old_tool, bool is_finish) const;
+    WipeTower::ToolChangeResult construct_tcr(WipeTowerWriter2& writer,
+                                   bool priming,
+                                   size_t old_tool,
+								   bool is_finish,
+                                   bool is_contact = false) const;
+
+    // Whether this print cuts wall openings ("skip points") at the toolchange entries.
+    // Shared with the entry routing in GCode.cpp so the router and the tower agree.
+    static bool use_gap_wall(const PrintConfig& config);
+
+    // Whether the blocking toolchange temperature wait moves onto the wipe tower.
+    // Shared with the defer flag in GCode.cpp append_tcr2 so the deferral and the
+    // tower's tagged M109 can never disagree.
+    static bool wait_for_temp_enabled(const PrintConfig& config);
 
     WipeTower::ToolChangeResult construct_tcr_new(WipeTowerWriter2& writer, bool priming,
         size_t old_tool, bool is_finish, bool is_tool_change, float purge_volume, bool is_contact) const;
@@ -94,11 +123,13 @@ public:
 		m_layer_height			= layer_height;
 		m_depth_traversed  = 0.f;
         m_current_layer_finished = false;
+        m_prev_layer_had_interface = m_current_layer_has_interface;
 
 		
         // Advance m_layer_info iterator, making sure we got it right
 		while (!m_plan.empty() && m_layer_info->z < print_z - WT_EPSILON && m_layer_info+1 != m_plan.end())
 			++m_layer_info;
+        m_current_layer_has_interface = (m_layer_info != m_plan.end()) && (m_layer_info->toolchanges_depth() > WT_EPSILON);
 
 		//m_current_shape = (! this->is_first_layer() && m_current_shape == SHAPE_NORMAL) ? SHAPE_REVERSED : SHAPE_NORMAL;
         m_current_shape = SHAPE_NORMAL;
@@ -154,8 +185,10 @@ public:
     struct FilamentParameters {
         std::string 	    material = "PLA";
         bool                is_soluble = false;
+        bool                is_support = false;
         int  			    temperature = 0;
         int  			    first_layer_temperature = 0;
+        int                 interface_print_temperature = 0;
         float               loading_speed = 0.f;
         float               loading_speed_start = 0.f;
         float               unloading_speed = 0.f;
@@ -232,11 +265,8 @@ private:
     WipeTowerBlock* m_cur_block{ nullptr };
     std::vector<int> m_filament_categories; // adhesiveness categories
     bool m_tower_framework = false; // internal support rib
-    bool m_enable_tower_interface_features = false;
-    bool m_enable_tower_interface_cooldown_during_tower = false;
     size_t m_cur_layer_id;
     bool m_use_rib_wall;
-    Vec2f m_rib_offset{0.f,0.f};
     int m_wall_filament;
     WipeTower::NozzleChangeResult m_nozzle_change_result;
     Polygons m_shared_print_bed;
@@ -281,8 +311,7 @@ private:
     float  m_wipe_tower_brim_width      = 0.f; 	// Width of brim (mm) from config
     float  m_wipe_tower_brim_width_real = 0.f; 	// Width of brim (mm) after generation
     bool   m_prime_tower_brim_chamfer          = true;   // Enable/disable brim chamfer
-    float  m_prime_tower_brim_chamfer_max_width = 4.f;   // Max chamfer width (mm)
-	float  m_wipe_tower_rotation_angle = 0.f; // Wipe tower rotation angle in degrees (with respect to x axis)
+    float  m_prime_tower_brim_chamfer_max_width = 4.f;   // Max chamfer width (mm)	float  m_wipe_tower_rotation_angle = 0.f; // Wipe tower rotation angle in degrees (with respect to x axis)
     float  m_internal_rotation  = 0.f;
 	float  m_y_shift			= 0.f;  // y shift passed to writer
 	float  m_z_pos 				= 0.f;  // Current Z position.
@@ -295,14 +324,23 @@ private:
 	float  m_perimeter_speed    = 0.f;
     float  m_first_layer_speed  = 0.f;
     size_t m_first_layer_idx    = size_t(-1);
+    bool   m_enable_tower_interface_features = false;
+    bool   m_enable_tower_interface_cooldown_during_tower = false;
+    bool   m_wait_for_temp_on_wipe_tower = false;
+    bool   m_prev_layer_had_interface = false;
+    bool   m_current_layer_has_interface = false;
 
 	int m_wall_type;
     bool   m_used_fillet                  = true;
-    bool   m_use_gap_wall                 = true;
     float  m_rib_width                    = 10;
     float  m_extra_rib_length             = 0;
-    std::vector<std::vector<Vec2f>> m_wall_skip_points;
     float  m_rib_length                   = 0;
+    Vec2f  m_rib_offset                   = Vec2f::Zero();
+    bool   m_use_gap_wall                 = false;
+    // Per plan layer, each toolchange's entry position (tower-local, un-shifted frame):
+    // where the wall is cut open so the entry travel does not cross the printed wall.
+    // Filled by compute_wall_skip_points() once the plan is final.
+    std::vector<std::vector<Vec2f>> m_wall_skip_points;
 
     bool   m_enable_arc_fitting           = false;
     std::map<float, Polylines> m_outer_wall; // for wipe tower out wall and brim
@@ -314,6 +352,8 @@ private:
     float           m_extra_loading_move        = 0.f;
     float           m_bridging                  = 0.f;
     bool            m_no_sparse_layers          = false;
+    bool            m_sparse_layers_skipped     = false;
+    bool            m_sparse_layers_combined    = false;
     bool            m_set_extruder_trimpot      = false;
     bool            m_adhesion                  = true;
     GCodeFlavor     m_gcode_flavor;
@@ -326,6 +366,7 @@ private:
     } m_bed_shape;
     float m_bed_width; // width of the bed bounding box
     Vec2f m_bed_bottom_left; // bottom-left corner coordinates (for rectangular beds)
+    Polygon m_bed_polygon; // printable_area contour (scaled)
 
 	float m_perimeter_width = 0.4f * Width_To_Nozzle_Ratio; // Width of an extrusion line, also a perimeter spacing for 100% infill.
 	float m_extrusion_flow = 0.038f; //0.029f;// Extrusion flow is derived from m_perimeter_width, layer height and filament diameter.
@@ -351,6 +392,37 @@ private:
     float           m_local_z_wipe_tower_purge_lines = 3.f;
 
     bool is_first_layer() const { return size_t(m_layer_info - m_plan.begin()) == m_first_layer_idx; }
+
+    // Purge row lattice of toolchange_Wipe(): row pitch and extrusion width.
+    float wipe_row_spacing(bool first_layer) const { return (first_layer ? m_extra_flow : m_extra_spacing_wipe) * m_perimeter_width; }
+    float wipe_line_width() const { return m_perimeter_width * m_extra_flow; }
+
+    // Whether toolchange_Unload() rams this (old) tool out.
+    bool tool_ramming_enabled(size_t tool) const { return (m_semm && m_enable_filament_ramming) || m_filpar[tool].multitool_ramming; }
+    // Whether the wipe restarts at the box boundary on a fresh row below the quantized
+    // ram band after ramming this (old) tool out (multi-tool gap wall; SEMM keeps the
+    // stock continue-from-ram-end behavior).
+    bool boundary_wipe_start_enabled(size_t tool) const { return tool_ramming_enabled(tool) && !m_semm && m_use_gap_wall; }
+
+    // With a boundary wipe start the wipe begins on a fresh row below the quantized ram
+    // band. Y offset from the box start to that first wipe row.
+    float wipe_start_offset_after_ram(float ramming_depth, bool first_layer) const
+    {
+        return ramming_depth + wipe_row_spacing(first_layer) - (m_perimeter_width + wipe_line_width()) / 2.f;
+    }
+
+    // Tower-local entry position of a toolchange whose box starts depth_traversed into
+    // the layer: the box corner, moved down to the first wipe row when the plan gives
+    // it a boundary wipe start (ramming_depth > 0 iff the unload rams). tool_change()
+    // enters here and compute_wall_skip_points() cuts the wall gap here, so the routed
+    // entry, the gap and the wipe scrub all share one opening.
+    Vec2f toolchange_entry_pos(float depth_traversed, float ramming_depth, bool first_layer) const
+    {
+        Vec2f pos(m_perimeter_width / 2.f, m_perimeter_width / 2.f + depth_traversed);
+        if (!m_semm && m_use_gap_wall && ramming_depth > 0.f)
+            pos.y() += wipe_start_offset_after_ram(ramming_depth, first_layer);
+        return pos;
+    }
 
 	// Calculates extrusion flow needed to produce required line width for given layer height
 	float extrusion_flow(float layer_height = -1.f) const	// negative layer_height - return current m_extrusion_flow
@@ -416,9 +488,10 @@ private:
 
     int get_wall_filament_for_layer(const WipeTowerInfo& layer);
 
-    // Return index of first toolchange that switches to non-soluble extruder
-    // ot -1 if there is no such toolchange.
-    int first_toolchange_to_nonsoluble(
+    // Return the index of the toolchange whose new filament should print the layer's
+    // finish extrusions (sparse infill + wall + brim), or -1 to print them with the
+    // layer's incoming filament before any toolchange happens.
+    int first_toolchange_to_nonsoluble_nonsupport(
             const std::vector<WipeTowerInfo::ToolChange>& tool_changes) const;
     bool layer_has_soluble_toolchange(const WipeTowerInfo &layer) const;
     float cumulative_toolchange_depth_before(const WipeTowerInfo::ToolChange *tool_change) const;
@@ -436,9 +509,13 @@ private:
     WipeTower::NozzleChangeResult toolchange_unload_new(const WipeTowerInfo::ToolChange& tool_change,
         bool solid_infill = false, bool extruder_change = true);
 
-    void toolchange_Change(WipeTowerWriter2 &writer, const size_t new_tool, 
-        const std::string& new_material);
-
+	void toolchange_Change(
+		WipeTowerWriter2 &writer,
+        const size_t		new_tool,
+		const std::string& 		new_material,
+		const int 				wait_for_temp,
+		const bool 				wait_beside_tower);
+	
 	void toolchange_Load(
 		WipeTowerWriter2 &writer,
 		const WipeTower::box_coordinates  &cleaning_box);
@@ -446,7 +523,10 @@ private:
 	void toolchange_Wipe(
 		WipeTowerWriter2 &writer,
 		const WipeTower::box_coordinates  &cleaning_box,
-		float wipe_volume);
+		float wipe_volume,
+        bool interface_layer,
+        bool priming = false,
+        bool fill_box = false);
 
     void toolchange_wipe_new(WipeTowerWriter2& writer,
         const WipeTower::box_coordinates& cleaning_box, float wipe_length, bool solid_toolchange = false);

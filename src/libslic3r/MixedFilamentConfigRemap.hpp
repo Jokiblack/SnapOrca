@@ -12,9 +12,12 @@ namespace Slic3r {
 inline const std::vector<std::string> &mixed_filament_feature_keys()
 {
     static const std::vector<std::string> keys = {
-        "wall_filament",
-        "sparse_infill_filament",
-        "solid_infill_filament",
+        "outer_wall_filament_id",
+        "inner_wall_filament_id",
+        "sparse_infill_filament_id",
+        "internal_solid_filament_id",
+        "top_surface_filament_id",
+        "bottom_surface_filament_id",
         "support_filament",
         "support_interface_filament",
     };

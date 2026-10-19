@@ -51,16 +51,15 @@ Visit our GitHub Releases page for the latest stable version of Snapmaker Slicer
     
 # How to compile
 - Windows 64-bit  
-  - Tools needed: Visual Studio 2019, Cmake, git, git-lfs, Strawberry Perl.
-      - You will require cmake version 3.14 or later, which is available [on their website](https://cmake.org/download/).
+  - Tools needed: Visual Studio 2022 (or newer) with the C++ workload, CMake, Git, Strawberry Perl, NSIS (for the installer).
       - Strawberry Perl is [available on their GitHub repository](https://github.com/StrawberryPerl/Perl-Dist-Strawberry/releases/).
-  - Run `build_release.bat` in `x64 Native Tools Command Prompt for VS 2019`
-  - Note: Don't forget to run `git lfs pull` after cloning the repository to download tools on Windows
+  - Run `build_win.bat -d` once to build the dependencies, then `build_win.bat -s -i` to build and install into `build\Snapmaker_Orca`, or `build_win.bat -s --installer` to also create the NSIS installer.
+  - Run `build_win.bat -h` for all options.
 
 - Mac 64-bit  
   - Tools needed: Xcode, Cmake, git, gettext, libtool, automake, autoconf, texinfo
       - You can install most of them by running `brew install cmake gettext libtool automake autoconf texinfo`
-  - run `build_release_macos.sh`
+  - run `./build_release_macos.sh`
   - To build and debug in Xcode:
       - run `Xcode.app`
       - open ``build_`arch`/Snapmaker_Orca.Xcodeproj``
@@ -72,8 +71,8 @@ Visit our GitHub Releases page for the latest stable version of Snapmaker Slicer
 
 - Ubuntu 
   - Dependencies **Will be auto-installed with the shell script**: `libmspack-dev libgstreamerd-3-dev libsecret-1-dev libwebkit2gtk-4.0-dev libosmesa6-dev libssl-dev libcurl4-openssl-dev eglexternalplatform-dev libudev-dev libdbus-1-dev extra-cmake-modules libgtk2.0-dev libglew-dev libudev-dev libdbus-1-dev cmake git texinfo`
-  - run 'sudo ./BuildLinux.sh -u'
-  - run './BuildLinux.sh -dsir'
+  - run `sudo ./build_linux.sh -u`
+  - run `./build_linux.sh -dsir`
 
 
 # Note: 

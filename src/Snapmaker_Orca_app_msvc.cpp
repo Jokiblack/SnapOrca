@@ -2,7 +2,9 @@
 #define _WIN32_WINNT 0x0502
 // The standard Windows includes.
 #define WIN32_LEAN_AND_MEAN
+#ifndef NOMINMAX
 #define NOMINMAX
+#endif
 #include <Windows.h>
 #include <shellapi.h>
 #include <wchar.h>
@@ -13,8 +15,8 @@
 extern "C" {
 // Let the NVIDIA and AMD know we want to use their graphics card
 // on a dual graphics card system.
-__declspec(dllexport) DWORD NvOptimusEnablement                  = 0x00000000;
-__declspec(dllexport) int   AmdPowerXpressRequestHighPerformance = 0;
+__declspec(dllexport) DWORD NvOptimusEnablement                  = 0x00000001;
+__declspec(dllexport) int   AmdPowerXpressRequestHighPerformance = 1;
 }
 #endif /* SLIC3R_GUI */
 
@@ -282,6 +284,16 @@ int wmain(int argc, wchar_t** argv)
     _wsplitpath(path_to_exe, drive, dir, fname, ext);
     _wmakepath(path_to_exe, drive, dir, nullptr, nullptr);
 
+    // OrcaSlicer 2.5: Snapmaker_Orca.dll links the bundled Python runtime, which is
+    // installed in <exe dir>/python. Add it to the DLL search path before loading.
+    wchar_t path_to_python[MAX_PATH + 1] = { 0 };
+    wcscpy(path_to_python, path_to_exe);
+    wcscat(path_to_python, L"python");
+    DWORD python_attrs = GetFileAttributesW(path_to_python);
+    if (python_attrs != INVALID_FILE_ATTRIBUTES && (python_attrs & FILE_ATTRIBUTE_DIRECTORY)) {
+        SetDllDirectoryW(path_to_python);
+    }
+
 #ifdef SLIC3R_GUI
     // https://wiki.qt.io/Cross_compiling_Mesa_for_Windows
     // http://download.qt.io/development_releases/prebuilt/llvmpipe/windows/
@@ -315,7 +327,7 @@ int wmain(int argc, wchar_t** argv)
             OutputDebugStringW(L"Snapmaker Orca: failed to load mesa\\opengl32.dll (software OpenGL fallback unavailable)\r\n");
             sentryReportLog(SENTRY_LOG_ERROR, "failed to load mesa\\opengl32.dll (software OpenGL fallback unavailable)", BP_START_SOFT);
         } else
-            printf("MESA OpenGL library was loaded sucessfully\n");
+            printf("MESA OpenGL library was loaded successfully\n");
     }
 #endif /* SLIC3R_GUI */
 
@@ -325,7 +337,7 @@ int wmain(int argc, wchar_t** argv)
     //	printf("Loading Slic3r library: %S\n", path_to_slic3r);
     HINSTANCE hInstance_Slic3r = LoadLibraryExW(path_to_slic3r, nullptr, 0);
     if (hInstance_Slic3r == nullptr) {
-        printf("Snapmaker_Orca.dll was not loaded, error=%d\n", GetLastError());
+        printf("Snapmaker_Orca.dll was not loaded, error=%lu\n", GetLastError());
 
         auto soft_end_time = get_time_timestamp();
         std::string softEndTime = BP_SOFT_WORKS_TIME + std::string(":") + get_works_time(soft_end_time - soft_start_time);

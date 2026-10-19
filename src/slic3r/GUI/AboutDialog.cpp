@@ -3,13 +3,33 @@
 
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/Color.hpp"
+#include "BuildCommit.hpp"
 #include "GUI.hpp"
 #include "GUI_App.hpp"
 #include "MainFrame.hpp"
 #include "format.hpp"
 #include "Widgets/Button.hpp"
+#include "common_func/common_func.hpp" // SM: MIN_FIRM_VER
+#include "libslic3r_version.h"
 
+#include "slic3r/GUI/GUI_Utils.hpp"
+#include "libslic3r/libslic3r.h"
+#include "slic3r/GUI/wxExtensions.hpp"
+#include "slic3r/GUI/Widgets/Label.hpp"
+#include <vector>
 #include <wx/clipbrd.h>
+#include <wx/panel.h>
+#include <wx/wx.h>
+#include <wx/gdicmn.h>
+#include <wx/event.h>
+#include <wx/dcclient.h>
+#include <wx/dialog.h>
+#include <wx/toplevel.h>
+#include <wx/sizer.h>
+#include <wx/html/htmlwin.h>
+#include <wx/string.h>
+#include <wx/colour.h>
+#include <wx/dataobj.h>
 
 namespace Slic3r {
 namespace GUI {
@@ -44,7 +64,7 @@ void AboutDialogLogo::onRepaint(wxEvent &event)
 CopyrightsDialog::CopyrightsDialog()
     : DPIDialog(static_cast<wxWindow*>(wxGetApp().mainframe), wxID_ANY, from_u8((boost::format("%1% - %2%")
         % (wxGetApp().is_editor() ? SLIC3R_APP_FULL_NAME : GCODEVIEWER_APP_NAME)
-        % _utf8(L("Portions copyright"))).str()),
+        % _utf8(L("License Info"))).str()),
         wxDefaultPosition, wxDefaultSize, wxDEFAULT_DIALOG_STYLE | wxRESIZE_BORDER)
 {
     this->SetFont(wxGetApp().normal_font());
@@ -93,10 +113,11 @@ void CopyrightsDialog::fill_entries()
         { "CGAL",                                           "",      "https://www.cgal.org" },
         { "Clipper",                                        "",      "http://www.angusj.co" },
         { "libcurl",                                        "",      "https://curl.se/libcurl" },
+        { "Draco",                                          "",      "https://google.github.io/draco/" },
         { "Eigen3",                                         "",      "http://eigen.tuxfamily.org" },
         { "Expat",                                          "",      "http://www.libexpat.org" },
         { "fast_float",                                     "",      "https://github.com/fastfloat/fast_float" },
-        { "GLEW (The OpenGL Extension Wrangler Library)",   "",      "http://glew.sourceforge.net" },
+        { "GLAD (Multi-Language GL Loader-Generator)",       "",      "https://github.com/Dav1dde/glad" },
         { "GLFW",                                           "",      "https://www.glfw.org" },
         { "GNU gettext",                                    "",      "https://www.gnu.org/software/gettext" },
         { "ImGUI",                                          "",      "https://github.com/ocornut/imgui" },
@@ -311,7 +332,8 @@ AboutDialog::AboutDialog()
                     find_txt += text_list[i][o];
                     count_txt += text_list[i][o];
                 } else {
-                    find_txt += std::string("\n") + text_list[i][o];
+                    find_txt += "\n";
+                    find_txt += text_list[i][o];
                     count_txt = text_list[i][o];
                 }
             }
@@ -346,11 +368,13 @@ AboutDialog::AboutDialog()
           m_html->SetFonts(font.GetFaceName(), font.GetFaceName(), size);
           m_html->SetMinSize(wxSize(FromDIP(-1), FromDIP(16)));
           m_html->SetBorders(2);
+          wxColour   bgr_clr = GetBackgroundColour();
+          const auto bgr_clr_str = encode_color(ColorRGB(bgr_clr.Red(), bgr_clr.Green(), bgr_clr.Blue()));
           const auto text = from_u8(
               (boost::format(
               "<html>"
-              "<body>"
-              "<p style=\"text-align:left\"><a style=\"color:#009789\" href=\"www.snapmaker.com\">www.snapmaker.com</ a></p>"
+              "<body bgcolor= \"" + bgr_clr_str + "\" >"
+              "<p style=\"text-align:left\"><a style=\"color:#009789\" href=\"https://www.snapmaker.com\">www.snapmaker.com</ a></p>"
               "</body>"
               "</html>")
             ).str());
@@ -360,17 +384,7 @@ AboutDialog::AboutDialog()
       }
     //Add "Portions copyright" button
     Button* button_portions = new Button(this,_L("Portions copyright"));
-    StateColor report_bg(std::pair<wxColour, int>(wxColour(255, 255, 255), StateColor::Disabled), std::pair<wxColour, int>(wxColour(206, 206, 206), StateColor::Pressed),
-                         std::pair<wxColour, int>(wxColour(238, 238, 238), StateColor::Hovered), std::pair<wxColour, int>(wxColour(255, 255, 255), StateColor::Enabled),
-                         std::pair<wxColour, int>(wxColour(255, 255, 255), StateColor::Normal));
-    button_portions->SetBackgroundColor(report_bg);
-    StateColor report_bd(std::pair<wxColour, int>(wxColour(144, 144, 144), StateColor::Disabled), std::pair<wxColour, int>(wxColour(38, 46, 48), StateColor::Enabled));
-    button_portions->SetBorderColor(report_bd);
-    StateColor report_text(std::pair<wxColour, int>(wxColour(144, 144, 144), StateColor::Disabled), std::pair<wxColour, int>(wxColour(38, 46, 48), StateColor::Enabled));
-    button_portions->SetTextColor(report_text);
-    button_portions->SetFont(Label::Body_12);
-    button_portions->SetCornerRadius(FromDIP(12));
-    button_portions->SetMinSize(wxSize(FromDIP(120), FromDIP(24)));
+    button_portions->SetStyle(ButtonStyle::Regular, ButtonType::Window);
 
     wxBoxSizer *copyright_button_ver = new wxBoxSizer(wxVERTICAL);
     copyright_button_ver->Add( 0, 0, 0, wxTOP, FromDIP(10));

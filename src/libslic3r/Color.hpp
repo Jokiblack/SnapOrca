@@ -7,6 +7,8 @@
 #include <algorithm>
 #include <cassert>
 
+#include <cassert>
+
 namespace Slic3r {
 using RGB = std::array<float, 3>;
 using RGBA = std::array<float, 4>;

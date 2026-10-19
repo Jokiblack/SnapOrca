@@ -1,0 +1,35 @@
+#ifndef __SLIC3R_VERSION_H
+#define __SLIC3R_VERSION_H
+
+// Snapmaker: common_func.hpp is the source of truth for the Snapmaker_Orca branding and version
+// macros. It is included first so that the generated values below only fill in what it lacks
+// (SoftFever_VERSION, ORCA_CHECK_GCODE_PLACEHOLDERS, ...) without macro redefinitions.
+#include "common_func/common_func.hpp"
+
+#ifndef SLIC3R_APP_NAME
+#define SLIC3R_APP_NAME "@SLIC3R_APP_NAME@"
+#endif
+#ifndef SLIC3R_APP_KEY
+#define SLIC3R_APP_KEY "@SLIC3R_APP_KEY@"
+#endif
+#ifndef SLIC3R_VERSION
+#define SLIC3R_VERSION "@SLIC3R_VERSION@"
+#endif
+#ifndef SoftFever_VERSION
+#define SoftFever_VERSION "@SoftFever_VERSION@"
+#endif
+#ifndef Snapmaker_VERSION
+#define Snapmaker_VERSION "@Snapmaker_VERSION@"
+#endif
+#ifndef SLIC3R_BUILD_ID
+#define SLIC3R_BUILD_ID "@SLIC3R_BUILD_ID@"
+#endif
+//#define SLIC3R_RC_VERSION "@SLIC3R_VERSION@"
+#ifndef BBL_INTERNAL_TESTING
+#define BBL_INTERNAL_TESTING @BBL_INTERNAL_TESTING@
+#endif
+#ifndef ORCA_CHECK_GCODE_PLACEHOLDERS
+#define ORCA_CHECK_GCODE_PLACEHOLDERS @ORCA_CHECK_GCODE_PLACEHOLDERS@
+#endif
+
+#endif /* __SLIC3R_VERSION_H */

@@ -1,23 +1,54 @@
 #include "WebView.hpp"
+#include "slic3r/GUI/Widgets/StateColor.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/Utils/MacDarkMode.hpp"
 
 #include <algorithm>
 #include <boost/log/trivial.hpp>
 
+#include <cassert>
+#include <chrono>
+#include <cstddef>
+#include <exception>
+#include <thread>
+
+#include <wx/setup.h>
+#include <wx/webview.h>
+#include <wx/string.h>
+#include <wx/gdicmn.h>
+#include <wx/sharedptr.h>
+#include <wx/vector.h>
+#include <wx/event.h>
+#include <vector>
+#include <wx/object.h>
+#include <wx/log.h>
+#include <utility>
 #include <wx/webviewarchivehandler.h>
 #include <wx/webviewfshandler.h>
+#include <wx/weakref.h>
 #if wxUSE_WEBVIEW_EDGE
 #include <wx/msw/webview_edge.h>
 #elif defined(__WXMAC__)
 #include <wx/osx/webview_webkit.h>
 #endif
 #include <wx/uri.h>
+#include <wx/filename.h>
+#include <wx/stdpaths.h>
+#include <boost/filesystem.hpp>
+#include <boost/filesystem/fstream.hpp>
+#include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
+#include <ios>
+#include <string>
+#include <wx/versioninfo.h>
+
+namespace fs = boost::filesystem;
 #if defined(__WIN32__) || defined(__WXMAC__)
 #include "wx/private/jsscriptwrapper.h"
 #endif
 
 #include "sentry_wrapper/SentryWrapper.hpp"
+#include "libslic3r_version.h"
 
 #if defined(__linux__)
 #include <mutex>
@@ -32,7 +63,12 @@
 #define WEBKIT_API
 struct WebKitWebView;
 struct WebKitJavascriptResult;
+struct WebKitSettings;
 extern "C" {
+WEBKIT_API WebKitSettings *
+webkit_settings_new                                  (void);
+WEBKIT_API const gchar *
+webkit_settings_get_user_agent                       (WebKitSettings            *settings);
 WEBKIT_API void
 webkit_web_view_run_javascript                       (WebKitWebView             *web_view,
                                                       const gchar               *script,
@@ -45,6 +81,10 @@ webkit_web_view_run_javascript_finish                (WebKitWebView             
 						      GError                    **error);
 WEBKIT_API void
 webkit_javascript_result_unref              (WebKitJavascriptResult *js_result);
+WEBKIT_API guint
+webkit_get_major_version                     (void);
+WEBKIT_API guint
+webkit_get_minor_version                     (void);
 }
 #endif
 
@@ -80,17 +120,20 @@ DWORD DownloadAndInstallWV2RT() {
       })
       .perform_sync();
   // Sleep for 1 second to wait for the buffer writen into disk
-  std::this_thread::sleep_for(1000ms);
+  std::this_thread::sleep_for(std::chrono::milliseconds(1000));
   if (downloaded) {
     // Either Package the WebView2 Bootstrapper with your app or download it using fwlink
     // Then invoke install at Runtime.
+    // Keep the path string alive for the duration of the ShellExecuteExW call;
+    // assigning .c_str() of a temporary directly would leave lpFile dangling.
+    const std::wstring installer_path = target_file_path.generic_wstring();
     SHELLEXECUTEINFOW shExInfo = {0};
     shExInfo.cbSize = sizeof(shExInfo);
     shExInfo.fMask = SEE_MASK_NOCLOSEPROCESS;
     shExInfo.hwnd = 0;
     shExInfo.lpVerb = L"runas";
-    shExInfo.lpFile = target_file_path.generic_wstring().c_str();
-    shExInfo.lpParameters = L" /install";
+    shExInfo.lpFile = installer_path.c_str();
+    shExInfo.lpParameters = L" /silent /install";
     shExInfo.lpDirectory = 0;
     shExInfo.nShow = 0;
     shExInfo.hInstApp = 0;
@@ -108,7 +151,7 @@ DWORD DownloadAndInstallWV2RT() {
 class WebViewEdge : public wxWebViewEdge
 {
 public:
-    bool SetUserAgent(const wxString &userAgent)
+    bool SetUserAgent(const wxString &userAgent) override
     {
         bool dark = userAgent.Contains("dark");
         SetColorScheme(dark ? COREWEBVIEW2_PREFERRED_COLOR_SCHEME_DARK : COREWEBVIEW2_PREFERRED_COLOR_SCHEME_LIGHT);
@@ -181,7 +224,12 @@ private:
 class WebViewWebKit : public wxWebViewWebKit
 {
 public:
-    explicit WebViewWebKit(const wxString &initialUrl) : m_pendingUrl(initialUrl) {}
+    // Snapmaker: the initial URL is held back until the "wx" script handler is installed.
+    explicit WebViewWebKit(const wxString &initialUrl)
+        : wxWebViewWebKit(wxWebView::NewConfiguration(wxWebViewBackendWebKit))
+        , m_pendingUrl(initialUrl)
+    {
+    }
 
     ~WebViewWebKit() override
     {
@@ -332,7 +380,9 @@ class FakeWebView : public wxWebView
 wxDEFINE_EVENT(EVT_WEBVIEW_RECREATED, wxCommandEvent);
 
 static std::vector<wxWebView*> g_webviews;
-static std::vector<wxWebView*> g_delay_webviews;
+// Webviews waiting for their script handler while another one is added; adding it yields, so a
+// view can be destroyed while it waits.
+static std::vector<wxWeakRef<wxWebView>> g_delay_webviews;
 
 class WebViewRef : public wxObjectRefData
 {
@@ -343,15 +393,33 @@ public:
         assert(iter != g_webviews.end());
         if (iter != g_webviews.end())
             g_webviews.erase(iter);
-        // Drop pending handler installs so a later g_delay_webviews flush never
-        // calls AddScriptMessageHandler() on a destroyed view.
-        // See bambulab/BambuStudio #11004 and #10968.
-        auto diter = std::find(g_delay_webviews.begin(), g_delay_webviews.end(), m_webView);
-        if (diter != g_delay_webviews.end())
-            g_delay_webviews.erase(diter);
     }
     wxWebView *m_webView;
+    // Guards against registering the "wx" handler twice (a duplicate throws on WKWebView).
+    bool m_script_handler_added = false;
 };
+
+static WebViewRef *webview_ref(wxWebView *webView)
+{
+    return webView ? static_cast<WebViewRef *>(webView->GetRefData()) : nullptr;
+}
+
+#ifdef __linux__
+// WebKitGTK's own User-Agent with the tags the bundled pages (globalapi.js) and Bambu's cloud read
+// appended. wx's GTK backend cannot report the stock string, so it comes from a throwaway settings object.
+static wxString linux_user_agent()
+{
+    static const wxString stock = [] {
+        WebKitSettings *settings = webkit_settings_new();
+        wxString        ua       = wxString::FromUTF8(webkit_settings_get_user_agent(settings));
+        g_object_unref(settings);
+        return ua;
+    }();
+    return wxString::Format("%s BBL-Slicer/v%s (%s) BBL-Language/%s", stock, Slic3r::GUI::wxGetApp().get_bbl_client_version(),
+                            Slic3r::GUI::wxGetApp().dark_mode() ? "dark" : "light",
+                            Slic3r::GUI::wxGetApp().current_language_code().BeforeFirst('_'));
+}
+#endif
 
 wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
 {
@@ -382,48 +450,68 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
 #endif
     if (webView) {
         webView->SetBackgroundColour(StateColor::darkModeColorFor(*wxWHITE));
+
+        wxString language_code = Slic3r::GUI::wxGetApp().current_language_code().BeforeFirst('_');
+        language_code          = language_code.ToStdString();
 #ifdef __WIN32__
+        // Snapmaker: keep the SM-Slicer tag (read by the Snapmaker web pages) in front of the upstream user agent.
         webView->SetUserAgent(wxString::Format("SM-Slicer/v%s (%s) Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
-            "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.52", SLIC3R_VERSION, 
-            Slic3r::GUI::wxGetApp().dark_mode() ? "dark" : "light"));
+                                               "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.52 BBL-Slicer/v%s (%s) BBL-Language/%s",
+                                               SLIC3R_VERSION, Slic3r::GUI::wxGetApp().dark_mode() ? "dark" : "light",
+                                               Slic3r::GUI::wxGetApp().get_bbl_client_version(), Slic3r::GUI::wxGetApp().dark_mode() ? "dark" : "light", language_code.mb_str()));
         webView->Create(parent, wxID_ANY, url2, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
         // We register the wxfs:// protocol for testing purposes
         webView->RegisterHandler(wxSharedPtr<wxWebViewHandler>(new wxWebViewArchiveHandler("bbl")));
         // And the memory: file system
         webView->RegisterHandler(wxSharedPtr<wxWebViewHandler>(new wxWebViewFSHandler("memory")));
 #else
-        // Handlers must be registered before Create(). Linux (WebKit2): scheme is process-global, register once to avoid "Cannot register URI scheme ... more than once".
+        // With WKWebView handlers need to be registered before creation.
+        // On Linux (WebKit2GTK), URI schemes are registered globally and can only
+        // be registered once, so guard against multiple registrations.
         // macOS (WKWebView): scheme is per-view, each WebView needs its own handlers.
 #if defined(__linux__)
-        static std::once_flag s_wxfs_memory_handlers_once;
-        std::call_once(s_wxfs_memory_handlers_once, [webView]() {
+        static bool s_schemes_registered = false;
+        if (!s_schemes_registered) {
             webView->RegisterHandler(wxSharedPtr<wxWebViewHandler>(new wxWebViewArchiveHandler("wxfs")));
             webView->RegisterHandler(wxSharedPtr<wxWebViewHandler>(new wxWebViewFSHandler("memory")));
-        });
+            s_schemes_registered = true;
+        }
 #else
         webView->RegisterHandler(wxSharedPtr<wxWebViewHandler>(new wxWebViewArchiveHandler("wxfs")));
         webView->RegisterHandler(wxSharedPtr<wxWebViewHandler>(new wxWebViewFSHandler("memory")));
 #endif
 #ifdef __WXMAC__
-        // WKWebView starts loading during Create(), before the delayed handler callback runs.
+        // Snapmaker: WKWebView starts loading during Create(), before the delayed handler callback runs.
         // Keep its initial document blank; the subclass flushes the pending URL after installation.
         webView->Create(parent, wxID_ANY, wxString("about:blank"), wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
         static_cast<WebViewWebKit *>(webView)->AttachNavigationGate();
 #else
         webView->Create(parent, wxID_ANY, url2, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
 #endif
-        webView->SetUserAgent(wxString::Format("SM-Slicer/v%s (%s) Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)", SLIC3R_VERSION,
-                                               Slic3r::GUI::wxGetApp().dark_mode() ? "dark" : "light"));
+#ifdef __linux__
+        webView->SetUserAgent(wxString::Format("SM-Slicer/v%s (%s) ", SLIC3R_VERSION, Slic3r::GUI::wxGetApp().dark_mode() ? "dark" : "light") + linux_user_agent());
+#else
+        webView->SetUserAgent(wxString::Format("SM-Slicer/v%s (%s) Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) BBL-Slicer/v%s (%s) BBL-Language/%s",
+                                               SLIC3R_VERSION, Slic3r::GUI::wxGetApp().dark_mode() ? "dark" : "light",
+                                               Slic3r::GUI::wxGetApp().get_bbl_client_version(), Slic3r::GUI::wxGetApp().dark_mode() ? "dark" : "light", language_code.mb_str()));
+#endif
 #endif
 #ifdef __WXMAC__
         WKWebView * wkWebView = (WKWebView *) webView->GetNativeBackend();
         Slic3r::GUI::WKWebView_setTransparentBackground(wkWebView);
 #endif
         auto addScriptMessageHandler = [] (wxWebView *webView) {
+            // Skip if SendAPIKey() already registered "wx"; a duplicate add throws an
+            // uncatchable NSException on WKWebView, killing the app at startup.
+            WebViewRef *ref = webview_ref(webView);
+            if (ref && ref->m_script_handler_added)
+                return;
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": begin to add script message handler for wx.";
             Slic3r::GUI::wxGetApp().set_adding_script_handler(true);
             if (!webView->AddScriptMessageHandler("wx"))
                 wxLogError("Could not add script message handler");
+            else if (ref)
+                ref->m_script_handler_added = true;
             Slic3r::GUI::wxGetApp().set_adding_script_handler(false);
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": finished add script message handler for wx.";
 #ifdef __WXMAC__
@@ -444,11 +532,9 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
                 addScriptMessageHandler(webView);
                 while (!g_delay_webviews.empty()) {
                     auto views = std::move(g_delay_webviews);
-                    for (auto wv : views) {
-                        if (std::find(g_webviews.begin(), g_webviews.end(), wv) == g_webviews.end())
-                            continue;
-                        addScriptMessageHandler(wv);
-                    }
+                    for (const wxWeakRef<wxWebView>& wv : views)
+                        if (wv)
+                            addScriptMessageHandler(wv.get());
                 }
             }
 #ifndef __WIN32__
@@ -465,12 +551,56 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
     webView->EnableAccessToDevTools();
     return webView;
 }
+
+void WebView::MarkScriptMessageHandlerAdded(wxWebView * webView)
+{
+    if (WebViewRef *ref = webview_ref(webView))
+        ref->m_script_handler_added = true;
+}
+
+bool WebView::NeedsRecreateOnShow()
+{
+    const bool recreating = Slic3r::GUI::wxGetApp().is_recreating_gui();
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": is_recreating_gui = " << recreating;
+#ifdef __WIN32__
+    return recreating;
+#else
+    return false;
+#endif
+}
+
+bool WebView::NeedsCompositingWorkaround()
+{
+#ifdef __linux__
+    const guint major = webkit_get_major_version();
+    const guint minor = webkit_get_minor_version();
+    return major < 2 || (major == 2 && minor < 42);
+#else
+    return false;
+#endif
+}
+
+bool WebView::SupportsForceSharedMemory()
+{
+#ifdef __linux__
+    const guint major = webkit_get_major_version();
+    const guint minor = webkit_get_minor_version();
+    return major > 2 || (major == 2 && minor >= 44);
+#else
+    return false;
+#endif
+}
+
 #if wxUSE_WEBVIEW_EDGE
 bool WebView::CheckWebViewRuntime()
 {
     wxWebViewFactoryEdge factory;
-    auto wxVersion = factory.GetVersionInfo();
-    return wxVersion.GetMajor() != 0;
+    auto wxVersion = factory.GetVersionInfo(wxVersionContext::RunTime);
+    bool present = wxVersion.GetMajor() != 0;
+    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": WebView2 runtime "
+                            << (present ? "found, version " : "not found (")
+                            << wxVersion.ToString().ToUTF8().data() << (present ? "" : ")");
+    return present;
 }
 
 bool WebView::DownloadAndInstallWebViewRuntime()
@@ -478,6 +608,12 @@ bool WebView::DownloadAndInstallWebViewRuntime()
     return DownloadAndInstallWV2RT() == 0;
 }
 #endif
+wxString WebView::RedactUrl(const wxString& url)
+{
+    const size_t cut = url.find_first_of(wxString("?#"));
+    return cut == wxString::npos ? url : url.Left(cut);
+}
+
 void WebView::LoadUrl(wxWebView * webView, wxString const &url)
 {
     auto url2  = url;
@@ -485,7 +621,7 @@ void WebView::LoadUrl(wxWebView * webView, wxString const &url)
     url2.Replace("\\", "/");
 #endif
     if (!url2.empty()) { url2 = wxURI(url2).BuildURI(); }
-    BOOST_LOG_TRIVIAL(trace) << __FUNCTION__ << url2.ToUTF8();
+    BOOST_LOG_TRIVIAL(trace) << __FUNCTION__ << RedactUrl(url2).ToUTF8();
     webView->LoadURL(url2);
 }
 
@@ -527,9 +663,21 @@ bool WebView::RunScript(wxWebView *webView, wxString const &javascript)
 void WebView::RecreateAll()
 {
     auto dark = Slic3r::GUI::wxGetApp().dark_mode();
+    wxString language_code = Slic3r::GUI::wxGetApp().current_language_code().BeforeFirst('_');
+    language_code          = language_code.ToStdString();
     for (auto webView : g_webviews) {
-        webView->SetUserAgent(wxString::Format("SM-Slicer/v%s (%s) Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko)", SLIC3R_VERSION,
-                                               dark ? "dark" : "light"));
-        webView->Reload();
+#ifdef __linux__
+        webView->SetUserAgent(wxString::Format("SM-Slicer/v%s (%s) ", SLIC3R_VERSION, dark ? "dark" : "light") + linux_user_agent());
+#else
+        webView->SetUserAgent(wxString::Format("SM-Slicer/v%s (%s) Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) BBL-Slicer/v%s (%s) BBL-Language/%s",
+                                               SLIC3R_VERSION, dark ? "dark" : "light", Slic3r::GUI::wxGetApp().get_bbl_client_version(), dark ? "dark" : "light", language_code.mb_str()));
+#endif
+        // A host-themed WebViewHostDialog re-themes in place (no reload). If it handles
+        // the event, skip the reload; legacy pages fall through and reload as before
+        // (their own dark.css swap re-themes them on reload).
+        wxCommandEvent evt(EVT_WEBVIEW_RECREATED);
+        evt.SetEventObject(webView);
+        if (!webView->GetEventHandler()->ProcessEvent(evt))
+            webView->Reload();
     }
 }

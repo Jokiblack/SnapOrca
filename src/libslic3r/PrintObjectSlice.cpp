@@ -1,27 +1,59 @@
+#include <algorithm>
 #include <boost/log/trivial.hpp>
+#include <limits>
 
+#include <cstddef>
+#include <functional>
+#include <cassert>
+#include <cstdlib>
+#include <memory>
+#include <math.h>
+#include <cmath>
+#include <iterator>
+#include <tbb/parallel_for.h>
+#include <vector>
+#include <utility>
 #include <algorithm>
 #include <array>
-#include <cmath>
-#include <cstdlib>
 #include <unordered_map>
 #include <fstream>
 #include <iomanip>
 #include <limits>
 #include <numeric>
 #include <sstream>
-#include <tbb/parallel_for.h>
+
+#include "BoundingBox.hpp"
 #include "ClipperUtils.hpp"
 #include "ElephantFootCompensation.hpp"
+#include "ExPolygon.hpp"
+#include "Exception.hpp"
+#include "Flow.hpp"
 #include "I18N.hpp"
 #include "Layer.hpp"
 #include "MixedFilament.hpp"
+#include "Model.hpp"
 #include "MultiMaterialSegmentation.hpp"
+#include "ObjectID.hpp"
+#include "Point.hpp"
+#include "Polygon.hpp"
 #include "Print.hpp"
 #include "SVG.hpp"
+#include "BeltTransform.hpp"
+#include "BeltSliceStrategy.hpp"
+#include "Geometry.hpp"
 //BBS
+#include "PrintConfig.hpp"
+#include "PrintBase.hpp"
 #include "ShortestPath.hpp"
+#include "libslic3r.h"
+#include "TriangleMeshSlicer.hpp"
+#include "TriangleMesh.hpp"
+#include "Slicing.hpp"
+#include "Surface.hpp"
+#include "Utils.hpp"
 #include "libslic3r/Feature/Interlocking/InterlockingGenerator.hpp"
+#include "Config.hpp"
+#include "SurfaceCollection.hpp"
 
 //! macro used to mark string used at localization, return same string
 #define L(s) Slic3r::I18N::translate(s)
@@ -41,6 +73,31 @@ static void dump_surface_emboss_mixed_layer_state(
     const Layer                                 &layer,
     const PrintObjectRegions::LayerRangeRegions &layer_range,
     const std::vector<ExPolygons>               *segmentation_layer);
+static coordf_t compute_slice_z(PrintObject* print_object, size_t i_layer, coordf_t lo, coordf_t hi)
+{
+    bool zaa_active   = false;
+    coordf_t z_offset = 0.0;
+
+    size_t num_regions = print_object->num_printing_regions();
+    for (size_t rid = 0; rid < num_regions; ++rid) {
+        const auto& rcfg = print_object->printing_region(rid).config();
+        if (rcfg.zaa_enabled) {
+            if (!zaa_active || rcfg.zaa_min_z < z_offset)
+                z_offset = rcfg.zaa_min_z;
+            zaa_active = true;
+        }
+    }
+
+    if (!zaa_active || i_layer == 0) {
+        return 0.5 * (lo + hi);
+    }
+
+    coordf_t slice_z = lo + z_offset;
+    if ((slice_z < lo && !is_approx(slice_z, lo)) || (slice_z > hi && !is_approx(slice_z, hi))) {
+        throw RuntimeError("Bad min Z value");
+    }
+    return slice_z;
+}
 
 LayerPtrs new_layers(
     PrintObject                 *print_object,
@@ -55,7 +112,8 @@ LayerPtrs new_layers(
     for (size_t i_layer = 0; i_layer < object_layers.size(); i_layer += 2) {
         coordf_t lo = object_layers[i_layer];
         coordf_t hi = object_layers[i_layer + 1];
-        coordf_t slice_z = 0.5 * (lo + hi);
+        coordf_t slice_z = compute_slice_z(print_object, i_layer, lo, hi);
+
         Layer *layer = new Layer(id ++, print_object, hi - lo, hi + zmin, slice_z);
         out.emplace_back(layer);
         if (prev != nullptr) {
@@ -146,7 +204,8 @@ static std::vector<VolumeSlices> slice_volumes_inner(
     ModelVolumePtrs                                           model_volumes,
     const std::vector<PrintObjectRegions::LayerRangeRegions> &layer_ranges,
     const std::vector<float>                                 &zs,
-    const std::function<void()>                              &throw_on_cancel_callback)
+    const std::function<void()>                              &throw_on_cancel_callback,
+    double                                                   *out_belt_min_z = nullptr)
 {
     model_volumes_sort_by_id(model_volumes);
 
@@ -161,6 +220,10 @@ static std::vector<VolumeSlices> slice_volumes_inner(
     params_base.closing_radius = print_object_config.slice_closing_radius.value;
     params_base.extra_offset   = 0;
     params_base.trafo          = object_trafo;
+    // Pre-slice mesh transforms: axis remap (standalone — works without belt
+    // mode), belt rotation, and the per-object Z-shift.  Owned by BeltSliceStrategy
+    // so this belt/remap-specific logic stays out of the generic slicing pipeline.
+    BeltSliceStrategy::apply_preslice_transforms(params_base.trafo, print_config, model_volumes, out_belt_min_z);
     //BBS: 0.0025mm is safe enough to simplify the data to speed slicing up for high-resolution model.
     //Also has on influence on arc fitting which has default resolution 0.0125mm.
     params_base.resolution = print_config.resolution <= 0.001 ? 0.0f : 0.0025;
@@ -294,16 +357,41 @@ static std::vector<std::vector<ExPolygons>> slices_to_regions(
                 }
             } else {
                 zs_complex.reserve(zs.size());
+                // region.bbox is computed in pre-belt-transform slicer space (see PrintApply.cpp::trafo_for_bbox).
+                // When belt transforms are active, layer Z values are in post-rotation/shear/scale/remap space,
+                // so the Z components of region.bbox aren't comparable to z. Skipping the Z filter here
+                // pushes those layers into the parallel_for path below, which handles multi-volume
+                // clipping per layer without relying on the bbox Z range.
+                const bool bbox_z_in_layer_frame = !(print_config.belt_printer.value &&
+                    BeltTransformPipeline::has_rotation(print_config));
+                // Belt-transform addendum: with bbox-Z untrusted, the simple path's
+                // "first model_part wins" logic drops subsequent volumes' slices unless
+                // they XY-overlap with the first.  Assemblies whose volumes are stacked
+                // or side-by-side in pre-transform Z (different bbox.z ranges) thus lose
+                // the volumes that originally sat outside the first volume's Z range —
+                // showing up as truncation at the top or bottom of the assembly.  Force
+                // every layer in a multi-volume range through the parallel_for path,
+                // which correctly merges all volumes per layer.
+                int num_model_parts = 0;
+                for (const PrintObjectRegions::VolumeRegion &vr : layer_range.volume_regions)
+                    if (vr.model_volume->is_model_part())
+                        ++num_model_parts;
+                const bool force_complex_for_belt = !bbox_z_in_layer_frame && num_model_parts > 1;
                 for (; z_idx < zs.size() && zs[z_idx] < layer_range.layer_height_range.second; ++ z_idx) {
                     float z                          = zs[z_idx];
+                    if (force_complex_for_belt) {
+                        zs_complex.push_back({ z_idx, z });
+                        continue;
+                    }
                     int   idx_first_printable_region = -1;
                     bool  complex                    = false;
                     std::vector<int> printable_region_ids;
                     for (int idx_region = 0; idx_region < int(layer_range.volume_regions.size()); ++ idx_region) {
                         const PrintObjectRegions::VolumeRegion &region = layer_range.volume_regions[idx_region];
-                        if (region.bbox->min().z() <= z && region.bbox->max().z() >= z) {
+                        if (!bbox_z_in_layer_frame || (region.bbox->min().z() <= z && region.bbox->max().z() >= z)) {
                             if (region.model_volume->is_model_part())
                                 printable_region_ids.push_back(idx_region);
+
                             if (idx_first_printable_region == -1 && region.model_volume->is_model_part()) {
                                 idx_first_printable_region = idx_region;
                             }
@@ -311,7 +399,9 @@ static std::vector<std::vector<ExPolygons>> slices_to_regions(
                                 // Test for overlap with some other region.
                                 for (int idx_region2 = idx_first_printable_region; idx_region2 < idx_region; ++ idx_region2) {
                                     const PrintObjectRegions::VolumeRegion &region2 = layer_range.volume_regions[idx_region2];
-                                    if (region2.bbox->min().z() <= z && region2.bbox->max().z() >= z && overlap_in_xy(*region.bbox, *region2.bbox)) {
+                                    const bool region2_in_z = !bbox_z_in_layer_frame
+                                        || (region2.bbox->min().z() <= z && region2.bbox->max().z() >= z);
+                                    if (region2_in_z && overlap_in_xy(*region.bbox, *region2.bbox)) {
                                         complex = true;
                                         break;
                                     }
@@ -359,7 +449,7 @@ static std::vector<std::vector<ExPolygons>> slices_to_regions(
                         bool rhs_empty  = rhs.region_id < 0 || rhs.expolygons.empty();
                         // Sort the empty items to the end of the list.
                         // Sort by region_id & volume_id lexicographically.
-                        return ! this_empty && (rhs_empty || (this->region_id < rhs.region_id || (this->region_id == rhs.region_id && volume_id < volume_id)));
+                        return ! this_empty && (rhs_empty || (this->region_id < rhs.region_id || (this->region_id == rhs.region_id && volume_id < rhs.volume_id)));
                     }
                 };
 
@@ -549,7 +639,7 @@ bool groupingVolumes(std::vector<VolumeSlices> objSliceByVolume, std::vector<gro
     }
 
     tbb::parallel_for(tbb::blocked_range<int>(0, osvIndex.size()),
-        [&osvIndex, &objSliceByVolume, &offsetValue, &resolution](const tbb::blocked_range<int>& range) {
+        [&osvIndex, &objSliceByVolume, &resolution](const tbb::blocked_range<int>& range) {
             for (auto k = range.begin(); k != range.end(); ++k) {
                 for (ExPolygon& poly_ex : objSliceByVolume[osvIndex[k][0]].slices[osvIndex[k][1]])
                     poly_ex.douglas_peucker(resolution);
@@ -557,7 +647,7 @@ bool groupingVolumes(std::vector<VolumeSlices> objSliceByVolume, std::vector<gro
         });
 
     tbb::parallel_for(tbb::blocked_range<int>(0, osvIndex.size()),
-        [&osvIndex, &objSliceByVolume,&offsetValue, &resolution](const tbb::blocked_range<int>& range) {
+        [&osvIndex, &objSliceByVolume,&offsetValue](const tbb::blocked_range<int>& range) {
             for (auto k = range.begin(); k != range.end(); ++k) {
                 objSliceByVolume[osvIndex[k][0]].slices[osvIndex[k][1]] = offset_ex(objSliceByVolume[osvIndex[k][0]].slices[osvIndex[k][1]], offsetValue);
             }
@@ -843,6 +933,14 @@ void PrintObject::slice()
     this->update_layer_height_profile(*this->model_object(), m_slicing_params, layer_height_profile, this);
     m_print->throw_if_canceled();
     m_typed_slices = false;
+    // The belt state below is only written while belt mode is on (and the min-Z
+    // lift only when there is a rotation or remap). Start every slice from zero,
+    // or a project switched from a belt printer to a normal one, or whose tilt
+    // axis was set to None, keeps the previous offsets: the adaptive infill octree
+    // and the organic support layers (PrintObject.cpp) would still be shifted by
+    // them.
+    m_belt_min_z              = 0.;
+    m_belt_global_z_offset    = 0.;
     this->clear_layers();
     m_layers = new_layers(this, generate_object_layers(m_slicing_params, layer_height_profile, m_config.precise_z_height.value));
     if (has_surface_emboss_mixed_volume(*this)) {
@@ -853,6 +951,20 @@ void PrintObject::slice()
     }
     this->slice_volumes();
     m_print->throw_if_canceled();
+
+    // Belt floor Z-shift: where is the belt surface in final slicer space?
+    //
+    // The belt surface is the model's Z=0 plane.  After the belt rotation and the
+    // Z-shift it is the plane Z_belt = shear_factor * from_axis + z_shift_val in
+    // slicer space, with z_shift_val = max(0, -m_belt_min_z), the lift that starts
+    // the slicing frame at the belt below the footprint.
+    if (std::abs(m_slicing_params.belt_floor_shear_factor) > EPSILON) {
+        double z_shift_val = (m_belt_min_z < 0.) ? -m_belt_min_z : 0.;
+        // The belt surface is at Z=0 in centered slicer space and bb.min.z() is
+        // already folded into m_belt_min_z.
+        m_slicing_params.belt_floor_z_shift = z_shift_val;
+    }
+
     int firstLayerReplacedBy = 0;
 
 #if 1
@@ -888,7 +1000,106 @@ void PrintObject::slice()
             }
         });
     if (m_layers.empty())
-        throw Slic3r::SlicingError(L("No layers were detected. You might want to repair your STL file(s) or check their size or thickness and retry.\n"));
+        throw Slic3r::SlicingError(L("No layers were detected. You might want to repair the model or check its size or thickness and retry.\n"));
+
+    // Belt printer: offset all layer Z values so objects at different positions
+    // along the belt print at different heights on the tilted belt.  This is a
+    // post-slicing adjustment: the sliced geometry is the same, only the output Z
+    // coordinates change.
+    {
+        const auto &pcfg = this->print()->config();
+        BOOST_LOG_TRIVIAL(trace) << "Belt global check: belt_printer=" << pcfg.belt_printer.value
+            << " belt_slice_rotation=" << int(pcfg.belt_slice_rotation.value)
+            << " object=" << this->model_object()->name;
+        if (pcfg.belt_printer.value) {
+
+            Point inst_shift = this->instances().empty() ? Point(0, 0)
+                : this->instances().front().shift - this->center_offset();
+            BOOST_LOG_TRIVIAL(trace) << "Belt global: object " << this->model_object()->name
+                << " instances=" << this->instances().size()
+                << " shift=(" << unscale<double>(inst_shift.x()) << ", " << unscale<double>(inst_shift.y()) << ")";
+
+            // Per-object Z-shift compensation, applied regardless of global mode.
+            //
+            // BeltSliceStrategy::apply_preslice_transforms lifts the mesh by max(0, -m_belt_min_z)
+            // so the slicer can slice with slicer_z >= 0.  BeltBackTransform inverts
+            // build_forward_transform() which DOES NOT include this per-object
+            // Z-shift (it's not known until vertex scan time).  Result: G-code
+            // coords emerge offset by the un-undone Z-shift — the inverse rotation
+            // couples slicer_z back into both machine_y and machine_z.  Compensating
+            // layer.print_z by belt_z_shift here makes the back-transform produce
+            // correct machine-frame coordinates whether or not a global mode is active.
+            // The compensation must mirror the Z-shift actually applied, which
+            // is max(0, -m_belt_min_z): when the transformed mesh starts ABOVE
+            // slicer Z=0 (m_belt_min_z > 0 — possible for counter-rotated or
+            // asymmetric geometry whose centered-frame minimum lands positive)
+            // no lift was applied, and an unclamped m_belt_min_z here would
+            // leak straight into the layer Z values, floating the whole object
+            // off the belt by exactly that amount.
+            double belt_z_shift = std::min(m_belt_min_z, 0.);   // the belt surface is Z=0 in centered slicer space
+            double global_z_offset = belt_z_shift;
+
+            // Centering correction: trafo_centered pretranslates by
+            // -m_center_offset.{x,y}.  Under the belt forward transform, the
+            // Y component of that pretranslate couples into slicer-Z (shear:
+            // tan*c.y, rotation: sin*c.y).  BeltBackTransform inverts the
+            // rotation/shear but doesn't undo centering, so this Z component
+            // leaks into machine output as a position offset whenever
+            // m_center_offset != 0.  When a user moves a volume within an
+            // assembly such that the combined bbox center shifts, this shows
+            // up as a small Z translation in the print.  Compensate by adding
+            // the Z component of the centering through the forward transform.
+            {
+                Transform3d T_fwd = BeltTransformPipeline::build_forward_transform(pcfg);
+                Vec3d c_off(unscale<double>(m_center_offset.x()),
+                            unscale<double>(m_center_offset.y()),
+                            0.);
+                double centering_z_corr = (T_fwd.linear() * c_off).z();
+                global_z_offset += centering_z_corr;
+            }
+
+            {
+                // Global pre-slice mode: compute full correction c = (T.linear() - I) * d
+                // where T is the belt forward transform and d is the bed position, so
+                // objects at different bed positions print at different machine Z values
+                // along the inclined belt.
+                Transform3d T = BeltTransformPipeline::build_forward_transform(pcfg);
+                Vec3d d(unscale<double>(inst_shift.x()), unscale<double>(inst_shift.y()), 0.);
+                Vec3d c = T.linear() * d - d;
+                global_z_offset += c.z();
+
+                BOOST_LOG_TRIVIAL(trace) << "Belt preslice_global: correction=("
+                    << c.x() << ", " << c.y() << ", " << c.z() << ")"
+                    << " belt_z_shift=" << belt_z_shift << " (m_belt_min_z=" << m_belt_min_z << ")";
+            }
+
+            BOOST_LOG_TRIVIAL(trace) << "Belt global: z_offset=" << global_z_offset
+                << " (" << this->print()->objects().size() << " objects on the plate)";
+            m_belt_global_z_offset = global_z_offset;
+            if (std::abs(global_z_offset) > EPSILON) {
+                for (Layer *layer : m_layers)
+                    layer->print_z += global_z_offset;
+                // Keep belt floor clipping in sync with the shifted print_z
+                // values — the support generator sees globally-offset object
+                // layer print_z, so belt_floor_z_shift must match.
+                m_slicing_params.belt_floor_z_shift += global_z_offset;
+            }
+            if (!m_layers.empty()) {
+                BOOST_LOG_TRIVIAL(trace) << "Belt global: first_layer_z=" << m_layers.front()->print_z
+                    << " last_layer_z=" << m_layers.back()->print_z
+                    << " num_layers=" << m_layers.size()
+                    << " center_offset=(" << unscale<double>(m_center_offset.x())
+                    << ", " << unscale<double>(m_center_offset.y()) << ")";
+            }
+
+            // Cache the final patched belt_floor_z_shift so a later support-only
+            // invalidation can rebuild m_slicing_params without losing this exact
+            // (vertex-scan-derived) value.  update_slicing_parameters() will
+            // restore it after create_from_config() seeds the bbox approximation.
+            m_belt_floor_z_shift_cached      = m_slicing_params.belt_floor_z_shift;
+            m_belt_floor_z_shift_cache_valid = true;
+        }
+    }
 
     // BBS
     this->set_done(posSlice);
@@ -2600,7 +2811,7 @@ static bool apply_mixed_region_surface_offsets(PrintObject &print_object)
             if (layerm == nullptr || layerm->slices.empty())
                 continue;
 
-            const unsigned int filament_id = unsigned(std::max(0, layerm->region().config().wall_filament.value));
+            const unsigned int filament_id = unsigned(std::max(0, layerm->region().config().outer_wall_filament_id.value));
             if (!mixed_mgr.is_mixed(filament_id, num_physical))
                 continue;
 
@@ -2794,7 +3005,7 @@ static std::vector<std::vector<ExPolygons>> whole_object_local_z_segmentation_by
             if (layerm == nullptr || layerm->slices.empty())
                 continue;
 
-            const unsigned int filament_id = unsigned(std::max(0, layerm->region().config().wall_filament.value));
+            const unsigned int filament_id = unsigned(std::max(0, layerm->region().config().outer_wall_filament_id.value));
             if (!mixed_mgr.is_mixed(filament_id, num_physical))
                 continue;
             if (filament_id >= segmentation[layer_id].size())
@@ -4496,7 +4707,7 @@ static inline void apply_mm_segmentation(PrintObject &print_object, std::vector<
                     int               self_extruder_id         = -1; // 1-based extruder ID
                     ExPolygons        explicit_self_expolygons;
                     ExPolygons        default_self_expolygons;
-                    if (const int cfg_wall = parent_print_region.config().wall_filament.value;
+                    if (const int cfg_wall = parent_print_region.config().outer_wall_filament_id.value;
                         cfg_wall >= 1 && cfg_wall <= int(by_extruder.size()))
                         self_extruder_id = cfg_wall;
                     if (clamp_parent_to_geometry && default_bbox.defined && parent_layer_region_bbox.overlap(default_bbox))
@@ -4759,7 +4970,7 @@ static std::vector<SurfaceEmbossMixedDebugCandidate> collect_surface_emboss_mixe
             continue;
         processed_region_ids.emplace_back(region_id);
 
-        if (!mixed_mgr.is_mixed(unsigned(std::max(0, volume_region.region->config().wall_filament.value)), num_physical))
+        if (!mixed_mgr.is_mixed(unsigned(std::max(0, volume_region.region->config().outer_wall_filament_id.value)), num_physical))
             continue;
 
         out.push_back({ volume, region_id });
@@ -4794,7 +5005,7 @@ static void export_surface_emboss_mixed_layer_svg(
         }) != candidates.end();
 
         SVG::ExPolygonAttributes attrs(
-            "region " + std::to_string(region_id) + " wall=" + std::to_string(layerm->region().config().wall_filament.value),
+            "region " + std::to_string(region_id) + " wall=" + std::to_string(layerm->region().config().outer_wall_filament_id.value),
             is_candidate ? "#3b82f6" : "#bfc5cc",
             is_candidate ? 0.35f : 0.14f);
         attrs.outline_width = scale_(0.05f);
@@ -4856,9 +5067,9 @@ static void dump_surface_emboss_mixed_layer_state(
         std::ostringstream line;
         line << std::fixed << std::setprecision(4)
              << "  region=" << region_id
-             << " wall=" << layerm->region().config().wall_filament.value
-             << " sparse=" << layerm->region().config().sparse_infill_filament.value
-             << " solid=" << layerm->region().config().solid_infill_filament.value
+             << " wall=" << layerm->region().config().outer_wall_filament_id.value
+             << " sparse=" << layerm->region().config().sparse_infill_filament_id.value
+             << " solid=" << layerm->region().config().internal_solid_filament_id.value
              << " area=" << slice_area;
         append_surface_emboss_mixed_debug_line(print_object, line.str());
     }
@@ -4875,14 +5086,14 @@ static void dump_surface_emboss_mixed_layer_state(
              << "  candidate region=" << candidate.region_id
              << " volume_name=" << candidate.volume->name
              << " volume_extruder=" << candidate.volume->extruder_id()
-             << " cfg_wall=" << layerm->region().config().wall_filament.value
+             << " cfg_wall=" << layerm->region().config().outer_wall_filament_id.value
              << " depth=" << float(candidate.volume->emboss_shape->projection.depth)
              << " shell_delta_mm=" << unscale<double>(shell_delta_scaled)
              << " area=" << slice_area;
         append_surface_emboss_mixed_debug_line(print_object, line.str());
 
         if (segmentation_layer != nullptr) {
-            const int cfg_wall = layerm->region().config().wall_filament.value;
+            const int cfg_wall = layerm->region().config().outer_wall_filament_id.value;
             if (cfg_wall >= 1 && cfg_wall <= int(segmentation_layer->size())) {
                 const double seg_area = std::abs(area((*segmentation_layer)[size_t(cfg_wall - 1)]));
                 std::ostringstream seg_line;
@@ -4976,7 +5187,7 @@ static bool apply_surface_emboss_mixed_region_override(PrintObject &print_object
                 continue;
             processed_region_ids.emplace_back(region_id);
 
-            const unsigned int filament_id = unsigned(std::max(0, volume_region.region->config().wall_filament.value));
+            const unsigned int filament_id = unsigned(std::max(0, volume_region.region->config().outer_wall_filament_id.value));
             if (!mixed_mgr.is_mixed(filament_id, num_physical))
                 continue;
 
@@ -5009,7 +5220,7 @@ static bool apply_surface_emboss_mixed_region_override(PrintObject &print_object
                      << " region=" << region_id
                      << " volume_name=" << volume->name
                      << " volume_extruder=" << volume->extruder_id()
-                     << " cfg_wall=" << volume_region.region->config().wall_filament.value
+                     << " cfg_wall=" << volume_region.region->config().outer_wall_filament_id.value
                      << " depth=" << float(volume->emboss_shape->projection.depth)
                      << " shell_delta_mm=" << unscale<double>(emboss_surface_mixed_shell_override_delta(*emboss_layerm, *volume))
                      << " mask_area=" << std::abs(area(override_mask));
@@ -5034,7 +5245,7 @@ static bool apply_surface_emboss_mixed_region_override(PrintObject &print_object
                 LayerRegion *target_layerm = layer.get_region(target_region_id);
                 if (target_layerm == nullptr || target_layerm->slices.empty())
                     continue;
-                if (target_layerm->region().config().wall_filament.value == int(filament_id))
+                if (target_layerm->region().config().outer_wall_filament_id.value == int(filament_id))
                     continue;
 
                 ExPolygons stolen = intersection_ex(target_layerm->slices.surfaces, override_mask);
@@ -5051,7 +5262,7 @@ static bool apply_surface_emboss_mixed_region_override(PrintObject &print_object
                      << " layer=" << layer_id
                      << " emboss_region=" << region_id
                      << " from_region=" << target_region_id
-                     << " from_wall=" << target_layerm->region().config().wall_filament.value
+                     << " from_wall=" << target_layerm->region().config().outer_wall_filament_id.value
                      << " stolen_area=" << std::abs(area(stolen));
                 append_surface_emboss_mixed_debug_line(print_object, line.str());
 
@@ -5204,6 +5415,7 @@ void apply_fuzzy_skin_segmentation(PrintObject &print_object, ThrowOnCancel thro
     }); // end of parallel_for
 }
 
+
 // 1) Decides Z positions of the layers,
 // 2) Initializes layers and their regions
 // 3) Slices the object meshes
@@ -5240,7 +5452,8 @@ void PrintObject::slice_volumes()
     if (!slice_zs.empty()) {
         objSliceByVolume = slice_volumes_inner(
             print->config(), this->config(), this->trafo_centered(),
-            this->model_object()->volumes, m_shared_regions->layer_ranges, slice_zs, throw_on_cancel_callback);
+            this->model_object()->volumes, m_shared_regions->layer_ranges, slice_zs, throw_on_cancel_callback,
+            &m_belt_min_z);
     }
 
     //BBS: "model_part" volumes are grouded according to their connections
@@ -5329,7 +5542,7 @@ void PrintObject::slice_volumes()
 
     apply_surface_emboss_mixed_region_override(*this, [print]() { print->throw_if_canceled(); });
 
-    InterlockingGenerator::generate_interlocking_structure(this);
+    InterlockingGenerator::generate_interlocking_structure(this, [print]() { print->throw_if_canceled(); });
     m_print->throw_if_canceled();
 
     BOOST_LOG_TRIVIAL(debug) << "Slicing volumes - make_slices in parallel - begin";
@@ -5428,7 +5641,7 @@ void PrintObject::slice_volumes()
                         if (min_growth < 0.f || elfoot > 0.f) {
                             // Apply the negative XY compensation. (the ones that is <0)
                             ExPolygons trimming;
-                            static const float eps = float(scale_(m_config.slice_closing_radius.value) * 1.5);
+                            const float eps = float(scale_(m_config.slice_closing_radius.value) * 1.5);
                             if (elfoot > 0.f) {
                                 ExPolygons expolygons_to_compensate = offset_ex(layer->merged(eps), -eps);
                                 lslices_elfoot_uncompensated[layer_id] = expolygons_to_compensate;
@@ -5631,6 +5844,13 @@ ExPolygons PrintObject::_shrink_contour_holes(double contour_delta, double hole_
     return union_ex(new_ex_polys);
 }
 
+Transform3d PrintObject::trafo_sliced() const
+{
+    Transform3d trafo = this->trafo_centered();
+    BeltSliceStrategy::apply_preslice_transforms(trafo, this->print()->config(), this->model_object()->volumes);
+    return trafo;
+}
+
 std::vector<Polygons> PrintObject::slice_support_volumes(const ModelVolumeType model_volume_type) const
 {
     auto it_volume     = this->model_object()->volumes.begin();
@@ -5645,7 +5865,7 @@ std::vector<Polygons> PrintObject::slice_support_volumes(const ModelVolumeType m
         const Print       *print = this->print();
         auto               throw_on_cancel_callback = std::function<void()>([print](){ print->throw_if_canceled(); });
         MeshSlicingParamsEx params;
-        params.trafo = this->trafo_centered();
+        params.trafo = this->trafo_sliced();
         for (; it_volume != it_volume_end; ++ it_volume)
             if ((*it_volume)->type() == model_volume_type) {
                 std::vector<ExPolygons> slices2 = slice_volume(*(*it_volume), zs, params, throw_on_cancel_callback);
@@ -5682,6 +5902,19 @@ std::vector<Polygons> PrintObject::slice_support_volumes(const ModelVolumeType m
         }
     }
     return slices;
+}
+
+std::vector<ExPolygons> PrintObject::slice_single_volume_regions(const ModelVolume* volume) const
+{
+    if (volume == nullptr)
+        return {};
+    // Match the existing slicing heights and the frame the layers were sliced in (belt
+    // pre-slice transforms included) without flattening holes.
+    const std::vector<float> zs = zs_from_layers(this->layers());
+    MeshSlicingParamsEx params;
+    params.trafo = this->trafo_sliced();
+    const Print *print = this->print();
+    return slice_volume(*volume, zs, params, [print]() { print->throw_if_canceled(); });
 }
 
 } // namespace Slic3r

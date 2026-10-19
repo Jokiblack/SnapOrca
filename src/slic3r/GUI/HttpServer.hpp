@@ -2,8 +2,16 @@
 #define slic3r_Http_App_hpp_
 
 #include <atomic>
+#include <condition_variable>
+#include <boost/asio/ip/basic_endpoint.hpp>
+#include <functional>
+#include <boost/asio/io_service.hpp>
+#include <boost/asio/ip/tcp.hpp>
+#include <boost/asio/streambuf.hpp>
 #include <iostream>
+#include <map>
 #include <mutex>
+#include <sstream>
 #include <stack>
 
 #include <boost/beast/core.hpp>
@@ -14,6 +22,7 @@
 #include <string>
 #include <set>
 #include <memory>
+#include <utility>
 
 #define LOCALHOST_PORT      13618
 #define PAGE_HTTP_PORT      13619
@@ -120,6 +129,16 @@ public:
         void write_response(std::stringstream& ssOut) override;
     };
 
+    class ResponseHtml : public Response
+    {
+        const std::string html;
+
+    public:
+        explicit ResponseHtml(std::string html) : html(std::move(html)) {}
+        ~ResponseHtml() override = default;
+        void write_response(std::stringstream& ssOut) override;
+    };
+
     class ResponseFile : public Response
     {
         std::string file_path;
@@ -175,6 +194,7 @@ public:
     void start_restart_check();  // 启动重启检查
     void stop_restart_check();   // 停止重启检查
     void simulate_crash();       // 模拟服务器崩溃，用于测试重启机制
+    void set_port(boost::asio::ip::port_type new_port) { if (!start_http_server) port = new_port; }
     void set_request_handler(const std::function<std::shared_ptr<Response>(const std::string&)>& m_request_handler);
     void setPort(boost::asio::ip::port_type new_port) { 
         if (!start_http_server) {  // 只有在服务器未启动时才允许修改端口
@@ -187,6 +207,7 @@ public:
     static std::string map_url_to_file_path(const std::string& url);
 
     static std::shared_ptr<Response> bbl_auth_handle_request(const std::string& url);
+    static std::shared_ptr<Response> auth_handle_request(const std::string& url, const std::string& provider);
 
     static std::shared_ptr<Response> web_server_handle_request(const std::string& url);
 

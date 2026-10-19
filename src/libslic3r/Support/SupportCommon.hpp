@@ -1,27 +1,28 @@
 #ifndef slic3r_SupportCommon_hpp_
 #define slic3r_SupportCommon_hpp_
 
-#include "../Layer.hpp"
 #include "../Polygon.hpp"
 #include "../Print.hpp"
 #include "../ClipperUtils.hpp"
 #include "../ExPolygon.hpp"
+#include "libslic3r/PrintConfig.hpp"
+#include "libslic3r/ExtrusionEntity.hpp"
 #include "SupportLayer.hpp"
 #include "SupportParameters.hpp"
+#include "../Point.hpp"
+#include "../libslic3r.h"
+#include <utility>
+#include <algorithm>
+#include <vector>
+
+namespace Slic3r { class Fill; }
+namespace Slic3r { class Flow; }
+namespace Slic3r { struct SlicingParameters; }
 
 namespace Slic3r {
 
 class PrintObject;
 class SupportLayer;
-
-// Remove bridges from support contact areas.
-// To be called if PrintObjectConfig::dont_support_bridges.
-void remove_bridges_from_contacts(
-    const PrintConfig   &print_config, 
-    const Layer         &lower_layer,
-    const LayerRegion   &layerm,
-    float                fw, 
-    Polygons            &contact_polygons);
 
 // Turn some of the base layers into base interface layers.
 // For soluble interfaces with non-soluble bases, print maximum two first interface layers with the base
@@ -196,16 +197,25 @@ template<typename CollisionPolyType>
             steps = distance / step_size;
     }
     for (int i = 0; i < steps; ++i) {
-        ret = diff_ex(offset_ex(ret, step_size, ClipperLib::jtRound, scaled<float>(0.01)), collision_trimmed());
+        ret = diff_ex(offset_ex(ret, step_size, jtRound, scaled<float>(0.01)), collision_trimmed());
         if (i % 10 == 7) ret = expolygons_simplify(ret, scaled<double>(0.015));
     }
     float last_offset = distance - steps * step_size;
-    if (last_offset > SCALED_EPSILON) ret = offset_ex(ret, distance - steps * step_size, ClipperLib::jtRound, scaled<float>(0.01));
+    if (last_offset > SCALED_EPSILON) ret = offset_ex(ret, distance - steps * step_size, jtRound, scaled<float>(0.01));
     ret = expolygons_simplify(ret, scaled<double>(0.015));
 
     if (do_final_difference) ret = diff_ex(ret, collision_trimmed());
     return union_ex(ret);
 }
+// Belt floor: compute the belt-side half-plane polygon at a given print_z.
+// Used to clip support polygons against the belt surface.
+Polygons belt_floor_surface_polygon(
+    const SlicingParameters &slicing_params, const PrintConfig &print_config,
+    const PrintObject &object, coordf_t print_z);
+
+// Build plate tilt: XY drift of gravity per unit of layer height, zero on a level plate.
+// The tilt is capped below 90 degrees to keep the drift finite.
+Vec2d build_plate_tilt_slope(const PrintConfig &print_config);
 
 } // namespace Slic3r
 

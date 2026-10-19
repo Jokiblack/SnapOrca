@@ -7,8 +7,23 @@
 #include "libslic3r/Utils.hpp"
 #include "I18N.hpp"
 
+#include <string>
+#include <sstream>
+#include <ios>
+#include <cctype>
+#include <iomanip>
+#include <boost/filesystem/operations.hpp>
+#include <boost/log/trivial.hpp>
+#include <cstddef>
 #include <wx/display.h>
 #include "sentry_wrapper/SentryWrapper.hpp"
+#include <wx/gdicmn.h>
+#include <wx/popupwin.h>
+#include <wx/sizer.h>
+#include <wx/timer.h>
+#include <wx/file.h>
+#include <wx/webview.h>
+#include <wx/window.h>
 
 namespace fs = boost::filesystem;
 
@@ -99,10 +114,7 @@ void MarkdownTip::LoadStyle()
         ph /= "tooltip/styled.html";
         _data_dir = false;
     }
-    auto url = ph.string();
-    std::replace(url.begin(), url.end(), '\\', '/');
-    url = "file:///" + url;
-    _tipView->LoadURL(from_u8(url));
+    _tipView->LoadURL(file_url_from_path(ph));
     _lastTip.clear();
 }
 
