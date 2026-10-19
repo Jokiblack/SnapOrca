@@ -871,7 +871,6 @@ class PartPlateList : public ObjectBase
 
     int m_filament_count = 1;
 
-    int m_filament_count = 1;
 
     bool m_filament_group_dirty = false;
 

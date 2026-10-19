@@ -870,8 +870,6 @@ public:
     // BBS
     //void show_action_buttons(const bool is_ready_to_slice) const;
 
-    void             set_global_filament_map(const std::vector<int>& filament_map);
-    std::vector<int> get_global_filament_map() const;
 
     wxString get_project_filename(const wxString& extension = wxEmptyString) const;
     wxString get_export_gcode_filename(const wxString& extension = wxEmptyString, bool only_filename = false, bool export_all = false) const;

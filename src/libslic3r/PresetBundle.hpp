@@ -517,7 +517,6 @@ public:
                                                                                                NozzleVolumeType   nozzle_volume_type);
     Preset *                    get_similar_printer_preset(std::string printer_model, std::string printer_variant);
 
-    Preset *                    get_similar_printer_preset(std::string printer_model, std::string printer_variant);
     
     PresetCollection            prints;
     PresetCollection            sla_prints;

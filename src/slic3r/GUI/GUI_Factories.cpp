@@ -191,7 +191,7 @@ std::map<std::string, std::vector<SimpleSettingData>> SettingsFactory::PART_CATE
        {"sparse_infill_density", "", 1},
        {"fill_multiline", "", 1},
        {"sparse_infill_pattern", "", 1},
-       {"sparse_infill_filament", "", 1},
+       {"sparse_infill_filament_id", "", 1},
        {"tpms_adaptive", "", 1},
        {"tpms_interior_density", "", 1},
        {"tpms_adaptive_gradient", "", 1},

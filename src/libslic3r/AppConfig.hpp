@@ -98,9 +98,9 @@ struct DeviceInfo {
 
     
     // For JSON serialization, nozzle_volume_type needs to be compatible with scenarios where this field is missing in old configurations
-    friend void to_json(json& j, const DeviceInfo& device)
+    friend void to_json(nlohmann::json& j, const DeviceInfo& device)
     {
-        j = json{{"ip", device.ip},
+        j = nlohmann::json{{"ip", device.ip},
                  {"dev_id", device.dev_id},
                  {"dev_name", device.dev_name},
                  {"model_name", device.model_name},
@@ -124,7 +124,7 @@ struct DeviceInfo {
                  {"id", device.id}};
     }
 
-    friend void from_json(const json& j, DeviceInfo& device)
+    friend void from_json(const nlohmann::json& j, DeviceInfo& device)
     {
         j.at("ip").get_to(device.ip);
         j.at("dev_id").get_to(device.dev_id);
@@ -496,7 +496,7 @@ public:
 	bool get_mouse_device_invert_roll(const std::string& name, bool& invert) const
 		{ return get_3dmouse_device_numeric_value(name, "invert_roll", invert); }
 
-	void update_filament_names(json& j);
+	void update_filament_names(nlohmann::json& j);
 
 	static const std::string SECTION_FILAMENTS;
     static const std::string SECTION_MATERIALS;

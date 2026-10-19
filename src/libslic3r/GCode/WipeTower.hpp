@@ -134,8 +134,6 @@ public:
         bool is_tool_change{ false };
         Vec2f tool_change_start_pos;
 
-		bool                    is_tool_change{false};
-		Vec2f                   tool_change_start_pos;
 
         // Pass a polyline so that normal G-code generator can do a wipe for us.
         // The wipe cannot be done by the wipe tower because it has to pass back
@@ -160,8 +158,6 @@ public:
         bool is_contact = false;
         NozzleChangeResult nozzle_change_result;
 
-        bool               is_contact = false;
-        NozzleChangeResult nozzle_change_result;
 
         // Orca: folded into a later, thicker layer, so the emitter drops it. Set by the tower, so
         // the two cannot disagree about which layers print.

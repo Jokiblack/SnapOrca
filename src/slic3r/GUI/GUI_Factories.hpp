@@ -145,7 +145,6 @@ private:
     
     void        create_filament_action_menu(bool init, int active_filament_menu_id);
 
-    void        create_filament_action_menu(bool init, int active_filament_menu_id);
 
     wxMenu*     append_submenu_add_generic(wxMenu* menu, ModelVolumeType type);
     // Orca: add submenu for adding handy models

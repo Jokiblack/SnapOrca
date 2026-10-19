@@ -4125,16 +4125,14 @@ static DynamicPrintConfig resolved_model_config_for_tab(const DynamicPrintConfig
 
     if (const auto* extruder_opt = config.option<ConfigOptionInt>("extruder"); extruder_opt != nullptr && extruder_opt->value > 0) {
         const int extruder = extruder_opt->value;
-        if (!resolved.has("wall_filament"))
-            resolved.set_key_value("wall_filament", new ConfigOptionInt(extruder));
-        if (!resolved.has("sparse_infill_filament"))
-            resolved.set_key_value("sparse_infill_filament", new ConfigOptionInt(extruder));
-        if (!resolved.has("solid_infill_filament"))
-            resolved.set_key_value("solid_infill_filament", new ConfigOptionInt(extruder));
+        for (const char* key : {"outer_wall_filament_id", "inner_wall_filament_id", "sparse_infill_filament_id",
+                                "internal_solid_filament_id"})
+            if (!resolved.has(key))
+                resolved.set_key_value(key, new ConfigOptionInt(extruder));
     }
 
-    if (!resolved.has("solid_infill_filament") && resolved.has("sparse_infill_filament"))
-        resolved.set_key_value("solid_infill_filament", new ConfigOptionInt(resolved.opt_int("sparse_infill_filament")));
+    if (!resolved.has("internal_solid_filament_id") && resolved.has("sparse_infill_filament_id"))
+        resolved.set_key_value("internal_solid_filament_id", new ConfigOptionInt(resolved.opt_int("sparse_infill_filament_id")));
 
     return resolved;
 }

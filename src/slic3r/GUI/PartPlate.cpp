@@ -161,7 +161,7 @@ namespace {
 template <typename ConfigLike>
 int resolve_sparse_infill_filament(const ConfigLike &config, int inherited_sparse_infill_filament)
 {
-    const ConfigOption *sparse_opt = config.option("sparse_infill_filament");
+    const ConfigOption *sparse_opt = config.option("sparse_infill_filament_id");
     return sparse_opt != nullptr && sparse_opt->getInt() > 0 ? sparse_opt->getInt() : inherited_sparse_infill_filament;
 }
 

@@ -57,6 +57,8 @@
 
 using namespace nlohmann;
 
+using json = nlohmann::json;
+
 namespace Slic3r {
 
 static const std::string VERSION_CHECK_URL_STABLE = "https://api.github.com/repos/Snapmaker/OrcaSlicer/releases/latest";

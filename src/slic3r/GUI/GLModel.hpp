@@ -138,7 +138,6 @@ namespace GUI {
             unsigned int vao_id{ 0 };
             unsigned int vbo_id{ 0 };
             unsigned int ibo_id{ 0 };
-            unsigned int vao_id{ 0 };
             size_t vertices_count{ 0 };
             size_t indices_count{ 0 };
             bool texCoordBoundsValid{ false };

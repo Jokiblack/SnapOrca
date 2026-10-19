@@ -139,7 +139,6 @@ public:
     //BBS:
     Polylines equally_spaced_lines(double distance) const;
 
-    void reset_to_linear_move();
 private:
     void append_fitting_result_after_append_points();
     void append_fitting_result_after_append_polyline(const Polyline& src);
