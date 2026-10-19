@@ -2026,7 +2026,7 @@ bool TriangleSelector::has_facets(const TriangleSplittingData &data, const Enfor
         };
         // < 0 -> negative of a number of children
         // >= 0 -> state
-        auto num_children_or_state = [&next_nibble]() -> int {
+        auto num_children_or_state = [&next_nibble, &truncated]() -> int {
             int code               = next_nibble();
             int num_of_split_sides = code & 0b11;
             if (num_of_split_sides != 0)
