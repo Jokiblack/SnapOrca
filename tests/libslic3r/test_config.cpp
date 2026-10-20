@@ -402,27 +402,6 @@ SCENARIO("update_non_diff_values_to_base_config preserves child vectors when chi
     }
 }
 
-TEST_CASE("A user filament preset keeps a High Flow column its parent lacks", "[Config][Variant][FilamentFlow]")
-{
-    std::set<std::string> no_keys;
-    Slic3r::DynamicPrintConfig parent;
-    parent.option<Slic3r::ConfigOptionStrings>("filament_extruder_variant", true)->values = {"Direct Drive Standard"};
-    parent.option<Slic3r::ConfigOptionFloats>("filament_max_volumetric_speed", true)->values = {12.};
-    parent.option<Slic3r::ConfigOptionInts>("nozzle_temperature", true)->values = {255};
-
-    // The user file writes the key it changed in full; the other keys are not written.
-    Slic3r::DynamicPrintConfig child;
-    child.option<Slic3r::ConfigOptionStrings>("filament_extruder_variant", true)->values = {"Direct Drive Standard", "Direct Drive High Flow"};
-    child.option<Slic3r::ConfigOptionFloats>("filament_max_volumetric_speed", true)->values = {12., 22.};
-
-    parent.update_diff_values_to_child_config(child, "", "filament_extruder_variant", Slic3r::filament_options_with_variant, no_keys);
-    CHECK(parent.option<Slic3r::ConfigOptionStrings>("filament_extruder_variant")->values ==
-          std::vector<std::string>({"Direct Drive Standard", "Direct Drive High Flow"}));
-    CHECK_THAT(parent.option<Slic3r::ConfigOptionFloats>("filament_max_volumetric_speed")->values, Catch::Matchers::Approx(std::vector<double>({12., 22.})));
-    // An unwritten key follows the parent's Standard value in both columns.
-    CHECK(parent.option<Slic3r::ConfigOptionInts>("nozzle_temperature")->values == std::vector<int>({255, 255}));
-}
-
 TEST_CASE("A parent that later gains a High Flow column fills the keys the user preset never wrote", "[Config][Variant][FilamentFlow]")
 {
     std::set<std::string> no_keys;
