@@ -151,7 +151,9 @@ Generator::Generator(PrintObject* m_object, std::vector<Polygons>& contours, std
     //lower density lightning performs opposite
     //TODO: decide whether enable density controller in advanced options or not
     density = std::max(0.15f, density);
-    m_supporting_radius = coord_t(m_infill_extrusion_width) / density;
+    // Never let the supporting radius (and thus the DistanceField cell size) collapse to 0,
+    // which would make sample_grid_pattern loop forever.
+    m_supporting_radius = std::max<coord_t>(coord_t(m_infill_extrusion_width / density), scaled<coord_t>(0.05));
     // Keep support-lightning behavior fixed and independent of user print-region angles.
     const double lightning_infill_overhang_angle = M_PI / 4; // 45 degrees
     const double lightning_infill_prune_angle = M_PI / 4; // 45 degrees

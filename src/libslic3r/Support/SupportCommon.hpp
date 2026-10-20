@@ -80,7 +80,10 @@ void generate_support_toolpaths(
     const SupportGeneratorLayersPtr   	&top_contacts,
     const SupportGeneratorLayersPtr   	&intermediate_layers,
 	const SupportGeneratorLayersPtr   	&interface_layers,
-    const SupportGeneratorLayersPtr   	&base_interface_layers);
+    const SupportGeneratorLayersPtr   	&base_interface_layers,
+    // Organic tree only: per-layer lightning infill regions for newly opened internal voids (organic tree
+    // base is otherwise printed sheath-only / hollow). Indexed like intermediate_layers.
+    const std::vector<ExPolygons>       &lightning_infill_areas = {});
 // FN_HIGHER_EQUAL: the provided object pointer has a Z value >= of an internal threshold.
 // Find the first item with Z value >= of an internal threshold of fn_higher_equal.
 // If no vec item with Z value >= of an internal threshold of fn_higher_equal is found, return vec.size()
