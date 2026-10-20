@@ -342,7 +342,7 @@ private:
     bool   m_use_gap_wall                 = false;
     // Per plan layer, each toolchange's entry position (tower-local, un-shifted frame):
     // where the wall is cut open so the entry travel does not cross the printed wall.
-    // Filled by compute_wall_skip_points() once the plan is final.
+    // Filled by get_all_wall_skip_points() once the plan is final (wipe_tower_wall_gap).
     std::vector<std::vector<Vec2f>> m_wall_skip_points;
 
     bool   m_enable_arc_fitting           = false;
@@ -404,30 +404,6 @@ private:
 
     // Whether toolchange_Unload() rams this (old) tool out.
     bool tool_ramming_enabled(size_t tool) const { return (m_semm && m_enable_filament_ramming) || m_filpar[tool].multitool_ramming; }
-    // Whether the wipe restarts at the box boundary on a fresh row below the quantized
-    // ram band after ramming this (old) tool out (multi-tool gap wall; SEMM keeps the
-    // stock continue-from-ram-end behavior).
-    bool boundary_wipe_start_enabled(size_t tool) const { return tool_ramming_enabled(tool) && !m_semm && m_use_gap_wall; }
-
-    // With a boundary wipe start the wipe begins on a fresh row below the quantized ram
-    // band. Y offset from the box start to that first wipe row.
-    float wipe_start_offset_after_ram(float ramming_depth, bool first_layer) const
-    {
-        return ramming_depth + wipe_row_spacing(first_layer) - (m_perimeter_width + wipe_line_width()) / 2.f;
-    }
-
-    // Tower-local entry position of a toolchange whose box starts depth_traversed into
-    // the layer: the box corner, moved down to the first wipe row when the plan gives
-    // it a boundary wipe start (ramming_depth > 0 iff the unload rams). tool_change()
-    // enters here and compute_wall_skip_points() cuts the wall gap here, so the routed
-    // entry, the gap and the wipe scrub all share one opening.
-    Vec2f toolchange_entry_pos(float depth_traversed, float ramming_depth, bool first_layer) const
-    {
-        Vec2f pos(m_perimeter_width / 2.f, m_perimeter_width / 2.f + depth_traversed);
-        if (!m_semm && m_use_gap_wall && ramming_depth > 0.f)
-            pos.y() += wipe_start_offset_after_ram(ramming_depth, first_layer);
-        return pos;
-    }
 
 	// Calculates extrusion flow needed to produce required line width for given layer height
 	float extrusion_flow(float layer_height = -1.f) const	// negative layer_height - return current m_extrusion_flow
