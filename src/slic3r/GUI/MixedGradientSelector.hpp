@@ -3,7 +3,7 @@
 #include "GUI_App.hpp"
 #include "Widgets/Label.hpp"
 #include "I18N.hpp"
-#include "libslic3r/filament_mixer.h"
+#include "libslic3r/FilamentMixer.hpp"
 
 #include <wx/panel.h>
 #include <wx/dcbuffer.h>

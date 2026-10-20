@@ -1,8 +1,8 @@
 #include <catch2/catch_test_macros.hpp>
-#include "libslic3r/filament_mixer.h"
+#include "libslic3r/FilamentMixer.hpp"
 
 // Golden baseline for the legacy Justin-Hayes polynomial mixer backend
-// (Slic3r::filament_mixer_lerp -> filament_mixer::lerp in filament_mixer_model.h).
+// (Slic3r::filament_mixer_lerp -> filament_mixer::lerp in FilamentMixerModel.hpp).
 //
 // Purpose: pin the CURRENT legacy filament_mixer backend output.
 // Any refactor of filament_mixer* is immediately visible if it
@@ -10,7 +10,7 @@
 
 TEST_CASE("filament_mixer_lerp documented example", "[mixed_filament][golden]")
 {
-    // Documented in filament_mixer_model.h: blue(0,33,133) + yellow(252,211,0)
+    // Documented in FilamentMixerModel.hpp: blue(0,33,133) + yellow(252,211,0)
     // @ t=0.5 -> green(47,141,56).
     unsigned char r = 0, g = 0, b = 0;
     Slic3r::filament_mixer_lerp(0, 33, 133, 252, 211, 0, 0.5f, &r, &g, &b);

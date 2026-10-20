@@ -1145,7 +1145,6 @@ bool TextCtrl::value_was_changed()
     }
     case coString:
     case coStrings:
-    case coFloatsOrPercents:
     case coFloatOrPercent:
     case coFloatsOrPercents:
         return boost::any_cast<std::string>(m_value) != boost::any_cast<std::string>(val);

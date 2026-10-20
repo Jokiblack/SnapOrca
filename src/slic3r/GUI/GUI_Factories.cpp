@@ -2376,11 +2376,6 @@ wxMenu* MenuFactory::plate_menu()
     return &m_plate_menu;
 }
 
-wxMenu* MenuFactory::filament_action_menu(int active_filament_menu_id) {
-    create_filament_action_menu(false, active_filament_menu_id);
-    return &m_filament_action_menu;
-}
-
 wxMenu* MenuFactory::assemble_object_menu()
 {
     wxMenu* menu = new MenuWithSeparators();

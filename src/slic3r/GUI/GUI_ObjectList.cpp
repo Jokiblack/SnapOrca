@@ -1199,24 +1199,6 @@ void ObjectList::update_objects_list_filament_column(size_t filaments_count)
     m_prevent_update_filament_in_config = false;
 }
 
-void ObjectList::update_objects_list_filament_column_when_delete_filament(size_t filament_id, size_t filaments_count, int replace_filament_id)
-{
-    m_prevent_update_filament_in_config = true;
-
-    // BBS: update extruder values even when filaments_count is 1, because it may be reduced from value greater than 1
-    if (m_objects)
-        update_filament_values_for_items_when_delete_filament(filament_id, replace_filament_id);
-
-    update_filament_colors();
-
-    // set show/hide for this column
-    set_filament_column_hidden(filaments_count == 1);
-    // a workaround for a wrong last column width updating under OSX
-    GetColumn(colEditing)->SetWidth(25);
-
-    m_prevent_update_filament_in_config = false;
-}
-
 void ObjectList::update_filament_colors()
 {
     m_objects_model->UpdateColumValues(colFilament);

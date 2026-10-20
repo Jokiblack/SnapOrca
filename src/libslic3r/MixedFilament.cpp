@@ -1,6 +1,6 @@
 #include "MixedFilament.hpp"
 #include "LocalesUtils.hpp"
-#include "filament_mixer.h"
+#include "FilamentMixer.hpp"
 #include "libslic3r.h"
 
 #include <algorithm>

@@ -1,6 +1,6 @@
 #pragma once
 
-#include "libslic3r/filament_mixer.h"
+#include "libslic3r/FilamentMixer.hpp"
 
 #include <wx/panel.h>
 #include <wx/dcbuffer.h>
