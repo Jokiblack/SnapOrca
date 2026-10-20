@@ -1368,6 +1368,10 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
 
     for (auto el : {"flush_into_infill", "flush_into_support", "flush_into_objects"})
         toggle_field(el, have_prime_tower);
+    // Snapmaker Orca: a tool changer (several heads, no single extruder multi-material purging) only
+    // honors the flush options through this switch; the single extruder path honors them by itself.
+    toggle_line("toolchanger_flush_into_objects", have_prime_tower && !is_belt_printer && !bSEMM &&
+                preset_bundle->printers.get_edited_preset().config.option<ConfigOptionFloats>("nozzle_diameter")->size() > 1);
 
     bool have_avoid_crossing_perimeters = config->opt_bool("reduce_crossing_wall");
     toggle_line("max_travel_detour_distance", have_avoid_crossing_perimeters);
