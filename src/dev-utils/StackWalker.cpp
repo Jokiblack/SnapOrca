@@ -110,18 +110,9 @@ BOOL CStackWalker::LoadSymbol()
 		StringCchCat(szSymbolPath, MAX_SYMBOL_PATH, _T(";"));
 	}
 
-	ZeroMemory(szTemp, MAX_PATH * sizeof(TCHAR));
-	if (GetEnvironmentVariable(_T("SYSTEMDRIVE"), szTemp, MAX_PATH) > 0)
-	{
-			StringCchCat(szSymbolPath, MAX_SYMBOL_PATH, _T("SRV*"));
-			StringCchCat(szSymbolPath, MAX_SYMBOL_PATH, szTemp);
-			StringCchCat(szSymbolPath, MAX_SYMBOL_PATH, _T("\\websymbols"));
-			StringCchCat(szSymbolPath, MAX_SYMBOL_PATH, _T("*http://msdl.microsoft.com/download/symbols;"));
-	}
-	else
-	{
-		StringCchCat(szSymbolPath, MAX_SYMBOL_PATH, _T("SRV*c:\\websymbols*http://msdl.microsoft.com/download/symbols;"));
-	}
+	// Snapmaker: no Microsoft symbol server here. The crash handler runs this inside a dying
+	// process, so it must not go online (or stall for minutes downloading system PDBs); our own
+	// frames resolve from the PDBs next to the binaries, the rest from the minidump offline.
 
 	size_t sLength = 0;
 	StringCchLength(szSymbolPath, MAX_SYMBOL_PATH, &sLength);
