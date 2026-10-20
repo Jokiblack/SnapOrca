@@ -73,6 +73,13 @@ static const int g_extra_height = 64;
 static const int g_min_setting_width = 464;
 static const int g_vscroll_width = 48;
 
+// Snapmaker: objects and features may use mixed (virtual) filaments numbered after the physical
+// ones, so stale-id cleanup must be bounded by every slot, not only by the physical colours.
+static size_t total_filament_slots(int physical_count)
+{
+    const size_t physical = size_t(std::max(physical_count, 1));
+    return wxGetApp().preset_bundle ? wxGetApp().preset_bundle->mixed_filaments.total_filaments(physical) : physical;
+}
 
 static int g_dialog_width = 0;
 static int g_dialog_height = 0;
@@ -1612,7 +1619,7 @@ void ObjectGridTable::SetValue( int row, int col, const wxString& value )
             option_value.value = enum_value + 1;
             update_filament_to_config(grid_row->config, grid_col->key, option_value, option_ori_value, (grid_row->row_type == row_object));
             update_volume_values_from_object(row, col);
-            wxGetApp().obj_list()->update_filament_values_for_items(m_panel->m_filaments_count);
+            wxGetApp().obj_list()->update_filament_values_for_items(total_filament_slots(m_panel->m_filaments_count));
             //m_panel->m_plater->update();
         }
     }
@@ -2580,7 +2587,7 @@ bool ObjectGridTable::OnCellLeftClick(int row, int col, ConfigOptionType &type)
                     object_volume_id.object = m_panel->m_model->objects[grid_row->object_id];
                     object_volume_id.volume = (grid_row->row_type == row_object) ? nullptr : object_volume_id.object->volumes[grid_row->volume_id];
                     if (col == col_filaments_reset)
-                        wxGetApp().obj_list()->update_filament_values_for_items(m_panel->m_filaments_count);
+                        wxGetApp().obj_list()->update_filament_values_for_items(total_filament_slots(m_panel->m_filaments_count));
                     else
                         wxGetApp().obj_list()->object_config_options_changed(object_volume_id);
 

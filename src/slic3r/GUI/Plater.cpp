@@ -6688,6 +6688,21 @@ static bool is_snapmaker_u1_printer(const DynamicPrintConfig &printer_config)
     return printer_model_opt && boost::icontains(printer_model_opt->value, "Snapmaker") && boost::icontains(printer_model_opt->value, "U1");
 }
 
+// Snapmaker printers mix colours with Full Spectrum (MixedFilamentManager, virtual ids after the
+// physical filaments). Upstream's mixed slots (filament_is_mixed) live inside the filament list and
+// would shift that numbering and the toolhead mapping, so they are not offered on these printers.
+static bool is_snapmaker_printer_selected()
+{
+    const PresetBundle *bundle = wxGetApp().preset_bundle;
+    if (bundle == nullptr)
+        return false;
+    const Preset &printer = bundle->printers.get_edited_preset();
+    if (const Preset *base = bundle->printers.get_preset_base(printer); base != nullptr && base->vendor != nullptr)
+        return base->vendor->id == PresetBundle::SM_BUNDLE;
+    const auto *printer_model_opt = printer.config.option<ConfigOptionString>("printer_model");
+    return printer_model_opt != nullptr && boost::icontains(printer_model_opt->value, "Snapmaker");
+}
+
 bool Sidebar::reset_bed_type_combox_choices(bool is_sidebar_init)
 {
     if (!p->combo_printer_bed) {
@@ -6819,8 +6834,18 @@ void Sidebar::update_mixed_filament_list()
     auto* grad_opt        = project_config.option<ConfigOptionBools>("filament_mixed_gradient");
     auto* grad_range_opt  = project_config.option<ConfigOptionStrings>("filament_mixed_gradient_range");
 
+    const bool snapmaker_printer = is_snapmaker_printer_selected();
     bool can_mix = (num_physical >= 2);
     bool has_mixed = can_mix && !mixed_indices.empty();
+    if (snapmaker_printer && !mixed_indices.empty()) {
+        // Keep the slots a loaded project brings (they stay editable and removable), just report them once per count.
+        static size_t logged_count = 0;
+        if (logged_count != mixed_indices.size()) {
+            logged_count = mixed_indices.size();
+            BOOST_LOG_TRIVIAL(warning) << "Snapmaker printer with " << mixed_indices.size()
+                                       << " upstream mixed filament slot(s) (filament_is_mixed); Full Spectrum is the supported way to mix colours";
+        }
+    }
 
     // Check integrity of mixed filament component references
     std::vector<size_t> broken_slots;
@@ -6852,12 +6877,14 @@ void Sidebar::update_mixed_filament_list()
     }
 
     bool at_limit = (wxGetApp().preset_bundle->filament_presets.size() >= size_t(EnforcerBlockerType::ExtruderMax));
-    p->m_btn_add_mixed_filament->Show(can_mix && !has_mixed && !at_limit);
+    p->m_btn_add_mixed_filament->Show(can_mix && !has_mixed && !at_limit && !snapmaker_printer);
     p->m_panel_mixed_title->Show(has_mixed);
     p->m_mixed_scroll_area->Show(has_mixed);
     p->m_panel_mixed_content->Show(has_mixed);
-    if (p->m_btn_mixed_add)
+    if (p->m_btn_mixed_add) {
+        p->m_btn_mixed_add->Show(!snapmaker_printer);
         p->m_btn_mixed_add->Enable(!at_limit);
+    }
     p->m_panel_mixed_warning->Show(false);
 
     // Show/dismiss 3D canvas notification for broken mixed filaments
@@ -7510,6 +7537,10 @@ static bool create_mixed_filament_from_result(
 {
     if (!sidebar || result.components.size() < 2 || result.ratios.size() < 2)
         return false;
+    if (is_snapmaker_printer_selected()) {
+        BOOST_LOG_TRIVIAL(warning) << "Not creating an upstream mixed filament slot on a Snapmaker printer; use Full Spectrum";
+        return false;
+    }
     if (!dynamic_cast<Plater*>(sidebar->GetParent()))
         return false;
 
@@ -7637,6 +7668,7 @@ void Sidebar::add_mixed_filament()
 
     size_t num_physical = p->combos_filament.size();
     if (num_physical < 2) return;
+    if (is_snapmaker_printer_selected()) return;
     if (wxGetApp().preset_bundle->filament_presets.size() >= size_t(EnforcerBlockerType::ExtruderMax)) return;
 
     std::vector<std::string> color_strs, names, types;

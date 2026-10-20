@@ -752,6 +752,24 @@ bool bbs_is_valid_object_type(const std::string& type)
 
 namespace Slic3r {
 
+// Snapmaker Orca <= 2.4 (and OrcaSlicer < 2.5) stored one filament for all walls ("wall_filament") and
+// one for all solid infill, top and bottom surfaces included ("solid_infill_filament"). handle_legacy()
+// renames each to a single new key (outer wall / internal solid), so the inner walls and the top and
+// bottom surfaces would silently fall back to the object filament. Feed the same value to the other
+// new keys through their own legacy names, which apply the same "1" -> "0" (Default) translation.
+template<class TConfig>
+static void set_deserialize_feature_filament_aware(TConfig &config, const std::string &key, const std::string &value,
+                                                   ConfigSubstitutionContext &substitutions)
+{
+    config.set_deserialize(key, value, substitutions);
+    if (key == "wall_filament") {
+        config.set_deserialize("inner_wall_filament", value, substitutions);
+    } else if (key == "solid_infill_filament") {
+        config.set_deserialize("top_solid_infill_filament", value, substitutions);
+        config.set_deserialize("bottom_solid_infill_filament", value, substitutions);
+    }
+}
+
 static size_t physical_filament_count_from_project_config(const DynamicPrintConfig &config)
 {
     for (const char* key : {"filament_colour", "filament_settings_id",
@@ -2359,7 +2377,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                     else if (metadata.key == "module")
                         model_object->module_name = metadata.value;
                     else
-                        model_object->config.set_deserialize(metadata.key, metadata.value, config_substitutions);
+                        set_deserialize_feature_filament_aware(model_object->config, metadata.key, metadata.value, config_substitutions);
                 }
 
                 // select object's detected volumes
@@ -3188,7 +3206,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                         std::string opt_key = option.second.get<std::string>("<xmlattr>.opt_key");
                         std::string value = option.second.data();
 
-                        config.set_deserialize(opt_key, value, config_substitutions);
+                        set_deserialize_feature_filament_aware(config, opt_key, value, config_substitutions);
                     }
 
                     config_ranges[{ min_z, max_z }].assign_config(std::move(config));
@@ -5547,7 +5565,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                 else if ((metadata.key == MATRIX_KEY) || (metadata.key == MESH_SHARED_KEY))
                     continue;
                 else
-                    volume->config.set_deserialize(metadata.key, metadata.value, config_substitutions);
+                    set_deserialize_feature_filament_aware(volume->config, metadata.key, metadata.value, config_substitutions);
             }
 
             // Missing or unknown seam modes retain the ordinary modifier fallback.
@@ -5729,7 +5747,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                 else if (metadata.key == MERGED_GROUP_ID_KEY)
                     volume->set_merged_group_id(ObjectID((size_t) ::atoi(metadata.value.c_str())));
                 else
-                    volume->config.set_deserialize(metadata.key, metadata.value, config_substitutions);
+                    set_deserialize_feature_filament_aware(volume->config, metadata.key, metadata.value, config_substitutions);
             }
 
             // this may happen for 3mf saved by 3rd part softwares
