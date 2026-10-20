@@ -1828,7 +1828,7 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 				Semver soft_ver = Semver(std::string(Snapmaker_VERSION));
 				legal           = min_ver <= soft_ver;
 				if (!legal)
-					changelog += ("\n" + format_wxstr(_L("Snapmaker Orca %1% needed, but current version is %2%"), min_ver.to_string(), soft_ver.to_string()) +
+					changelog += ("\n" + GUI::format_wxstr(_L("Snapmaker Orca %1% needed, but current version is %2%"), min_ver.to_string(), soft_ver.to_string()) +
 					              "\n").ToStdString();
 			}
 
@@ -2605,7 +2605,7 @@ void PresetUpdater::load_flutter_web(const std::string& resource_path, bool serv
                 bool legal = true;
                 legal      = min_ver <= soft_ver;
                 if (!legal) {
-                    changelog += ("\n" + format_wxstr(_L("Snapmaker Orca %1% needed, but current version is %2%"), min_ver.to_string(), soft_ver.to_string()) +
+                    changelog += ("\n" + GUI::format_wxstr(_L("Snapmaker Orca %1% needed, but current version is %2%"), min_ver.to_string(), soft_ver.to_string()) +
                                   "\n")
                                      .ToStdString();
                 }
@@ -2781,7 +2781,7 @@ void PresetUpdater::import_system_profile()
                         bool legal = true;
                         legal      = min_ver <= soft_ver;
                         if (!legal) {
-                            changelog += ("\n" + format_wxstr(_L("Snapmaker Orca %1% needed, but current version is %2%"), min_ver.to_string(), soft_ver.to_string()) +
+                            changelog += ("\n" + GUI::format_wxstr(_L("Snapmaker Orca %1% needed, but current version is %2%"), min_ver.to_string(), soft_ver.to_string()) +
                                           "\n")
                                              .ToStdString();
                         }
