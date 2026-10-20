@@ -80,6 +80,7 @@
 #include "GCode/WipeTowerEstimate.hpp"
 #include "Utils.hpp"
 #include "PrintConfig.hpp"
+#include "UsedFilaments.hpp"
 #include "FilamentHotBedNozzleRules.hpp"
 #include "MaterialType.hpp"
 #include "Model.hpp"
@@ -577,7 +578,6 @@ static std::vector<LocalZWipeTowerToolchange> collect_local_z_wipe_tower_toolcha
     return toolchanges;
 }
 
-<<<<<<< snaporca-int
 // Return the effective wipe tower volume for a given extruder: the greater of
 // the global prime_volume and the per-filament minimal purge. This ensures
 // per-filament overrides are respected even in non-SEMM mode.
@@ -599,8 +599,6 @@ static float effective_wipe_tower_volume(const PrintConfig& config, size_t extru
             config.filament_minimal_purge_on_wipe_tower.values.end()));
 }
 
-=======
->>>>>>> lixnix/main
 } // namespace
 
 //BBS
@@ -727,6 +725,8 @@ bool Print::invalidate_state_by_config_options(const ConfigOptionResolver & /* n
         "outer_wall_acceleration",
         "inner_wall_acceleration",
         "initial_layer_acceleration",
+        "first_layer_travel_acceleration",
+        "first_layer_travel_jerk",
         "top_surface_acceleration",
         "bridge_acceleration",
         "travel_acceleration",
@@ -844,6 +844,17 @@ bool Print::invalidate_state_by_config_options(const ConfigOptionResolver & /* n
             steps.emplace_back(psGCodeExport);
         } else if (steps_ignore.find(opt_key) != steps_ignore.end()) {
             // These steps have no influence on the G-code whatsoever. Just ignore them.
+        } else if (
+               opt_key == "filament_volume_type"
+            || opt_key == "nozzle_volume_type"
+            || opt_key == "filament_flow_support"
+            || opt_key == "process_flow_support"
+            || opt_key == "printer_flow_support"
+            || opt_key == "filament_flow_step_size") {
+            // Snapmaker: switching a filament's flow variant changes the values read out of
+            // flow-variant arrays without the arrays themselves
+            // changing, so everything has to be recalculated. Do NOT move these keys into steps_gcode.
+            invalidated |= this->invalidate_all_steps();
         } else if (
                opt_key == "skirt_type"
             || opt_key == "skirt_loops"
@@ -1166,26 +1177,8 @@ std::vector<unsigned int> Print::support_material_extruders() const
     auto num_extruders = (unsigned int)m_config.filament_diameter.size();
 
     for (PrintObject *object : m_objects) {
-<<<<<<< snaporca-int
-        if (object->has_support_material() && append_support_extruders(object->config(), num_extruders, extruders))
+        if (object->has_support_material() && append_support_extruders(object->config(), m_config, num_extruders, extruders))
             support_uses_current_extruder = true;
-=======
-        if (object->has_support_material()) {
-            // Under support restrictions (nozzle diameter, material) a "default" (0) support filament resolves to a passing filament: one of the object's own or the deterministic fallback.
-            auto add_support_filament = [&](int configured, bool interface_role) {
-                assert(configured >= 0);
-                const unsigned int resolved_default = object->resolved_default_support_filament(interface_role);
-                if (configured == 0 && resolved_default == 0) {
-                    support_uses_current_extruder = true;
-                } else {
-                    unsigned int i = (configured > 0 ? (unsigned int)configured : resolved_default) - 1;
-                    extruders.emplace_back((i >= num_extruders) ? 0 : i);
-                }
-            };
-            add_support_filament(object->config().support_filament, false);
-            add_support_filament(object->config().support_interface_filament, true);
-        }
->>>>>>> lixnix/main
     }
 
     if (support_uses_current_extruder)
@@ -1198,22 +1191,23 @@ std::vector<unsigned int> Print::support_material_extruders() const
 
 // Appends 0-based indices of the support and support interface filaments of an object printing support material.
 // Returns true if support or support interface is printed with the filament of the object.
-bool Print::append_support_extruders(const PrintObjectConfig &config, unsigned int num_extruders, std::vector<unsigned int> &extruders)
+// ORCA: under a support restriction (support nozzle diameter, support material) a "default" (0) support
+// filament resolves to a passing filament of print_config (PrintObject::resolved_default_support_filament).
+bool Print::append_support_extruders(const PrintObjectConfig &config, const PrintConfig &print_config, unsigned int num_extruders, std::vector<unsigned int> &extruders)
 {
     bool uses_current_extruder = false;
-    assert(config.support_filament >= 0);
-    if (config.support_filament == 0)
-        uses_current_extruder = true;
-    else {
-        unsigned int i = (unsigned int)config.support_filament - 1;
-        extruders.emplace_back((i >= num_extruders) ? 0 : i);
-    }
-    assert(config.support_interface_filament >= 0);
-    if (config.support_interface_filament == 0)
-        uses_current_extruder = true;
-    else {
-        unsigned int i = (unsigned int)config.support_interface_filament - 1;
-        extruders.emplace_back((i >= num_extruders) ? 0 : i);
+    for (const bool interface_role : { false, true }) {
+        const int configured = interface_role ? config.support_interface_filament.value : config.support_filament.value;
+        assert(configured >= 0);
+        const SupportFilamentRestriction restriction{ config.support_nozzle_diameter.value,
+                                                      (interface_role ? config.support_interface_material : config.support_base_material).value };
+        const unsigned int filament = configured > 0 ? (unsigned int)configured : resolve_restricted_support_filament(print_config, restriction);
+        if (filament == 0)
+            uses_current_extruder = true;
+        else {
+            unsigned int i = filament - 1;
+            extruders.emplace_back((i >= num_extruders) ? 0 : i);
+        }
     }
     return uses_current_extruder;
 }
@@ -1225,31 +1219,9 @@ std::vector<unsigned int> Print::extruders(bool conside_custom_gcode) const
     append(extruders, this->support_material_extruders());
     sort_remove_duplicates(extruders);
 
-<<<<<<< snaporca-int
     if (conside_custom_gcode)
         this->append_tool_change_extruders(extruders);
     this->append_wipe_tower_extruder(extruders);
-=======
-    if (conside_custom_gcode) {
-        //BBS
-        const size_t num_physical = m_config.filament_colour.size();
-        const size_t num_filaments = m_mixed_filament_mgr.total_filaments(num_physical);
-        if (m_model.plates_custom_gcodes.find(m_model.curr_plate_index) != m_model.plates_custom_gcodes.end()) {
-            for (auto item : m_model.plates_custom_gcodes.at(m_model.curr_plate_index).gcodes) {
-                if (item.type == CustomGCode::Type::ToolChange && item.extruder <= int(num_filaments))
-                    extruders.push_back((unsigned int)(item.extruder - 1));
-            }
-        }
-    }
-
-    // The wipe tower extruder can also be set. When the wipe tower is enabled and it will be generated,
-    // append its extruder into the list too so it participates in tool ordering.
-    if (has_wipe_tower() && config().wipe_tower_filament != 0 && extruders.size() > 1) {
-        assert(config().wipe_tower_filament > 0 && config().wipe_tower_filament <= int(config().filament_diameter.size()));
-        extruders.emplace_back(config().wipe_tower_filament - 1); // the config value is 1-based
-    }
-
->>>>>>> lixnix/main
     sort_remove_duplicates(extruders);
 
     return extruders;
@@ -2476,7 +2448,7 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
     };
 
     std::vector<unsigned int> extruders = this->extruders();
-    [[maybe_unused]] unsigned int nozzles = m_config.nozzle_diameter.size();
+    unsigned int nozzles = m_config.nozzle_diameter.size();
 
     if (m_objects.empty())
         return {std::string()};
@@ -2697,7 +2669,6 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                  "enable_mixed_color_sublayer");
     }
 
-<<<<<<< snaporca-int
     if (nozzles < 2 && extruders.size() > 1) {
         auto ret = check_multi_filament_valid(*this);
         if (!ret.string.empty())
@@ -2710,17 +2681,6 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
         }
     }
 
-=======
-    // NOTE (merge): upstream Orca hard-blocks here with
-    //     if (nozzles < 2 && extruders.size() > 1) { check_multi_filament_valid(*this); ... }
-    // This fork deliberately removed that block (commit ed29afecd9, "Feature top cover").
-    // Snapmaker U1 is a single-nozzle multi-filament machine, so `nozzles < 2 && extruders > 1`
-    // is the *normal* mixed-filament case and blocking it would kill the Local-Z dithering
-    // feature. High/low temperature mixing is instead detected in real time from the
-    // per-preset `filament_is_high_temperature` option (Plater::check_filament_temp_mixing()
-    // and Print::filament_rule_mismatch_flags()/FilamentHotBedNozzleRules). Print::check_multi_filament_valid()
-    // is kept (still reachable from the GUI) but is intentionally not called from validate().
->>>>>>> lixnix/main
     if (m_config.print_sequence == PrintSequence::ByObject && (m_objects.size() > 1 || m_objects[0]->instances().size() > 1)) {
         if (m_config.timelapse_type == TimelapseType::tlSmooth)
             return {L("Smooth mode of timelapse is not supported when \"by object\" sequence is enabled.")};
@@ -2864,7 +2824,6 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
         bool   last_layer_below_max  = false;
         bool   have_height           = false;
 
-<<<<<<< snaporca-int
         if (belt_printer) {
             const double raw_z = print_object.model_object()->max_z();
             effective_max_z = raw_z;
@@ -2879,32 +2838,6 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                 last_layer_below_max = layers.size() >= 2 &&
                     raft_z + 0.5 * (layers[layers.size() - 2] + layers.back()) <= this->config().printable_height + EPSILON;
                 have_height          = true;
-=======
-            // Paint penetration may not exceed the total layer count (halved, see Slicing.cpp).
-            {
-                int max_top_penetration = 0, max_bottom_penetration = 0;
-                for (size_t region_idx = 0; region_idx < print_object.num_printing_regions(); ++ region_idx) {
-                    const PrintRegionConfig &region_config = print_object.printing_region(region_idx).config();
-                    max_top_penetration    = std::max(max_top_penetration, region_config.top_color_penetration_layers.value);
-                    max_bottom_penetration = std::max(max_bottom_penetration, region_config.bottom_color_penetration_layers.value);
-                }
-                if (max_top_penetration > total_layers)
-                    return StringObjectException{
-                        Slic3r::format(_u8L("The paint penetration layers (current: %1%) exceed the model layers (total: %2%). "
-                                            "Please reduce the top paint penetration layers."),
-                            max_top_penetration, total_layers),
-                        print_object.model_object(),
-                        "top_color_penetration_layers"
-                    };
-                if (max_bottom_penetration > total_layers)
-                    return StringObjectException{
-                        Slic3r::format(_u8L("The paint penetration layers (current: %1%) exceed the model layers (total: %2%). "
-                                            "Please reduce the bottom paint penetration layers."),
-                            max_bottom_penetration, total_layers),
-                        print_object.model_object(),
-                        "bottom_color_penetration_layers"
-                    };
->>>>>>> lixnix/main
             }
         }
 
@@ -3231,10 +3164,8 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                 // https://github.com/prusa3d/PrusaSlicer/commit/96b3ae85013ac363cd1c3e98ec6b7938aeacf46d
                 if (is_tree(object->config().support_type.value)) {
                     if (object->config().support_style == smsTreeOrganic ||
-                        (object->config().support_style == smsDefault &&
-                         !tree_default_style_is_hybrid(object->config().support_top_z_distance.value,
-                                                       object->config().support_interface_top_layers.value,
-                                                       object->model_object()->has_custom_layering()))) {
+                        // Orca: use organic as default
+                        object->config().support_style == smsDefault) {
 
                         // Orca: check the support wall count and the base pattern
                         if (object->config().tree_support_wall_count > 1 &&
@@ -3246,11 +3177,11 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                         if (object->config().support_base_pattern == SupportMaterialPattern::smpLightning)
                             warn(L("The Lightning base pattern is not supported by this support type; Rectilinear will be used instead."), "support_base_pattern");
 
-                        // Only the branch diameter is checked; the tip may be narrower than the support line
-                        // (102.5% lines on a 0.8 mm nozzle around the default 0.8 mm tip).
                         float extrusion_width = std::min(
                             support_material_flow(object).width(),
                             support_material_interface_flow(object).width());
+                        if (object->config().tree_support_tip_diameter < extrusion_width - EPSILON)
+                            return { L("Organic support tree tip diameter must not be smaller than support material extrusion width."), object, "tree_support_tip_diameter" };
                         if (object->config().tree_support_branch_diameter_organic < 2. * extrusion_width - EPSILON)
                             return { L("Organic support branch diameter must not be smaller than 2x support material extrusion width."), object, "tree_support_branch_diameter_organic" };
                         if (object->config().tree_support_branch_diameter_organic < object->config().tree_support_tip_diameter)
@@ -3359,17 +3290,6 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                         return refused_on_head(err_msg, object, "support_line_width", head);
                 }
             for (const PrintRegion &region : object->all_regions()) {
-<<<<<<< snaporca-int
-                const auto &bridge_width_opt = region.config().bridge_line_width;
-                for (FlowRole bridge_role : { frPerimeter, frInfill, frSolidInfill, frTopSolidInfill }) {
-                    const double nozzle_diameter = nozzle_diameter_for_filament(m_config, region.extruder(bridge_role), this->is_BBL_printer());
-                    const double bridge_width    = bridge_width_opt.get_abs_value(nozzle_diameter);
-                    if (bridge_width <= 0.)
-                        continue;
-                    if (bridge_width > nozzle_diameter) {
-                        err_msg = L("Bridge line width must not exceed nozzle diameter");
-                        return { err_msg, object, "bridge_line_width" };
-=======
                 const PrintRegionConfig &region_config = region.config();
                 // The role widths at the head of the role's filament; the bottom surfaces print the
                 // internal solid width with the bottom surface filament (Fill.cpp).
@@ -3441,7 +3361,6 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                             widest          = width;
                             widest_filament = unsigned(region.config().outer_wall_filament_id.value);
                         }
->>>>>>> lixnix/main
                     }
                     if (widest > max_width + EPSILON)
                         warn(Slic3r::format(_u8L("The maximum width of a segmented region (%1% mm) is narrower than the outer wall "
@@ -4047,17 +3966,12 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
     assert(bed_type_def != nullptr);
 
     // ORCA: check if bed type is compatible with all selected filaments
-    // Snapmaker: the Graphic Effect Plate is a Snapmaker U1 plate that the U1 offers without
-    // support_multi_bed_types, and the vendor's filaments mark "not for this plate" with 0 (ABS, ASA,
-    // PC, PA ...). Without this check such a print is sliced with a bed target of 0, i.e. a cold bed.
-    if (is_BBL_printer() || m_config.support_multi_bed_types.value || m_config.curr_bed_type == btGESP) {
+    if (is_BBL_printer() || m_config.support_multi_bed_types.value) {
 	    const t_config_enum_values* bed_type_keys_map = bed_type_def->enum_keys_map;
 	    for (unsigned int extruder_id : extruders) {
 	        const ConfigOptionInts* bed_temp_opt = m_config.option<ConfigOptionInts>(get_bed_temp_key(m_config.curr_bed_type));
 	        for (unsigned int extruder_id : extruders) {
-	            // One value per filament variant column; the first column of the filament is the one
-	            // of the extruder that prints it once the columns are resolved per filament.
-	            int curr_bed_temp = bed_temp_opt->get_at(first_filament_variant_column(m_config.filament_self_index.values, extruder_id));
+	            int curr_bed_temp = bed_temp_opt->get_at(extruder_id);
 	            if (curr_bed_temp == 0 && bed_type_keys_map != nullptr) {
 	                std::string bed_type_name;
 	                for (auto item : *bed_type_keys_map) {
@@ -4186,11 +4100,6 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                             "top_surface_acceleration",
                         };
                    warning_key = check_motion_ability_object_setting(accel_to_check, max_accel);
-                   // The first layer travel acceleration is a print-scope option, possibly a percentage of the travel acceleration.
-                   const double first_layer_travel_accel = m_full_print_config.has("initial_layer_travel_acceleration") ?
-                       m_full_print_config.get_abs_value_at("initial_layer_travel_acceleration", extruder_id) : 0.;
-                   if (warning_key.empty() && !support_travel_acc && first_layer_travel_accel > max_accel)
-                        warning_key = "initial_layer_travel_acceleration";
                    if (!warning_key.empty()) {
                         motion_warning.string  = L("The acceleration setting exceeds the printer's maximum acceleration "
                                               "(machine_max_acceleration_extruding).\nOrca will "
@@ -4206,8 +4115,6 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                                 "travel_acceleration",
                             };
                             warning_key = check_motion_ability_object_setting(accel_to_check, max_travel);
-                            if (warning_key.empty() && first_layer_travel_accel > max_travel)
-                                warning_key = "initial_layer_travel_acceleration";
                             if (!warning_key.empty()) {
                                 motion_warning.string = L(
                                     "The travel acceleration setting exceeds the printer's maximum travel acceleration "
@@ -6337,21 +6244,7 @@ int Print::get_nozzle_config_index(int filament_id, int layer_id)
     return get_config_index(filament_id, layer_id, m_default_region_config.print_extruder_variant.values, m_default_region_config.print_extruder_id.values, m_nozzle_index_map);
 }
 
-<<<<<<< snaporca-int
 int Print::get_config_index(int filament_id, int layer_id, const std::vector<std::string> &variant_list, const std::vector<int>& self_index_list, FilamentIndexMap *index_map)
-=======
-size_t Print::process_slot_of_filament(unsigned int filament_id, int layer_id)
-{
-    // Without a grouping get_nozzle_config_index answers the filament id, which is not the tool
-    // head under a filament map that is not the identity; the table then has one slot per head.
-    if (!get_layered_nozzle_group_result())
-        return get_extruder_id(filament_id);
-    const int slot = get_nozzle_config_index(int(filament_id), layer_id);
-    return slot >= 0 ? size_t(slot) : get_extruder_id(filament_id);
-}
-
-int Print::get_config_index(int filament_id, int layer_id, const std::vector<std::string> &variant_list, const std::vector<int>& self_index_list, FilamentIndexMap &index_map)
->>>>>>> lixnix/main
 {
     const MultiNozzleUtils::LayeredNozzleGroupResult *group_result = m_layered_nozzle_group_result.get();
     // Orca: defensive — when no grouping producer has published a result yet, fall back to the
@@ -6379,15 +6272,7 @@ int Print::get_config_index(int filament_id, int layer_id, const std::vector<std
     auto             iter = index_map->find(key);
     if (iter == index_map->end()) {
         int index = get_config_index_base(nozzle_volume_type, extruder_type, filament_id + 1, variant_list, self_index_list);
-<<<<<<< snaporca-int
         (*index_map)[key] = index;
-=======
-        // Snapmaker Orca: get_config_index_base answers column 0 for a filament that owns no column at
-        // all (a self index shorter than the filament list); such a filament keeps its own id as column.
-        if (index < 0 || size_t(index) >= self_index_list.size() || self_index_list[size_t(index)] != filament_id + 1)
-            index = std::max(filament_id, 0);
-        index_map[key] = index;
->>>>>>> lixnix/main
         return index;
     } else {
         return iter->second;
@@ -6466,22 +6351,7 @@ const WipeTowerData &Print::wipe_tower_data(size_t filaments_cnt) const
     if (max_height < EPSILON)
         return m_wipe_tower_data;
 
-    // The estimate takes physical filaments only: virtual mixed ids from extruders() are expanded
-    // into their components and ids without a physical slot dropped, so the tower is not oversized.
-    std::vector<unsigned int> physical_filament_ids;
-    {
-        const size_t     num_physical = m_config.filament_colour.size();
-        std::vector<int> ids_1based;
-        for (unsigned int filament_id : this->extruders(true))
-            ids_1based.emplace_back(int(filament_id) + 1);
-        m_mixed_filament_mgr.expand_virtual_extruder_ids(ids_1based, num_physical);
-        for (int id : ids_1based)
-            if (id >= 1 && (num_physical == 0 || size_t(id) <= num_physical))
-                physical_filament_ids.emplace_back((unsigned int)(id - 1));
-        sort_remove_duplicates(physical_filament_ids);
-    }
-
-    const WipeTowerFootprint footprint = estimate_wipe_tower_footprint(m_config, this->wipe_tower_type(), physical_filament_ids, layer_height, max_height);
+    const WipeTowerFootprint footprint = estimate_wipe_tower_footprint(m_config, this->wipe_tower_type(), this->extruders(true), layer_height, max_height);
     WipeTowerData &data = const_cast<Print *>(this)->m_wipe_tower_data;
     data.depth      = float(footprint.depth);
     data.width      = float(footprint.width);
@@ -6701,7 +6571,7 @@ void Print::_make_wipe_tower()
                     wipe_volume_nc = 15.f;
                 }
 
-            wipe_tower.plan_toolchange((float)layer_tools.print_z, (float)layer_tools.wipe_tower_layer_height, current_filament_id, filament_id,
+                wipe_tower.plan_toolchange((float)layer_tools.print_z, (float)layer_tools.wipe_tower_layer_height, current_filament_id, filament_id,
                     wipe_volume_ec, wipe_volume_nc, volume_to_purge);
                 current_filament_id = filament_id;
             }
@@ -6776,23 +6646,13 @@ void Print::_make_wipe_tower()
         for (unsigned int i = 0; i<number_of_extruders; ++i)
             wipe_volumes.push_back(std::vector<float>(flush_matrix.begin()+i*number_of_extruders, flush_matrix.begin()+(i+1)*number_of_extruders));
 
-        // A tower purge is at least the new filament's minimal purge.
-        auto tower_purge_volume = [this](unsigned int filament_id) {
-            return std::max((float) m_config.prime_volume,
-                            (float) m_config.filament_minimal_purge_on_wipe_tower.get_at(
-                                first_filament_variant_column(m_config.filament_self_index.values, filament_id)));
-        };
         // Orca: itertate over wipe_volumes and change the non-zero values to the prime_volume
         if ((!m_config.purge_in_prime_tower || !m_config.single_extruder_multi_material) && is_wipe_tower_type2) {
             for (unsigned int i = 0; i < number_of_extruders; ++i) {
                 for (unsigned int j = 0; j < number_of_extruders; ++j) {
                     if (wipe_volumes[i][j] > 0) {
-<<<<<<< snaporca-int
                         // Snapmaker: respect per-filament minimal purge as well.
                         wipe_volumes[i][j] = effective_wipe_tower_volume(m_config, j);
-=======
-                        wipe_volumes[i][j] = tower_purge_volume(j);
->>>>>>> lixnix/main
                     }
                 }
             }
@@ -6807,14 +6667,6 @@ void Print::_make_wipe_tower()
         // wipe_tower.set_zhop();
 
         // Set the extruder & material properties at the wipe tower object.
-        // Snapmaker Orca: the slot each filament's travel and first-layer speeds are read at; the
-        // tower has no layer dimension, so the slot of the first layer stands for the print.
-        {
-            std::vector<size_t> slots;
-            for (size_t i = 0; i < number_of_extruders; ++i)
-                slots.emplace_back(process_slot_of_filament((unsigned int)i, 0));
-            wipe_tower.set_filament_slots(slots);
-        }
         for (size_t i = 0; i < number_of_extruders; ++i)
             wipe_tower.set_extruder(i, m_config);
 
@@ -6852,7 +6704,7 @@ void Print::_make_wipe_tower()
                         collect_local_z_wipe_tower_toolchanges(*this, *layers_with_same_print_z, int(current_extruder_id));
                     for (const LocalZWipeTowerToolchange &toolchange : local_z_toolchanges) {
                         wipe_tower.plan_local_z_toolchange((float) layer_tools.print_z, (float) layer_tools.wipe_tower_layer_height,
-                                                           toolchange.old_tool, toolchange.new_tool, tower_purge_volume(toolchange.new_tool));
+                                                           toolchange.old_tool, toolchange.new_tool, effective_wipe_tower_volume(m_config, toolchange.new_tool));
                     }
                     if (!local_z_toolchanges.empty())
                         current_extruder_id = local_z_toolchanges.back().new_tool;
@@ -6868,22 +6720,19 @@ void Print::_make_wipe_tower()
                 for (const auto extruder_id : nominal_layer_extruders) {
                     if ((first_layer && extruder_id == m_wipe_tower_data.tool_ordering.all_extruders().back()) || extruder_id !=
                         current_extruder_id) {
-                        float volume_to_wipe = tower_purge_volume(extruder_id);
+                        float volume_to_wipe = effective_wipe_tower_volume(m_config, extruder_id);
                         if (m_config.purge_in_prime_tower && m_config.single_extruder_multi_material) {
                             volume_to_wipe = wipe_volumes[current_extruder_id][extruder_id]; // total volume to wipe after this toolchange
                             volume_to_wipe *= m_config.flush_multiplier.get_at(0);
                             // Not all of that can be used for infill purging:
-                            // The minimal purge holds one value per filament variant column.
-                            const float minimal_purge = (float) m_config.filament_minimal_purge_on_wipe_tower.get_at(
-                                first_filament_variant_column(m_config.filament_self_index.values, extruder_id));
-                            volume_to_wipe -= minimal_purge;
+                            volume_to_wipe -= (float) get_value_at(m_config, m_config.filament_minimal_purge_on_wipe_tower, ConfigFlowDomain::Filament, extruder_id);
 
                             // try to assign some infills/objects for the wiping:
                             volume_to_wipe = layer_tools.wiping_extrusions().mark_wiping_extrusions(*this, current_extruder_id, extruder_id,
                                                                                                     volume_to_wipe);
 
                             // add back the minimal amount toforce on the wipe tower:
-                            volume_to_wipe += minimal_purge;
+                            volume_to_wipe += (float) get_value_at(m_config, m_config.filament_minimal_purge_on_wipe_tower, ConfigFlowDomain::Filament, extruder_id);
                         }
 
                         // request a toolchange at the wipe tower with at least volume_to_wipe purging amount
@@ -6899,10 +6748,16 @@ void Print::_make_wipe_tower()
             }
         }
 
+        std::vector<int> categories;
+        for (size_t i = 0; i < m_config.filament_adhesiveness_category.values.size(); ++i) {
+            categories.push_back(m_config.filament_adhesiveness_category.get_at(i));
+        }
+        wipe_tower.set_filament_categories(categories);
+
         // Generate the wipe tower layers.
         m_wipe_tower_data.tool_changes.reserve(m_wipe_tower_data.tool_ordering.layer_tools().size());
         m_wipe_tower_data.local_z_tool_changes.reserve(m_wipe_tower_data.tool_ordering.layer_tools().size());
-        wipe_tower.generate(m_wipe_tower_data.tool_changes, m_wipe_tower_data.local_z_tool_changes);
+        wipe_tower.generate_new(m_wipe_tower_data.tool_changes, m_wipe_tower_data.local_z_tool_changes);
         BOOST_LOG_TRIVIAL(debug) << "Wipe tower generation completed"
                                  << " nominal_layers=" << m_wipe_tower_data.tool_changes.size()
                                  << " local_z_layers=" << m_wipe_tower_data.local_z_tool_changes.size();
@@ -6995,7 +6850,6 @@ void Print::_make_wipe_tower()
                                                   m_wipe_tower_data.z_and_depth_pairs, m_wipe_tower_data.brim_width,
                                                   config().wipe_tower_rotation_angle, config().wipe_tower_cone_angle,
                                                   {scale_(origin.x()), scale_(origin.y())});
-        m_fake_wipe_tower.outer_wall = wipe_tower.get_outer_wall();
     }
 
     // The clamps and checks above work from estimates; re-test the exact generated footprint
