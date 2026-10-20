@@ -137,7 +137,9 @@ class TestObsoleteKeys(unittest.TestCase):
             source, re.DOTALL)
         self.assertIsNotNone(match, "Could not locate the loader's obsolete-key set")
         keys = re.sub(r"//[^\n]*|/\*.*?\*/", "", match.group(1), flags=re.DOTALL)
-        self.assertEqual(apt.OBSOLETE_KEYS, set(re.findall(r'"([^"\n]+)"', keys)))
+        loader = set(re.findall(r'"([^"\n]+)"', keys))
+        self.assertEqual(apt.OBSOLETE_KEYS | apt.LOADER_IGNORED_KEPT_KEYS, loader)
+        self.assertFalse(apt.OBSOLETE_KEYS & apt.LOADER_IGNORED_KEPT_KEYS)
 
 
 class TestVariantScheme(unittest.TestCase):

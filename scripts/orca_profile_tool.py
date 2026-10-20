@@ -177,14 +177,21 @@ OBSOLETE_KEYS = {
     "top_area_threshold", "reduce_wall_solid_infill",
     "filament_load_time", "filament_unload_time", "smooth_coefficient",
     "overhang_totally_speed", "silent_mode", "overhang_speed_classic",
-    # Snapmaker Orca 2.4.1 process key that never reached the support generator.
-    "tree_support_adaptive_layer_height",
     "anisotropic_surfaces",
     # Belt printer options retired before the feature shipped (#16236).
     "belt_slice_rotation_global", "preslice_remap_x", "preslice_remap_y", "preslice_remap_z",
     "preslice_remap_global", "belt_support_z_offset_mode", "first_layer_plane",
     "first_layer_plane_offset", "belt_preslice_global", "gcode_back_transform",
     "belt_support_floor_mode", "first_layer_plane_thickness",
+}
+
+# Snapmaker Orca: keys handle_legacy ignores that normalize and check still leave in the
+# profiles. tree_support_adaptive_layer_height is the Snapmaker Orca 2.4.1 process key
+# that never reached the support generator; mainline OrcaSlicer defines it and its
+# vendor profiles (Creality, Anycubic, Artillery, ...) write it, so stripping it would
+# rewrite upstream bundles on every sync for no effect on what loads.
+LOADER_IGNORED_KEPT_KEYS = {
+    "tree_support_adaptive_layer_height",
 }
 
 # Keys renamed at some point, whose old and new spellings must never co-exist:
