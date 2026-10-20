@@ -771,7 +771,7 @@ void SMPhysicalPrinterDialog::OnOK(wxEvent& event)
         json data = devices;
         wxGetApp().device_card_notify(data);
 
-        MessageDialog msg_window_connected(nullptr, host->get_host() + _L(" connected sucessfully !\n"), L("Machine Connected"),
+        MessageDialog msg_window_connected(nullptr, format_wxstr(_L("%1% connected successfully!"), host->get_host()) + "\n", _L("Machine Connected"),
                                            wxICON_QUESTION | wxOK);
         msg_window_connected.ShowModal();
 

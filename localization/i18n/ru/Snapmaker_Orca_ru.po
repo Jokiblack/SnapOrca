@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Snapmaker Orca V2.3.0 Official Release\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-20 10:56+0200\n"
+"POT-Creation-Date: 2026-10-20 13:51+0200\n"
 "PO-Revision-Date: 2025-07-06 21:08+0700\n"
 "Last-Translator: \n"
 "Language-Team: Andylg <andylg@yandex.ru>\n"
@@ -2187,7 +2187,7 @@ msgstr "Файлы SLA"
 msgid "Draco files"
 msgstr "Файлы Draco"
 
-msgid "Snapmaker Orca will terminate because of running out of memory.It may be a bug. It will be appreciated if you report the issue to our team."
+msgid "Snapmaker Orca will terminate because of running out of memory. It may be a bug. It will be appreciated if you report the issue to our team."
 msgstr ""
 
 msgid "Fatal error"
@@ -4483,10 +4483,8 @@ msgstr "В данном программном обеспечении испол
 msgid "About %s"
 msgstr "О %s"
 
-msgid "Snapmaker Orca "
-msgstr ""
-
-msgid "Note: The firmware version of SnapmakerU1 should be no less than"
+#, boost-format
+msgid "Note: The firmware version of Snapmaker U1 should be no less than %1%."
 msgstr ""
 
 msgid "Snapmaker Orca is forked from Orca Slicer by SoftFever."
@@ -6829,9 +6827,6 @@ msgstr "Вернуть профили материалов, которые об�
 msgid "Troubleshoot Center"
 msgstr "Экран отладки"
 
-msgid "Open Network Test"
-msgstr "Проверка сети"
-
 # AI Translated
 msgid "Benchmark 3D Scene"
 msgstr "Тест производительности 3D-сцены"
@@ -6857,6 +6852,9 @@ msgstr ""
 
 msgid "Import Web Resource"
 msgstr ""
+
+msgid "Open Network Test"
+msgstr "Проверка сети"
 
 #, c-format, boost-format
 msgid "&About %s"
@@ -8496,12 +8494,6 @@ msgstr "Ошибка:"
 msgid "WARNING:"
 msgstr "ПРЕДУПРЕЖДЕНИЕ:"
 
-msgid "Jump to: Support on build plate only"
-msgstr ""
-
-msgid "Jump to: Support"
-msgstr ""
-
 msgid "Warning:"
 msgstr "Предупреждение:"
 
@@ -10017,10 +10009,11 @@ msgstr "Тест прохождения углов"
 msgid "Import SLA archive"
 msgstr "Импорт SLA архива"
 
-msgid "The selected file"
-msgstr "В выбранном файле"
-
-msgid "does not exist."
+#, boost-format
+msgid ""
+"The selected file:\n"
+"%1%\n"
+"does not exist."
 msgstr ""
 
 msgid "Error occurs while loading G-code file"
@@ -12832,9 +12825,6 @@ msgstr "Заметки"
 msgid "Frequent"
 msgstr "Частые"
 
-msgid "Modifier cycle"
-msgstr ""
-
 #, c-format, boost-format
 msgid ""
 "Following line %s contains reserved keywords.\n"
@@ -13771,7 +13761,7 @@ msgstr "Полный рэмминг"
 msgid "Ramming line"
 msgstr "Линия рэмминга"
 
-msgid "Orca would re-calculate your flushing volumes everytime the filaments color changed or filaments changed. You could disable the auto-calculate in Snapmaker Orca > Preferences"
+msgid "Orca would re-calculate your flushing volumes every time the filaments color changed or filaments changed. You could disable the auto-calculate in Snapmaker Orca > Preferences"
 msgstr ""
 
 msgid "Flushing volume (mm³) for each filament pair."
@@ -14373,7 +14363,8 @@ msgstr ""
 msgid "request to server update preset resource fail with body:%s,error:%s,status:%d"
 msgstr ""
 
-msgid "needed, but current version is "
+#, boost-format
+msgid "Snapmaker Orca %1% needed, but current version is %2%"
 msgstr ""
 
 # AI Translated
@@ -14405,7 +14396,7 @@ msgstr "Перед обновлением профилей необходимо 
 msgid "Import Failed"
 msgstr ""
 
-msgid "This web resouce could not be imported due to outdated versions."
+msgid "This web resource could not be imported due to outdated versions."
 msgstr ""
 
 msgid "Updating the web resources requires application restart."
@@ -14921,9 +14912,6 @@ msgstr "Выберите последовательность печати «П�
 
 msgid "Spiral (vase) mode does not work when an object contains more than one material."
 msgstr "Режим вазы не работает, когда модель печатается несколькими материалами."
-
-msgid "Spiral (vase) mode does not work when an object contains regions with different print settings."
-msgstr ""
 
 #, boost-format
 msgid "While the object %1% itself fits the build volume, it exceeds the maximum build volume height because of material shrinkage compensation."
@@ -16379,9 +16367,6 @@ msgstr "Монотонный"
 msgid "Monotonic line"
 msgstr "Монотонная линия"
 
-msgid "Global monotonic line"
-msgstr ""
-
 msgid "Rectilinear"
 msgstr "Прямолинейный"
 
@@ -16517,18 +16502,6 @@ msgstr "Шаблон сплошного заполнения"
 msgid "Line pattern of internal solid infill. if the detect narrow internal solid infill be enabled, the concentric pattern will be used for the small area."
 msgstr "Шаблон печати внутреннего сплошного заполнения. Если включена функция «Обнаруживать узкую область сплошного заполнения», то для небольшой области будет использоваться концентрический шаблон заполнения."
 
-msgid "Separate sub-top surface"
-msgstr ""
-
-msgid "Print the internal solid infill that supports a visible top surface with its own pattern, set in \"Sub-top surface pattern\". The lines of this layer can print through and mark the top surface."
-msgstr ""
-
-msgid "Sub-top surface pattern"
-msgstr ""
-
-msgid "Line pattern of the solid layer that supports a visible top surface. Its lines can print through and mark the top, so a monotonic pattern gives the smoothest result. The whole solid area that a top surface reaches uses this pattern, not only the part directly beneath it."
-msgstr ""
-
 msgid "Line width of outer wall. If expressed as a %, it will be computed over the nozzle diameter."
 msgstr "Ширина экструзии для внешнего периметра. Если задано в процентах, то значение вычисляться относительно диаметра сопла."
 
@@ -16661,7 +16634,7 @@ msgstr "Этот параметр устанавливает минимальн�
 msgid "Bed mesh max"
 msgstr "Макс. сетка стола"
 
-msgid "This option sets the max point for the allowed bed mesh area. Due to the probe's XY offset, most printers are unable to probe the entire bed. To ensure the probe point does not go outside the bed area, the minimum and maximum points of the bed mesh should be set appropriately. Snapmaker_Orca ensures that adaptive_bed_mesh_min/adaptive_bed_mesh_max values do not exceed these min/max points. This information can usually be obtained from your printer manufacturer. The default setting is (99999, 99999), which means there are no limits, thus allowing probing across the entire bed."
+msgid "This option sets the max point for the allowed bed mesh area. Due to the probe's XY offset, most printers are unable to probe the entire bed. To ensure the probe point does not go outside the bed area, the minimum and maximum points of the bed mesh should be set appropriately. Snapmaker Orca ensures that adaptive_bed_mesh_min/adaptive_bed_mesh_max values do not exceed these min/max points. This information can usually be obtained from your printer manufacturer. The default setting is (99999, 99999), which means there are no limits, thus allowing probing across the entire bed."
 msgstr ""
 
 msgid "Probe point distance"
@@ -17582,12 +17555,6 @@ msgstr ""
 msgid "Line width of the first layer. If expressed as a %, it will be computed over the nozzle diameter."
 msgstr "Ширина линий первого слоя. Можно указать процент от диаметра сопла."
 
-msgid "First layer infill"
-msgstr "Заполнение"
-
-msgid "Line width of the infill of the first layer, including sparse infill, solid infill and top surface. Walls, support and everything else on the first layer keep using the first layer line width. If expressed as a %, it will be computed over the nozzle diameter. Zero means to use the first layer line width."
-msgstr ""
-
 msgid "First layer height"
 msgstr "Высота первого слоя"
 
@@ -17597,6 +17564,9 @@ msgstr "Высота первого слоя. Небольшое увеличе�
 # AI Translated
 msgid "This is the speed for the walls and brim of the first layer."
 msgstr "Ограничение скорости движения головы (относительно стола) при печати периметров и каймы на первом слое."
+
+msgid "First layer infill"
+msgstr "Заполнение"
 
 # AI Translated
 msgid "This is the speed for the first layer except for walls and brim, such as infill, gap fill and support."
@@ -19159,39 +19129,6 @@ msgstr ""
 "При включении этой опции необходимо отключить опцию «Сохранение толщины вертикальной оболочки».\n"
 "\n"
 "Использование шаблона заполнения «Молния» вместе с этой опцией не рекомендуется, поскольку количество заполнения, к которому можно прикрепить дополнительные периметры, ограничено."
-
-msgid "Periodic modifier"
-msgstr ""
-
-msgid "Apply this modifier on a repeating layer cycle. On skipped layers it is ignored, as if this modifier were not there."
-msgstr ""
-
-msgid "Skip for"
-msgstr ""
-
-msgid "Periodic modifier skip layers"
-msgstr ""
-
-msgid "Number of consecutive layers on which this modifier is not applied. 0 means the modifier is applied on every layer."
-msgstr ""
-
-msgid "Apply for"
-msgstr ""
-
-msgid "Periodic modifier apply layers"
-msgstr ""
-
-msgid "Number of consecutive layers in each cycle on which this modifier is fully applied. The cycle starts at layer 0: first \"Apply for\", then \"Skip for\"."
-msgstr ""
-
-msgid "Ignore infill settings"
-msgstr ""
-
-msgid "Modifier ignores infill settings"
-msgstr ""
-
-msgid "Do not apply this modifier's internal infill settings (pattern, density, and related options). Walls and other overrides still apply. Infill is taken from the parent region."
-msgstr ""
 
 msgid "If you want to process the output G-code through custom scripts, just list their absolute paths here. Separate multiple scripts with a semicolon. Scripts will be passed the absolute path to the G-code file as the first argument, and they can access the Snapmaker Orca config settings by reading environment variables."
 msgstr "Если вы хотите обработать выходной G-код с помощью пользовательских скриптов, просто перечислите здесь абсолютные пути к ним. Разделяйте скрипты точкой с запятой. Скриптам будет передан абсолютный путь к файлу G-кода в качестве первого аргумента, и они смогут получить доступ к настройкам конфигурации Snapmaker Orca, читая переменные окружения."
@@ -20800,7 +20737,7 @@ msgstr ""
 msgid "Support transition flow ratio"
 msgstr ""
 
-#, c-format, boost-format
+#, no-c-format, no-boost-format
 msgid "Flow ratio for support transition layers relative to normal support flow. Slightly lower than interface flow for a more natural transition. 0.85 = 85% of normal support flow."
 msgstr ""
 
@@ -20978,7 +20915,7 @@ msgstr "Минимальная толщина оболочки сверху в �
 msgid "Top paint penetration layers"
 msgstr ""
 
-msgid "This is  the number of layers of top paint penetration."
+msgid "This is the number of layers of top paint penetration."
 msgstr ""
 
 msgid "Separated infills"
@@ -22672,14 +22609,6 @@ msgstr "Генерация поддержки"
 msgid "Optimizing toolpath"
 msgstr "Оптимизация траектории инструмента"
 
-#, boost-format
-msgid "Unsupported overhangs were detected on object \"%1%\". Because \"Support on build plate only\" is enabled, supports cannot grow down to the build plate. Try turning this option off."
-msgstr ""
-
-#, boost-format
-msgid "Unsupported overhangs were detected on object \"%1%\": some overhang regions could not get support. Try adjusting the support settings or re-orienting the object."
-msgstr ""
-
 msgid "Empty layers around bottom are replaced by nearest normal layers."
 msgstr ""
 
@@ -24073,7 +24002,7 @@ msgid "Upload to storage"
 msgstr "Загрузить в хранилище"
 
 #, c-format, boost-format
-msgid "The filename '%s' contains special characters (#, *, ;, \\, /, :, \", <, >, or |) which may cause issues.Do you wish to continue?"
+msgid "The filename '%s' contains special characters (#, *, ;, \\, /, :, \", <, >, or |) which may cause issues. Do you wish to continue?"
 msgstr ""
 
 #, c-format, boost-format
@@ -32222,7 +32151,7 @@ msgstr "Пурпурный Ребекки"
 msgid "Medium violet red"
 msgstr "Средний фиолетово-красный"
 
-msgid "PaleV violet red"
+msgid "Pale violet red"
 msgstr ""
 
 # AI Translated
@@ -32439,7 +32368,7 @@ msgstr "Небо над рифом"
 msgid "Shallow sky"
 msgstr "Небо мелководья"
 
-msgid "Electric bel"
+msgid "Electric blue"
 msgstr ""
 
 # AI Translated
@@ -37500,9 +37429,6 @@ msgstr ""
 msgid "Downloading: %.1f MB..."
 msgstr ""
 
-msgid "Donwload failed"
-msgstr ""
-
 msgid "Legend:"
 msgstr ""
 
@@ -37646,7 +37572,8 @@ msgstr ""
 msgid "Machine Bind"
 msgstr ""
 
-msgid " connected sucessfully !\n"
+#, boost-format
+msgid "%1% connected successfully!"
 msgstr ""
 
 msgid "Machine Connected"
@@ -37655,31 +37582,31 @@ msgstr ""
 msgid "select file"
 msgstr ""
 
-msgid " upload failed"
-msgstr " ошибка отправки"
-
-msgid "UpLoad Failed"
+msgid "Upload Failed"
 msgstr ""
 
-msgid " has already been uploaded"
+#, c-format, boost-format
+msgid "%s uploaded successfully"
 msgstr ""
 
-msgid "UpLoad Successfully"
+msgid "Upload Successful"
 msgstr ""
 
 msgid "Save file"
 msgstr ""
 
-msgid " download failed"
+#, c-format, boost-format
+msgid "%s download failed"
 msgstr ""
 
-msgid "DownLoad Failed"
+msgid "Download Failed"
 msgstr ""
 
-msgid " has already been downloaded"
+#, c-format, boost-format
+msgid "%s downloaded successfully"
 msgstr ""
 
-msgid "DownLoad Successfully"
+msgid "Download Successful"
 msgstr ""
 
 msgid "setting failed"
@@ -37716,9 +37643,6 @@ msgid "Downloaded"
 msgstr ""
 
 msgid "Download Cancelled"
-msgstr ""
-
-msgid "Download Failed"
 msgstr ""
 
 msgid "Download Lists"
@@ -38078,3 +38002,9 @@ msgid ""
 "Avoid warping\n"
 "Did you know that when printing materials that are prone to warping such as ABS, appropriately increasing the heatbed temperature can reduce the probability of warping."
 msgstr ""
+
+#~ msgid "The selected file"
+#~ msgstr "В выбранном файле"
+
+#~ msgid " upload failed"
+#~ msgstr " ошибка отправки"

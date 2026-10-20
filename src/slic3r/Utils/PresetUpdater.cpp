@@ -155,6 +155,9 @@ struct Update
 	bool is_directory {false};
 	// Orca: a vendor update may be the cache-only form.
 	bool is_opc {false};
+	// The device printer configs (resources/printers -> <data_dir>/printers). Tagged "bbl"
+	// for the update dialog, but the directory holds no presets.
+	bool is_printer_config {false};
 
     bool can_install{true};
 
@@ -195,6 +198,13 @@ struct Update
                 if (vendor == "flutter_web") {
                     if (!fs::exists(staging / "version.json")) {
                         BOOST_LOG_TRIVIAL(error) << "Web resource staging is missing version.json";
+                        return false;
+                    }
+                    return true;
+                }
+                if (is_printer_config) {
+                    if (!fs::exists(staging / "version.txt")) {
+                        BOOST_LOG_TRIVIAL(error) << "Printer config staging is missing version.txt";
                         return false;
                     }
                     return true;
@@ -1717,6 +1727,7 @@ Updates PresetUpdater::priv::get_printer_config_updates(bool update) const
         } catch (...) {}
     }
     updates.updates.emplace_back(std::move(resc_folder), std::move(config_folder), version, "bbl", change_log, version.comment, false, true);
+    updates.updates.back().is_printer_config = true;
     return updates;
 }
 
@@ -1817,8 +1828,8 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 				Semver soft_ver = Semver(std::string(Snapmaker_VERSION));
 				legal           = min_ver <= soft_ver;
 				if (!legal)
-					changelog += ("\nSnapmaker Orca " + min_ver.to_string() + " " + _L("needed, but current version is ") +
-					              soft_ver.to_string() + "\n").ToStdString();
+					changelog += ("\n" + format_wxstr(_L("Snapmaker Orca %1% needed, but current version is %2%"), min_ver.to_string(), soft_ver.to_string()) +
+					              "\n").ToStdString();
 			}
 
 			if (vendor_ver < cache_ver) {
@@ -2594,8 +2605,8 @@ void PresetUpdater::load_flutter_web(const std::string& resource_path, bool serv
                 bool legal = true;
                 legal      = min_ver <= soft_ver;
                 if (!legal) {
-                    changelog += ("\nSnapmaker Orca " + min_ver.to_string() + " " + _L("needed, but current version is ") +
-                                  soft_ver.to_string() + "\n")
+                    changelog += ("\n" + format_wxstr(_L("Snapmaker Orca %1% needed, but current version is %2%"), min_ver.to_string(), soft_ver.to_string()) +
+                                  "\n")
                                      .ToStdString();
                 }
 
@@ -2652,7 +2663,7 @@ void PresetUpdater::load_flutter_web(const std::string& resource_path, bool serv
 
         wxString message;
         if (!outdated_presets.empty() && !serverUpdate) {
-            message = _L("This web resouce could not be imported due to outdated versions.") + "\n";
+            message = _L("This web resource could not be imported due to outdated versions.") + "\n";
             for (const auto& preset : outdated_presets) {
                 message += "• " + preset + "\n";
             }
@@ -2770,8 +2781,8 @@ void PresetUpdater::import_system_profile()
                         bool legal = true;
                         legal      = min_ver <= soft_ver;
                         if (!legal) {
-                            changelog += ("\nSnapmaker Orca " + min_ver.to_string() + " " + _L("needed, but current version is ") +
-                                          soft_ver.to_string() + "\n")
+                            changelog += ("\n" + format_wxstr(_L("Snapmaker Orca %1% needed, but current version is %2%"), min_ver.to_string(), soft_ver.to_string()) +
+                                          "\n")
                                              .ToStdString();
                         }
 

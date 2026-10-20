@@ -263,7 +263,7 @@ AboutDialog::AboutDialog()
     // version
     {
         vesizer->Add(0, FromDIP(165), 1, wxEXPAND, FromDIP(5));
-        auto version_string = _L("Snapmaker Orca ") + " " + std::string(Snapmaker_VERSION);
+        auto version_string = wxString::FromUTF8(SLIC3R_APP_NAME " " Snapmaker_VERSION);
         wxStaticText* version = new wxStaticText(this, wxID_ANY, version_string.c_str(), wxDefaultPosition, wxDefaultSize);
         wxStaticText* bs_version = new wxStaticText(this, wxID_ANY, wxString::Format("Based on Orca Slicer"), wxDefaultPosition, wxDefaultSize);
         bs_version->SetFont(Label::Body_12);
@@ -306,7 +306,7 @@ AboutDialog::AboutDialog()
     
 
     // SM Beta
-    text_list.push_back(_L("Note: The firmware version of SnapmakerU1 should be no less than") + " " + std::string(MIN_FIRM_VER));
+    text_list.push_back(format_wxstr(_L("Note: The firmware version of Snapmaker U1 should be no less than %1%."), MIN_FIRM_VER));
     text_list.push_back(_L("Snapmaker Orca is forked from Orca Slicer by SoftFever."));
     text_list.push_back(_L("OrcaSlicer is forked from Bambu Studio by Bambu Lab."));
     text_list.push_back(_L("Bambu Studio is forked from PrusaSlicer by Prusa Research, which is from Slic3r by Alessandro Ranellucci and the RepRap community. Orca Slicer incorporates a lot of features from SuperSlicer by @supermerill."));
