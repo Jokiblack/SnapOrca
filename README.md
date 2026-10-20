@@ -1,54 +1,167 @@
+<h1>SnapOrca</h1>
 
-<h1> <p "font-size:200px;"> Snapmaker Orca</p> </h1>
+[![Build all](https://github.com/Jokiblack/SnapOrca/actions/workflows/build_all.yml/badge.svg?branch=main)](https://github.com/Jokiblack/SnapOrca/actions/workflows/build_all.yml)
 
-[![Build all](https://github.com/Snapmaker/OrcaSlicer/actions/workflows/build_all.yml/badge.svg?branch=main)](https://github.com/Snapmaker/OrcaSlicer/actions/workflows/build_all.yml)
-<br>Snapmaker Orca is an open source slicer for FDM printers based on OrcaSlicer.
- 
+**[English](#english) · [Español](#español)**
 
+> SnapOrca is an **unofficial**, community build. It is not affiliated with or endorsed by Snapmaker, the OrcaSlicer team, Bambu Lab or Prusa Research.
+>
+> SnapOrca es una versión **no oficial** hecha por la comunidad. No está afiliada ni respaldada por Snapmaker, el equipo de OrcaSlicer, Bambu Lab ni Prusa Research.
 
-# Download
+---
 
-### Stable Release
-📥 **[Download the Latest Stable Release](https://github.com/Snapmaker/OrcaSlicer/releases/latest)**  
-Visit our GitHub Releases page for the latest stable version of Snapmaker Slicer, recommended for most users.
+## English
 
-# How to install
-**Windows**: 
-1.  Download the installer for your preferred version from the [releases page](https://github.com/Snapmaker/OrcaSlicer/releases).
-    - *For convenience there is also a portable build available.*
-    - *If you have troubles to run the build, you might need to install following runtimes:*
-      - [MicrosoftEdgeWebView2RuntimeInstallerX64](https://github.com/SoftFever/OrcaSlicer/releases/download/v1.0.10-sf2/MicrosoftEdgeWebView2RuntimeInstallerX64.exe)
-          - [Details of this runtime](https://aka.ms/webview2)
-          - [Alternative Download Link Hosted by Microsoft](https://go.microsoft.com/fwlink/p/?LinkId=2124703)
-      - [vcredist2019_x64](https://github.com/SoftFever/OrcaSlicer/releases/download/v1.0.10-sf2/vcredist2019_x64.exe)
-          -  [Alternative Download Link Hosted by Microsoft](https://aka.ms/vs/17/release/vc_redist.x64.exe)
-          -  This file may already be available on your computer if you've installed visual studio.  Check the following location: `%VCINSTALLDIR%Redist\MSVC\v142`
+SnapOrca is **Snapmaker Orca 2.4.1** (the official slicer for the Snapmaker U1) merged with **OrcaSlicer 2.5.0-alpha**. It adds improvements ported from **Bambu Studio** and the **multi-nozzle printing** work of the **LixNix** fork. It is built and tested mainly for the **Snapmaker U1** (4-toolhead toolchanger).
 
-**Mac**:
-1. Download the DMG for your computer: `arm64` version for Apple Silicon and `x86_64` for Intel CPU.  
-2. Drag Snapmaker_Orca.app to Application folder. 
-3. *If you want to run a build from a PR, you also need to follow the instructions below:*  
-    <details quarantine>
-    - Option 1 (You only need to do this once. After that the app can be opened normally.):
-      - Step 1: Hold _cmd_ and right click the app, from the context menu choose **Open**.
-      - Step 2: A warning window will pop up, click _Open_  
-      
-    - Option 2:  
-      Execute this command in terminal: `xattr -dr com.apple.quarantine /Applications/Snapmaker_Orca.app`
-      ```console
-          softfever@mac:~$ xattr -dr com.apple.quarantine /Applications/Snapmaker_Orca.app
-      ```
-    - Option 3:  
-        - Step 1: open the app, a warning window will pop up  
-            ![image](./SoftFever_doc/mac_cant_open.png)  
-        - Step 2: in `System Settings` -> `Privacy & Security`, click `Open Anyway`:  
-            ![image](./SoftFever_doc/mac_security_setting.png)  
-    </details>
-    
-**Linux (Ubuntu)**:
- 1. If you run into trouble executing it, try this command in the terminal:  
-    `chmod +x /path_to_appimage/Snapmaker_Orca_Linux.AppImage`
-    
+### Download
+
+📥 **[Latest release](https://github.com/Jokiblack/SnapOrca/releases/latest)**: Windows installer and portable.
+
+- The installer is called **SnapOrca** and installs to `Program Files\SnapOrca`, **next to** the official Snapmaker Orca, without replacing it.
+- Settings are stored in `%APPDATA%\SnapOrca`. The first time it starts, SnapOrca copies your user presets from the official Snapmaker Orca.
+- With the U1 default profiles (4 × 0.4 mm nozzles), the G-code is the same as without the multi-nozzle changes. This was checked by slicing 22 test jobs. The only difference is the final `SET_PRESSURE_ADVANCE ADVANCE=0`, which is no longer emitted (see Snapmaker#714).
+
+### Credits: where the features come from
+
+| Source | What SnapOrca takes from it |
+|---|---|
+| [Snapmaker Orca](https://github.com/Snapmaker/OrcaSlicer) by **Snapmaker** | The base: Snapmaker U1 support and profiles, flow variants (Standard / High Flow), Full Spectrum mixed filament, the block-based wipe tower for the U1, device page, Moonraker / MQTT connection. |
+| [OrcaSlicer](https://github.com/OrcaSlicer/OrcaSlicer) by **SoftFever** and the OrcaSlicer contributors | The 2.5.0-alpha engine and interface: printer agents and plugins, new slicing options, fixes and performance work. |
+| [Bambu Studio](https://github.com/bambulab/BambuStudio) by **Bambu Lab** | Separate pattern for the layer under the top surface; "Global monotonic line" pattern; separate first-layer infill line width; periodic modifier and "modifier ignores infill"; Archimedean-spiral ironing; 13 organic / hybrid tree-support fixes and a warning for uncovered overhangs; 3MF and cut-tool hardening. |
+| [LixNix fork of Snapmaker Orca](https://github.com/LixNix-Swap-Org/Snapmaker-Orca) by **LixNix** | **Different nozzle sizes on the U1**: per-nozzle diameter and preferred layer height, per-extruder layer height and its combining engine, fractional support layers and wipe-tower slabs, per-toolhead line widths, support material per nozzle, "prime tower counts every filament that prints"; crash fixes (right-click on the plate, object list, printer switch); setup wizard with Snapmaker first; U1 line widths as % of the nozzle; macOS hidden-web-view fix. |
+| [PrusaSlicer](https://github.com/prusa3d/PrusaSlicer) / [Slic3r](https://github.com/Slic3r/Slic3r) | The common origin of all the slicers above. |
+
+The merge, the fixes and the tests were done with the help of **Claude (Anthropic)**. Commits contain a `Co-Authored-By` line.
+
+### What SnapOrca adds over the official Snapmaker Orca 2.4.1
+
+**Engine and interface**
+- OrcaSlicer 2.5.0-alpha engine and interface, on top of Snapmaker's U1 code.
+- The Bambu Studio improvements and the LixNix multi-nozzle features listed above.
+
+**Multi-nozzle (different nozzle sizes on the U1)**
+- Nozzle 1–4 tabs, each with its own diameter, flow (Standard / High Flow) and preferred layer height.
+- A per-toolhead line-width selector in the Process tab.
+- Warnings when a filament or a layer height does not fit a toolhead's nozzle.
+- Wipe tower and supports that adapt to each nozzle.
+
+**Fixes made in SnapOrca**
+- **Crash on Prepare:** the bed was drawn with the wrong shader.
+- **Duplicated nozzle panel** in the sidebar.
+- **Tree / organic supports with % line widths:** "105%" was read as 105 mm.
+- **Float precision** of the support nozzle diameter.
+- **Toolchange temperatures:** M104 is sent to every tool.
+- **Wipe tower:** sparse-layer combination; interface temperature at toolchange; tower options that do nothing with the U1 tower are hidden.
+- **Profile updater:** error at start-up.
+- **Default process per U1 nozzle:** 0.2 → 0.10 mm, 0.4 → 0.20 mm, 0.6 → 0.30 mm, 0.8 → 0.40 mm.
+- **Profile defaults:** `max_bridge_length` and raft expansion kept at the Snapmaker values.
+- **Two calibrations** that always failed.
+- **Unit tests:** the slicing tests that the merge broke are fixed.
+
+**Performance**
+- Objects outside the camera are no longer drawn (restored from Snapmaker).
+- Batched plate icons.
+- Lighter memory guard.
+
+**Diagnostics**
+- A crash catcher writes `crash_*.log` and `crash_*.dmp` to `%APPDATA%\SnapOrca\log`.
+- Extra logging when switching tabs.
+
+**Translations**
+- The 23 languages the merge had dropped are back.
+- Spanish is complete, including the multi-nozzle texts.
+
+**Installs separately**
+- Its own folder, uninstaller, Start-menu entry and data folder.
+- It does not take over the official `Snapmaker_Orca://` links.
+
+### Known limitations
+- The per-toolhead **speeds** from LixNix have no effect on the U1: Snapmaker's process profiles already use those columns for the Standard / High Flow variants. Layer heights, line widths, the tower and supports per nozzle do work.
+- Multi-nozzle printing is new. Check the preview, and start with small parts.
+- Main target: **Windows x64**. Linux and macOS builds are made but less tested.
+
+### Feedback
+Report problems in [Issues](https://github.com/Jokiblack/SnapOrca/issues). Do not report SnapOrca problems to Snapmaker or OrcaSlicer.
+
+---
+
+## Español
+
+SnapOrca es **Snapmaker Orca 2.4.1** (el laminador oficial de la Snapmaker U1) fusionado con **OrcaSlicer 2.5.0-alpha**. Añade mejoras traídas de **Bambu Studio** y la **impresión con boquillas de distinto tamaño** del fork de **LixNix**. Está hecho y probado sobre todo para la **Snapmaker U1** (cambiador de 4 cabezales).
+
+### Descarga
+
+📥 **[Última versión](https://github.com/Jokiblack/SnapOrca/releases/latest)**: instalador y portable para Windows.
+
+- El instalador se llama **SnapOrca** y se instala en `Program Files\SnapOrca`, **junto al** Snapmaker Orca oficial, sin sustituirlo.
+- Los ajustes se guardan en `%APPDATA%\SnapOrca`. La primera vez que se abre, SnapOrca copia tus perfiles de usuario del Snapmaker Orca oficial.
+- Con los perfiles por defecto de la U1 (4 boquillas de 0.4 mm), el G-code es el mismo que sin los cambios de boquillas distintas. Se ha comprobado laminando 22 trabajos de prueba. La única diferencia es que ya no se emite el `SET_PRESSURE_ADVANCE ADVANCE=0` final (ver Snapmaker#714).
+
+### Créditos: de dónde salen las funciones
+
+| Origen | Qué toma SnapOrca de él |
+|---|---|
+| [Snapmaker Orca](https://github.com/Snapmaker/OrcaSlicer), de **Snapmaker** | La base: soporte y perfiles de la Snapmaker U1, variantes de flujo (Standard / High Flow), filamento mixto Full Spectrum, la torre de purga por bloques de la U1, la página de dispositivo y la conexión Moonraker / MQTT. |
+| [OrcaSlicer](https://github.com/OrcaSlicer/OrcaSlicer), de **SoftFever** y los colaboradores de OrcaSlicer | El motor y la interfaz de la 2.5.0-alpha: agentes de impresora y plugins, opciones de laminado nuevas, arreglos y mejoras de rendimiento. |
+| [Bambu Studio](https://github.com/bambulab/BambuStudio), de **Bambu Lab** | Patrón propio para la capa bajo la superficie superior; patrón «Global monotonic line»; ancho de línea propio para el relleno de la primera capa; modificador periódico y «el modificador ignora el relleno»; planchado en espiral de Arquímedes; 13 arreglos del soporte en árbol orgánico e híbrido y aviso de voladizos sin cubrir; refuerzos en 3MF y en el corte. |
+| [Fork de Snapmaker Orca de LixNix](https://github.com/LixNix-Swap-Org/Snapmaker-Orca), de **LixNix** | **Boquillas de distinto tamaño en la U1**: diámetro y altura de capa preferida por boquilla, altura de capa por cabezal y su motor de combinación, capas de soporte fraccionarias y bloques de la torre de purga, anchos de línea por cabezal, material de soporte según la boquilla, «la torre cuenta todos los filamentos que imprimen»; arreglos de cierres (clic derecho en la bandeja, lista de objetos, cambio de impresora); asistente con Snapmaker primero; anchos de línea de la U1 en % de la boquilla; arreglo de las vistas web ocultas en macOS. |
+| [PrusaSlicer](https://github.com/prusa3d/PrusaSlicer) / [Slic3r](https://github.com/Slic3r/Slic3r) | El origen común de todos los laminadores anteriores. |
+
+La fusión, los arreglos y las pruebas se han hecho con ayuda de **Claude (Anthropic)**. Los commits llevan una línea `Co-Authored-By`.
+
+### Qué añade SnapOrca respecto al Snapmaker Orca 2.4.1 oficial
+
+**Motor e interfaz**
+- El motor y la interfaz de OrcaSlicer 2.5.0-alpha, sobre el código de la U1 de Snapmaker.
+- Las mejoras de Bambu Studio y las funciones de boquillas distintas de LixNix de la tabla anterior.
+
+**Boquillas de distinto tamaño en la U1**
+- Pestañas Boquilla 1–4, cada una con su diámetro, su flujo (Standard / High Flow) y su altura de capa preferida.
+- Selector de ancho de línea por cabezal en la pestaña Proceso.
+- Avisos cuando un filamento o una altura de capa no encajan con la boquilla de un cabezal.
+- Torre de purga y soportes que se adaptan a cada boquilla.
+
+**Arreglos hechos en SnapOrca**
+- **Cierre al abrir Preparar:** la cama se dibujaba con el shader equivocado.
+- **Panel de boquillas repetido** en la barra lateral.
+- **Soportes en árbol / orgánicos con anchos en %:** «105%» se leía como 105 mm.
+- **Precisión del diámetro de boquilla** de los soportes.
+- **Temperaturas en los cambios de cabezal:** se manda M104 a todas las herramientas.
+- **Torre de purga:** combinación de capas dispersas; temperatura de interfaz en el cambio; se ocultan las opciones que no hacen nada con la torre de la U1.
+- **Actualizador de perfiles:** error al arrancar.
+- **Proceso por defecto de cada boquilla de la U1:** 0.2 → 0.10 mm, 0.4 → 0.20 mm, 0.6 → 0.30 mm, 0.8 → 0.40 mm.
+- **Valores de perfil:** `max_bridge_length` y la expansión de la balsa se mantienen con los valores de Snapmaker.
+- **Dos calibraciones** que fallaban siempre.
+- **Pruebas automáticas:** arregladas las de laminado que había roto la fusión.
+
+**Rendimiento**
+- Ya no se dibujan los objetos que están fuera de la cámara (recuperado de Snapmaker).
+- Iconos de bandeja dibujados en lote.
+- Vigilancia de memoria más ligera.
+
+**Diagnóstico**
+- Un capturador de cierres guarda `crash_*.log` y `crash_*.dmp` en `%APPDATA%\SnapOrca\log`.
+- Más registro al cambiar de pestaña.
+
+**Traducciones**
+- Vuelven los 23 idiomas que la fusión había borrado.
+- Español completo, incluidos los textos de boquillas distintas.
+
+**Instalación aparte**
+- Carpeta, desinstalador, entrada del menú Inicio y carpeta de datos propios.
+- No se apropia de los enlaces `Snapmaker_Orca://` del oficial.
+
+### Limitaciones conocidas
+- Las **velocidades** por cabezal de LixNix no tienen efecto en la U1: los perfiles de proceso de Snapmaker ya usan esas columnas para las variantes Standard / High Flow. Las alturas de capa, los anchos de línea, la torre y los soportes por boquilla sí funcionan.
+- La impresión con boquillas distintas es nueva. Revisa la vista previa y empieza con piezas pequeñas.
+- Plataforma principal: **Windows x64**. Las versiones de Linux y macOS se compilan, pero se han probado menos.
+
+### Comentarios
+Informa de los problemas en [Issues](https://github.com/Jokiblack/SnapOrca/issues). No informes de problemas de SnapOrca a Snapmaker ni a OrcaSlicer.
+
+---
+
 # How to compile
 - Windows 64-bit  
   - Tools needed: Visual Studio 2022 (or newer) with the C++ workload, CMake, Git, Strawberry Perl, NSIS (for the installer).
@@ -88,7 +201,7 @@ resolution: 0.1
 
 
 ## Some background
-Snapmaker Orca is originally forked from Snapmaker_Orca.
+SnapOrca is a fork of Snapmaker Orca merged with OrcaSlicer 2.5. Snapmaker Orca is originally forked from OrcaSlicer.
 
 Snapmaker_Orca is originally forked from Bambu Studio, it was previously known as BambuStudio-SoftFever.
 Bambu Studio is forked from [PrusaSlicer](https://github.com/prusa3d/PrusaSlicer) by Prusa Research, which is from [Slic3r](https://github.com/Slic3r/Slic3r) by Alessandro Ranellucci and the RepRap community. 
@@ -97,6 +210,8 @@ Orca Slicer's logo is designed by community member Justin Levine(@freejstnalxndr
 
 
 # License
+SnapOrca is licensed under the GNU Affero General Public License, version 3, like all the projects it is based on; its full source code is in this repository.
+
 Snapmaker Orca is licensed under the GNU Affero General Public License, version 3. Snapmaker_Orca is based on Orca Slicer by SoftFever
 
 Orca Slicer is licensed under the GNU Affero General Public License, version 3. Orca Slicer is based on Bambu Studio by BambuLab.
@@ -114,6 +229,4 @@ Orca Slicer includes a pressure advance calibration pattern test adapted from An
 The Bambu networking plugin is based on non-free libraries from BambuLab. It is optional to the Orca Slicer and provides extended functionalities for Bambulab printer users.
 
 # Feedback & Contribution
-We greatly value feedback and contributions from our users. Your feedback will help us to further develop Snapmaker Orca for our community.
-- To submit a bug or feature request, file an issue in GitHub Issues or email us at support@snapmaker.com.
-- To contribute some code, make sure you have read and followed our guidelines for contributing.
+For SnapOrca problems, open an issue at https://github.com/Jokiblack/SnapOrca/issues.

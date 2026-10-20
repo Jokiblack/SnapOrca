@@ -1,0 +1,88 @@
+# SnapOrca: publish a public GitHub release from the files of a finished "Build all" run.
+# Run it by hand (Actions -> SnapOrca release -> Run workflow) with the id of a successful run;
+# it downloads that run's Windows installer and portable (and the Linux AppImage and macOS DMG
+# when the run produced them) and creates the release at the commit the run built.
+name: SnapOrca release
+
+on:
+  workflow_dispatch:
+    inputs:
+      run_id:
+        description: 'Id of the successful "Build all" run (the number in its URL)'
+        required: true
+      tag:
+        description: 'Release tag, e.g. v2.5.0-snaporca.1'
+        required: true
+      title:
+        description: 'Release title'
+        required: false
+        default: ''
+      prerelease:
+        description: 'Mark as pre-release'
+        type: boolean
+        default: false
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          sparse-checkout: |
+            .github/release_notes.md
+          sparse-checkout-cone-mode: false
+
+      - name: Download the run's Windows files
+        uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+          pattern: Snapmaker_Orca_Windows_*
+          path: dl
+
+      - name: Download the run's Linux and macOS files
+        uses: actions/download-artifact@v4
+        continue-on-error: true
+        with:
+          run-id: ${{ inputs.run_id }}
+          github-token: ${{ github.token }}
+          pattern: Snapmaker_Orca_{Linux,Mac}_*
+          path: dl
+
+      - name: Collect the release files
+        shell: bash
+        run: |
+          set -euo pipefail
+          mkdir -p out
+          shopt -s nullglob
+          for d in dl/*/; do
+            name=$(basename "$d")
+            case "$name" in
+              *_portable)
+                # The portable is a folder: ship it as one zip, renamed SnapOrca.
+                (cd "$d" && zip -qr "../../out/${name/Snapmaker_Orca/SnapOrca}.zip" .) ;;
+              *)
+                for f in "$d"*; do
+                  base=$(basename "$f")
+                  cp "$f" "out/${base/Snapmaker_Orca/SnapOrca}"
+                done ;;
+            esac
+          done
+          ls -la out
+          test -n "$(ls out/*Windows* 2>/dev/null)" || { echo "No Windows files in run ${{ inputs.run_id }}"; exit 1; }
+
+      - name: Create the release
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          sha=$(gh api "repos/${{ github.repository }}/actions/runs/${{ inputs.run_id }}" --jq .head_sha)
+          title="${{ inputs.title }}"; [ -n "$title" ] || title="SnapOrca ${{ inputs.tag }}"
+          flags=(); [ "${{ inputs.prerelease }}" = "true" ] && flags+=(--prerelease) || flags+=(--latest)
+          gh release create "${{ inputs.tag }}" out/* --repo "${{ github.repository }}" --target "$sha" \
+            --title "$title" --notes-file .github/release_notes.md "${flags[@]}"
