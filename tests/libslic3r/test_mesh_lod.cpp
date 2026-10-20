@@ -9,11 +9,16 @@
 #include <atomic>
 #include <cfloat>
 #include <cmath>
+#include <math.h>
 #include <cstdint>
 #include <cstring>
 #include <stdexcept>
 
+#include <Eigen/Core>
+
+#include "libslic3r/BoundingBox.hpp"
 #include "libslic3r/Config.hpp"
+#include "libslic3r/Point.hpp"
 #include "libslic3r/MeshLod.hpp"
 #include "libslic3r/QuadricEdgeCollapse.hpp"
 #include "libslic3r/TriangleMesh.hpp"

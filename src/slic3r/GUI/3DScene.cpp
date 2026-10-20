@@ -12,6 +12,10 @@
 #include "BitmapCache.hpp"
 #include "Camera.hpp"
 #include "MeshLodCache.hpp"
+#include "MeshLodPool.hpp"
+#include "libslic3r/MeshLod.hpp"
+#include <wx/app.h>
+#include <cfloat>
 #include <chrono>
 #include <cstdint>
 

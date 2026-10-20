@@ -4,8 +4,14 @@
 #include <algorithm>
 #include <array>
 #include <cmath>
+#include <cstddef>
+#include <functional>
 #include <limits>
 
+#include <Eigen/Core>
+
+#include "BoundingBox.hpp"
+#include "Point.hpp"
 #include "QuadricEdgeCollapse.hpp"
 
 namespace Slic3r {

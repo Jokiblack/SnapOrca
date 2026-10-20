@@ -1,5 +1,7 @@
 #include "CpuMemory.hpp"
 
+#include <cstdint>
+
 // Platform headers stay outside namespace Slic3r (upstream #737: inside, their declarations
 // would land in that namespace).
 #if defined(_WIN32)
@@ -9,6 +11,7 @@
 #include <mach/mach_host.h>
 #elif defined(__linux__)
 #include <cstdio>
+#include <linux/sysinfo.h>
 #include <sys/sysinfo.h>
 #endif
 

@@ -89,6 +89,7 @@
 #include "CameraUtils.hpp"
 #include "GLModel.hpp"
 #include "MeshLodCache.hpp"
+#include "libslic3r/MeshLod.hpp"
 #include "GLShader.hpp"
 #include "libslic3r/ConnectedBodies.hpp"
 #include "GUI.hpp"

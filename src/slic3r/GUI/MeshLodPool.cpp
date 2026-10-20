@@ -3,15 +3,23 @@
 #include <algorithm>
 #include <cassert>
 #include <chrono>
+#include <cstddef>
 #include <exception>
+#include <functional>
+#include <memory>
+#include <mutex>
 #include <string>
+#include <thread>
 #include <utility>
+#include <vector>
 
 #include <boost/log/trivial.hpp>
 
 #include <tbb/task_arena.h>
 
+#include "libslic3r/MeshLod.hpp"
 #include "libslic3r/Thread.hpp"
+#include "GLModel.hpp"
 
 namespace Slic3r {
 namespace GUI {

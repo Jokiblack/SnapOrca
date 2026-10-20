@@ -1,11 +1,13 @@
 // Snapmaker Orca: the worker pool and the cache of the render LOD. Neither needs an application,
 // a window or an OpenGL context, so the cases run unconditionally.
+#include <catch2/catch_message.hpp>
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
 
 #include <atomic>
 #include <chrono>
 #include <cmath>
+#include <math.h>
 #include <condition_variable>
 #include <cstddef>
 #include <functional>
@@ -19,6 +21,7 @@
 #include "libslic3r/MeshLod.hpp"
 #include "libslic3r/TriangleMesh.hpp"
 #include "slic3r/GUI/3DScene.hpp"
+#include "slic3r/GUI/GLModel.hpp"
 #include "slic3r/GUI/MeshLodCache.hpp"
 #include "slic3r/GUI/MeshLodPool.hpp"
 

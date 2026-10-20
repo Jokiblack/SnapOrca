@@ -1,18 +1,26 @@
 #include "MeshLodCache.hpp"
 
 #include <algorithm>
+#include <atomic>
 #include <cassert>
 #include <chrono>
+#include <cstddef>
 #include <cstdint>
 #include <iterator>
+#include <memory>
 #include <thread>
 #include <utility>
 
 #include <boost/log/trivial.hpp>
 
+#include <wx/app.h>
 #include <wx/timer.h>
 
 #include "libslic3r/AppConfig.hpp"
+#include "libslic3r/MeshLod.hpp"
+#include "libslic3r/TriangleMesh.hpp"
+#include "GLModel.hpp"
+#include "MeshLodPool.hpp"
 #include "GUI_App.hpp"
 #include "GLCanvas3D.hpp"
 #include "Plater.hpp"
