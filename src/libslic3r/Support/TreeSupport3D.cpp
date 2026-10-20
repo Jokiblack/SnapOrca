@@ -4414,21 +4414,22 @@ void organic_draw_branches(
                             // branches into a solid floor slab. m_belt_floor is only populated in that
                             // mode, so it doubles as the gate (no effect on other printer types).
                             const bool                      belt_mode = !volumes.m_belt_floor.empty();
-                            // Don't propagate further than 1.5 * bottom radius.
-                            //LayerIndex                      layers_propagate_max = 2 * bottom_radius / config.layer_height;
+                            // Bambu (nofloat): drop the non-gracious "fake root" until it wraps onto the
+                            // model surface (rest area pinched below support_area_stop) or reaches the bed,
+                            // instead of a fixed layers_propagate_max budget that left the bottom floating.
+                            // Sibling overlaps are welded later by the per-tree union + keep_main pass.
+                            // Belt mode keeps the bounded budget: the belt clip below handles termination
+                            // and an unbounded drop would weld branches into the Z=0 slab.
                             LayerIndex                      layers_propagate_max = 5 * bottom_radius / config.layer_height;
-                            LayerIndex                      layer_bottommost = (branch.path.front()->state.verylost && !belt_mode) ?
-                                // If the tree bottom is hanging in the air, bring it down to some surface.
-                                0 :
-                                // In belt mode never force-drop to Z=0 (the belt clip below handles
-                                // termination); otherwise the "verylost" branch welds into the slab.
-                                //FIXME the "verylost" branches should stop when crossing another support.
-                                std::max(0, layer_begin - layers_propagate_max);
+                            LayerIndex                      layer_bottommost = belt_mode ? std::max(0, layer_begin - layers_propagate_max) : 0;
                             double                          support_area_min_radius = M_PI * sqr(double(config.branch_radius));
                             double                          support_area_stop = std::max(0.2 * M_PI * sqr(double(bottom_radius)), 0.5 * support_area_min_radius);
                              // Only propagate until the rest area is smaller than this threshold.
                             //double                          support_area_min = 0.1 * support_area_min_radius;
                             for (LayerIndex layer_idx = layer_begin - 1; layer_idx >= layer_bottommost; -- layer_idx) {
+                                // Drop is now bounded by the model/bed instead of layers_propagate_max, so poll cancel every 16 layers.
+                                if (((layer_begin - 1 - layer_idx) & 15) == 15)
+                                    throw_on_cancel();
                                 LayerIndex collision_layer = (layer_idx == layer_begin - 1) ? layer_begin : layer_idx;
                                 Polygons collision = volumes.getCollision(0, collision_layer, false);
                                 rest_support = diff_clipped(rest_support.empty() ? slice_front_contact : rest_support, collision, ApplySafetyOffset::Yes);
