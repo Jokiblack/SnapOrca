@@ -779,7 +779,7 @@ public:
 
     WipeTowerWriter&				 set_initial_tool(size_t tool) { m_current_tool = tool; return *this; }
 
-	WipeTowerWriter&				 set_z(float z) 
+	WipeTowerWriter&				 set_z(float z)
 		{ m_current_z = z; return *this; }
 
 	WipeTowerWriter& 			 set_extrusion_flow(float flow)
@@ -987,7 +987,7 @@ public:
 	WipeTowerWriter& travel(float x, float y, float f = 0.f)
 		{ return extrude_explicit(x, y, 0.f, f); }
 
-	WipeTowerWriter& travel(const Vec2f &dest, float f = 0.f) 
+	WipeTowerWriter& travel(const Vec2f &dest, float f = 0.f)
 		{ return extrude_explicit(dest.x(), dest.y(), 0.f, f); }
 
 	// Extrude a line from current position to x, y with the extrusion amount given by m_extrusion_flow.
@@ -1002,7 +1002,7 @@ public:
         return extrude_arc_explicit(arc, f, false , limit_flow);
     }
 
-	WipeTowerWriter& extrude(const Vec2f &dest, const float f = 0.f) 
+	WipeTowerWriter& extrude(const Vec2f &dest, const float f = 0.f)
 		{ return extrude(dest.x(), dest.y(), f); }
 
     WipeTowerWriter& rectangle(const Vec2f& ld,float width,float height,const float f = 0.f)
@@ -1053,7 +1053,7 @@ public:
         do {
             ++i;
             if (i == 4) i = 0;
-            if (need_change_flow) { 
+            if (need_change_flow) {
                 if (i == 1) {
                     // using bridge flow in bridge area, and add notes for gcode-check when flow changed
                     set_extrusion_flow(wipe_tower->extrusion_flow(0.2));
@@ -1198,7 +1198,7 @@ public:
 
 	// Elevate the extruder head above the current print_z position.
 	WipeTowerWriter& z_hop(float hop, float f = 0.f)
-	{ 
+	{
 		m_gcode += std::string("G1") + set_format_Z(m_current_z + hop);
 		if (f != 0 && f != m_current_feedrate)
 			m_gcode += set_format_F(f);
@@ -1207,7 +1207,7 @@ public:
 	}
 
 	// Lower the extruder head back to the current print_z position.
-	WipeTowerWriter& z_hop_reset(float f = 0.f) 
+	WipeTowerWriter& z_hop_reset(float f = 0.f)
 		{ return z_hop(0, f); }
 
 	// Move to x1, +y_increment,
@@ -1298,7 +1298,7 @@ public:
 
 	// Reset internal extruder counter.
 	WipeTowerWriter& reset_extruder()
-	{ 
+	{
 		m_gcode += "G92 E0\n";
 		return *this;
 	}
@@ -2920,7 +2920,7 @@ void WipeTower::set_for_wipe_tower_writer(WipeTowerWriter &writer)
     writer.set_accel_to_decel_enable(m_accel_to_decel_enable);
     writer.set_accel_to_decel_factor(m_accel_to_decel_factor);
     writer.set_first_layer(m_cur_layer_id == 0);
-    writer.set_layer_id(m_cur_layer_id);
+    writer.set_layer_id(nozzle_layer_id(int(m_cur_layer_id))); // per-layer nozzle maps use the ToolOrdering index
     writer.set_physical_extruder_map(m_physical_extruder_map);
 }
 #if 0
@@ -3124,8 +3124,10 @@ void WipeTower::plan_toolchange(float z_par, float layer_height_par, unsigned in
 {
 	assert(m_plan.empty() || m_plan.back().z <= z_par + WT_EPSILON);	// refuses to add a layer below the last one
 
-	if (m_plan.empty() || m_plan.back().z + WT_EPSILON < z_par) // if we moved to a new layer, we'll add it to m_plan first
+	if (m_plan.empty() || m_plan.back().z + WT_EPSILON < z_par) { // if we moved to a new layer, we'll add it to m_plan first
 		m_plan.push_back(WipeTowerInfo(z_par, layer_height_par));
+		m_plan.back().start_tool = int(old_tool);
+	}
 
     if (m_first_layer_idx == size_t(-1) && (! m_sparse_layers_skipped || old_tool != new_tool))
         m_first_layer_idx = m_plan.size() - 1;
@@ -4623,6 +4625,10 @@ void WipeTower::generate_wipe_tower_blocks(bool add_solid_flag)
         }
         for (auto &info : m_plan) {
             std::unordered_set<int> used_tools;
+            // The tool loaded at this layer may have changed off the tower since the last
+            // planned toolchange (fractional support layers): trust the recorded start tool.
+            if (info.start_tool >= 0)
+                first_tool = info.start_tool;
             if (info.tool_changes.empty()) {
                 used_tools.insert(get_filament_category(first_tool));
             } else {
@@ -4856,6 +4862,9 @@ int WipeTower::get_wall_filament_for_all_layer()
     std::map<int, int> filament_counts;
     int current_tool = m_current_tool;
     for (const auto &layer : m_plan) {
+        // The tool loaded at a layer may have changed off the tower since the last toolchange.
+        if (layer.start_tool >= 0)
+            current_tool = layer.start_tool;
         if (layer.tool_changes.empty()){
             filament_counts[current_tool]++;
             category_counts[get_filament_category(current_tool)]++;
@@ -4918,11 +4927,13 @@ void WipeTower::generate_new(std::vector<std::vector<WipeTower::ToolChangeResult
     plan_tower_new();
     m_layer_info = m_plan.begin();
 
-    for (const auto &layer : m_plan) {
-        if (!layer.tool_changes.empty()) {
-            m_current_tool = layer.tool_changes.front().old_tool;
-            break;
-        }
+    {
+        bool start_tool_known = false;
+        for (const auto &layer : m_plan)
+            if (layer.start_tool >= 0) { m_current_tool = size_t(layer.start_tool); start_tool_known = true; break; }
+        if (!start_tool_known)
+            for (const auto &layer : m_plan)
+                if (!layer.tool_changes.empty()) { m_current_tool = layer.tool_changes.front().old_tool; break; }
     }
 
     for (auto &used : m_used_filament_length) // reset used filament stats
@@ -4936,6 +4947,9 @@ void WipeTower::generate_new(std::vector<std::vector<WipeTower::ToolChangeResult
         reset_block_status();
         m_cur_layer_id = index++;
         set_layer(layer.z, layer.height, 0, false, layer.z == m_plan.back().z);
+        // Re-sync to the tool actually loaded at this layer (filament may have changed off the tower).
+        if (layer.start_tool >= 0 && size_t(layer.start_tool) != m_current_tool)
+            m_current_tool = size_t(layer.start_tool);
         if (m_layer_info->depth < m_perimeter_width) continue;
         if (m_wipe_tower_blocks.size() == 1) {
             if (m_layer_info->depth < m_wipe_tower_depth - m_perimeter_width) {
@@ -5138,11 +5152,13 @@ void WipeTower::generate(std::vector<std::vector<WipeTower::ToolChangeResult>> &
     m_layer_info = m_plan.begin();
 
     // we don't know which extruder to start with - we'll set it according to the first toolchange
-    for (const auto& layer : m_plan) {
-        if (!layer.tool_changes.empty()) {
-            m_current_tool = layer.tool_changes.front().old_tool;
-            break;
-        }
+    {
+        bool start_tool_known = false;
+        for (const auto &layer : m_plan)
+            if (layer.start_tool >= 0) { m_current_tool = size_t(layer.start_tool); start_tool_known = true; break; }
+        if (!start_tool_known)
+            for (const auto &layer : m_plan)
+                if (!layer.tool_changes.empty()) { m_current_tool = layer.tool_changes.front().old_tool; break; }
     }
 
     for (auto& used : m_used_filament_length) // reset used filament stats
@@ -5522,24 +5538,26 @@ float WipeTower::get_block_gap_width(int tool,bool is_nozzlechangle)
 
 }
 
+// All callers pass a plan layer index; the nozzle group result is indexed by the ToolOrdering
+// layer index, which differs once fractional layers carry no tower slab.
 bool WipeTower::is_need_ramming(int filament_id_1, int filament_id_2, int layer_id) const
 {
-    return !m_multi_nozzle_group_result->are_filaments_same_nozzle(filament_id_1, filament_id_2, layer_id);
+    return !m_multi_nozzle_group_result->are_filaments_same_nozzle(filament_id_1, filament_id_2, nozzle_layer_id(layer_id));
 }
 bool WipeTower::is_same_extruder(int filament_id_1, int filament_id_2, int layer_id) const
 {
-    return m_multi_nozzle_group_result->are_filaments_same_extruder(filament_id_1, filament_id_2, layer_id);
+    return m_multi_nozzle_group_result->are_filaments_same_extruder(filament_id_1, filament_id_2, nozzle_layer_id(layer_id));
 }
 
 bool WipeTower::is_same_nozzle(int filament_id_1, int filament_id_2, int layer_id) const
 {
-    return m_multi_nozzle_group_result->are_filaments_same_nozzle(filament_id_1, filament_id_2, layer_id);
+    return m_multi_nozzle_group_result->are_filaments_same_nozzle(filament_id_1, filament_id_2, nozzle_layer_id(layer_id));
 }
 
-int WipeTower::get_nozzle_id(int filament_id, int layer_id) const { return m_multi_nozzle_group_result->get_nozzle_id(filament_id, layer_id); }
+int WipeTower::get_nozzle_id(int filament_id, int layer_id) const { return m_multi_nozzle_group_result->get_nozzle_id(filament_id, nozzle_layer_id(layer_id)); }
 
 int WipeTower::get_extruder_id(int filament_id, int layer_id) const {
-    return m_multi_nozzle_group_result->get_extruder_id(filament_id, layer_id);
+    return m_multi_nozzle_group_result->get_extruder_id(filament_id, nozzle_layer_id(layer_id));
 }
 
 } // namespace Slic3r

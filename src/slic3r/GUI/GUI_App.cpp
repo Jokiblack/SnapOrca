@@ -3158,6 +3158,9 @@ bool GUI_App::OnInit()
 
 int GUI_App::OnExit()
 {
+    // Snapmaker Orca: SSWCP instances and the web views' MQTT engines go first, while SnapLog and
+    // the app can still take their callbacks, not left to static destruction.
+    SSWCP::shutdown();
     ::Slic3r::SnapLog::v1::SnapLogClient::instance().shutdown();
 
     stop_http_server();
@@ -3670,6 +3673,9 @@ bool GUI_App::on_init_inner()
     }
     BOOST_LOG_TRIVIAL(info) << "loading systen presets...";
     preset_bundle = new PresetBundle();
+    // Snapmaker Orca: before the presets and the selections are loaded, which read it.
+    preset_bundle->nozzle_filament_enabled = app_config->get_bool("filament_follows_nozzle");
+    preset_bundle->process_follows_nozzle  = app_config->get_bool("process_follows_nozzle");
 
     // just checking for existence of Slic3r::data_dir is not enough : it may be an empty directory
     // supplied as argument to --datadir; in that case we should still run the wizard
@@ -9909,6 +9915,45 @@ void GUI_App::open_exportpresetbundledialog(size_t open_on_tab, const std::strin
                 if (dlg.seq_top_layer_only_changed())
         #endif // ENABLE_GCODE_LINES_ID_IN_H_SLIDER
                     this->plater_->reload_print();
+    }
+}
+
+void GUI_App::update_filament_follows_nozzle()
+{
+    if (preset_bundle == nullptr || app_config == nullptr)
+        return;
+    const bool enabled = app_config->get_bool("filament_follows_nozzle");
+    if (preset_bundle->nozzle_filament_enabled == enabled)
+        return;
+    preset_bundle->nozzle_filament_enabled = enabled;
+    // The per slot rating of the preset layer starts or stops applying; Preset::is_compatible is
+    // the same either way. Slots are only replaced where they held a preset they may no longer hold.
+    preset_bundle->update_compatible(PresetSelectCompatibleType::OnlyIfWasCompatible);
+    if (Tab *tab = get_tab(Preset::TYPE_FILAMENT); tab != nullptr)
+        tab->update_tab_ui();
+    if (plater_ != nullptr)
+        plater_->sidebar().update_presets(Preset::TYPE_FILAMENT);
+    // Turned on: the slots that hold a preset made for another nozzle size than their tool head
+    // move to the version of that size now, with the notice of a pass. The loop above only
+    // replaces a preset a slot may not hold at all.
+    if (enabled && plater_ != nullptr)
+        plater_->follow_nozzle_sizes_and_notify(Plater::FollowReason::Preference);
+}
+
+void GUI_App::update_process_follows_nozzle()
+{
+    if (preset_bundle == nullptr || app_config == nullptr)
+        return;
+    const bool enabled = app_config->get_bool("process_follows_nozzle");
+    if (preset_bundle->process_follows_nozzle == enabled)
+        return;
+    preset_bundle->process_follows_nozzle = enabled;
+    if (Tab *tab = get_tab(Preset::TYPE_PRINT); tab != nullptr)
+        tab->update_description_lines();
+    if (plater_ != nullptr) {
+        plater_->sidebar().update_nozzle_process_hints();
+        // The next apply composes or decomposes the process table.
+        plater_->schedule_background_process();
     }
 }
 

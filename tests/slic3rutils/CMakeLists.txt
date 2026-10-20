@@ -3,6 +3,8 @@ add_executable(${_TEST_NAME}_tests
     ${_TEST_NAME}_tests_main.cpp
     test_bambu_filament_ids.cpp
     test_config_value_formatter.cpp
+    test_high_flow_notices.cpp # Snapmaker Orca: High Flow allow list and tool head rules
+    test_per_head_process_sites.cpp # Snapmaker Orca: every GUI Print::apply is fed by full_config_for_print
     test_creality_cfs_match.cpp
     test_dev_mapping.cpp
     test_device_access.cpp

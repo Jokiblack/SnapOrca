@@ -33,7 +33,6 @@
 #include <boost/algorithm/string/trim.hpp>
 #include <boost/format/format_fwd.hpp>
 #include <boost/functional/hash.hpp>
-#include <boost/log/trivial.hpp>
 #include <boost/property_tree/ptree_fwd.hpp>
 #include <boost/log/trivial.hpp>
 
@@ -591,7 +590,8 @@ public:
                 throw ConfigurationError("ConfigOptionVector::set_only_diff(): Assigning from an vector with invalid diff_index size");
 
             for (size_t i = 0; i < diff_index.size(); i++) {
-                if (diff_index[i] != -1) {
+                // Snapmaker Orca: an index past the values of rhs keeps the value of this vector.
+                if (diff_index[i] != -1 && size_t(diff_index[i] + 1) * size_t(stride) <= other->values.size()) {
                     for (size_t j = 0; j < stride; j++) {
                         if (!other->is_nil(diff_index[i] * stride))
                             this->values[i * stride + j] = other->values[diff_index[i] * stride + j];
@@ -939,10 +939,7 @@ public:
         		if (NULLABLE)
         			this->values.push_back(nil_value());
         		else
-        			{
-                    BOOST_LOG_TRIVIAL(warning) << "deserialize: skipping nil item in non-nullable vector";
-                    continue;
-                }
+        			throw ConfigurationError("Deserializing nil into a non-nullable object");
         	} else {
 	            std::istringstream iss(item_str);
 	            double value;
@@ -1117,10 +1114,7 @@ public:
         		if (NULLABLE)
         			this->values.push_back(nil_value());
         		else
-                    {
-                    BOOST_LOG_TRIVIAL(warning) << "deserialize: skipping nil item in non-nullable vector";
-                    continue;
-                }
+                    throw ConfigurationError("Deserializing nil into a non-nullable object");
         	} else {
 	            std::istringstream iss(item_str);
 	            int value;
@@ -1453,10 +1447,7 @@ public:
                 if (NULLABLE)
                     this->values.push_back(nil_value());
                 else
-                    {
-                    BOOST_LOG_TRIVIAL(warning) << "deserialize: skipping nil item in non-nullable vector";
-                    continue;
-                }
+                    throw ConfigurationError("Deserializing nil into a non-nullable object");
             } else {
                 bool percent = item_str.find_first_of("%") != std::string::npos;
                 std::istringstream iss(item_str);
@@ -2004,10 +1995,7 @@ public:
         		if (NULLABLE)
                     new_value = nil_value();
         		else
-                    {
-                    BOOST_LOG_TRIVIAL(warning) << "deserialize: skipping nil item in non-nullable vector";
-                    continue;
-                }
+                    throw ConfigurationError("Deserializing nil into a non-nullable object");
         	} else if (item_str == "1") {
         		new_value = true;
         	} else if (item_str == "0") {
@@ -2256,10 +2244,7 @@ public:
                 if (NULLABLE)
                     this->values.push_back(nil_value());
                 else
-                    {
-                    BOOST_LOG_TRIVIAL(warning) << "deserialize: skipping nil item in non-nullable vector";
-                    continue;
-                }
+                    throw ConfigurationError("Deserializing nil into a non-nullable object");
             }
             else {
                 auto it = this->keys_map->find(item_str);
@@ -2327,6 +2312,9 @@ public:
     ConfigOptionType                    type            = coNone;
 	// If a type is nullable, then it accepts a "nil" value (scalar) or "nil" values (vector).
 	bool								nullable		= false;
+    // Snapmaker Orca: a vector option written as one value while all columns are equal (opt_serialize,
+    // save_to_json), keeping the scalar spelling older readers know; used by the line width keys.
+    bool                                scalar_when_uniform = false;
     // Default value of this option. The default value object is owned by ConfigDef, it is released in its destructor.
     Slic3r::clonable_ptr<const ConfigOption> default_value;
     void 								set_default_value(const ConfigOption* ptr) { this->default_value = Slic3r::clonable_ptr<const ConfigOption>(ptr); }
@@ -2841,8 +2829,14 @@ public:
         { ConfigSubstitutionContext ctxt{ ForwardCompatibilitySubstitutionRule::Disable }; this->set_deserialize(items, ctxt); }
 
     double get_abs_value_at(const t_config_option_key &opt_key, size_t index) const;
+    // Absolute value of column `index` of a coFloatsOrPercents option (a coFloatOrPercent scalar
+    // ignores the index), a percent resolved against `ratio_over`, e.g. the head's nozzle; nil reads 0.
+    double get_abs_value_at(const t_config_option_key &opt_key, size_t index, double ratio_over) const;
     double get_abs_value(const t_config_option_key &opt_key) const;
     double get_abs_value(const t_config_option_key &opt_key, double ratio_over) const;
+    // Snapmaker Orca: a vector option whose definition carries scalar_when_uniform, has no nil
+    // column and holds the same value in every column; such an option is serialised as one value.
+    bool uniform_scalar_option(const t_config_option_key &opt_key, const ConfigOption *opt) const;
     void setenv_() const;
     ConfigSubstitutions load(const std::string &file, ForwardCompatibilitySubstitutionRule compatibility_rule);
     //BBS support load from ini string

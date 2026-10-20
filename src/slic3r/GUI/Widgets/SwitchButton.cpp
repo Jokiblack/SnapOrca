@@ -673,13 +673,14 @@ MultiSwitchButton::MultiSwitchButton(wxWindow *parent, wxWindowID id, const wxPo
     m_scroll = new wxScrolledWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxHSCROLL | wxBORDER_NONE);
     //m_scroll->SetBackgroundColour(wxColour("#D9D9D9"));
     m_scroll->SetBackgroundColour(GetBackgroundColour());
-    // The buttons are a single row, so only the horizontal bar may ever appear: a vertical one would
-    // eat into the row's height.
+    // The switch is as high as its rows, so only the horizontal bar may ever appear: a vertical one
+    // would eat into the rows' height.
     m_scroll->ShowScrollbars(wxSHOW_SB_DEFAULT, wxSHOW_SB_NEVER);
     m_scroll->EnableScrolling(true, false);
     m_scroll->SetScrollRate(FromDIP(10), 0);
 
-    sizer = new wxBoxSizer(wxHORIZONTAL);
+    // The rows of buttons (rebuild_rows): one, unless a maximum row width is set.
+    sizer = new wxBoxSizer(wxVERTICAL);
     m_scroll->SetSizer(sizer);
 
     auto *hsizer = new wxBoxSizer(wxVERTICAL);
@@ -715,7 +716,7 @@ void MultiSwitchButton::update_scroll_range()
     // the buttons it holds, so the layout has to be given that width explicitly. It is also the
     // widest this switch wants to be: a row with less room squeezes it below this and it scrolls.
     const wxSize content = sizer->CalcMin();
-    SetMinSize(wxSize(content.x, options_height() + scrollbar_height(content.x)));
+    SetMinSize(wxSize(content.x, rows_height() + scrollbar_height(content.x)));
     SetMaxSize(m_fit_to_options ? wxSize(content.x, -1) : wxDefaultSize);
     InvalidateBestSize();
 }
@@ -738,7 +739,7 @@ void MultiSwitchButton::on_size(wxSizeEvent &evt)
 
     // The row resized, so the buttons may now overflow it (or no longer fit in it) and the room the
     // bar needs changed with that. Width does not depend on height, so this settles in one pass.
-    const int height = options_height() + scrollbar_height(sizer->CalcMin().x);
+    const int height = rows_height() + scrollbar_height(sizer->CalcMin().x);
     if (GetMinSize().y != height) {
         SetMinSize(wxSize(GetMinSize().x, height));
         // The switch sits in a row of this tab, and the tab in a panel that shares its height
@@ -776,7 +777,7 @@ void MultiSwitchButton::scroll_option_into_view(Button *btn)
     m_scroll->Scroll((target + step - 1) / step, -1);
 }
 
-int MultiSwitchButton::AppendOption(const wxString &option, void *clientData)
+Button *MultiSwitchButton::make_button(const wxString &option, void *clientData)
 {
     Button *btn = new Button();
     btn->Create(m_scroll, option);
@@ -787,11 +788,42 @@ int MultiSwitchButton::AppendOption(const wxString &option, void *clientData)
     btn->SetCornerRadius(m_button_radius);
     btn->SetPaddingSize(FromDIP(m_button_padding));
     btn->SetClientData(clientData);
-
     btns.push_back(btn);
     btns_modified.push_back(false);
-    sizer->Add(btn, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
 
+    return btn;
+}
+
+void MultiSwitchButton::rebuild_rows()
+{
+    // The row sizers go (a sizer item owns its sub-sizer), the buttons stay.
+    sizer->Clear(false);
+    wxBoxSizer *row       = nullptr;
+    int         row_width = 0;
+    int         rows      = 0;
+    for (Button *btn : btns) {
+        const int width = btn->GetMinSize().x;
+        if (row == nullptr || (m_max_row_width > 0 && row_width > 0 && row_width + width > m_max_row_width)) {
+            // Rows share the height of the scrolled area by proportion, one equal part each.
+            row = new wxBoxSizer(wxHORIZONTAL);
+            sizer->Add(row, 1, wxEXPAND);
+            row_width = 0;
+            ++rows;
+        }
+        row->Add(btn, 1, wxEXPAND);
+        row_width += width;
+    }
+    m_rows = std::max(1, rows);
+    // The switch is as high as its rows and as wide as its widest row; the sizer that holds it reads these.
+    update_scroll_range();
+    // The rows are new sizers, placed even when the scrolled area keeps its size and gets no size event.
+    m_scroll->Layout();
+}
+
+int MultiSwitchButton::AppendOption(const wxString &option, void *clientData)
+{
+    make_button(option, clientData);
+    rebuild_rows();
     return int(btns.size()) - 1;
 }
 
@@ -799,9 +831,9 @@ void MultiSwitchButton::SetOptions(const std::vector<wxString> &options)
 {
     DeleteAllOptions();
     for (const auto &option : options)
-        AppendOption(option);
+        make_button(option, nullptr);
+    rebuild_rows();
 
-    update_scroll_range();
     Layout();
     Refresh();
 }
@@ -815,8 +847,30 @@ void MultiSwitchButton::DeleteAllOptions()
     }
     btns.clear();
     btns_modified.clear();
+    m_rows = 1;
     if (sizer)
-        sizer->Clear();
+        sizer->Clear(false);
+}
+
+void MultiSwitchButton::SetMaxRowWidth(int width)
+{
+    if (width < 0)
+        width = 0;
+    if (width == m_max_row_width)
+        return;
+    m_max_row_width = width;
+    rebuild_rows();
+    Layout();
+    Refresh();
+}
+
+int MultiSwitchButton::MeasureOption(unsigned int index, const wxString &option) const
+{
+    int width = GetTextExtent(option).x + FromDIP(m_button_padding).x * 2;
+    // The dot and its gap, as Button::messureSize adds them.
+    if (index < btns.size() && btns[index]->HasIndicator())
+        width += FromDIP(6) + FromDIP(6);
+    return width;
 }
 
 unsigned int MultiSwitchButton::GetCount() const
@@ -857,7 +911,18 @@ void MultiSwitchButton::SetOptionText(unsigned int index, const wxString &text)
     if (index >= btns.size())
         return;
     btns[index]->SetLabel(text);
-    update_scroll_range();
+    // The button measures the new text itself; the rows and the scrollbar range follow its width.
+    rebuild_rows();
+    Layout();
+}
+
+void MultiSwitchButton::SetOptionIndicator(unsigned int index, bool on)
+{
+    if (index >= btns.size() || btns[index]->HasIndicator() == on)
+        return;
+    btns[index]->SetIndicator(on);
+    rebuild_rows();
+    Layout();
 }
 
 void *MultiSwitchButton::GetOptionData(unsigned int index) const
@@ -909,7 +974,7 @@ void MultiSwitchButton::SetButtonPadding(const wxSize &padding)
     m_button_padding = padding;
     for (auto *btn : btns)
         btn->SetPaddingSize(FromDIP(padding));
-    update_scroll_range();
+    rebuild_rows();
     Layout();
     Refresh();
 }
@@ -927,8 +992,8 @@ void MultiSwitchButton::Rescale()
         btn->SetPaddingSize(FromDIP(m_button_padding));
         btn->Rescale();
     }
-    // Rescaling can change how the labels measure, and the scrollbar range follows the buttons.
-    update_scroll_range();
+    // Rescaling can change how the labels measure, and the rows and the scrollbar range follow the buttons.
+    rebuild_rows();
 }
 
 void MultiSwitchButton::button_clicked(wxCommandEvent &event)

@@ -32,6 +32,7 @@
 #include <boost/date_time.hpp>
 #include "boost/date_time/posix_time/ptime.hpp"
 
+#include <array>
 #include <openssl/evp.h>
 #include <openssl/md5.h>
 #include <vector>
@@ -792,6 +793,9 @@ inline std::string get_bbl_remain_time_dhms(float time_in_secs)
 }
 
 bool bbl_calc_md5(const std::string &filename, std::string &md5_out);
+// SHA-256 of a file (UTF-8 path). Returns false, and leaves digest_out zeroed, when the file cannot
+// be read to its end or the digest fails; a partial hash is never returned.
+bool calc_file_sha256(const std::string &filename, std::array<unsigned char, 32> &digest_out);
 
 inline std::string filter_characters(const std::string& str, const std::string& filterChars)
 {
@@ -838,6 +842,11 @@ void remove_installed_vendor(const std::string& vendor);
 // The vendors `dir` holds, sorted: one is named by its profile or, in a build that
 // ships preset caches instead of the raw profile JSONs, by its cache alone.
 std::set<std::string> vendor_names_in(const boost::filesystem::path& dir);
+
+// The version of the preset cache `<vendor>.opc` in `dir` when that cache is the form of the
+// vendor to install (it covers the vendor profile beside it, if any); invalid when the vendor
+// installs as its profile JSON. See utils.cpp.
+Semver installable_cache_version(const boost::filesystem::path& dir, const std::string& vendor);
 
 // The version a build ships `vendor` at: whichever of its preset cache and its
 // profile is newer, that being the one installing lays down. Invalid Semver if the

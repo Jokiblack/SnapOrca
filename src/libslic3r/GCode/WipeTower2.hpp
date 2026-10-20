@@ -68,6 +68,38 @@ public:
     WipeTower::ToolChangeResult construct_block_tcr(WipeTowerWriter2& writer,
         bool priming, size_t filament_id, bool is_finish, float purge_volume) const;
 
+    // The depth one tool change reserves on the tower (set_toolchange()), from the geometry alone,
+    // so the pre-slice footprint estimate (WipeTowerEstimate) reserves what the tower will print.
+    // ORCA: the ram uses the old tool's own line width and the purge the new tool's, so a thin head's
+    // purge stays dense; with equal nozzles both are the tower's line width.
+    struct ToolChangeGeometry
+    {
+        float tower_width                      = 0.f; // the box width
+        float widest_line_width                = 0.f; // the wall line, the widest tool's
+        float layer_height                     = 0.f;
+        float old_line_width                   = 0.f; // the ramming tool's line
+        float ramming_line_width_multiplicator = 1.f;
+        float ramming_step_multiplicator       = 1.f;
+        float ramming_volume                   = 0.f;
+        bool  ramming                          = false; // whether the unload rams at all
+        bool  boundary_wipe_start              = false; // unused by this tower: each purge starts on its block's own row
+        float new_line_width                   = 0.f;  // the purging tool's line and row pitch
+        float wipe_volume                      = 0.f;
+        float extra_flow                       = 1.f;
+        float extra_spacing_wipe               = 1.f; // row pitch factor of the purge
+        float extra_spacing_ramming            = 1.f;
+    };
+    struct ToolChangeDepth
+    {
+        float ramming_depth   = 0.f;
+        float ramming_length  = 0.f; // whole ram rows
+        float first_wipe_line = 0.f;
+        float wiping_depth    = 0.f; // whole rows of the purging tool
+        float wipe_length     = 0.f;
+        float total() const { return ramming_depth + wiping_depth; }
+    };
+    static ToolChangeDepth toolchange_depth(const ToolChangeGeometry &geometry);
+
 	// x			-- x coordinates of wipe tower in mm ( left bottom corner )
 	// y			-- y coordinates of wipe tower in mm ( left bottom corner )
 	// width		-- width of wipe tower in mm ( default 60 mm - leave as it is )
@@ -206,11 +238,16 @@ public:
         float               max_e_speed = std::numeric_limits<float>::max();
         std::vector<float>  ramming_speed;
         float               nozzle_diameter;
+        // ORCA: tower line width this tool purges and rams with (its nozzle diameter * Width_To_Nozzle_Ratio).
+        float               perimeter_width = 0.f;
         float               filament_area;
 		bool			    multitool_ramming;
 		float               multitool_ramming_time = 0.f;
 		float               multitool_ramming_volume = 0.f;
 		float               filament_minimal_purge_on_wipe_tower = 0.f;
+        // Pressure advance the slicer sets for this filament (enable_pressure_advance), restored
+        // after the ramming override; negative when the firmware manages the value.
+        float               pressure_advance = -1.f;
         float               retract_length;
         float               retract_speed;
         float               flat_iron_area;
@@ -221,6 +258,13 @@ public:
         float wipe_dist = 0.f;
         // Tallest layer this filament's nozzle can lay down; caps the sparse layer combination.
         float max_layer_height = 0.f;
+        // Snapmaker Orca: the speeds the tower prints this filament with, read in its own flow variant
+        // (set_extruder): travel and first layer from the print config, sparse infill and inner wall
+        // from the region config. 0 (autospeed): 30 mm/s first layer, 80 mm/s above.
+        float travel_speed      = 0.f;
+        float infill_speed      = 80.f;
+        float perimeter_speed   = 80.f;
+        float first_layer_speed = 30.f;
     };
 
     const std::map<float, Polylines>& get_outer_wall() const { return m_outer_wall; }
@@ -299,6 +343,23 @@ private:
     float filament_area() const {
         return m_filpar[0].filament_area; // all extruders are assumed to have the same filament diameter at this point
     }
+    // ORCA: line width the given tool purges and rams with; m_perimeter_width (the widest nozzle's)
+    // keeps the tower layout: the wall, the sparse and solid fills and the block alignment.
+    float tool_perimeter_width(size_t tool) const {
+        return tool < m_filpar.size() && m_filpar[tool].perimeter_width > 0.f ? m_filpar[tool].perimeter_width : m_perimeter_width;
+    }
+    // Extrusion flow of the given tool's purge line at the current layer height. A tool of the tower's
+    // line width returns m_extrusion_flow itself, so equal nozzles keep the tower's flow bit for bit.
+    float tool_extrusion_flow(size_t tool) const {
+        const float width = tool_perimeter_width(tool);
+        return width == m_perimeter_width ? m_extrusion_flow :
+                                            m_layer_height * (width - m_layer_height * (1.f - float(M_PI) / 4.f)) / filament_area();
+    }
+
+    // Snapmaker: set the ramming pressure advance (enable_change_pressure_when_wiping) and restore
+    // the filament's own value after the ram (see toolchange_Unload()).
+    bool   m_change_pressure         = true;
+    float  m_change_pressure_value   = 0.f;
 
     float  m_ramming_width_ratio     = 2.0;
 	bool   m_semm               = true; // Are we using a single extruder multimaterial printer?
@@ -321,11 +382,20 @@ private:
 	float  m_layer_height 		= 0.f; 	// Current layer height.
 	size_t m_max_color_changes 	= 0; 	// Maximum number of color changes per layer.
     int    m_old_temperature    = -1;   // To keep track of what was the last temp that we set (so we don't issue the command when not neccessary)
-    float  m_travel_speed       = 0.f;
-	float  m_infill_speed       = 0.f;
+    // Snapmaker Orca: the region config's sparse infill and inner wall speeds, read per filament in
+    // set_extruder(). The speeds live in m_filpar, read through the accessors below for the tool
+    // the tower prints with at that point.
+    ConfigOptionFloatsNullable m_region_infill_speed;
+    ConfigOptionFloatsNullable m_region_perimeter_speed;
     float  m_wipe_tower_max_purge_speed   = 90.f;
-	float  m_perimeter_speed    = 0.f;
-    float  m_first_layer_speed  = 0.f;
+    float  travel_speed(size_t tool) const      { return tool < m_filpar.size() ? m_filpar[tool].travel_speed : 0.f; }
+    float  infill_speed(size_t tool) const      { return tool < m_filpar.size() ? m_filpar[tool].infill_speed : 80.f; }
+    float  perimeter_speed(size_t tool) const   { return tool < m_filpar.size() ? m_filpar[tool].perimeter_speed : 80.f; }
+    float  first_layer_speed(size_t tool) const { return tool < m_filpar.size() ? m_filpar[tool].first_layer_speed : 30.f; }
+    float  travel_speed() const      { return travel_speed(m_current_tool); }
+    float  infill_speed() const      { return infill_speed(m_current_tool); }
+    float  perimeter_speed() const   { return perimeter_speed(m_current_tool); }
+    float  first_layer_speed() const { return first_layer_speed(m_current_tool); }
     size_t m_first_layer_idx    = size_t(-1);
     bool   m_enable_tower_interface_features = false;
     bool   m_enable_tower_interface_cooldown_during_tower = false;
@@ -452,6 +522,10 @@ private:
 
 		std::vector<ToolChange> tool_changes;
         std::vector<ToolChange> local_z_tool_changes;
+        // Tool loaded when this layer starts (-1 = unknown). Toolchanges may happen off
+        // the tower between layers (fractional support layers), so the tower cannot infer
+        // it from its own toolchange chain.
+        int start_tool = -1;
 
 		WipeTowerInfo(float z_par, float layer_height_par)
 			: z{z_par}, height{layer_height_par}, depth{0} {}

@@ -276,8 +276,13 @@ static std::vector<std::pair<TreeSupportSettings, std::vector<size_t>>> group_me
     const coordf_t radius_sample_resolution = g_config_tree_support_collision_resolution;
 
     // calc the extrudable expolygons of each layer
-    // SnapOrca: line_width may be a percentage of the nozzle (the U1 profiles use one).
-    const coordf_t extrusion_width = config.get_abs_value("line_width", print_object.print()->config().nozzle_diameter.get_at(0));
+    // SnapOrca: the width is a column per tool head, read at the support head, and may be a % of
+    // that head's nozzle (the U1 profiles use one).
+    float          support_nozzle  = 0.f;
+    const size_t   width_head      = support_head(&print_object, config.support_filament, false, &support_nozzle);
+    if (support_nozzle <= 0.f)
+        support_nozzle = float(print_object.print()->config().nozzle_diameter.get_at(width_head));
+    const coordf_t extrusion_width = config.get_abs_value_at("line_width", width_head, support_nozzle);
     const coordf_t extrusion_width_scaled = scale_(extrusion_width);
     tbb::parallel_for(tbb::blocked_range<size_t>(0, print_object.layer_count()),
         [&](const tbb::blocked_range<size_t>& range) {
@@ -4349,7 +4354,7 @@ static void generate_support_areas(Print &print, TreeSupport* tree_support, cons
         const int       num_raft_layers = int(config.raft_layers.size());
         const int       num_layers = int(print_object.layer_count()) + num_raft_layers;
         overhangs.resize(num_layers);
-        
+        // Pure sharp tail overhangs are expanded by 0.2 mm.
         for (size_t i = 0; i < print_object.layer_count(); i++) {
             for (const std::pair<ExPolygon, int>& overhang_with_type : print_object.get_layer(i)->loverhangs_with_type) {
                 Polygons polys = to_polygons(overhang_with_type.first);

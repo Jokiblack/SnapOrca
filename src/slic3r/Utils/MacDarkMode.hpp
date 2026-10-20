@@ -12,6 +12,8 @@ extern double mac_max_scaling_factor();
 extern void set_miniaturizable(void * window);
 void WKWebView_evaluateJavaScript(void * web, wxString const & script, void (*callback)(wxString const &));
 void WKWebView_setTransparentBackground(void * web);
+void WKWebViewConfiguration_keepActiveWhenHidden(void * configuration);
+void WKWebView_keepActiveWhenHidden(void * web);
 void WKWebView_force_display(void * web);
 void WKWebViewConfiguration_keepActiveWhenHidden(void * configuration);
 void WKWebView_keepActiveWhenHidden(void * web);

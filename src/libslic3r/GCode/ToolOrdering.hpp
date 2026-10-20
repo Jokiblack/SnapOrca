@@ -33,6 +33,15 @@ namespace Slic3r {
 class Print;
 class PrintObject;
 class LayerTools;
+
+// ORCA: per-feature wall filaments. Classify a perimeter entity the way GCode::process_layer()'s
+// mixed-perimeter split does: a loop carrying an external perimeter path - or a fully overhanging
+// loop without any plain perimeter path - prints with the outer wall filament, everything else
+// with the inner wall filament. The split and every wall filament dispatch must agree on this.
+bool perimeter_entity_uses_outer_wall_filament(const ExtrusionEntity &entity);
+// Do any of the collection's perimeter entities print with the outer / the inner wall filament?
+void classify_wall_filaments(const ExtrusionEntityCollection &collection, bool &any_outer, bool &any_inner);
+
 namespace CustomGCode { struct Item; }
 class PrintRegion;
 
@@ -164,8 +173,11 @@ public:
 
     // Return a zero based extruder from the region, or extruder_override if overriden.
     unsigned int wall_extruder_id(const PrintRegion &region) const;
+    unsigned int inner_wall_extruder_id(const PrintRegion &region) const;
     unsigned int sparse_infill_filament_id(const PrintRegion &region) const;
     unsigned int internal_solid_filament_id(const PrintRegion &region) const;
+    unsigned int top_surface_filament_id(const PrintRegion &region) const;
+    unsigned int bottom_surface_filament_id(const PrintRegion &region) const;
     // Snapmaker: mixed-filament aware aliases kept for the Snapmaker G-code paths.
     unsigned int wall_filament(const PrintRegion &region) const { return this->wall_extruder_id(region); }
     unsigned int sparse_infill_filament(const PrintRegion &region) const { return this->sparse_infill_filament_id(region); }
@@ -176,10 +188,14 @@ public:
     coordf_t 					print_z	= 0.;
     bool 						has_object = false;
     bool						has_support = false;
+    // This print_z is an object layer boundary (of any object, extrusions or not); support-only
+    // layers between such Zs come from fractional independent support layer heights.
+    bool						on_object_grid = false;
     // Zero based extruder IDs, ordered to minimize tool switches.
     std::vector<unsigned int> 	extruders;
     bool                        preserve_extruder_order = false;
-    // Purge overrides disable Local-Z emission for the entire shared print layer.
+    // An object splits this layer into Local-Z sublayers; purge overrides stay off here because
+    // they would disable Local-Z emission for the entire shared print layer.
     bool                        has_local_z_subdivision = false;
     // If per layer extruder switches are inserted by the G-code preview slider, this value contains the new (1 based) extruder, with which the whole object layer is being printed with.
     // If not overriden, it is set to 0.
@@ -197,6 +213,9 @@ public:
     // Due to the support layers possibly interleaving the object layers,
     // wipe tower will be disabled for some support only layers.
     bool 						has_wipe_tower = false;
+    // ORCA: per-extruder layer height. An object-grid layer that changes no tool: the prime
+    // tower may leave it without a slab and bridge it with the next slab (fill_wipe_tower_partitions).
+    bool                        tower_optional = false;
     // Number of wipe tower partitions to support the required number of tool switches
     // and to support the wipe tower partitions above this one.
     size_t                      wipe_tower_partitions = 0;
@@ -343,6 +362,7 @@ public:
     std::vector<LayerTools>::const_iterator end()   const { return m_layer_tools.end(); }
     bool 				empty()       const { return m_layer_tools.empty(); }
     std::vector<LayerTools>& layer_tools() { return m_layer_tools; }
+    const std::vector<LayerTools>& layer_tools() const { return m_layer_tools; }
     bool 				has_wipe_tower() const { return ! m_layer_tools.empty() && m_first_printing_extruder != (unsigned int)-1 && m_layer_tools.front().has_wipe_tower; }
 
     int                 get_most_used_extruder() const { return most_used_extruder; }
@@ -400,7 +420,7 @@ public:
 private:
     void				initialize_layers(std::vector<coordf_t> &zs);
     void 				collect_extruders(const PrintObject &object, const std::vector<std::pair<double, unsigned int>> &per_layer_extruder_switches);
-    void 				fill_wipe_tower_partitions(const PrintConfig &config, coordf_t object_bottom_z, coordf_t max_layer_height);
+    void 				fill_wipe_tower_partitions(const PrintConfig &config, coordf_t object_bottom_z, coordf_t raft_top_z, coordf_t max_layer_height);
     bool                insert_wipe_tower_extruder();
     void                mark_skirt_layers(const PrintConfig &config, coordf_t max_layer_height);
     void 				collect_extruder_statistics(bool prime_multi_material);

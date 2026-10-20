@@ -101,6 +101,8 @@
 #include "libslic3r/ClipperUtils.hpp"
 #include "libslic3r/FilamentMixer.hpp"
 #include "libslic3r/Preset.hpp"
+#include "libslic3r/FilamentFlowColumns.hpp"
+#include "libslic3r/PerHeadProcess.hpp"
 #include "libslic3r/Geometry.hpp"
 #include "libslic3r/GCode.hpp"
 #include "libslic3r/MeshRepair.hpp"
@@ -108,6 +110,7 @@
 #include "libslic3r/ModelArrange.hpp"
 #include "libslic3r/Platform.hpp"
 #include "libslic3r/Print.hpp"
+#include "libslic3r/Slicing.hpp"
 #include "libslic3r/SLAPrint.hpp"
 #include "libslic3r/TriangleMesh.hpp"
 #include "libslic3r/Format/AMF.hpp"
@@ -3334,6 +3337,13 @@ int CLI::run(int argc, char **argv)
         load_default_gcodes_to_config(load_process_config, Preset::TYPE_PRINT);
         if (new_process_name.empty()) {
             int diff_keys_size = different_keys_set.size();
+            // Snapmaker Orca: a project whose process preset holds values per tool head is wider
+            // than the system preset (libslic3r/PerHeadProcess.hpp); the system preset is laid out
+            // like the project first, so that every column is restored onto its own.
+            if (PerHeadProcess::is_wide(m_print_config)) {
+                BOOST_LOG_TRIVIAL(info) << boost::format("%1%, the process preset carries values per extruder: the system preset takes its layout") % __LINE__;
+                PerHeadProcess::relayout(load_process_config, PerHeadProcess::layout_of(m_print_config));
+            }
             compute_variant_index(m_print_config, load_process_config, "print_extruder_id", "print_extruder_variant", new_variant_index, variant_count_changed);
             ret = update_full_config(m_print_config, load_process_config, different_keys_set, variant_count_changed, print_options_with_variant, empty_options, new_variant_index, false, skip_modified_gcodes);
             if (diff_keys_size != different_keys_set.size()) {
@@ -3358,6 +3368,13 @@ int CLI::run(int argc, char **argv)
             flush_and_exit(ret);
         }
     }
+
+    // Snapmaker Orca: the project records the process preset each tool head printed with in the
+    // application and the preset chosen for a head there (PerHeadProcess). The command line
+    // composes no per-head process table yet: every tool head slices with the loaded process
+    // preset, the outputs' record says so (emptied) and the choice is kept.
+    for (const std::string &line : PerHeadProcess::command_line_record(m_print_config))
+        BOOST_LOG_TRIVIAL(warning) << line;
 
     //get nozzle_volume_type
     if(m_extra_config.has("nozzle_volume_type")) {
@@ -3436,6 +3453,13 @@ int CLI::run(int argc, char **argv)
                 if (!current_is_multi_extruder && new_is_multi_extruder && (current_print_variant_count == 1)) {
                     //single -> multiple
                     ret = m_print_config.update_values_from_single_to_multi(config, print_options_with_variant, "print_extruder_id", "print_extruder_variant");
+                }
+                else if (PerHeadProcess::is_wide(m_print_config)) {
+                    // Snapmaker Orca: values set per tool head (PerHeadProcess.hpp). The shared columns stay;
+                    // each head of the new printer takes its own column or the shared one of its flow, with its marker.
+                    BOOST_LOG_TRIVIAL(info) << boost::format("%1%, machine_switch: the process preset carries values per extruder, laid out for the new printer") % __LINE__;
+                    PerHeadProcess::relayout(m_print_config, PerHeadProcess::wide_layout(m_print_config, m_print_config));
+                    ret = 0;
                 }
                 else {
                     //multiple -> single
@@ -3574,6 +3598,12 @@ int CLI::run(int argc, char **argv)
             if ((int) curr_variant_opt->values.size() < filament_count)
                 curr_variant_opt->values.resize(filament_count, get_extruder_variant_string(etDirectDrive, nvtStandard));
             const ConfigOptionStrings *new_variant_opt = dynamic_cast<const ConfigOptionStrings*>(config.option("filament_extruder_variant", true));
+            // Snapmaker Orca: a refresh from a system file keeps the High Flow column of a project filament whose
+            // system preset has none: the file gains the project's columns first, as copies of its column 0.
+            if (load_filament_count == 0 && up_config_to_date)
+                for (int j = old_start_indice[filament_index - 1]; j < old_start_indice[filament_index - 1] + old_variant_counts[filament_index - 1] && j < int(curr_variant_opt->values.size()); j++)
+                    if (is_known_filament_variant(curr_variant_opt->values[j]))
+                        filament_add_variant_column(config, curr_variant_opt->values[j]);
 
             std::vector<int> new_variant_indice;
             int new_variant_count = new_variant_opt->size(), old_variant_count = old_variant_counts[filament_index - 1];
@@ -3589,6 +3619,12 @@ int CLI::run(int argc, char **argv)
                     }
                 }
             }
+            // Snapmaker Orca: with --load-filaments, a column of the project filament that the loaded preset lacks
+            // (a High Flow column, the preset holding Standard values only) is not carried over; the Standard values are.
+            for (int j = old_start_indice[filament_index - 1]; j < old_start_indice[filament_index - 1] + old_variant_count && j < int(curr_variant_opt->values.size()); j++)
+                if (std::find(new_variant_opt->values.begin(), new_variant_opt->values.end(), curr_variant_opt->values[j]) == new_variant_opt->values.end())
+                    BOOST_LOG_TRIVIAL(warning) << boost::format("filament %1% (%2%): column \"%3%\" is not in the loaded preset and is dropped")
+                        % filament_index % load_filaments_name[index] % curr_variant_opt->values[j];
 
             //parse the filament value to index th
             //loop through options and apply them
@@ -3732,6 +3768,10 @@ int CLI::run(int argc, char **argv)
                                                 old_variant_count, true);
             }
 
+            // Snapmaker Orca: every per-column key of this filament now has the width of the loaded list, whichever
+            // branch above wrote it.
+            new_variant_counts[filament_index - 1] = new_variant_count;
+
             //update the old index
             if (old_variant_count != new_variant_count)
             {
@@ -3762,13 +3802,13 @@ int CLI::run(int argc, char **argv)
 
         if (m_print_config.option<ConfigOptionStrings>("filament_extruder_variant")) {
             std::vector<int>& filament_self_indice = m_print_config.option<ConfigOptionInts>("filament_self_index", true)->values;
-            int index_size = m_print_config.option<ConfigOptionStrings>("filament_extruder_variant")->size();
-            filament_self_indice.resize(index_size, 1);
-            int k = 0;
-            for (size_t i = 0; i < filament_count; i++) {
-                for (size_t j = 0; j < new_variant_counts[i]; j++) {
-                    filament_self_indice[k++] = i + 1;
-                }
+            const size_t index_size = m_print_config.option<ConfigOptionStrings>("filament_extruder_variant")->size();
+            // Snapmaker Orca: rebuilt only when the column counts add up to the joined list; a mismatch would
+            // write past its end or give one filament the values of another.
+            if (!filament_self_index_from_counts(new_variant_counts, index_size, filament_self_indice)) {
+                BOOST_LOG_TRIVIAL(error) << boost::format("the filament column counts do not add up to the %1% entries of filament_extruder_variant") % index_size;
+                record_exit_reson(outfile_dir, CLI_CONFIG_FILE_ERROR, 0, cli_errors[CLI_CONFIG_FILE_ERROR], sliced_info);
+                flush_and_exit(CLI_CONFIG_FILE_ERROR);
             }
         }
     }
@@ -6945,6 +6985,8 @@ int CLI::run(int argc, char **argv)
                             ConfigOptionEnumsGeneric* final_nozzle_volume_type_opt = new_print_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type", true);
                             final_nozzle_volume_type_opt->values.resize(new_extruder_count, nvtStandard);
                         }
+                        // Snapmaker Orca: the preferred layer heights are planned as the GUI plans them for slicing.
+                        apply_extruder_layer_height_plan(new_print_config);
                         print->apply(model, new_print_config);
                         BOOST_LOG_TRIVIAL(info) << boost::format("set no_check to %1%:")%no_check;
                         print->set_no_check_flag(no_check);//BBS

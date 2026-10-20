@@ -11,6 +11,8 @@
 #include "Semver.hpp"
 #include "enum_bitmask.hpp"
 #include "MixedFilament.hpp"
+#include "NozzleFilamentPresets.hpp"
+#include "PerHeadProcess.hpp"
 
 #include <climits>
 #include <functional>
@@ -54,6 +56,9 @@ struct ConnectMachineInfo
     std::string filament_info {""};
     std::string filament_type {""};
     std::string nozzle_info {""};
+    // Flow type the printer reports for the nozzle of this slot, in the wire spelling of
+    // SSWCPProtocol ("standard" / "high_flow"); empty when the printer reports none.
+    // Upstream #794 784cfd18b1.
     std::string nozzle_volume_type {""};
     std::string color_info{""};
     std::vector<std::string> multiColors;
@@ -529,6 +534,44 @@ public:
     // Filament preset names for a multi-extruder or multi-material print.
     // extruders.size() should be the same as printers.get_edited_preset().config.nozzle_diameter.size()
     std::vector<std::string>    filament_presets;
+    // Snapmaker Orca: the filament presets follow the nozzle size of the tool head that prints them
+    // (libslic3r/NozzleFilamentPresets.hpp). Off unless the application turns it on from the
+    // preference "filament_follows_nozzle"; the command line and the tests leave or set it.
+    bool                        nozzle_filament_enabled { false };
+    // Snapmaker Orca: preference "process_follows_nozzle" (PerHeadProcess.hpp), off unless the application
+    // sets it. A preset chosen for a head applies either way (gate: PerHeadProcess::active).
+    bool                        process_follows_nozzle { false };
+    // Session memory of the rule, never stored: (family, machine preset name) -> the user preset
+    // a slot left because of its size (NozzleFilament::remember_user_preset()). target_for_slot()
+    // prefers it over the system version while it exists, is installed and fits.
+    std::map<std::pair<std::string, std::string>, std::string> nozzle_filament_memory;
+    // Per slot compatibility: Preset::is_compatible, unless State::mixed and the slot has a tool
+    // head; then "fits" rates against that head's machine preset and "selectable" also admits user
+    // presets and system presets without a version for its size. A State lasts until slots change.
+    bool                        filament_slot_fits(const Preset &preset, size_t slot) const;
+    bool                        filament_slot_fits(const NozzleFilament::State &state, const Preset &preset, size_t slot) const;
+    bool                        filament_slot_selectable(const Preset &preset, size_t slot) const;
+    bool                        filament_slot_selectable(const NozzleFilament::State &state, const Preset &preset, size_t slot) const;
+    // The first visible preset that fits the slot, the best by `preference` (the match quality
+    // PresetCollection::first_compatible_idx takes; none: the first). When no visible preset fits
+    // the tool head, the first compatible one as mainline picks it.
+    const Preset&               first_slot_fit(size_t slot, const std::function<int(const Preset&)> &preference = {}) const;
+    // What the slots should hold, one entry per slot whose tool head is among `heads` (empty: every
+    // slot, those without a tool head included). Changes nothing. Empty when the rule is off.
+    std::vector<NozzleFilament::SlotTarget> nozzle_filament_targets(const std::vector<size_t> &heads = {}) const;
+    // Writes the targets into the slots that still hold `from`; returns the number of changed slots.
+    // A hidden target becomes visible and, with `app_config`, is entered in its filament section.
+    size_t                      apply_nozzle_filament_targets(const std::vector<NozzleFilament::SlotTarget> &targets, AppConfig *app_config = nullptr);
+    // The per slot form of the loop that ends update_selections() and load_selections(); false when
+    // tool heads of different nozzle sizes are not in use and mainline's loop has to run.
+    bool                        repair_filament_slots_per_head();
+    // The preset a broken filament slot takes when all extruders share one nozzle size: the edited
+    // filament (update_compatible()'s pick) if installed and compatible, else the first compatible one.
+    std::string                 filament_slot_fallback_name() const;
+    // Rank of a filament as default material of the edited Snapmaker printer: in the model's
+    // "default_materials" -> 3, Generic PLA -> 2, Snapmaker PLA -> 1, else 0 (0 for other vendors).
+    // Last tie-breaker of update_compatible(), first_slot_fit() and filament_slot_fallback_name().
+    int                         default_material_rank(const Preset &filament) const;
     // BBS: ams
     std::map<int, DynamicPrintConfig> filament_ams_list;
     std::vector<std::vector<std::string>> ams_multi_color_filment;
@@ -581,6 +624,12 @@ public:
     DynamicPrintConfig          full_config(bool apply_extruder = true, std::optional<std::vector<int>>filament_maps = std::nullopt, std::optional<std::vector<int>> filament_volume_maps = std::nullopt) const;
     // full_config() with the some "useless" config removed.
     DynamicPrintConfig          full_config_secure(std::optional<std::vector<int>>filament_maps = std::nullopt) const;
+    // Snapmaker Orca: the config every GUI Print::apply site uses; equals full_config(apply_extruder, maps...)
+    // unless PerHeadProcess::active and a head prints with another process preset, then the process columns
+    // are composed per head on the unexpanded config. `sources` receives what each head prints with.
+    DynamicPrintConfig          full_config_for_print(bool apply_extruder = true, std::optional<std::vector<int>> filament_maps = std::nullopt,
+                                                      std::optional<std::vector<int>> filament_volume_maps = std::nullopt,
+                                                      std::vector<PerHeadProcess::Source> *sources = nullptr) const;
 
     // Default per-filament nozzle-volume types: each filament inherits the volume type of the
     // extruder it maps to (1-based f_maps), Standard when unknown.
@@ -839,6 +888,12 @@ public:
     static const char *ORCA_DEFAULT_FILAMENT;
     static const char *ORCA_FILAMENT_LIBRARY;
     static const char *ORCA_DEFAULT_FILAMENT_PLACEHOLDER;
+
+    // Snapmaker Orca: the variant the setup wizard activates among the ticked nozzle sizes. SM_BUNDLE:
+    // SM_DEFAULT_PRINTER_VARIANT if ticked; else the first ticked variant in model order (null `model`:
+    // the default size if ticked, else the first ticked name). Empty when nothing is ticked.
+    static std::string wizard_printer_variant(const std::string &bundle_name, const VendorProfile::PrinterModel *model,
+                                              const std::set<std::string> &ticked);
 
 
     static std::array<Preset::Type, 3>  types_list(PrinterTechnology pt) {

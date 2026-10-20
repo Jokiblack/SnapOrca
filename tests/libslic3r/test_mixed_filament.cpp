@@ -1,6 +1,5 @@
-#include <catch2/catch_test_macros.hpp>
-#include <catch2/matchers/catch_matchers.hpp>
-#include "test_utils.hpp"
+#include <catch2/catch_all.hpp>
+
 #include "libslic3r/ExtrusionEntity.hpp"
 #include "libslic3r/FilamentColorLibrary.hpp"
 #include "libslic3r/MixedFilamentConfigRemap.hpp"
@@ -350,33 +349,33 @@ TEST_CASE("Mixed filament apparent mix percent follows the signed bias target", 
 TEST_CASE("Mixed filament bias helper maps signed bias to a one-sided safe offset pair", "[MixedFilament]")
 {
     const auto [offset_a, offset_b] = MixedFilamentManager::surface_offset_pair_from_signed_bias(0.06f, 0.4f);
-    CHECK_THAT(offset_a, WithinRel(0.0f, 0.001));
-    CHECK_THAT(offset_b, WithinRel(0.06f, 0.001));
+    CHECK(offset_a == Catch::Approx(0.0f));
+    CHECK(offset_b == Catch::Approx(0.06f));
 
-    CHECK_THAT(MixedFilamentManager::bias_ui_value_from_surface_offsets(offset_a, offset_b, 0.4f), WithinRel(0.06f, 0.001));
+    CHECK(MixedFilamentManager::bias_ui_value_from_surface_offsets(offset_a, offset_b, 0.4f) == Catch::Approx(0.06f));
 
-    CHECK_THAT(MixedFilamentManager::bias_ui_value_from_surface_offsets(0.02f, 0.0f, 0.4f), WithinRel(-0.02f, 0.001));
-    CHECK_THAT(MixedFilamentManager::bias_ui_value_from_surface_offsets(-0.02f, 0.0f, 0.4f), WithinRel(0.02f, 0.001));
+    CHECK(MixedFilamentManager::bias_ui_value_from_surface_offsets(0.02f, 0.0f, 0.4f) == Catch::Approx(-0.02f));
+    CHECK(MixedFilamentManager::bias_ui_value_from_surface_offsets(-0.02f, 0.0f, 0.4f) == Catch::Approx(0.02f));
 
     const auto [negative_a, negative_b] = MixedFilamentManager::surface_offset_pair_from_signed_bias(-0.06f, 0.4f);
-    CHECK_THAT(negative_a, WithinRel(0.06f, 0.001));
-    CHECK_THAT(negative_b, WithinRel(0.0f, 0.001));
+    CHECK(negative_a == Catch::Approx(0.06f));
+    CHECK(negative_b == Catch::Approx(0.0f));
 
     const auto [unclamped_a, unclamped_b] = MixedFilamentManager::surface_offset_pair_from_signed_bias(0.30f, 0.4f);
-    CHECK_THAT(unclamped_a, WithinRel(0.0f, 0.001));
-    CHECK_THAT(unclamped_b, WithinRel(0.30f, 0.001));
+    CHECK(unclamped_a == Catch::Approx(0.0f));
+    CHECK(unclamped_b == Catch::Approx(0.30f));
 
     const auto [unclamped_negative_a, unclamped_negative_b] = MixedFilamentManager::surface_offset_pair_from_signed_bias(-0.30f, 0.4f);
-    CHECK_THAT(unclamped_negative_a, WithinRel(0.30f, 0.001));
-    CHECK_THAT(unclamped_negative_b, WithinRel(0.0f, 0.001));
+    CHECK(unclamped_negative_a == Catch::Approx(0.30f));
+    CHECK(unclamped_negative_b == Catch::Approx(0.0f));
 
     const auto [clamped_a, clamped_b] = MixedFilamentManager::surface_offset_pair_from_signed_bias(0.40f, 0.4f);
-    CHECK_THAT(clamped_a, WithinRel(0.0f, 0.001));
-    CHECK_THAT(clamped_b, WithinRel(0.35f, 0.001));
+    CHECK(clamped_a == Catch::Approx(0.0f));
+    CHECK(clamped_b == Catch::Approx(0.35f));
 
     const auto [clamped_negative_a, clamped_negative_b] = MixedFilamentManager::surface_offset_pair_from_signed_bias(-0.40f, 0.4f);
-    CHECK_THAT(clamped_negative_a, WithinRel(0.35f, 0.001));
-    CHECK_THAT(clamped_negative_b, WithinRel(0.0f, 0.001));
+    CHECK(clamped_negative_a == Catch::Approx(0.35f));
+    CHECK(clamped_negative_b == Catch::Approx(0.0f));
 }
 
 TEST_CASE("Mixed filament component surface offsets follow the signed bias target across alternating layers", "[MixedFilament]")
@@ -558,11 +557,12 @@ TEST_CASE("Grouped manual wall patterns make infill follow the innermost perimet
     REQUIRE(row.manual_pattern == "12,1");
 
     PrintRegionConfig region_config = static_cast<const PrintRegionConfig &>(FullPrintConfig::defaults());
-    region_config.wall_filament.value                  = 3;
+    region_config.outer_wall_filament_id.value         = 3;
+    region_config.inner_wall_filament_id.value         = 3;
     region_config.wall_loops.value                     = 2;
     region_config.sparse_infill_density.value          = 15.;
-    region_config.sparse_infill_filament.value         = 2;
-    region_config.solid_infill_filament.value          = 3;
+    region_config.sparse_infill_filament_id.value      = 2;
+    region_config.internal_solid_filament_id.value     = 3;
 
     PrintRegion region(region_config);
 
@@ -580,17 +580,21 @@ TEST_CASE("Grouped manual wall patterns make infill follow the innermost perimet
     layer1.mixed_mgr         = &mgr;
     layer1.num_physical      = 2;
 
-    CHECK(layer0.wall_filament(region) == 0);
-    CHECK(layer1.wall_filament(region) == 1);
+    CHECK(layer0.wall_extruder_id(region) == 0);
+    CHECK(layer1.wall_extruder_id(region) == 1);
+    CHECK(layer0.sparse_infill_filament_id(region) == 1);
+    CHECK(layer1.sparse_infill_filament_id(region) == 1);
+    CHECK(layer0.internal_solid_filament_id(region) == 0);
+    CHECK(layer1.internal_solid_filament_id(region) == 0);
 
-    region_config.sparse_infill_filament.value          = 2;
-    region_config.solid_infill_filament.value           = 2;
+    region_config.sparse_infill_filament_id.value       = 2;
+    region_config.internal_solid_filament_id.value      = 2;
     PrintRegion overridden_region(region_config);
 
-    CHECK(layer0.sparse_infill_filament(overridden_region) == 1);
-    CHECK(layer1.sparse_infill_filament(overridden_region) == 1);
-    CHECK(layer0.solid_infill_filament(overridden_region) == 1);
-    CHECK(layer1.solid_infill_filament(overridden_region) == 1);
+    CHECK(layer0.sparse_infill_filament_id(overridden_region) == 1);
+    CHECK(layer1.sparse_infill_filament_id(overridden_region) == 1);
+    CHECK(layer0.internal_solid_filament_id(overridden_region) == 1);
+    CHECK(layer1.internal_solid_filament_id(overridden_region) == 1);
 }
 
 TEST_CASE("Local-Z plans follow repeated object and part filament changes", "[MixedFilament][LocalZ][Invalidation]")
@@ -691,9 +695,10 @@ TEST_CASE("Local-Z layers preserve mixed infill when purge overrides are enabled
     config.set("dithering_local_z_infill", true);
 
     PrintRegionConfig region_config            = static_cast<const PrintRegionConfig&>(FullPrintConfig::defaults());
-    region_config.wall_filament.value          = 1;
-    region_config.sparse_infill_filament.value = 2;
-    region_config.is_infill_first.value        = true;
+    region_config.outer_wall_filament_id.value    = 1;
+    region_config.inner_wall_filament_id.value    = 1;
+    region_config.sparse_infill_filament_id.value = 2;
+    region_config.is_infill_first.value           = true;
     PrintRegion region(region_config);
     Print       print;
     print.set_status_silent();
@@ -703,7 +708,7 @@ TEST_CASE("Local-Z layers preserve mixed infill when purge overrides are enabled
     const auto extrusion = [](ExtrusionRole role) {
         auto* collection = new ExtrusionEntityCollection;
         auto* path       = new ExtrusionPath(role, 0.08, 0.4f, 0.2f);
-        path->polyline   = Polyline({Point::new_scale(1., 1.), Point::new_scale(19., 1.)});
+        path->polyline   = Polyline3(Polyline({Point::new_scale(1., 1.), Point::new_scale(19., 1.)}));
         collection->entities.emplace_back(path);
         return collection;
     };
@@ -5794,19 +5799,17 @@ TEST_CASE("Mixed filament config remap shifts object feature overrides", "[Mixed
     // Six physical filaments; deleting old ID 2 shifts old IDs 3..6 to 2..5.
     const std::vector<unsigned int> id_remap = {0, 1, 0, 2, 3, 4, 5};
 
-    DynamicPrintConfig global_config = DynamicPrintConfig::full_print_config();
-    global_config.set("wall_filament", 5, true);
-    remap_dynamic_config_feature_filament_ids(global_config, id_remap, 5);
-    CHECK(global_config.opt_int("wall_filament") == 4);
+    CHECK(remap_filament_config_id(5, id_remap, 5) == 4);
+    CHECK(remap_filament_config_id(2, id_remap, 5) == 0);
 
     ModelConfig object_config;
     object_config.set("extruder", 5);
-    object_config.set("wall_filament", 5);
-    object_config.set("sparse_infill_filament", 6);
+    object_config.set("outer_wall_filament_id", 5);
+    object_config.set("sparse_infill_filament_id", 6);
     remap_model_config_filament_ids(object_config, id_remap, 5);
     CHECK(object_config.extruder() == 4);
-    CHECK(object_config.opt_int("wall_filament") == 4);
-    CHECK(object_config.opt_int("sparse_infill_filament") == 5);
+    CHECK(object_config.opt_int("outer_wall_filament_id") == 4);
+    CHECK(object_config.opt_int("sparse_infill_filament_id") == 5);
 }
 
 TEST_CASE("Mixed filament config remap sends deleted mixed rows to default", "[MixedFilament][ConfigRemap]")
@@ -5816,10 +5819,10 @@ TEST_CASE("Mixed filament config remap sends deleted mixed rows to default", "[M
 
     ModelConfig object_config;
     object_config.set("extruder", 5);
-    object_config.set("wall_filament", 5);
-    object_config.set("solid_infill_filament", 6);
+    object_config.set("outer_wall_filament_id", 5);
+    object_config.set("internal_solid_filament_id", 6);
     remap_model_config_filament_ids(object_config, id_remap, 6);
     CHECK(object_config.extruder() == 0);
-    CHECK_FALSE(object_config.has("wall_filament"));
-    CHECK(object_config.opt_int("solid_infill_filament") == 5);
+    CHECK_FALSE(object_config.has("outer_wall_filament_id"));
+    CHECK(object_config.opt_int("internal_solid_filament_id") == 5);
 }

@@ -2,6 +2,7 @@
 
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
+#include "libslic3r/FilamentFlowColumns.hpp"
 #include "libslic3r/Preset.hpp"
 #include "libslic3r/PrintConfig.hpp"
 
@@ -55,4 +56,89 @@ TEST_CASE("deep_diff distinguishes absolute and percentage speeds for each varia
     DynamicPrintConfig transferred = reference.config;
     transferred.apply_only(edited.config, diff);
     REQUIRE(*transferred.option("small_perimeter_speed") == *edited.config.option("small_perimeter_speed"));
+}
+
+// Snapmaker Orca: extruder_nozzle_stats is a session-only key. The nozzle count badges of the
+// sidebar seed it into the edited printer preset on every preset load and saved presets never
+// carry it, so a system preset with the seed must read clean; a key the user set still counts.
+TEST_CASE("A session-only extruder_nozzle_stats entry does not make a preset dirty", "[PresetDiff][Config]")
+{
+    Preset reference(Preset::TYPE_PRINTER, "ref");
+    reference.config.set_key_value("nozzle_diameter", new ConfigOptionFloats{0.4, 0.4, 0.4, 0.4});
+
+    Preset edited(Preset::TYPE_PRINTER, "edited");
+    edited.config = reference.config;
+    edited.config.set_key_value("extruder_nozzle_stats", new ConfigOptionStrings{"Standard#1", "Standard#1", "Standard#1", "Standard#1"});
+
+    CHECK_FALSE(PresetCollection::is_dirty(&edited, &reference));
+    const std::vector<std::string> deep = PresetCollection::dirty_options(&edited, &reference, /*deep_compare=*/true);
+    CHECK(std::find(deep.begin(), deep.end(), "extruder_nozzle_stats") == deep.end());
+    const std::vector<std::string> flat = PresetCollection::dirty_options(&edited, &reference, /*deep_compare=*/false);
+    CHECK(std::find(flat.begin(), flat.end(), "extruder_nozzle_stats") == flat.end());
+
+    // A key the reference lacks and the user set away from its default is still a change.
+    edited.config.set_key_value("printer_notes", new ConfigOptionString("tuned"));
+    CHECK(PresetCollection::is_dirty(&edited, &reference));
+    const std::vector<std::string> with_notes = PresetCollection::dirty_options(&edited, &reference, /*deep_compare=*/true);
+    CHECK(std::find(with_notes.begin(), with_notes.end(), "printer_notes") != with_notes.end());
+}
+
+// Snapmaker Orca: a two-column filament preset (Standard / High Flow) edited in its High Flow
+// column reports that column only.
+TEST_CASE("A High Flow edit of a filament preset marks the High Flow column only", "[PresetDiff][FilamentFlow]")
+{
+    Preset reference(Preset::TYPE_FILAMENT, "ref");
+    reference.config.set_key_value("filament_extruder_variant", new ConfigOptionStrings{"Direct Drive Standard", "Direct Drive High Flow"});
+    reference.config.set_key_value("filament_max_volumetric_speed", new ConfigOptionFloats{20., 40.});
+
+    Preset edited = reference;
+    edited.config.option<ConfigOptionFloats>("filament_max_volumetric_speed")->values[1] = 45.;
+
+    for (const bool deep : {true, false}) {
+        INFO("deep_compare " << deep);
+        const std::vector<std::string> diff = PresetCollection::dirty_options(&edited, &reference, deep);
+        if (deep) {
+            CHECK(std::find(diff.begin(), diff.end(), "filament_max_volumetric_speed#1") != diff.end());
+            CHECK(std::find(diff.begin(), diff.end(), "filament_max_volumetric_speed#0") == diff.end());
+        } else
+            CHECK(std::find(diff.begin(), diff.end(), "filament_max_volumetric_speed") != diff.end());
+    }
+    CHECK(PresetCollection::is_dirty(&edited, &reference));
+}
+
+// Snapmaker Orca: a filament preset given High Flow values in the Filament tab is compared with its
+// reference widened by the High Flow column (filament_reference_in_layout_of).
+TEST_CASE("An added High Flow column makes a filament preset dirty on its own", "[PresetDiff][FilamentFlow]")
+{
+    Preset reference(Preset::TYPE_FILAMENT, "ref");
+    reference.config.set_key_value("filament_extruder_variant", new ConfigOptionStrings{"Direct Drive Standard"});
+    reference.config.set_key_value("filament_max_volumetric_speed", new ConfigOptionFloats{12.});
+    reference.config.set_key_value("nozzle_temperature", new ConfigOptionInts{255});
+
+    Preset edited = reference;
+    REQUIRE(filament_add_flow_column(edited.config, nvtHighFlow));
+
+    CHECK(PresetCollection::is_dirty(&edited, &reference));
+    for (const bool deep : {true, false}) {
+        INFO("deep_compare " << deep);
+        CHECK(PresetCollection::dirty_options(&edited, &reference, deep) == std::vector<std::string>{"filament_extruder_variant"});
+    }
+}
+
+TEST_CASE("A High Flow value equal to the Standard value of a one-column reference is no change", "[PresetDiff][FilamentFlow]")
+{
+    Preset reference(Preset::TYPE_FILAMENT, "ref");
+    reference.config.set_key_value("filament_extruder_variant", new ConfigOptionStrings{"Direct Drive Standard"});
+    reference.config.set_key_value("filament_max_volumetric_speed", new ConfigOptionFloats{12.});
+    reference.config.set_key_value("nozzle_temperature", new ConfigOptionInts{255});
+
+    Preset edited = reference;
+    REQUIRE(filament_add_flow_column(edited.config, nvtHighFlow));
+    edited.config.option<ConfigOptionFloats>("filament_max_volumetric_speed")->values[1] = 22.;
+
+    const std::vector<std::string> diff = PresetCollection::dirty_options(&edited, &reference, /*deep_compare=*/true);
+    CHECK(std::find(diff.begin(), diff.end(), "filament_max_volumetric_speed#1") != diff.end());
+    CHECK(std::find(diff.begin(), diff.end(), "filament_max_volumetric_speed#0") == diff.end());
+    CHECK(std::find(diff.begin(), diff.end(), "nozzle_temperature#1") == diff.end());
+    CHECK(std::find(diff.begin(), diff.end(), "nozzle_temperature") == diff.end());
 }

@@ -275,7 +275,7 @@ TEST_CASE("Machine envelope emits max limit among used extruders", "[GCodeWriter
         config.set_key_value("machine_start_gcode",          new ConfigOptionString(""));
         config.set_key_value("layer_height",                 new ConfigOptionFloat(0.2));
         config.set_key_value("initial_layer_print_height",   new ConfigOptionFloat(0.2));
-        config.set_key_value("initial_layer_line_width",     new ConfigOptionFloatOrPercent(0, false));
+        config.set_key_value("initial_layer_line_width",     new ConfigOptionFloatsOrPercentsNullable{FloatOrPercent(0., false)});
         config.set_key_value("z_hop",                        new ConfigOptionFloats({0}));
         // Print objects sequentially so each uses its own extruder without
         // wipe-tower / tool-change complexity.
@@ -285,6 +285,10 @@ TEST_CASE("Machine envelope emits max limit among used extruders", "[GCodeWriter
         config.set_key_value("nozzle_diameter",          new ConfigOptionFloats({0.4, 0.4}));
         config.set_key_value("printer_extruder_id",      new ConfigOptionInts({1, 2}));
         config.set_key_value("printer_extruder_variant", new ConfigOptionStrings({"Direct Drive Standard", "Direct Drive Standard"}));
+        // The per-filament variant columns are normally synthesized by PresetBundle;
+        // provide them directly for this raw config (upstream multi-variant lookup).
+        config.set_key_value("filament_self_index",       new ConfigOptionInts({1, 2}));
+        config.set_key_value("filament_extruder_variant", new ConfigOptionStrings({"Direct Drive Standard", "Direct Drive Standard"}));
         config.set_key_value("filament_diameter",        new ConfigOptionFloats({1.75, 1.75}));
         config.set_key_value("filament_colour",          new ConfigOptionStrings({"#FF0000", "#00FF00"}));
         config.set_key_value("filament_type",            new ConfigOptionStrings({"PLA", "PLA"}));
@@ -385,7 +389,7 @@ TEST_CASE("EXTRUDER_LIMIT per-extruder clamping and max fallback", "[GCodeWriter
     config.set_key_value("machine_start_gcode",          new ConfigOptionString(""));
     config.set_key_value("layer_height",                 new ConfigOptionFloat(0.2));
     config.set_key_value("initial_layer_print_height",   new ConfigOptionFloat(0.2));
-    config.set_key_value("initial_layer_line_width",     new ConfigOptionFloatOrPercent(0, false));
+    config.set_key_value("initial_layer_line_width",     new ConfigOptionFloatsOrPercentsNullable{FloatOrPercent(0., false)});
     config.set_key_value("z_hop",                        new ConfigOptionFloats({0}));
     config.set_key_value("print_sequence",               new ConfigOptionEnum<PrintSequence>(PrintSequence::ByObject));
 
@@ -689,7 +693,7 @@ static DynamicPrintConfig dual_extruder_toolchange_config()
     config.set_key_value("machine_start_gcode",        new ConfigOptionString(""));
     config.set_key_value("layer_height",               new ConfigOptionFloat(0.2));
     config.set_key_value("initial_layer_print_height", new ConfigOptionFloat(0.2));
-    config.set_key_value("initial_layer_line_width",   new ConfigOptionFloatOrPercent(0, false));
+    config.set_key_value("initial_layer_line_width",   new ConfigOptionFloatsOrPercentsNullable{FloatOrPercent(0., false)});
     config.set_key_value("z_hop",                      new ConfigOptionFloats({0., 0.}));
     // The change block carries both a real toolchange command and the ordinal
     // placeholder the stock profiles feed to the firmware.

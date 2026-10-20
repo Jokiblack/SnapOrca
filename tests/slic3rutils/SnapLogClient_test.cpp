@@ -512,6 +512,10 @@ struct FakeClient
 {
     int64_t       now           = 0;
     int           request_count = 0;
+    // false: the handles returned by do_request never complete, so the realtime
+    // worker keeps the first one in flight and pops nothing more (see park_worker).
+    // Set before init(); shutdown() cancels the held handle.
+    bool          auto_fulfill = true;
     SnapLogDeps   deps;
     SnapLogConfig cfg;
 
@@ -522,7 +526,7 @@ struct FakeClient
                                  const std::string* /*body_str*/) {
             ++request_count;
             auto h = std::make_shared<SnapLogHandle>();
-            h->fulfilled.store(true);
+            h->fulfilled.store(auto_fulfill);
             return h;
         };
         deps.consent_ok = []() { return true; };
@@ -549,6 +553,22 @@ struct FakeClient
         SnapLogClient::instance().set_user_token("tok");
     }
     void shutdown() { SnapLogClient::instance().shutdown(); }
+
+    // Parks the realtime worker on a never-completing sentinel handle so nothing drains the
+    // queue afterwards. Requires auto_fulfill == false before init(); returns true once the
+    // worker has taken the sentinel (queue empty) within timeout_ms.
+    bool park_worker(int timeout_ms = 2000)
+    {
+        SnapLogClient::instance().log(SnapLogLevel::Info, "park", SnapLogExt{{"eventName", "park"}}, SnapLogPolicy::Realtime, __FUNCTION__,
+                                      __LINE__);
+        auto t0 = std::chrono::steady_clock::now();
+        while (SnapLogClient::instance().realtime_queue_size_for_test() > 0) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(2));
+            if (std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - t0).count() > timeout_ms)
+                return false;
+        }
+        return true;
+    }
 };
 } // anonymous namespace
 
@@ -568,7 +588,9 @@ TEST_CASE("log(): disabled event name not enqueued", "[snaplog][pipeline]")
 {
     FakeClient fc;
     fc.cfg.event_disable_list.push_back("blocked_event");
+    fc.auto_fulfill = false;
     fc.init();
+    REQUIRE(fc.park_worker());
     SnapLogClient::instance().log(SnapLogLevel::Info, "msg", SnapLogExt{{"eventName", "blocked_event"}}, SnapLogPolicy::Realtime,
                                   __FUNCTION__, __LINE__);
     REQUIRE(SnapLogClient::instance().realtime_queue_size_for_test() == 0);
@@ -583,7 +605,9 @@ TEST_CASE("log(): rate limit throttles beyond cap", "[snaplog][pipeline]")
 {
     FakeClient fc;
     fc.cfg.event_rate_cap_per_sec["throttled"] = 2;
+    fc.auto_fulfill = false;
     fc.init();
+    REQUIRE(fc.park_worker());
     // First 2 pass (cap=2 at t=0), 3rd is throttled.
     for (int i = 0; i < 3; ++i) {
         SnapLogClient::instance().log(SnapLogLevel::Info, "msg", SnapLogExt{{"eventName", "throttled"}}, SnapLogPolicy::Realtime,
@@ -596,8 +620,11 @@ TEST_CASE("log(): rate limit throttles beyond cap", "[snaplog][pipeline]")
 TEST_CASE("log(): queue fills to cap, Error evicts oldest non-Error", "[snaplog][pipeline]")
 {
     FakeClient fc;
-    // cap=4; rate caps high so nothing throttles.
+    // cap=4; rate caps high so nothing throttles. The worker is parked first,
+    // otherwise it pops one of the fill events and the queue is not full.
+    fc.auto_fulfill = false;
     fc.init();
+    REQUIRE(fc.park_worker());
     // Fill with 4 Info events.
     for (int i = 0; i < 4; ++i) {
         SnapLogClient::instance().log(SnapLogLevel::Info, "fill", SnapLogExt{{"eventName", "fill"}}, SnapLogPolicy::Realtime, __FUNCTION__,
@@ -624,7 +651,11 @@ TEST_CASE("log(): queue fills to cap, Error evicts oldest non-Error", "[snaplog]
 TEST_CASE("log(): full queue + non-Error incoming -> dropped counter increments", "[snaplog][pipeline]")
 {
     FakeClient fc;
+    // The worker is parked first, otherwise it pops one of the fill events and
+    // the 5th is admitted instead of dropped.
+    fc.auto_fulfill = false;
     fc.init();
+    REQUIRE(fc.park_worker());
     // Fill with 4 Info events.
     for (int i = 0; i < 4; ++i) {
         SnapLogClient::instance().log(SnapLogLevel::Info, "fill", SnapLogExt{{"eventName", "fill"}}, SnapLogPolicy::Realtime, __FUNCTION__,
@@ -652,7 +683,9 @@ TEST_CASE("log(): Buffered policy does not land in realtime queue", "[snaplog][p
 TEST_CASE("log(): no eventName in ext still enqueues (unknown bucket)", "[snaplog][pipeline]")
 {
     FakeClient fc;
+    fc.auto_fulfill = false;
     fc.init();
+    REQUIRE(fc.park_worker());
     SnapLogClient::instance().log(SnapLogLevel::Info, "no-event", SnapLogExt{{"someKey", "someVal"}}, SnapLogPolicy::Realtime, __FUNCTION__,
                                   __LINE__);
     REQUIRE(SnapLogClient::instance().realtime_queue_size_for_test() == 1);
@@ -662,7 +695,9 @@ TEST_CASE("log(): no eventName in ext still enqueues (unknown bucket)", "[snaplo
 TEST_CASE("log(): set_consent(false) after init drops events", "[snaplog][pipeline]")
 {
     FakeClient fc;
+    fc.auto_fulfill = false;
     fc.init();
+    REQUIRE(fc.park_worker());
     // consent starts true (deps.consent_ok returns true).
     SnapLogClient::instance().log(SnapLogLevel::Info, "before", SnapLogExt{{"eventName", "x"}}, SnapLogPolicy::Realtime, __FUNCTION__,
                                   __LINE__);
@@ -680,7 +715,9 @@ TEST_CASE("log(): set_consent(false) after init drops events", "[snaplog][pipeli
 TEST_CASE("log(): empty user_token drops events (login gate)", "[snaplog][pipeline]")
 {
     FakeClient fc;
+    fc.auto_fulfill = false;
     fc.init();
+    REQUIRE(fc.park_worker());
     SnapLogClient::instance().set_user_token(""); // ensure not logged in
     SnapLogClient::instance().log(SnapLogLevel::Info, "anon", SnapLogExt{{"eventName", "x"}}, SnapLogPolicy::Realtime, __FUNCTION__,
                                   __LINE__);
@@ -695,7 +732,9 @@ TEST_CASE("log(): empty user_token drops events (login gate)", "[snaplog][pipeli
 TEST_CASE("log(): forced event bypasses empty user_token", "[snaplog][pipeline]")
 {
     FakeClient fc;
+    fc.auto_fulfill = false;
     fc.init();
+    REQUIRE(fc.park_worker());
     SnapLogClient::instance().set_user_token("");
     SnapLogClient::instance().log(SnapLogLevel::Info, "forced", SnapLogExt{{"eventName", "forced"}}, SnapLogPolicy::Realtime, __FUNCTION__,
                                   __LINE__, true);
@@ -870,7 +909,7 @@ TEST_CASE("worker: drains queue when handles auto-fulfill", "[snaplog][worker]")
     wf.shutdown();
 }
 
-TEST_CASE("worker: in-flight=1 — blocks while handle not done", "[snaplog][worker]")
+TEST_CASE("worker: in-flight=1 - blocks while handle not done", "[snaplog][worker]")
 {
     WorkerFake wf;
     wf.auto_fulfill = false; // handles stay not-done
@@ -1946,14 +1985,14 @@ struct BatchFlusherFixture
 {
     boost::filesystem::path                   spool;
     TempSpoolGuard                            guard;
+    std::atomic<int64_t>                      now{1700000000000};
     std::shared_ptr<SnapLogClient::Internals> in;
 
     BatchFlusherFixture()
         : spool(boost::filesystem::temp_directory_path() / boost::filesystem::unique_path("snaplog-bt-%%%%.dir")), guard(spool)
     {
         SnapLogDeps deps;
-        int64_t     ts  = 1700000000000;
-        deps.now_ms     = [&ts]() { return ts++; };
+        deps.now_ms     = [this]() { return now++; };
         deps.consent_ok = []() { return true; };
         deps.user_token = []() { return std::string("tok"); };
         deps.user_id    = []() { return std::string("uid-1"); };
@@ -2196,6 +2235,7 @@ struct BatchUploadFixture
 {
     boost::filesystem::path                   spool;
     TempSpoolGuard                            guard;
+    std::atomic<int64_t>                      now{1700000000000};
     std::shared_ptr<SnapLogClient::Internals> in;
 
     std::mutex                 calls_mu;
@@ -2229,8 +2269,7 @@ struct BatchUploadFixture
         : spool(boost::filesystem::temp_directory_path() / boost::filesystem::unique_path("snaplog-bt-up-%%%%.dir")), guard(spool)
     {
         SnapLogDeps deps;
-        int64_t     ts  = 1700000000000;
-        deps.now_ms     = [&ts]() { return ts++; };
+        deps.now_ms     = [this]() { return now++; };
         deps.consent_ok = []() { return true; };
         deps.user_token = [this]() { return this->live_token; };
         deps.user_id    = []() { return std::string("uid-1"); };
@@ -2904,12 +2943,17 @@ TEST_CASE("batch lifecycle: shutdown drain flushes bt_queue to sealed and upload
                                       SnapLogExt{{"eventName", "drain_test"}, {"opId", "op" + std::to_string(i)}}, SnapLogPolicy::Buffered,
                                       __FUNCTION__, __LINE__);
     }
-    REQUIRE(SnapLogClient::instance().batch_queue_size_for_test() == 3);
+    REQUIRE(SnapLogClient::instance().batch_queue_dropped_for_test() == 0);
 
     // shutdown() should set drain_and_flush, drain the queue to active.log,
     // rotate to sealed, upload via create/PUT/completed, then join bt_worker.
     f.shutdown();
 
+    // A request running when shutdown starts stops the uploads; its sealed file stays for the next session.
+    if (SnapLogClient::instance().shutdown_stopped_uploads_for_test()) {
+        CHECK(!list_sealed(f.spool).empty());
+        return;
+    }
     // After shutdown: bt_queue empty (drained), all sealed uploaded + deleted.
     REQUIRE(list_sealed(f.spool).empty());
     // At least one create+completed happened (the drained events).
@@ -3243,7 +3287,7 @@ TEST_CASE("bt upload: create body code 110004 sets auth_known_dead", "[snaplog][
     // Sealed retained.
     REQUIRE(boost::filesystem::exists(sealed));
 }
-TEST_CASE("SpoolLock: exclusive — second acquire fails, release enables retry", "[snaplog][batch]")
+TEST_CASE("SpoolLock: exclusive - second acquire fails, release enables retry", "[snaplog][batch]")
 {
     namespace fs = boost::filesystem;
     auto dir     = fs::unique_path(fs::temp_directory_path() / "snaplog-lock-%%%%.dir");

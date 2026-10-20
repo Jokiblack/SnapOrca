@@ -30,6 +30,7 @@ add_executable(${_TEST_NAME}_tests
     test_preset_bundle_loading.cpp
     test_preset_setting_id.cpp
     test_preset_diff.cpp
+    test_first_run_presets.cpp # Snapmaker Orca: the presets the setup wizard leaves for a Snapmaker U1
     test_vendor_cache.cpp
     test_preset_options.cpp
     test_elephant_foot_compensation.cpp
@@ -53,6 +54,7 @@ add_executable(${_TEST_NAME}_tests
     test_step.cpp
     test_stl.cpp
     test_triangle_selector.cpp
+    test_used_filaments.cpp # Snapmaker Orca: the filaments a plate counts before slicing
     test_meshboolean.cpp
     test_mesh_repair.cpp
     test_trianglemesh_slicer.cpp

@@ -29,6 +29,7 @@
 #include <wx/gdicmn.h>
 #include <wx/event.h>
 #include <wx/numformatter.h>
+#include <wx/textwrapper.h>
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include "libslic3r/Exception.hpp"
@@ -194,16 +195,29 @@ void OptionsGroup::set_max_win_width(int max_win_width)
 
 void OptionsGroup::remove_option_if(std::function<bool(std::string const&)> const& comp)
 {
+    // m_options_mode parallels only the lines that carried options when appended:
+    // append_line() skips the mode push for full-width widget lines and optionless
+    // (widget-only) lines, e.g. the legacy support selection toggle. Walk the two
+    // structures in step - indexing m_options_mode with the m_lines index reads and
+    // erases out of bounds as soon as one such line exists.
+    size_t mode_idx = 0;
     for (auto& l : m_lines) {
         auto& opts = const_cast<std::vector<Option>&>(l.get_options());
+        const bool counted_in_modes = !opts.empty() &&
+            !(l.full_width && (l.widget != nullptr || !l.get_extra_widgets().empty()));
         opts.erase(std::remove_if(opts.begin(), opts.end(), [&comp](Option& o) { return comp(o.opt.opt_key); }), opts.end());
         l.undo_to_sys = true;
+        if (counted_in_modes) {
+            if (opts.empty())
+                m_options_mode.erase(m_options_mode.begin() + mode_idx);
+            else
+                ++mode_idx;
+        }
     }
-    for (int i = m_lines.size() - 1; i >= 0; --i) {
-        if (m_lines[i].get_options().empty())
-            m_options_mode.erase(m_options_mode.begin() + i);
-    }
-    m_lines.erase(std::remove_if(m_lines.begin(), m_lines.end(), [](auto& l) { return l.get_options().empty(); }), m_lines.end());
+    // Only drop lines whose options were removed; keep widget-only lines (they never had any).
+    m_lines.erase(std::remove_if(m_lines.begin(), m_lines.end(), [](auto& l) {
+        return l.get_options().empty() && l.widget == nullptr && l.get_extra_widgets().empty();
+    }), m_lines.end());
     // TODO: remove items from g->m_options;
 }
 
@@ -297,6 +311,8 @@ void OptionsGroup::append_line(const Line& line)
 // BBS: get line for opt_key
 Line* OptionsGroup::get_line(const std::string& opt_key)
 {
+    // ORCA: widget-only lines (e.g. the legacy support selection toggle) carry no options; the
+    // per-option scan below simply skips them.
     for (int index = 0; index < m_lines.size(); index++) {
         for (auto& opt : m_lines[index].get_options())
             if (opt.opt_id == opt_key)
@@ -740,7 +756,17 @@ void ConfigOptionsGroup::on_change_OG(const t_config_option_key& opt_id, const b
         auto itOption              = it->second;
         const std::string& opt_key = itOption.first;
         int opt_index              = itOption.second;
-        this->change_opt_value(opt_key, value, opt_index == -1 ? 0 : opt_index);
+        int write_index            = opt_index == -1 ? 0 : opt_index;
+        if (m_before_change && !m_before_change(opt_key, write_index)) {
+            // Refused: the field shows the stored value again.
+            const auto option = m_options.find(opt_id);
+            if (option != m_options.end())
+                this->set_value(opt_id, config_value(opt_key, opt_index, option->second.opt.gui_flags == "serialized"));
+            return;
+        }
+        this->change_opt_value(opt_key, value, write_index);
+        if (m_after_change)
+            m_after_change(opt_key, write_index);
     }
 
     OptionsGroup::on_change_OG(opt_id, value);
@@ -814,6 +840,8 @@ void ConfigOptionsGroup::back_to_initial_value(const std::string& opt_key)
 {
     if (m_get_initial_config == nullptr)
         return;
+    if (m_before_revert && m_before_revert(opt_key, false))
+        return;
     back_to_config_value(m_get_initial_config(), opt_key);
 }
 
@@ -822,6 +850,8 @@ void ConfigOptionsGroup::back_to_sys_value(const std::string& opt_key)
     if (m_get_sys_config == nullptr)
         return;
     if (!have_sys_config())
+        return;
+    if (m_before_revert && m_before_revert(opt_key, true))
         return;
     back_to_config_value(m_get_sys_config(), opt_key);
 }
@@ -905,7 +935,16 @@ void ConfigOptionsGroup::reload_config()
         // index in the vector option, zero for scalars
         int opt_index                 = kvp.second.second;
         const ConfigOptionDef& option = m_options.at(opt_id).opt;
-        this->set_value(opt_id, config_value(opt_key, opt_index, option.gui_flags == "serialized"));
+        boost::any value = config_value(opt_key, opt_index, option.gui_flags == "serialized");
+        // Snapmaker Orca: a field may show the value the selected tool head prints with when its
+        // preset stores none of its own (the speed selector of the Process tab).
+        if (m_display_source) {
+            const DynamicPrintConfig *source = nullptr;
+            int                       index  = 0;
+            if (m_display_source(opt_key, opt_index, source, index) && source != nullptr)
+                value = get_config_value(*source, opt_key, index);
+        }
+        this->set_value(opt_id, value);
     }
 }
 
@@ -1110,6 +1149,7 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
             {
             case coPercents:
             case coFloats:
+            case coFloatsOrPercents:
                 ret = _(L("N/A"));
                 break;
             case coBools:
@@ -1442,6 +1482,9 @@ boost::any ConfigOptionsGroup::get_config_value2(const DynamicPrintConfig& confi
             case coPercents:
             case coFloats:
                 ret = ConfigOptionFloatsNullable::nil_value();
+                break;
+            case coFloatsOrPercents:
+                ret = ConfigOptionFloatsOrPercentsNullable::nil_value();
                 break;
             case coBools:
                 ret = static_cast<unsigned char>(false);
@@ -1800,20 +1843,81 @@ bool OptionsGroup::launch_browser(const std::string& path_end) { return wxLaunch
 // ogStaticText
 //-------------------------------------------------------------------------------------------
 
-ogStaticText::ogStaticText(wxWindow* parent, const wxString& text) : wxStaticText(parent, wxID_ANY, text, wxDefaultPosition, wxDefaultSize)
+ogStaticText::ogStaticText(wxWindow* parent, const wxString& text, long style) : wxStaticText(parent, wxID_ANY, text, wxDefaultPosition, wxDefaultSize, style)
 {
+    m_full_text = text;
     if (!text.IsEmpty()) {
-        Wrap(60 * wxGetApp().em_unit());
+        set_wrapped_label(60 * wxGetApp().em_unit());
         GetParent()->Layout();
     }
 }
 
 void ogStaticText::SetText(const wxString& value, bool wrap /* = true*/)
 {
+    m_full_text = value;
     SetLabel(value);
-    if (wrap)
-        Wrap(60 * wxGetApp().em_unit());
+    if (m_wrap_to_width) {
+        m_wrapped_width = -1;
+        wrap_to_current_width();
+    } else if (wrap)
+        set_wrapped_label(60 * wxGetApp().em_unit());
     GetParent()->Layout();
+}
+
+// Snapmaker Orca: wxStaticText::Wrap skips a call with the width of its previous call, even after
+// SetLabel, which leaves a new text on one line (its best size one line high, the rest cut).
+void ogStaticText::set_wrapped_label(int width)
+{
+    class LineWrapper : public wxTextWrapper
+    {
+    public:
+        wxString text;
+
+    protected:
+        void OnOutputLine(const wxString &line) override { text += line; }
+        void OnNewLine() override { text += '\n'; }
+    };
+    LineWrapper wrapper;
+    wrapper.Wrap(this, m_full_text, width);
+    SetLabel(wrapper.text);
+    InvalidateBestSize();
+}
+
+void ogStaticText::WrapToWidth(std::function<void()> after_wrap)
+{
+    m_after_wrap = std::move(after_wrap);
+    if (m_wrap_to_width)
+        return;
+    m_wrap_to_width = true;
+    // The sizer reads the minimum size where one is set: the width may shrink below the longest
+    // line, the height follows the wrapped lines (the best size).
+    SetMinSize({FromDIP(40), -1});
+    Bind(wxEVT_SIZE, [this](wxSizeEvent &evt) {
+        evt.Skip();
+        const int width = evt.GetSize().x;
+        if (width <= 0 || width == m_wrapped_width)
+            return;
+        // Deferred: the layout that set this size is still running.
+        CallAfter([this]() {
+            if (!wrap_to_current_width())
+                return;
+            if (m_after_wrap)
+                m_after_wrap();
+            else if (GetParent() != nullptr)
+                GetParent()->Layout();
+        });
+    });
+    wrap_to_current_width();
+}
+
+bool ogStaticText::wrap_to_current_width()
+{
+    const int width = GetClientSize().x;
+    if (width <= 0 || width == m_wrapped_width)
+        return false;
+    m_wrapped_width = width;
+    set_wrapped_label(width);
+    return true;
 }
 
 void ogStaticText::SetPathEnd(const std::string& link)

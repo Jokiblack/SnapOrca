@@ -1,5 +1,6 @@
 #include "calib_dlg.hpp"
 #include "GUI_App.hpp"
+#include "libslic3r/PerHeadProcess.hpp"
 #include "MsgDialog.hpp"
 #include "I18N.hpp"
 #include <algorithm>
@@ -923,9 +924,11 @@ void VFA_Test_Dlg::on_start(wxCommandEvent& event)
         const double machine_min_lh  = get_at(printer_config.option<ConfigOptionFloats>("min_layer_height"), 0.0);
         const double machine_max_lh  = get_at(printer_config.option<ConfigOptionFloats>("max_layer_height"), 0.0);
 
-        double line_width = print_config.get_abs_value("outer_wall_line_width", nozzle_diameter);
+        // Snapmaker Orca: the widths are columns per tool head; the shared value of the edited preset.
+        const size_t width_column = size_t(PerHeadProcess::shared_column(print_config, nvtStandard));
+        double line_width = print_config.get_abs_value_at("outer_wall_line_width", width_column, nozzle_diameter);
         if (line_width <= 0.0)
-            line_width = print_config.get_abs_value("line_width", nozzle_diameter);
+            line_width = print_config.get_abs_value_at("line_width", width_column, nozzle_diameter);
         if (line_width <= 0.0)
             line_width = nozzle_diameter;
 
@@ -1678,7 +1681,7 @@ Cornering_Test_Dlg::Cornering_Test_Dlg(wxWindow* parent, wxWindowID id, Plater* 
                 break;
             }
             case GCodeFlavor::gcfRepRapFirmware:
-                note_msg_2 += _L("RepRap detected: Jerk in mm/s.\nOrcaSlicer will convert the values to mm/min when necessary.");
+                note_msg_2 += _L("RepRap detected: Jerk in mm/s.\nSnapmaker Orca will convert the values to mm/min when necessary.");
                 break;
             default:
                 break;

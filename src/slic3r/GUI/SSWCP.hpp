@@ -246,6 +246,10 @@ public:
     {
         if (m_work_thread.joinable())
             m_work_thread.detach();
+        // The instance may die on the checker thread of SSWCP::m_instance_list, under its lock,
+        // when the printer never answered the pin code request; the client's destructor can wait
+        // seconds, so it is not run here.
+        MqttClient::dispose_async(std::move(m_pin_code_client));
     }
 
     void process() override;
@@ -261,15 +265,13 @@ private:
     void sw_connect_other_device();
 
     void sw_get_pin_code();
+    // Snapmaker Orca: the instance owns the MQTT client of sw_get_pin_code until the answer
+    // (release_pin_code_client, UI thread) or the timeout; its callback holds only a weak reference.
+    void release_pin_code_client() { MqttClient::dispose_async(std::move(m_pin_code_client)); }
+    std::shared_ptr<MqttClient> m_pin_code_client;
 
     // Subscribe to foreground/background change events (event_id=205890)
     void sw_SubscribeForegroundChange();
-
-    // Owns the one-shot pin-code MQTT client (sw_get_pin_code). Released on
-    // the UI thread after the response — never from a Paho callback thread,
-    // where destroying a client is not allowed.
-    static std::shared_ptr<MqttClient> m_pin_client;
-    static void release_pin_client() { m_pin_client.reset(); }
 
 };
 
@@ -345,6 +347,12 @@ public:
         std::lock_guard<std::mutex> lk(m_engine_map_mtx);
         m_connect_session_map.erase(m_webview);
     }
+    // Snapmaker Orca: drops the subscriptions, funnel id and MQTT engine (released off the UI
+    // thread) of a web view being destroyed. Takes the view as an argument: on_webview_delete()
+    // has already nulled m_webview of every instance.
+    static void forget_webview(wxWebView* view);
+    // Snapmaker Orca: everything of every view, synchronously; for SSWCP::shutdown() at exit.
+    static void release_all_engines();
 
     void set_Instance_illegal() override;
 
@@ -360,6 +368,7 @@ private:
 
 private:
     void clean_current_engine();
+    static void release_view_state(wxWebView* view);
 
     static void mqtt_msg_cb(const std::string& topic, const std::string& payload, void* client);
 
@@ -377,8 +386,8 @@ public:
 
     void process() override;
 
-    bool is_stop() { return m_stop; }
-    void set_stop(bool stop);
+    bool is_stop() override { return m_stop; }
+    void set_stop(bool stop) override;
 
 private:
     // Machine discovery methods
@@ -687,6 +696,12 @@ public:
     // long-running modal commands (e.g. sw_AskUserLogin) so their pending
     // response is not dropped after the default 80 s.
     static void renew_instance_timeout(SSWCP_Instance* instance);
+    // Snapmaker Orca: suspends the timeout of a one-shot instance while a modal dialog of its own
+    // is open (the user's time is not the printer's); renew_instance_timeout arms it again.
+    static void hold_instance_timeout(SSWCP_Instance* instance);
+    // Snapmaker Orca: asks for one GUI_App::load_current_presets() on the UI thread; requests
+    // made before it runs are folded into it. UI thread only.
+    static void request_preset_reload();
 
     // Stop machine discovery
     static void stop_machine_find();
@@ -696,6 +711,9 @@ public:
 
     // Handle webview deletion
     static void on_webview_delete(wxWebView* webview);
+    // Snapmaker Orca: releases the instance list and every MQTT engine at application exit
+    // (GUI_App::OnExit), before static destruction.
+    static void shutdown();
 
     // query the info of the machine
     static bool query_machine_info(std::shared_ptr<PrintHost>& host, MachineInfo& out, int timeout_second = 5);

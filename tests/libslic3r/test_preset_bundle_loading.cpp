@@ -3986,16 +3986,55 @@ TEST_CASE("Printer publishable allowlist matches the printer tab's Retraction an
         "retract_before_wipe", "retract_after_wipe"
     };
     const std::vector<std::string> expected_z_hop = {
-        "retract_lift_enforce", "z_hop_types", "z_hop", "travel_slope", "retract_lift_above",
-        "retract_lift_below"
+        "retract_lift_enforce", "z_hop_types", "z_hop",
+        "z_hop_when_prime", // Snapmaker Orca: fork-only option
+        "travel_slope", "retract_lift_above", "retract_lift_below"
     };
+
+    // Snapmaker Orca: the preferred layer height of the "Layer height limits" group, and the
+    // mode it is read with.
+    const std::vector<std::string> expected_layer_height = { "extruder_layer_height" };
 
     CHECK(keys_of(publishable_printer_retraction_options()) == expected_retraction);
     CHECK(keys_of(publishable_printer_z_hop_options()) == expected_z_hop);
+    CHECK(keys_of(publishable_printer_layer_height_options()) == expected_layer_height);
 
     std::set<std::string> expected_union(expected_retraction.begin(), expected_retraction.end());
     expected_union.insert(expected_z_hop.begin(), expected_z_hop.end());
+    expected_union.insert(expected_layer_height.begin(), expected_layer_height.end());
+    expected_union.insert("extruder_layer_height_exact");
     CHECK(publishable_printer_keys() == expected_union);
+}
+
+// Snapmaker Orca: the per-head preferred layer heights are published with the derived object layer
+// height and apply per index, the exact mode as a scalar; an index without a matching head on the
+// receiver is listed as skipped.
+TEST_CASE("Published 3MF applies the preferred layer heights of the tool heads onto the receiver's printer preset", "[Preset][Bundle][Published]")
+{
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.opt<ConfigOptionStrings>("filament_colour")->values = { "#FF0000" };
+    Preset::normalize(config);
+    config.opt<ConfigOptionFloats>("extruder_layer_height")->values = { 0.09, 0.18, 0.36, 0.54, 0.6 };
+    config.opt<ConfigOptionBool>("extruder_layer_height_exact")->value  = true;
+
+    PresetBundle bundle;
+    {
+        DynamicPrintConfig &receiver = bundle.printers.get_edited_preset().config;
+        receiver.opt<ConfigOptionFloats>("nozzle_diameter")->values          = { 0.2, 0.4, 0.6, 0.8 };
+        receiver.opt<ConfigOptionFloats>("extruder_layer_height")->values    = { 0., 0., 0., 0. };
+        receiver.opt<ConfigOptionBool>("extruder_layer_height_exact")->value = false;
+    }
+
+    PublishedConfig pub;
+    pub.published      = true;
+    pub.published_keys = { "extruder_layer_height#1", "extruder_layer_height#3", "extruder_layer_height#4", "extruder_layer_height_exact" };
+    bundle.load_config_model("test.3mf", std::move(config), Semver(), &pub);
+
+    const DynamicPrintConfig &after = bundle.printers.get_edited_preset().config;
+    check_double_vector(after.opt<ConfigOptionFloats>("extruder_layer_height")->values, { 0., 0.18, 0., 0.54 });
+    CHECK(after.opt<ConfigOptionBool>("extruder_layer_height_exact")->value);
+    CHECK(contains_key(pub.skipped_keys, "extruder_layer_height#4"));
+    CHECK_FALSE(contains_key(pub.skipped_keys, "extruder_layer_height#1"));
 }
 
 // Loading the same published file twice must not compound values on the receiver's presets:
@@ -5488,6 +5527,50 @@ TEST_CASE("A saved mix survives a restart on a multi-tool printer", "[Preset][Bu
         CHECK(bundle.num_mixed_filaments() == 1);
         CHECK(bundle.is_mixed_filament(4));
     }
+}
+
+// The app config key "filament_multi_colors" separates the colours of a slot with '|'; the option
+// "filament_multi_colour" restored from it is parsed on spaces (read_color_pack(), AMS sync), so
+// the restore translates the separator.
+TEST_CASE("A multi-colour slot is restored as a space-separated pack", "[Preset][Bundle][FilamentColor]")
+{
+    AppConfig app_config;
+    {
+        PresetBundle bundle;
+        add_inmemory_preset(bundle.printers, "Test Printer");
+        bundle.printers.select_preset_by_name("Test Printer", true);
+        add_inmemory_preset(bundle.filaments, "Test Filament");
+        bundle.filaments.select_preset_by_name("Test Filament", true);
+        bundle.set_num_filaments(2u, std::string("#FF0000"));
+        bundle.filament_presets.assign(2, "Test Filament");
+        bundle.project_config.option<ConfigOptionStrings>("filament_colour")->values = { "#FF0000", "#0000FF" };
+        bundle.project_config.option<ConfigOptionStrings>("filament_multi_colors", true)->values =
+            { "#FF0000|#00FF00", "#0000FF" };
+        bundle.project_config.option<ConfigOptionInts>("filament_colour_mode", true)->values = { 1, 0 };
+        bundle.export_selections(app_config);
+        REQUIRE(app_config.get_printer_setting("Test Printer", "filament_multi_colors").find('|') != std::string::npos);
+    }
+
+    auto check = [](const PresetBundle &bundle) {
+        const auto &packs = bundle.project_config.option<ConfigOptionStrings>("filament_multi_colour")->values;
+        REQUIRE(packs.size() == 2);
+        CHECK(packs[0].find('|') == std::string::npos);
+        CHECK(packs[0].find(' ') != std::string::npos);
+        CHECK(packs[1] == "#0000FF");
+        // The fork's own key keeps its '|' form.
+        const auto &multi = bundle.project_config.option<ConfigOptionStrings>("filament_multi_colors")->values;
+        REQUIRE(multi.size() == 2);
+        CHECK(multi[0].find('|') != std::string::npos);
+    };
+
+    PresetBundle bundle;
+    add_inmemory_preset(bundle.printers, "Test Printer");
+    add_inmemory_preset(bundle.filaments, "Test Filament");
+    bundle.load_selections(app_config);
+    check(bundle);
+
+    bundle.update_selections(app_config);
+    check(bundle);
 }
 
 // The startup sizing in GUI_App::load_current_presets targets the nozzle count plus the mixes.

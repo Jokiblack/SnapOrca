@@ -55,11 +55,45 @@
 #include <libslic3r.h>
 #include "libslic3r/ExPolygon.hpp"
 #include "libslic3r/ExtrusionEntityCollection.hpp"
+#include "libslic3r/Flow.hpp"
 #include "libslic3r/Model.hpp"
 #include "libslic3r/Polygon.hpp"
 #include "libslic3r/SurfaceCollection.hpp"
 
 namespace Slic3r {
+
+bool perimeter_entity_uses_outer_wall_filament(const ExtrusionEntity &entity)
+{
+    // Chaining may put an overhang path first and fully overhanging loops have no plain
+    // perimeter path: classify by scanning every path (must match the mixed-perimeter split
+    // in GCode::process_layer()).
+    bool has_external = false, has_internal = false;
+    auto classify = [&](const ExtrusionPaths &paths) {
+        for (const ExtrusionPath &path : paths) {
+            if (path.role() == erExternalPerimeter)
+                has_external = true;
+            else if (path.role() == erPerimeter)
+                has_internal = true;
+        }
+    };
+    if (const auto *loop = dynamic_cast<const ExtrusionLoop *>(&entity))
+        classify(loop->paths);
+    else if (const auto *multi_path = dynamic_cast<const ExtrusionMultiPath *>(&entity))
+        classify(multi_path->paths);
+    else {
+        const ExtrusionRole role = entity.role();
+        has_external = role == erExternalPerimeter;
+        has_internal = role == erPerimeter;
+    }
+    return has_external || ! has_internal;
+}
+
+void classify_wall_filaments(const ExtrusionEntityCollection &collection, bool &any_outer, bool &any_inner)
+{
+    any_outer = any_inner = false;
+    for (const ExtrusionEntity *entity : collection.entities)
+        (perimeter_entity_uses_outer_wall_filament(*entity) ? any_outer : any_inner) = true;
+}
 
     //! macro used to mark string used at localization,
     //! return same string
@@ -252,14 +286,28 @@ unsigned int LayerTools::resolve_mixed_1based(unsigned int filament_id) const
 }
 
 // Return a zero based extruder from the region, or extruder_override if overriden.
-// The region accessors below resolve mixed-color slots to the physical filament chosen for this
-// layer by resolve_mixed_filaments(), because a virtual slot id is never a real tool. resolve_mixed()
-// returns its argument unchanged for every filament that is not a mixed slot.
+// The region accessors below resolve mixed-color slots to a physical filament, because a virtual
+// slot id is never a real tool. Two resolution stages run in sequence and both are identities for
+// anything that is not a mixed slot:
+//   1. resolve_mixed_1based() asks the MixedFilamentManager for the component this layer (and, for
+//      grouped manual patterns, this perimeter) should use. This is the path the fork populates in
+//      collect_extruders(), so it normally answers first.
+//   2. resolve_mixed() looks the (still virtual) slot up in the per-layer map filled by
+//      ToolOrdering::resolve_mixed_filaments(). It only fires when stage 1 left a slot unresolved
+//      (no manager attached), and it can never re-map a physical id because the map is keyed by
+//      virtual slots only.
 unsigned int LayerTools::wall_extruder_id(const PrintRegion &region) const
 {
 	assert(region.config().outer_wall_filament_id.value > 0);
 	unsigned int id = (this->extruder_override == 0) ? region.config().outer_wall_filament_id.value : this->extruder_override;
 	// Snapmaker mixed filament first (virtual id -> physical), then the Orca mixed-colour slot resolution.
+	return resolve_mixed(resolve_mixed_1based(id) - 1);
+}
+
+unsigned int LayerTools::inner_wall_extruder_id(const PrintRegion &region) const
+{
+	assert(region.config().inner_wall_filament_id.value > 0);
+	unsigned int id = (this->extruder_override == 0) ? region.config().inner_wall_filament_id.value : this->extruder_override;
 	return resolve_mixed(resolve_mixed_1based(id) - 1);
 }
 
@@ -279,10 +327,27 @@ unsigned int LayerTools::internal_solid_filament_id(const PrintRegion &region) c
 	return resolve_mixed(((grouped != 0) ? grouped : resolve_mixed_1based(id)) - 1);
 }
 
+unsigned int LayerTools::top_surface_filament_id(const PrintRegion &region) const
+{
+	assert(region.config().top_surface_filament_id.value > 0);
+	unsigned int id = (this->extruder_override == 0) ? region.config().top_surface_filament_id.value : this->extruder_override;
+    const unsigned int grouped = grouped_manual_pattern_infill_filament_1based(*this, region, id);
+	return resolve_mixed((((grouped != 0) ? grouped : resolve_mixed_1based(id)) - 1));
+}
+
+unsigned int LayerTools::bottom_surface_filament_id(const PrintRegion &region) const
+{
+	assert(region.config().bottom_surface_filament_id.value > 0);
+	unsigned int id = (this->extruder_override == 0) ? region.config().bottom_surface_filament_id.value : this->extruder_override;
+    const unsigned int grouped = grouped_manual_pattern_infill_filament_1based(*this, region, id);
+	return resolve_mixed((((grouped != 0) ? grouped : resolve_mixed_1based(id)) - 1));
+}
+
 // Returns a zero based extruder this eec should be printed with, according to PrintRegion config or extruder_override if overriden.
 unsigned int LayerTools::extruder(const ExtrusionEntityCollection &extrusions, const PrintRegion &region) const
 {
 	assert(region.config().outer_wall_filament_id.value > 0);
+	assert(region.config().inner_wall_filament_id.value > 0);
 	assert(region.config().sparse_infill_filament_id.value > 0);
 	assert(region.config().internal_solid_filament_id.value > 0);
 	assert(region.config().top_surface_filament_id.value > 0);
@@ -290,39 +355,65 @@ unsigned int LayerTools::extruder(const ExtrusionEntityCollection &extrusions, c
     if (this->extruder_override != 0)
         return resolve_mixed(resolve_mixed_1based(this->extruder_override) - 1);
 
-	// 1 based extruder ID.
-    unsigned int extruder = 1;
     if (extrusions.has_infill()) {
-        if (extrusions.has_solid_infill()) {
-            ExtrusionRole role = extrusions.role();
-            if (role == erTopSolidInfill || role == erIroning)
-                extruder = region.config().top_surface_filament_id;
-            else if (role == erBottomSurface)
-                extruder = region.config().bottom_surface_filament_id;
-            else {
-                // Snapmaker: internal solid infill at 100% sparse density prints with the sparse infill filament.
-                const ExtrusionRole first_role = extrusions.entities.empty() ? erNone : extrusions.entities.front()->role();
-                return internal_solid_infill_uses_sparse_filament(region, first_role) ? this->sparse_infill_filament_id(region)
-                                                                                       : this->internal_solid_filament_id(region);
-            }
-        } else {
-            return this->sparse_infill_filament_id(region);
-        }
-    } else {
-        const ExtrusionRole role = extrusions.role();
-        if (role == erPerimeter)
-            extruder = region.config().inner_wall_filament_id.value;
-        else
+        // Gap fill inherits the filament of the surface it fills; derive the role from
+        // the first non-gap-fill entity (must match ToolOrdering::collect_extruders()).
+        ExtrusionRole role = extrusions.entities.empty() ? erNone : extrusions.entities.front()->role();
+        if (role == erGapFill)
+            for (const ExtrusionEntity *ee : extrusions.entities)
+                if (ee->role() != erGapFill) {
+                    role = ee->role();
+                    break;
+                }
+        if (role == erGapFill)
+            // Perimeter-generated gap fill with no sibling surface prints with the outer wall filament
+            // (ToolOrdering::collect_extruders() has_pure_gap_fill).
             return this->wall_extruder_id(region);
+        if (extrusions.has_solid_infill()) {
+            ExtrusionRole solid_role = extrusions.role();
+            if (solid_role == erMixed && role != erGapFill)
+                solid_role = role;
+            if (solid_role == erTopSolidInfill || solid_role == erIroning)
+                return this->top_surface_filament_id(region);
+            if (solid_role == erBottomSurface || solid_role == erBridgeInfill) // ORCA: external bridges print as bottom surfaces (internal bridges stay internal solid)
+                return this->bottom_surface_filament_id(region);
+            // Snapmaker: internal solid infill at 100% sparse density prints with the sparse infill filament.
+            return internal_solid_infill_uses_sparse_filament(region, role) ? this->sparse_infill_filament_id(region)
+                                                                            : this->internal_solid_filament_id(region);
+        }
+        return this->sparse_infill_filament_id(region);
     }
-
-    return (extruder == 0) ? resolve_mixed(0) : resolve_mixed(resolve_mixed_1based(extruder) - 1);
+    // Classify like the mixed-perimeter split: role() only reflects the first path of the first
+    // loop, which may be an overhang path of an inner loop.
+    bool any_outer = false, any_inner = false;
+    classify_wall_filaments(extrusions, any_outer, any_inner);
+    return any_inner && ! any_outer ? this->inner_wall_extruder_id(region) : this->wall_extruder_id(region);
 }
 
-static double calc_max_layer_height(const PrintConfig &config, double max_object_layer_height)
+// ORCA: per-extruder layer height. The heads (0-based, one per nozzle_diameter entry) some layer prints
+// with: the layers' filament ids, mixed slots resolved, like the tower maps a tool to its nozzle.
+// Empty before collect_extruders() ran.
+static std::vector<unsigned int> used_heads(const std::vector<LayerTools> &layer_tools, const PrintConfig &config)
+{
+    std::vector<unsigned int> heads;
+    const unsigned int        count = (unsigned int) config.nozzle_diameter.values.size();
+    for (const LayerTools &lt : layer_tools)
+        for (unsigned int filament : lt.extruders) {
+            const unsigned int head = lt.resolve_mixed(filament);
+            if (head < count && std::find(heads.begin(), heads.end(), head) == heads.end())
+                heads.push_back(head);
+        }
+    return heads;
+}
+
+// The height a tower slab may bridge: the smallest max_layer_height of `heads` (all heads when empty),
+// raised to the objects' layer height. ORCA: unused heads are skipped so they cannot cap the slabs.
+static double calc_max_layer_height(const PrintConfig &config, double max_object_layer_height, const std::vector<unsigned int> &heads)
 {
     double max_layer_height = std::numeric_limits<double>::max();
     for (size_t i = 0; i < config.nozzle_diameter.values.size(); ++ i) {
+        if (! heads.empty() && std::find(heads.begin(), heads.end(), (unsigned int) i) == heads.end())
+            continue;
         // max_layer_height may be shorter than the extruder count; get_at() clamps.
         double mlh = config.max_layer_height.get_at(i);
         if (mlh == 0.)
@@ -572,7 +663,9 @@ bool ToolOrdering::insert_wipe_tower_extruder()
     bool changed = false;
     const unsigned int wipe_extruder = (unsigned int)(m_print_config_ptr->wipe_tower_filament - 1);
     for (LayerTools &lt : m_layer_tools) {
-        if (lt.wipe_tower_partitions > 0) {
+        // Only layers that carry a tower slab (fill_wipe_tower_partitions has run): a
+        // fractional support-only layer without one must not switch to the tower filament.
+        if (lt.wipe_tower_partitions > 0 && lt.has_wipe_tower) {
             if (std::find(lt.extruders.begin(), lt.extruders.end(), wipe_extruder) == lt.extruders.end()) {
                 lt.extruders.emplace_back(wipe_extruder);
                 changed = true;
@@ -593,26 +686,37 @@ void ToolOrdering::sort_and_build_data(const Print& print, unsigned int first_ex
     m_sorted = true;
 
     double max_layer_height = 0.;
-    double object_bottom_z = 0.;
+    // The lowest object bottom: below it the tower needs its base (raft, support under a
+    // floating part); above it a lower object's fractional support layers must not be taken
+    // for raft layers.
+    double object_bottom_z = std::numeric_limits<double>::max();
     for (const auto& object : print.objects()) {
         for (const Layer* layer : object->layers()) {
             if (layer->has_extrusions()) {
-                object_bottom_z = layer->print_z - layer->height;
+                object_bottom_z = std::min(object_bottom_z, layer->print_z - layer->height);
                 break;
             }
         }
         max_layer_height = std::max(max_layer_height, object->config().layer_height.value);
     }
+    if (object_bottom_z == std::numeric_limits<double>::max())
+        object_bottom_z = 0.;
+    // Top of the tallest raft: raft layers always carry the tower base, while fractional
+    // support layers under a floating part above it follow the same rule as anywhere else.
+    double raft_top_z = 0.;
+    for (const auto& object : print.objects())
+        if (object->slicing_parameters().raft_layers() > 0)
+            raft_top_z = std::max(raft_top_z, object->slicing_parameters().raft_contact_top_z);
 
-    max_layer_height = calc_max_layer_height(print.config(), max_layer_height);
+    max_layer_height = calc_max_layer_height(print.config(), max_layer_height, used_heads(m_layer_tools, print.config()));
 
-    this->fill_wipe_tower_partitions(print.config(), object_bottom_z, max_layer_height);
+    this->fill_wipe_tower_partitions(print.config(), object_bottom_z, raft_top_z, max_layer_height);
     if (this->insert_wipe_tower_extruder()) {
         reorder_extruders_for_minimum_flush_volume(reorder_first_layer);
         // Orca reorders a second time here (BBS has no such path); re-enforce so the
         // mixed sub-layer component order survives the extra pass.
         this->enforce_mixed_component_order();
-        this->fill_wipe_tower_partitions(print.config(), object_bottom_z, max_layer_height);
+        this->fill_wipe_tower_partitions(print.config(), object_bottom_z, raft_top_z, max_layer_height);
     }
 
     this->collect_extruder_statistics(prime_multi_material);
@@ -628,15 +732,15 @@ void ToolOrdering::sort_and_build_data(const PrintObject& object , unsigned int 
     this->enforce_mixed_component_order();
     m_sorted = true;
 
-    double max_layer_height = calc_max_layer_height(object.print()->config(), object.config().layer_height);
+    double max_layer_height = calc_max_layer_height(object.print()->config(), object.config().layer_height, used_heads(m_layer_tools, object.print()->config()));
 
-    this->fill_wipe_tower_partitions(object.print()->config(), object.layers().front()->print_z - object.layers().front()->height, max_layer_height);
+    this->fill_wipe_tower_partitions(object.print()->config(), object.layers().front()->print_z - object.layers().front()->height, object.slicing_parameters().raft_layers() > 0 ? object.slicing_parameters().raft_contact_top_z : 0., max_layer_height);
     if (this->insert_wipe_tower_extruder()) {
         reorder_extruders_for_minimum_flush_volume(reorder_first_layer);
         // Orca reorders a second time here (BBS has no such path); re-enforce so the
         // mixed sub-layer component order survives the extra pass.
         this->enforce_mixed_component_order();
-        this->fill_wipe_tower_partitions(object.print()->config(), object.layers().front()->print_z - object.layers().front()->height, max_layer_height);
+        this->fill_wipe_tower_partitions(object.print()->config(), object.layers().front()->print_z - object.layers().front()->height, object.slicing_parameters().raft_layers() > 0 ? object.slicing_parameters().raft_contact_top_z : 0., max_layer_height);
     }
 
     this->collect_extruder_statistics(prime_multi_material);
@@ -673,8 +777,11 @@ ToolOrdering::ToolOrdering(const PrintObject &object, unsigned int first_extrude
         for (const BeltBrimBand &band : object.belt_brim_prologue())
             zs.emplace_back(band.print_z);
         this->initialize_layers(zs);
+        for (auto layer : object.layers())
+            this->tools_for_layer(layer->print_z).on_object_grid = true;
     }
 
+    // Mark this object's Local-Z layers before considering any purge overrides.
     this->collect_local_z_layers(object);
 
     // Collect extruders reuqired to print the layers. Add dontcare extruders
@@ -695,7 +802,7 @@ ToolOrdering::ToolOrdering(const PrintObject &object, unsigned int first_extrude
 
     this->collect_extruder_statistics(prime_multi_material);
 
-    double max_layer_height = calc_max_layer_height(object.print()->config(), object.config().layer_height);
+    double max_layer_height = calc_max_layer_height(object.print()->config(), object.config().layer_height, used_heads(m_layer_tools, object.print()->config()));
 
     this->mark_skirt_layers(object.print()->config(), max_layer_height);
 }
@@ -731,8 +838,10 @@ ToolOrdering::ToolOrdering(const Print &print, unsigned int first_extruder, bool
             max_layer_height = std::max(max_layer_height, object->config().layer_height.value);
         }
         this->initialize_layers(zs);
+        for (auto object : print.objects())
+            for (auto layer : object->layers())
+                this->tools_for_layer(layer->print_z).on_object_grid = true;
     }
-    max_layer_height = calc_max_layer_height(print.config(), max_layer_height);
 
 	// Use the extruder switches from Model::custom_gcode_per_print_z to override the extruder to print the object.
 	// Do it only if all the objects were configured to be printed with a single extruder.
@@ -771,6 +880,8 @@ ToolOrdering::ToolOrdering(const Print &print, unsigned int first_extruder, bool
     // The wipe tower filament is inserted in sort_and_build_data() (insert_wipe_tower_extruder).
     this->collect_extruder_statistics(prime_multi_material);
 
+    // The extruders of the layers are known now: the cap follows the heads in use.
+    max_layer_height = calc_max_layer_height(print.config(), max_layer_height, used_heads(m_layer_tools, print.config()));
     this->mark_skirt_layers(print.config(), max_layer_height);
 }
 
@@ -831,8 +942,9 @@ std::vector<unsigned int> ToolOrdering::generate_first_layer_tool_order(const Pr
         for(auto layer : object->layers()){
             for(auto layerm : layer->regions()){
                 for(auto& expoly : layerm->raw_slices){
-                    // SnapOrca: initial_layer_line_width may be a % of the nozzle (the U1 profiles use one).
-                    if (!offset_ex(expoly, -0.2 * scale_(print.config().get_abs_value("initial_layer_line_width", print.config().nozzle_diameter.get_at(0)))).empty()) {
+                    // SnapOrca: initial_layer_line_width may be a % of the nozzle (the U1 profiles use one);
+                    // it is a column per tool head, the first column is read.
+                    if (!offset_ex(expoly, -0.2 * scale_(print.config().get_abs_value_at("initial_layer_line_width", 0, print.config().nozzle_diameter.get_at(0)))).empty()) {
                         target_layer = layer;
                         break;
                     }
@@ -852,7 +964,7 @@ std::vector<unsigned int> ToolOrdering::generate_first_layer_tool_order(const Pr
 
             for (auto expoly : layerm->raw_slices) {
                 const double nozzle_diameter = print.config().nozzle_diameter.get_at(0);
-                const coordf_t initial_layer_line_width = print.config().get_abs_value("initial_layer_line_width", nozzle_diameter);
+                const coordf_t initial_layer_line_width = print.config().get_abs_value_at("initial_layer_line_width", 0, nozzle_diameter);
 
                 if (offset_ex(expoly, -0.2 * scale_(initial_layer_line_width)).empty())
                     continue;
@@ -896,7 +1008,9 @@ std::vector<unsigned int> ToolOrdering::generate_first_layer_tool_order(const Pr
     for(auto layer : object.layers()){
         for(auto layerm : layer->regions()){
             for(auto& expoly : layerm->raw_slices){
-                if (!offset_ex(expoly, -0.2 * scale_(object.config().line_width)).empty()) {
+                // Snapmaker Orca: the width is a column per tool head; the first column's number, as
+                // the scalar read (a percent read as a number, the pre-existing quirk).
+                if (!offset_ex(expoly, -0.2 * scale_(Flow::width_at(object.config().line_width, 0).value)).empty()) {
                     target_layer = layer;
                     break;
                 }
@@ -915,7 +1029,7 @@ std::vector<unsigned int> ToolOrdering::generate_first_layer_tool_order(const Pr
         int extruder_id = layerm->region().config().option("outer_wall_filament_id")->getInt();
         for (auto expoly : layerm->raw_slices) {
             const double nozzle_diameter = object.print()->config().nozzle_diameter.get_at(0);
-            const coordf_t line_width = object.config().get_abs_value("line_width", nozzle_diameter);
+            const coordf_t line_width = object.config().get_abs_value_at("line_width", 0, nozzle_diameter);
 
             if (offset_ex(expoly, -0.2 * scale_(line_width)).empty())
                 continue;
@@ -1077,62 +1191,83 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
                 }
 
                 if (something_nonoverriddable){
-                    const unsigned int configured_wall = (extruder_override == 0) ? region.config().outer_wall_filament_id.value : extruder_override;
-                    unsigned int       wall_ext        = resolve_mixed(configured_wall, layerCount, float(layer->print_z), float(layer->height), &object);
-                    const unsigned int grouped_id =
-                        grouped_manual_pattern_mixed_filament_id_for_layer(layer_tools, configured_wall);
-                    if (grouped_id != 0) {
-                        const std::vector<unsigned int> ordered =
-                            m_mixed_mgr->ordered_perimeter_extruders(grouped_id,
-                                                                     m_num_physical,
-                                                                     layerCount,
-                                                                     float(layer->print_z),
-                                                                     float(layer->height));
-                        if (!ordered.empty()) {
-                            if (ordered.size() >= 2)
-                                layer_tools.preserve_extruder_order = true;
-                            for (unsigned int extruder_id : ordered) {
-                                layer_tools.extruders.emplace_back(extruder_id);
-                                if (layerCount == 0 &&
-                                    std::find(firstLayerExtruders.begin(), firstLayerExtruders.end(), int(extruder_id)) == firstLayerExtruders.end())
-                                    firstLayerExtruders.emplace_back(int(extruder_id));
+                    // Emplace a wall filament, expanding a grouped manual-pattern mixed filament
+                    // into its per-layer ordered physical extruders (both walls need this so the
+                    // wipe tower planner sees every extruder the grouped split will emit).
+                    auto emplace_wall_filament = [&](unsigned int configured_wall, bool first_layer_candidate) {
+                        unsigned int wall_ext = resolve_mixed(configured_wall, layerCount, float(layer->print_z), float(layer->height), &object);
+                        const unsigned int grouped_id =
+                            grouped_manual_pattern_mixed_filament_id_for_layer(layer_tools, configured_wall);
+                        if (grouped_id != 0) {
+                            const std::vector<unsigned int> ordered =
+                                m_mixed_mgr->ordered_perimeter_extruders(grouped_id,
+                                                                         m_num_physical,
+                                                                         layerCount,
+                                                                         float(layer->print_z),
+                                                                         float(layer->height));
+                            if (!ordered.empty()) {
+                                if (ordered.size() >= 2)
+                                    layer_tools.preserve_extruder_order = true;
+                                for (unsigned int extruder_id : ordered) {
+                                    layer_tools.extruders.emplace_back(extruder_id);
+                                    if (first_layer_candidate && layerCount == 0 &&
+                                        std::find(firstLayerExtruders.begin(), firstLayerExtruders.end(), int(extruder_id)) == firstLayerExtruders.end())
+                                        firstLayerExtruders.emplace_back(int(extruder_id));
+                                }
+                                return;
                             }
-                        } else {
-                            layer_tools.extruders.emplace_back(wall_ext);
-                            if (layerCount == 0)
-                                firstLayerExtruders.emplace_back(wall_ext);
                         }
-                    } else {
                         layer_tools.extruders.emplace_back(wall_ext);
-                        if (layerCount == 0)
+                        if (first_layer_candidate && layerCount == 0)
                             firstLayerExtruders.emplace_back(wall_ext);
-                    }
-                    // Orca: the inner walls may print with their own filament.
-                    if (extruder_override == 0 && region.config().wall_loops.value > 1)
-                        layer_tools.extruders.emplace_back(resolve_mixed(region.config().inner_wall_filament_id.value, layerCount,
-                                                                         float(layer->print_z), float(layer->height), &object));
+                    };
+                    emplace_wall_filament((extruder_override == 0) ? region.config().outer_wall_filament_id.value : extruder_override, true);
+                    // alternate_extra_wall should add an inner loop on odd layers (mirrors
+                    // PerimeterGenerator's loop_number and the spiral gate of
+                    // LayerRegion::make_perimeters()); layers dropping the loop again
+                    // (only_one_wall_top / only_one_wall_first_layer) may reserve the filament
+                    // unused, which merely costs a toolchange.
+                    const bool spiral_vase_layer = object.print()->config().spiral_mode.value &&
+                        layer->id() >= size_t(region.config().bottom_shell_layers.value) &&
+                        layer->print_z >= region.config().bottom_shell_thickness - EPSILON;
+                    if (extruder_override == 0 &&
+                        (region.config().wall_loops.value > 1 ||
+                         (region.config().alternate_extra_wall.value && layer->id() % 2 == 1 &&
+                          region.config().sparse_infill_density.value > 0 && !spiral_vase_layer)))
+                        emplace_wall_filament(region.config().inner_wall_filament_id.value, false);
                 }
 
                 layer_tools.has_object = true;
             }
 
-            bool has_sparse_infill      = false;
-            bool has_internal_solid     = false;
-            bool has_top_solid_surface  = false;
-            bool has_bottom_surface     = false;
+            bool has_sparse_infill     = false;
+            bool has_internal_solid    = false;
+            bool has_top_solid_surface = false;
+            bool has_bottom_surface    = false;
+            bool has_pure_gap_fill     = false;
             bool something_nonoverriddable = false;
             for (const ExtrusionEntity *ee : layerm->fills.entities) {
                 // fill represents infill extrusions of a single island.
                 const auto *fill = dynamic_cast<const ExtrusionEntityCollection*>(ee);
                 ExtrusionRole role = fill->entities.empty() ? erNone : fill->entities.front()->role();
+                // gap fill inherits its surface's filament; classify by the first non-gap-fill entity (must match LayerTools::extruder()).
+                if (role == erGapFill)
+                    for (const ExtrusionEntity *fill_entity : fill->entities)
+                        if (fill_entity->role() != erGapFill) {
+                            role = fill_entity->role();
+                            break;
+                        }
                 if (internal_solid_infill_uses_sparse_filament(region, role))
                     has_sparse_infill = true;
                 else if (role == erTopSolidInfill || role == erIroning)
                     has_top_solid_surface = true;
-                else if (role == erBottomSurface)
+                else if (role == erBottomSurface || role == erBridgeInfill) // ORCA: external bridges print as bottom surfaces
                     has_bottom_surface = true;
                 else if (is_solid_infill(role))
                     has_internal_solid = true;
+                else if (role == erGapFill)
+                    // perimeter-generated gap fill with no sibling surface dispatches to the outer wall filament.
+                    has_pure_gap_fill = true;
                 else if (role != erNone)
                     has_sparse_infill = true;
 
@@ -1144,22 +1279,31 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
 
             if (something_nonoverriddable || !m_print_config_ptr) {
             	if (extruder_override == 0) {
-                    if (has_internal_solid)
-                        layer_tools.extruders.emplace_back(layer_tools.internal_solid_filament_id(region) + 1);
-                    if (has_top_solid_surface)
-                        layer_tools.extruders.emplace_back(resolve_mixed(region.config().top_surface_filament_id.value, layerCount,
-                                                                         float(layer->print_z), float(layer->height), &object));
-                    if (has_bottom_surface)
-                        layer_tools.extruders.emplace_back(resolve_mixed(region.config().bottom_surface_filament_id.value, layerCount,
-                                                                         float(layer->print_z), float(layer->height), &object));
-	                if (has_sparse_infill)
-	                    layer_tools.extruders.emplace_back(layer_tools.sparse_infill_filament_id(region) + 1);
-                } else if (has_internal_solid || has_top_solid_surface || has_bottom_surface || has_sparse_infill) {
-            		layer_tools.extruders.emplace_back(resolve_mixed(extruder_override, layerCount,
-                                                                      float(layer->print_z), float(layer->height), &object));
-                }
+	                if (has_internal_solid) {
+		                    layer_tools.extruders.emplace_back(layer_tools.internal_solid_filament_id(region) + 1);
+	                }
+	                if (has_top_solid_surface) {
+		                    layer_tools.extruders.emplace_back(layer_tools.top_surface_filament_id(region) + 1);
+	                }
+	                if (has_bottom_surface) {
+		                    layer_tools.extruders.emplace_back(layer_tools.bottom_surface_filament_id(region) + 1);
+	                }
+	                if (has_sparse_infill) {
+		                    layer_tools.extruders.emplace_back(layer_tools.sparse_infill_filament_id(region) + 1);
+	                }
+	                if (has_pure_gap_fill) {
+		                    // perimeter-generated gap fill with no sibling surface uses the outer wall filament.
+		                    layer_tools.extruders.emplace_back(layer_tools.wall_extruder_id(region) + 1);
+	                }
+            	} else if (has_internal_solid || has_top_solid_surface || has_bottom_surface || has_sparse_infill || has_pure_gap_fill) {
+            		layer_tools.extruders.emplace_back(resolve_mixed(extruder_override,
+                                                                      layerCount,
+                                                                      float(layer->print_z),
+                                                                      float(layer->height),
+                                                                      &object));
+            	}
             }
-            if (has_internal_solid || has_top_solid_surface || has_bottom_surface || has_sparse_infill)
+            if (has_internal_solid || has_top_solid_surface || has_bottom_surface || has_sparse_infill || has_pure_gap_fill)
                 layer_tools.has_object = true;
         }
 
@@ -1213,71 +1357,14 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
         layerCount++;
     }
 
-    // Collect the support extruders.
-    for (auto support_layer : object.support_layers()) {
-        LayerTools &layer_tools = this->tools_for_layer(support_layer->print_z);
-        layer_tools.layer_height = support_layer->height;
-        ExtrusionRole role = support_layer->support_fills.role();
-        bool has_support = role == erMixed || role == erSupportMaterial || role == erSupportTransition;
-        bool has_interface = role == erMixed || role == erSupportMaterialInterface;
-        unsigned int extruder_support = resolve_mixed(object.config().support_filament.value,
-            layer_tools.layer_index, float(support_layer->print_z), float(support_layer->height), &object);
-        unsigned int extruder_interface = resolve_mixed(object.config().support_interface_filament.value,
-            layer_tools.layer_index, float(support_layer->print_z), float(support_layer->height), &object);
-
-        if (has_support && extruder_support == 0 && extruder_interface != 0) {
-            bool interface_not_for_body = object.config().support_interface_not_for_body;
-            const PrintConfig &print_config = object.print()->config();
-            auto has_reusable_layer_extruder = [&]() -> bool {
-                for (unsigned int extruder_id : layer_tools.extruders) {
-                    if (extruder_id == 0) continue;
-                    if (interface_not_for_body && extruder_id == extruder_interface) continue;
-                    if (print_config.filament_soluble.get_at(extruder_id - 1)) continue;
-                    return true;
-                }
-                return false;
-            };
-            if (!has_reusable_layer_extruder()) {
-                auto all_extruders = object.print()->extruders();
-                auto get_next_extruder = [&](int current_extruder, const std::vector<unsigned int> &extruders) {
-                    std::vector<float> flush_matrix(cast<float>(print_config.flush_volumes_matrix.values));
-                    const unsigned int number_of_extruders = (unsigned int) (sqrt(flush_matrix.size()) + EPSILON);
-                    // Extract purging volumes for each extruder pair:
-                    std::vector<std::vector<float>> wipe_volumes;
-                    for (unsigned int i = 0; i < number_of_extruders; ++i)
-                        wipe_volumes.push_back(std::vector<float>(flush_matrix.begin() + i * number_of_extruders,
-                                                                 flush_matrix.begin() + (i + 1) * number_of_extruders));
-                    int next_extruder = current_extruder;
-                    float min_flush = std::numeric_limits<float>::max();
-                    for (auto extruder_id : extruders) {
-                        if (print_config.filament_soluble.get_at(extruder_id) || extruder_id == current_extruder) continue;
-                        if (wipe_volumes[extruder_interface - 1][extruder_id] < min_flush) {
-                            next_extruder = extruder_id;
-                            min_flush = wipe_volumes[extruder_interface - 1][extruder_id];
-                        }
-                    }
-                    return next_extruder;
-                };
-                layer_tools.extruders.push_back(get_next_extruder(interface_not_for_body ? extruder_interface - 1 : -1, all_extruders) + 1);
-            }
-        }
-        if (has_support)
-            layer_tools.extruders.push_back(extruder_support);
-        if (has_interface)
-            layer_tools.extruders.push_back(extruder_interface);
-        if (has_support || has_interface) {
-            layer_tools.has_support = true;
-            layer_tools.wiping_extrusions().is_support_overriddable_and_mark(role, object);
-        }
-    }
-
     sort_remove_duplicates(firstLayerExtruders);
     const_cast<PrintObject&>(object).object_first_layer_wall_extruders = firstLayerExtruders;
 
     // Collect the support extruders.
     for (auto support_layer : object.support_layers()) {
         LayerTools   &layer_tools   = this->tools_for_layer(support_layer->print_z);
-        layer_tools.layer_height    = support_layer->height;
+        if (!layer_tools.has_object) // a shared Z keeps the object layer height
+            layer_tools.layer_height = support_layer->height;
         ExtrusionRole role          = support_layer->support_fills.role();
         bool          has_support   = false;
         bool          has_interface = false;
@@ -1292,8 +1379,29 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
             layer_tools.layer_index, float(support_layer->print_z), float(support_layer->height), &object);
         unsigned int extruder_interface = resolve_mixed(object.config().support_interface_filament.value,
             layer_tools.layer_index, float(support_layer->print_z), float(support_layer->height), &object);
+        // ORCA: with support nozzle diameter / material restrictions, resolve a "default" (0) support filament to a passing one here,
+        // preferring a filament this layer already prints with to save toolchanges. GCode::process_layer() re-prefers
+        // layer-scheduled extruders for "don't care" support when the G-code is emitted.
+        if (object.has_support_filament_restriction()) {
+            auto restrict_default_filament = [&object, &layer_tools](unsigned int configured, bool interface_role) -> unsigned int {
+                if (configured != 0)
+                    return configured;
+                const PrintConfig &print_config = object.print()->config();
+                for (unsigned int filament : layer_tools.extruders) // 1 based at this point
+                    if (filament > 0 && object.support_filament_allowed(filament, interface_role) &&
+                        ! print_config.filament_soluble.get_at(filament - 1))
+                        return filament;
+                unsigned int resolved = object.resolved_default_support_filament(interface_role);
+                return resolved > 0 ? resolved : configured;
+            };
+            extruder_support   = restrict_default_filament(extruder_support, false);
+            extruder_interface = restrict_default_filament(extruder_interface, true);
+        }
+        const bool interface_not_for_body = object.config().support_interface_not_for_body;
+        // A "don't care" support base gets a concrete filament on support-only interface layers.
+        const bool pick_base_filament = !(extruder_support > 0 || !has_interface || extruder_interface == 0 || layer_tools.has_object);
         if (has_support) {
-            if (extruder_support > 0 || !has_interface || extruder_interface == 0 || layer_tools.has_object)
+            if (!pick_base_filament)
                 layer_tools.extruders.push_back(extruder_support);
             else {
                 auto all_extruders     = object.print()->extruders();
@@ -1307,6 +1415,20 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
                         wipe_volumes.push_back(std::vector<float>(flush_matrix.begin() + i * number_of_extruders, flush_matrix.begin() + (i + 1) * number_of_extruders));
                     int   next_extruder = current_extruder;
                     float min_flush     = std::numeric_limits<float>::max();
+                    // The matrix is dimensioned from the stored flush_volumes_matrix, the ids from the
+                    // print's filament list; when they disagree (stale matrix) the lookup below would
+                    // read out of bounds. Fall back to the first usable candidate instead.
+                    const bool matrix_covers_ids =
+                        extruder_interface > 0 && extruder_interface - 1 < number_of_extruders &&
+                        std::all_of(extruders.begin(), extruders.end(), [number_of_extruders](unsigned int id) { return id < number_of_extruders; });
+                    if (! matrix_covers_ids) {
+                        BOOST_LOG_TRIVIAL(error) << "support filament selection: flush matrix (" << number_of_extruders
+                                                 << ") does not cover the filament ids, skipping flush lookup";
+                        for (auto extruder_id : extruders)
+                            if (! object.print()->config().filament_soluble.get_at(extruder_id) && extruder_id != current_extruder)
+                                return int(extruder_id);
+                        return next_extruder;
+                    }
                     for (auto extruder_id : extruders) {
                         if (object.print()->config().filament_soluble.get_at(extruder_id) || extruder_id == current_extruder) continue;
                         if (wipe_volumes[extruder_interface - 1][extruder_id] < min_flush) {
@@ -1316,7 +1438,6 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
                     }
                     return next_extruder;
                 };
-                bool interface_not_for_body = object.config().support_interface_not_for_body;
                 layer_tools.extruders.push_back(get_next_extruder(interface_not_for_body ? extruder_interface - 1 : -1, all_extruders) + 1);
             }
         }
@@ -1364,7 +1485,9 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
     }
 
     for (auto& layer : m_layer_tools) {
+        // Sort and remove duplicates
         if (layer.preserve_extruder_order)
+            // Mixed filament layers depend on their collected extruder order, sorting would destroy it.
             remove_duplicates_preserve_order(layer.extruders);
         else
             sort_remove_duplicates(layer.extruders);
@@ -1379,34 +1502,84 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
 }
 
 
-void ToolOrdering::fill_wipe_tower_partitions(const PrintConfig &config, coordf_t object_bottom_z, coordf_t max_layer_height)
+// The chain the tower plan and the G-code emission walk: a layer starts with the tool still
+// loaded whenever it uses it (GCode::process_layer rotates the layer's extruders to it), so a
+// custom or cyclic sequence never counts a phantom initial toolchange.
+static std::vector<unsigned int> rotate_extruders_to_start_with(const std::vector<unsigned int> &extruders, unsigned int start_extruder)
+{
+    std::vector<unsigned int> rotated = extruders;
+    auto it = std::find(rotated.begin(), rotated.end(), start_extruder);
+    if (it != rotated.end())
+        std::rotate(rotated.begin(), it, rotated.end());
+    return rotated;
+}
+
+void ToolOrdering::fill_wipe_tower_partitions(const PrintConfig &config, coordf_t object_bottom_z, coordf_t raft_top_z, coordf_t max_layer_height)
 {
     if (m_layer_tools.empty())
         return;
 
-    // Count the minimum number of tool changes per layer.
+    // Count the minimum number of tool changes per layer, on the rotated chain.
     size_t last_extruder = size_t(-1);
     for (LayerTools &lt : m_layer_tools) {
         lt.wipe_tower_partitions = lt.extruders.size();
         if (! lt.extruders.empty()) {
-            if (last_extruder == size_t(-1) || last_extruder == lt.extruders.front())
+            const std::vector<unsigned int> chain = rotate_extruders_to_start_with(lt.extruders, (unsigned int) last_extruder);
+            if (last_extruder == size_t(-1) || last_extruder == chain.front())
                 // The first extruder on this layer is equal to the current one, no need to do an initial tool change.
                 -- lt.wipe_tower_partitions;
-            last_extruder = lt.extruders.back();
+            last_extruder = chain.back();
         }
     }
+
+    // ORCA: per-extruder layer height. An object-grid layer that changes no tool may lose its
+    // tower slab (the thinning pass at the end). Not with smooth timelapse (a slab on every
+    // print layer), single-extruder multi-material (ramming on every change) or wrapping detection.
+    if (has_extruder_layer_heights(config) && config.enable_prime_tower && config.timelapse_type != TimelapseType::tlSmooth &&
+        !config.single_extruder_multi_material && !config.enable_wrapping_detection)
+        for (LayerTools &lt : m_layer_tools)
+            lt.tower_optional = lt.on_object_grid && lt.wipe_tower_partitions == 0 && lt.print_z >= object_bottom_z + EPSILON;
 
     // Propagate the wipe tower partitions down to support the upper partitions by the lower partitions.
     for (int i = int(m_layer_tools.size()) - 2; i >= 0; -- i)
         m_layer_tools[i].wipe_tower_partitions = std::max(m_layer_tools[i + 1].wipe_tower_partitions, m_layer_tools[i].wipe_tower_partitions);
 
 
-    int wrapping_layer_nums = config.wrapping_detection_layers;
-    for (size_t i = 0; i < wrapping_layer_nums; ++i) {
-        if (i >= m_layer_tools.size())
-            break;
-        LayerTools &lt    = m_layer_tools[i];
+    // Fractional independent support heights place support-only layers between the object
+    // grid Zs. Those layers get no tower layer of their own: the tower would have to print
+    // a sub-minimum slab there, and the toolchange they carry switches TO the support
+    // filament, which tolerates an unpurged nozzle (the residue lands in the support).
+    // The switch back to an object filament happens on an object-grid layer with a full
+    // tower slab; the tower re-syncs its loaded tool per layer. Smooth timelapse needs a
+    // tower layer on every print layer and single-extruder multi-material needs the
+    // tower's ramming for every change, so both keep the old behavior.
+    auto off_grid_gates = [&config]() {
+        return config.enable_prime_tower &&
+               config.independent_support_layer_height &&
+               config.support_layer_height_step != slhsWholeLayer &&
+               config.timelapse_type != TimelapseType::tlSmooth &&
+               !config.single_extruder_multi_material;
+    };
+    auto support_only_off_grid = [&off_grid_gates](const LayerTools &lt) {
+        return lt.has_support && !lt.has_object && !lt.on_object_grid && off_grid_gates();
+    };
+    // Only fractional Zs are ever left without a tower slab: support-only layers there and
+    // support layers that ended up without extrusions (the ladder continues above the
+    // support tops). Object grid layers (even empty ones) keep theirs, so the slabs that
+    // remain are whole grid steps.
+    auto tower_skippable = [&off_grid_gates](const LayerTools &lt) {
+        return !lt.has_object && !lt.on_object_grid && (lt.has_support || lt.extruders.empty()) && off_grid_gates();
+    };
+
+    // The first wrapping_detection_layers slabs; a fractional entry never carries a slab and
+    // does not consume one of them.
+    const int wrapping_layer_nums = config.wrapping_detection_layers;
+    for (size_t i = 0, marked = 0; i < m_layer_tools.size() && int(marked) < wrapping_layer_nums; ++i) {
+        LayerTools &lt = m_layer_tools[i];
+        if (tower_skippable(lt))
+            continue;
         lt.has_wipe_tower = config.enable_wrapping_detection;
+        ++marked;
     }
 
     //FIXME this is a hack to get the ball rolling.
@@ -1425,8 +1598,12 @@ void ToolOrdering::fill_wipe_tower_partitions(const PrintConfig &config, coordf_
     // the negative-Z wipe tower, so the broad belt_printer gate is correct.
     const bool belt_no_raft_gap = config.belt_printer.value;
     for (LayerTools &lt : m_layer_tools)
-        lt.has_wipe_tower |= ((lt.has_object || lt.has_support) && (config.timelapse_type == TimelapseType::tlSmooth || lt.wipe_tower_partitions > 0))
-            || (! belt_no_raft_gap && lt.print_z < object_bottom_z + EPSILON);
+        lt.has_wipe_tower |= ((lt.has_object || lt.has_support) && !support_only_off_grid(lt) &&
+                              (config.timelapse_type == TimelapseType::tlSmooth || lt.wipe_tower_partitions > 0))
+            // Below the object bottom the tower needs its base: on every raft layer, and on the
+            // object-grid layers under a floating part. Fractional support-only layers there are
+            // left slab-less like anywhere else, so the slabs stay whole grid steps.
+            || (! belt_no_raft_gap && lt.print_z < object_bottom_z + EPSILON && (lt.print_z < raft_top_z + EPSILON || !tower_skippable(lt)));
 
     // Test for a raft, insert additional wipe tower layer to fill in the raft separation gap.
     // Skipped on belt printers for the same reason as the clause above: layers
@@ -1500,6 +1677,22 @@ void ToolOrdering::fill_wipe_tower_partitions(const PrintConfig &config, coordf_
             }
         for (int i = first_wt_idx + 1; i < last_wt_idx; ++i) {
             LayerTools &lt = m_layer_tools[i];
+            if (tower_skippable(lt) && !lt.has_wipe_tower) {
+                // Prefer no tower slab on a fractional support-only (or empty) layer, but
+                // only when the slab bridging over it stays within the maximum layer
+                // height - otherwise this layer keeps its (thin) tower slab.
+                coordf_t prev_z = m_layer_tools[first_wt_idx].print_z;
+                for (int j = i - 1; j >= first_wt_idx; --j)
+                    if (m_layer_tools[j].has_wipe_tower) { prev_z = m_layer_tools[j].print_z; break; }
+                coordf_t next_z = m_layer_tools[last_wt_idx].print_z;
+                for (int j = i + 1; j <= last_wt_idx; ++j)
+                    if (m_layer_tools[j].has_wipe_tower || !tower_skippable(m_layer_tools[j])) {
+                        next_z = m_layer_tools[j].print_z;
+                        break;
+                    }
+                if (next_z - prev_z <= max_layer_height + EPSILON)
+                    continue;
+            }
             lt.has_wipe_tower = true;
             // GCode::process_layer emits wipe-tower G-code inside `for (extruder_id : layer_tools.extruders)`.
             // An empty extruders vector here would silently skip wipe tower output, leaving the tower
@@ -1555,22 +1748,82 @@ void ToolOrdering::fill_wipe_tower_partitions(const PrintConfig &config, coordf_
     // and maybe other problems. We will therefore go through layer_tools and detect and fix this.
     // So, if there is a non-object layer starting with different extruder than the last one ended with (or containing more than one extruder),
     // we'll mark it with has_wipe tower.
+    // Per-extruder layer height combines layers away, leaving many LayerTools empty; skip them and
+    // compare against the last printing layer. Without the feature keep the historic behavior of
+    // stopping at the first empty layer.
+    const bool skip_empty_layer_tools = has_extruder_layer_heights(config);
+    const LayerTools *lt_last_printing = nullptr;
+    // The tool loaded after the last printing layer, on the rotated chain.
+    unsigned int loaded_tool = (unsigned int) -1;
     for (unsigned int i=0; i+1<m_layer_tools.size(); ++i) {
         LayerTools& lt = m_layer_tools[i];
+        if (! lt.extruders.empty()) {
+            lt_last_printing = &lt;
+            loaded_tool      = rotate_extruders_to_start_with(lt.extruders, loaded_tool).back();
+        }
         LayerTools& lt_next = m_layer_tools[i+1];
-        if (lt.extruders.empty() || lt_next.extruders.empty())
-            break;
-        if (!lt_next.has_wipe_tower && (lt_next.extruders.front() != lt.extruders.back() || lt_next.extruders.size() > 1))
+        if (lt.extruders.empty() || lt_next.extruders.empty()) {
+            if (! skip_empty_layer_tools)
+                break;
+            if (lt_last_printing == nullptr || lt_next.extruders.empty())
+                continue;
+        }
+        if (!lt_next.has_wipe_tower && !tower_skippable(lt_next) &&
+            (lt_next.extruders.size() > 1 ||
+             std::find(lt_next.extruders.begin(), lt_next.extruders.end(), loaded_tool) == lt_next.extruders.end()))
             lt_next.has_wipe_tower = true;
-        // We should also check that the next wipe tower layer is no further than max_layer_height:
+        // We should also check that the next wipe tower layer is no further than max_layer_height.
+        // Fractional entries are transparent here: they never carry a slab, their neighbours
+        // bridge them.
         unsigned int j = i+1;
         double last_wipe_tower_print_z = lt_next.print_z;
-        while (++j < m_layer_tools.size()-1 && !m_layer_tools[j].has_wipe_tower)
-            if (m_layer_tools[j+1].print_z - last_wipe_tower_print_z > max_layer_height + EPSILON) {
+        while (++j < m_layer_tools.size()-1 && !m_layer_tools[j].has_wipe_tower) {
+            if (tower_skippable(m_layer_tools[j]))
+                continue;
+            size_t jn = j + 1;
+            while (jn < m_layer_tools.size() && !m_layer_tools[jn].has_wipe_tower && tower_skippable(m_layer_tools[jn]))
+                ++jn;
+            if (jn < m_layer_tools.size() && m_layer_tools[jn].print_z - last_wipe_tower_print_z > max_layer_height + EPSILON) {
                 if (!config.enable_wrapping_detection)
                     m_layer_tools[j].has_wipe_tower = true;
                 last_wipe_tower_print_z = m_layer_tools[j].print_z;
             }
+        }
+    }
+
+
+    // ORCA: per-extruder layer height. With the object grid finer than the extruders' pitches
+    // most object-grid layers change no tool, and a tower slab on each of them is the finest
+    // extruder's slab count for the whole print. Thin them out: such a slab (tower_optional) is
+    // dropped when the slab above can bridge to the slab below within the maximum layer height,
+    // greedily from the bottom, so the tower prints one slab per tool change where the grid
+    // allows. Every tool change keeps its slab, as do the first and last tower layers and
+    // everything below the object bottom; the fractional support rules above are untouched, so
+    // a dropped slab never makes a fractional layer carry one.
+    {
+        int first_wt = -1, last_wt = -1;
+        for (int i = 0; i < int(m_layer_tools.size()); ++ i)
+            if (m_layer_tools[i].has_wipe_tower) {
+                if (first_wt < 0)
+                    first_wt = i;
+                last_wt = i;
+            }
+        int prev = -1;
+        for (int i = first_wt; i >= 0 && i <= last_wt; ++ i) {
+            LayerTools &lt = m_layer_tools[i];
+            if (! lt.has_wipe_tower)
+                continue;
+            if (prev >= 0 && i < last_wt && lt.tower_optional) {
+                int next = i + 1;
+                while (next <= last_wt && ! m_layer_tools[next].has_wipe_tower)
+                    ++ next;
+                if (next <= last_wt && m_layer_tools[next].print_z - m_layer_tools[prev].print_z <= max_layer_height + EPSILON) {
+                    lt.has_wipe_tower = false;
+                    continue;
+                }
+            }
+            prev = i;
+        }
     }
 
     // Calculate the wipe_tower_layer_height values.
@@ -2140,6 +2393,18 @@ MultiNozzleUtils::LayeredNozzleGroupResult ToolOrdering::get_recommended_filamen
     if (has_multiple_extruder && !print->is_BBL_printer()) {
         for (size_t i = 0; i < filament_nums && i < extruder_nums; i++)
             ret[i] = (int)i;
+        // Snapmaker Orca: on a composed per-extruder table (PerHeadProcess) role speeds follow this
+        // grouping while travel speeds, prime tower and placeholders follow filament_map; warn when they differ.
+        if (const auto *composed = print->full_print_config().option<ConfigOptionInts>("print_extruder_source_column");
+            composed != nullptr && !composed->values.empty()) {
+            const std::vector<int> &map = print_config.filament_map.values;
+            for (unsigned int filament : used_filaments)
+                if (filament < extruder_nums && filament < map.size() && map[filament] - 1 != int(filament)) {
+                    BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": filament %1% is mapped to extruder %2% but grouped on extruder %3%; slice-time and G-code speeds may differ")
+                        % (filament + 1) % map[filament] % (filament + 1);
+                    assert(map[filament] - 1 == int(filament));
+                }
+        }
         auto result_opt = LayeredNozzleGroupResult::create(ret, nozzle_list, used_filaments);
         return result_opt ? *result_opt : LayeredNozzleGroupResult();
     }
@@ -3601,8 +3866,9 @@ void ToolOrdering::mark_skirt_layers(const PrintConfig &config, coordf_t max_lay
 static CustomGCode::Info custom_gcode_per_print_z;
 void ToolOrdering::assign_custom_gcodes(const Print &print)
 {
-	// Only valid for non-sequential print.
-	assert(print.config().print_sequence == PrintSequence::ByLayer);
+	// Only valid for non-sequential print; a sequential print with a wipe tower is emitted
+	// by layer from the print-wide ordering and takes the custom G-codes the same way.
+	assert(print.config().print_sequence == PrintSequence::ByLayer || print.has_wipe_tower());
 
     custom_gcode_per_print_z = print.model().get_curr_plate_custom_gcodes();
 	if (custom_gcode_per_print_z.gcodes.empty())
@@ -3729,14 +3995,57 @@ int WipingExtrusions::last_nonsoluble_extruder_on_layer(const PrintConfig& print
     return (-1);
 }
 
+// diameter of the nozzle a 0-based filament prints through.
+static double filament_nozzle_diameter(const Print &print, unsigned int filament_id)
+{
+    return print.config().nozzle_diameter.get_at(print.extruder_index_of(filament_id));
+}
+
+// Snapmaker Orca: the nine line widths of the tool heads of two 0-based filaments are equal (the
+// columns of the narrowed table, Print::width_slot). An entity whose widths were computed for its
+// filament's head is handed to another filament only when that head prints the same widths.
+static bool same_width_columns(const Print &print, const PrintObject &object, const PrintRegion &region, unsigned int a, unsigned int b)
+{
+    const size_t ca = print.width_slot(a + 1), cb = print.width_slot(b + 1);
+    if (ca == cb)
+        return true;
+    auto same = [ca, cb](const ConfigOptionVector<FloatOrPercent> &widths) { return Flow::width_at(widths, ca) == Flow::width_at(widths, cb); };
+    const PrintConfig       &print_config  = print.config();
+    const PrintObjectConfig &object_config = object.config();
+    const PrintRegionConfig &region_config = region.config();
+    return same(print_config.initial_layer_line_width) && same(object_config.line_width) && same(object_config.support_line_width) &&
+           same(region_config.outer_wall_line_width) && same(region_config.inner_wall_line_width) && same(region_config.top_surface_line_width) &&
+           same(region_config.sparse_infill_line_width) && same(region_config.internal_solid_infill_line_width) && same(region_config.bridge_line_width);
+}
+
 // Decides whether this entity could be overridden
 bool WipingExtrusions::is_overriddable(const ExtrusionEntityCollection& eec, const PrintConfig& print_config, const PrintObject& object, const PrintRegion& region) const
 {
+    // Purge overrides would disable Local-Z emission for the entire shared print layer.
     if (m_layer_tools->has_local_z_subdivision)
         return false;
 
-    if (print_config.filament_soluble.get_at(m_layer_tools->extruder(eec, region)))
+    const unsigned int intended_filament = m_layer_tools->extruder(eec, region);
+    if (print_config.filament_soluble.get_at(intended_filament))
         return false;
+
+    // Entity widths/heights were computed for its filament's nozzle, so only a filament with the same nozzle diameter may take it over; with no candidate it must keep its own filament.
+    if (print_config.nozzle_diameter.values.size() > 1) {
+        const Print &print = *object.print();
+        const double intended_nozzle = filament_nozzle_diameter(print, intended_filament);
+        bool has_candidate = false;
+        for (size_t filament = 0; filament < print_config.filament_soluble.values.size(); ++ filament)
+            if (filament != intended_filament &&
+                !print_config.filament_soluble.get_at(filament) &&
+                !print_config.filament_is_support.get_at(filament) &&
+                std::abs(filament_nozzle_diameter(print, (unsigned int)filament) - intended_nozzle) < EPSILON &&
+                same_width_columns(print, object, region, intended_filament, (unsigned int)filament)) {
+                has_candidate = true;
+                break;
+            }
+        if (!has_candidate)
+            return false;
+    }
 
     if (object.config().flush_into_objects)
         return true;
@@ -3834,6 +4143,12 @@ float WipingExtrusions::mark_wiping_extrusions(const Print& print, unsigned int 
                         if (!is_overriddable(*fill, print.config(), *object, region))
                             continue;
 
+                        // Only wipe into entities computed for this extruder's nozzle diameter and line widths.
+                        if (std::abs(filament_nozzle_diameter(print, lt.extruder(*fill, region)) -
+                                     filament_nozzle_diameter(print, new_extruder)) > EPSILON ||
+                            !same_width_columns(print, *object, region, lt.extruder(*fill, region), new_extruder))
+                            continue;
+
                         if (wipe_into_infill_only && ! is_infill_first)
                             // In this case we must check that the original extruder is used on this layer before the one we are overridding
                             // (and the perimeters will be finished before the infill is printed):
@@ -3855,7 +4170,11 @@ float WipingExtrusions::mark_wiping_extrusions(const Print& print, unsigned int 
                 {
                     for (const ExtrusionEntity* ee : layerm->perimeters.entities) {
                         auto* fill = dynamic_cast<const ExtrusionEntityCollection*>(ee);
-                        if (is_overriddable(*fill, print.config(), *object, region) && !is_entity_overridden(fill, object, copy) && fill->total_volume() > min_infill_volume) {
+                        if (is_overriddable(*fill, print.config(), *object, region) && !is_entity_overridden(fill, object, copy) && fill->total_volume() > min_infill_volume &&
+                            // nozzle diameter and line widths must match
+                            std::abs(filament_nozzle_diameter(print, lt.extruder(*fill, region)) -
+                                     filament_nozzle_diameter(print, new_extruder)) < EPSILON &&
+                            same_width_columns(print, *object, region, lt.extruder(*fill, region), new_extruder)) {
                             set_extruder_override(fill, object, copy, new_extruder, num_of_copies);
                             if ((volume_to_wipe -= float(fill->total_volume())) <= 0.f)
                             	// More material was purged already than asked for.
@@ -3874,8 +4193,9 @@ float WipingExtrusions::mark_wiping_extrusions(const Print& print, unsigned int 
                     if (this_support_layer == nullptr)
                         break;
 
-                    bool support_overriddable = object_config.support_filament == 0;
-                    bool support_intf_overriddable = object_config.support_interface_filament == 0;
+                    // Only a filament passing the object's support restrictions (nozzle diameter, material) may flush into its support.
+                    bool support_overriddable = object_config.support_filament == 0 && object->support_filament_allowed(new_extruder + 1, false);
+                    bool support_intf_overriddable = object_config.support_interface_filament == 0 && object->support_filament_allowed(new_extruder + 1, true);
                     if (!support_overriddable && !support_intf_overriddable)
                         break;
 
@@ -3925,6 +4245,25 @@ void WipingExtrusions::ensure_perimeters_infills_order(const Print& print)
     unsigned int first_nonsoluble_extruder = first_nonsoluble_extruder_on_layer(print.config());
     unsigned int last_nonsoluble_extruder = last_nonsoluble_extruder_on_layer(print.config());
 
+    // Prefer filaments printing through the nozzle diameter the entity's widths were computed for; returns -1 when the layer offers none.
+    auto nonsoluble_matching_extruder = [this, &print](bool first, unsigned int intended_filament) -> int {
+        const PrintConfig &config = print.config();
+        const double intended_nozzle = filament_nozzle_diameter(print, intended_filament);
+        auto matches = [&](unsigned int filament) {
+            return !config.filament_soluble.get_at(filament) && !config.filament_is_support.get_at(filament) &&
+                   std::abs(filament_nozzle_diameter(print, filament) - intended_nozzle) < EPSILON;
+        };
+        const std::vector<unsigned int> &extruders = m_layer_tools->extruders;
+        if (first) {
+            for (auto it = extruders.begin(); it != extruders.end(); ++ it)
+                if (matches(*it)) return int(*it);
+        } else {
+            for (auto it = extruders.rbegin(); it != extruders.rend(); ++ it)
+                if (matches(*it)) return int(*it);
+        }
+        return -1;
+    };
+
     for (const PrintObject* object : print.objects()) {
         // Finds this layer:
         const Layer* this_layer = object->get_layer_at_printz(lt.print_z, EPSILON);
@@ -3956,8 +4295,13 @@ void WipingExtrusions::ensure_perimeters_infills_order(const Print& print)
                     //BBS
                     //|| object->config().flush_into_objects  // in this case the perimeter is overridden, so we can override by the last one safely
                     || lt.is_extruder_order(lt.wall_extruder_id(region), last_nonsoluble_extruder    // !infill_first, but perimeter is already printed when last extruder prints
-                    || ! lt.has_extruder(lt.sparse_infill_filament_id(region)))) // we have to force override - this could violate infill_first (FIXME)
-                        set_extruder_override(fill, object, copy, (is_infill_first ? first_nonsoluble_extruder : last_nonsoluble_extruder), num_of_copies);
+                    || ! lt.has_extruder(lt.sparse_infill_filament_id(region)))) { // we have to force override - this could violate infill_first (FIXME)
+                        // Prefer a nozzle-matching filament; fall back so the entity still prints.
+                        int flush_extruder = nonsoluble_matching_extruder(is_infill_first, lt.extruder(*fill, region));
+                        if (flush_extruder < 0)
+                            flush_extruder = is_infill_first ? first_nonsoluble_extruder : last_nonsoluble_extruder;
+                        set_extruder_override(fill, object, copy, flush_extruder, num_of_copies);
+                    }
                     else {
                         // In this case we can (and should) leave it to be printed normally.
                         // Force overriding would mean it gets printed before its perimeter.
@@ -3967,8 +4311,13 @@ void WipingExtrusions::ensure_perimeters_infills_order(const Print& print)
                 // Now the same for perimeters - see comments above for explanation:
                 for (const ExtrusionEntity* ee : layerm->perimeters.entities) {                      // iterate through all perimeter Collections
                     auto* fill = dynamic_cast<const ExtrusionEntityCollection*>(ee);
-                    if (is_overriddable(*fill, print.config(), *object, region) && ! is_entity_overridden(fill, object, copy))
-                        set_extruder_override(fill, object, copy, (is_infill_first ? last_nonsoluble_extruder : first_nonsoluble_extruder), num_of_copies);
+                    if (is_overriddable(*fill, print.config(), *object, region) && ! is_entity_overridden(fill, object, copy)) {
+                        // Same nozzle-matching preference as above.
+                        int flush_extruder = nonsoluble_matching_extruder(!is_infill_first, lt.extruder(*fill, region));
+                        if (flush_extruder < 0)
+                            flush_extruder = is_infill_first ? last_nonsoluble_extruder : first_nonsoluble_extruder;
+                        set_extruder_override(fill, object, copy, flush_extruder, num_of_copies);
+                    }
                 }
             }
         }

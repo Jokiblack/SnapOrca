@@ -20,6 +20,8 @@
 #include <iomanip>
 #include <regex>
 #include <thread>
+#include <type_traits>
+#include <unordered_map>
 #include <string_view>
 #include <vector>
 #include <boost/algorithm/string/predicate.hpp>
@@ -1694,12 +1696,22 @@ void SSWCP_Instance::update_filament_info(const json& objects, bool send_message
             // save filament and update the gui filament
             auto& filaments = wxGetApp().preset_bundle->machine_filaments;
             auto& machine_nozzles = wxGetApp().preset_bundle->m_connect_machine_info_list;
-            static auto tmp_filaments = filaments;
 
+            // The last report that made the GUI reload, kept per printer (UI-thread state). As
+            // machine_filaments is one list for the whole GUI, a report of another printer than
+            // the one shown is always a change.
+            using FilamentReport = std::remove_reference_t<decltype(filaments)>;
+            static std::unordered_map<std::string, FilamentReport> s_shown_report_by_sn;
+            static std::string                                     s_shown_sn;
             if (m_first_connected) {
-                tmp_filaments = filaments;
+                s_shown_report_by_sn.clear();
+                s_shown_sn.clear();
                 m_first_connected = false;
             }
+            // The first report of a printer is judged against what the GUI shows now.
+            const auto     shown_it      = s_shown_report_by_sn.find(sn);
+            FilamentReport tmp_filaments = shown_it != s_shown_report_by_sn.end() ? shown_it->second : filaments;
+            const bool     other_printer = !s_shown_sn.empty() && s_shown_sn != sn;
 
             machine_nozzles.clear();
             filaments.clear();
@@ -1789,7 +1801,7 @@ void SSWCP_Instance::update_filament_info(const json& objects, bool send_message
                 }
             }
 
-            bool need_load_preset = false;
+            bool need_load_preset = other_printer;
 
             if (filaments.size() == 0 && tmp_filaments.size() != 0)
                 need_load_preset = true;
@@ -1814,8 +1826,11 @@ void SSWCP_Instance::update_filament_info(const json& objects, bool send_message
                 }
             }
             if (need_load_preset) {
-                tmp_filaments = filaments;
-                wxGetApp().load_current_presets();
+                s_shown_report_by_sn[sn] = filaments;
+                s_shown_sn               = sn;
+                // Every Tab reloads its preset, the sanitizer runs and the sidebar relayouts:
+                // once per burst of reports, not once per report.
+                SSWCP::request_preset_reload();
             }
 
             if (send_message) {
@@ -3098,7 +3113,11 @@ void SSWCP_MachineOption_Instance::sw_UploadFiletoMachine() {
 
         wxString wildcard = "All files (*.*)|*.*";
 
-        wxGetApp().CallAfter([wildcard, this, upload_url]() {
+        // The callbacks hold the instance as a shared_ptr: the 80 s timeout of m_instance_list may drop
+        // the list's reference meanwhile. The timeout is paused while the modal dialog is open and
+        // renewed by every progress report of the transfer.
+        auto self = std::static_pointer_cast<SSWCP_MachineOption_Instance>(shared_from_this());
+        wxGetApp().CallAfter([wildcard, self, upload_url]() {
             
             wxFileDialog picFileDialog(nullptr,
                                         L("select file"),                    // title
@@ -3107,8 +3126,11 @@ void SSWCP_MachineOption_Instance::sw_UploadFiletoMachine() {
                                         wildcard,                            // filter 
                                         wxFD_OPEN | wxFD_OVERWRITE_PROMPT);  // style
 
-            if (picFileDialog.ShowModal() == wxID_CANCEL) {                
-                handle_general_fail();
+            SSWCP::hold_instance_timeout(self.get());
+            const int answer = picFileDialog.ShowModal();
+            SSWCP::renew_instance_timeout(self.get());
+            if (answer == wxID_CANCEL) {
+                self->handle_general_fail();
                 return;
             }
             
@@ -3122,34 +3144,32 @@ void SSWCP_MachineOption_Instance::sw_UploadFiletoMachine() {
             http_object
                 .form_add("print", "false")
                 .form_add_file("file", std::string(filepath.ToUTF8()), std::string(filename.ToUTF8()))
-                .on_error([=](std::string body, std::string error, unsigned status) {
-                    handle_general_fail();
-                    wxGetApp().CallAfter([filename]() {
+                .on_error([self, filename](std::string body, std::string error, unsigned status) {
+                    // Http thread: the instance is touched on the UI thread only.
+                    wxGetApp().CallAfter([self, filename]() {
+                        self->handle_general_fail();
                         MessageDialog msg_window(nullptr, wxString::Format(_L("%s upload failed"), filename) + "\n", _L("Upload Failed"),
                                                  wxICON_QUESTION | wxOK);
                         msg_window.ShowModal();
                     });
                 })
-                .on_complete([=](std::string body, unsigned) {
-                    try {
-                        wxGetApp().CallAfter([=]() {
-                            json response;
-                            response["filename"] = std::string(filename.ToUTF8());
-                            m_res_data           = response;
-                            send_to_js();
+                .on_complete([self, filename](std::string body, unsigned) {
+                    wxGetApp().CallAfter([self, filename]() {
+                        json response;
+                        response["filename"] = std::string(filename.ToUTF8());
+                        self->m_res_data     = response;
+                        self->send_to_js();
 
 
-                            MessageDialog msg_window(nullptr, wxString::Format(_L("%s uploaded successfully"), filename) + "\n",
-                                                     _L("Upload Successful"), wxICON_QUESTION | wxOK);
-                            msg_window.ShowModal();
-                            finish_job();
-                        });
-                    } catch (std::exception& e) {
-                        handle_general_fail();
-                    }
+                        MessageDialog msg_window(nullptr, wxString::Format(_L("%s uploaded successfully"), filename) + "\n",
+                                                 _L("Upload Successful"), wxICON_QUESTION | wxOK);
+                        msg_window.ShowModal();
+                        self->finish_job();
+                    });
                 })
-                .on_progress([&](Http::Progress progress, bool& cancel) {
-
+                .on_progress([self](Http::Progress progress, bool& cancel) {
+                    // A transfer over Wi-Fi may take longer than the instance timeout.
+                    SSWCP::renew_instance_timeout(self.get());
                 })
                 .perform();
         });
@@ -3195,7 +3215,9 @@ void SSWCP_MachineOption_Instance::sw_DownloadMachineFile() {
             wildcard = "All files (*.*)|*.*";
         }
 
-        wxGetApp().CallAfter([filename, extension, wildcard, this, download_url]() {
+        // Shared_ptr, paused timeout, renewal per progress report: see sw_UploadFiletoMachine.
+        auto self = std::static_pointer_cast<SSWCP_MachineOption_Instance>(shared_from_this());
+        wxGetApp().CallAfter([filename, wildcard, self, download_url]() {
             
             wxFileDialog saveFileDialog(nullptr,
                                         L("Save file"),                     // title
@@ -3204,9 +3226,12 @@ void SSWCP_MachineOption_Instance::sw_DownloadMachineFile() {
                                         wildcard,                           // filter
                                         wxFD_SAVE | wxFD_OVERWRITE_PROMPT); // style
 
-            if (saveFileDialog.ShowModal() == wxID_CANCEL) {
+            SSWCP::hold_instance_timeout(self.get());
+            const int answer = saveFileDialog.ShowModal();
+            SSWCP::renew_instance_timeout(self.get());
+            if (answer == wxID_CANCEL) {
                 // use cancel download
-                handle_general_fail();
+                self->handle_general_fail();
                 return;
             }
             
@@ -3216,36 +3241,48 @@ void SSWCP_MachineOption_Instance::sw_DownloadMachineFile() {
 
             Http http_object = Http::get(final_url);
             http_object
-                .on_error([=](std::string body, std::string error, unsigned status) {
-                    handle_general_fail();
-                    wxGetApp().CallAfter([filename]() {
+                .on_error([self, filename](std::string body, std::string error, unsigned status) {
+                    // Http thread: the instance is touched on the UI thread only.
+                    wxGetApp().CallAfter([self, filename]() {
+                        self->handle_general_fail();
                         MessageDialog msg_window(nullptr, wxString::Format(_L("%s download failed"), filename) + "\n", _L("Download Failed"),
                                                  wxICON_QUESTION | wxOK);
                         msg_window.ShowModal();
                     });
                 })
-                .on_complete([=](std::string body, unsigned) {
+                .on_complete([self, filename, path](std::string body, unsigned) {
+                    bool written = false;
                     try {
                         boost::nowide::ofstream file(path.ToStdString(wxConvUTF8), std::ios::binary);
-                        if (!file.is_open()) {
+                        if (file.is_open()) {
+                            file.write(body.c_str(), body.size());
+                            file.close();
+                            written = true;
+                        } else {
                             BOOST_LOG_TRIVIAL(error) << "Failed to open file for writing: " << path;
+                        }
+                    } catch (std::exception& e) {
+                        BOOST_LOG_TRIVIAL(error) << "Failed to write " << path << ": " << e.what();
+                    }
+                    // The request is answered either way, so the page never sees a spurious "time out".
+                    wxGetApp().CallAfter([self, filename, path, written]() {
+                        if (!written) {
+                            self->handle_general_fail();
                             return;
                         }
-
-                        file.write(body.c_str(), body.size());
-                        file.close();
-
-                        wxGetApp().CallAfter([=]() {
-                            MessageDialog msg_window(nullptr, wxString::Format(_L("%s downloaded successfully"), filename) + "\n",
-                                                     _L("Download Successful"), wxICON_QUESTION | wxOK);
-                            msg_window.ShowModal();
-                        });
-                    } catch (std::exception& e) {
-                        handle_general_fail();
-                    }
+                        json response;
+                        response["filename"] = std::string(filename.ToUTF8());
+                        response["path"]     = std::string(path.ToUTF8());
+                        self->m_res_data     = response;
+                        self->send_to_js();
+                        MessageDialog msg_window(nullptr, wxString::Format(_L("%s downloaded successfully"), filename) + "\n",
+                                                 _L("Download Successful"), wxICON_QUESTION | wxOK);
+                        msg_window.ShowModal();
+                        self->finish_job();
+                    });
                 })
-                .on_progress([&](Http::Progress progress, bool& cancel) {
-
+                .on_progress([self](Http::Progress progress, bool& cancel) {
+                    SSWCP::renew_instance_timeout(self.get());
                 })
                 .perform();
         });
@@ -4304,10 +4341,6 @@ void SSWCP_MachineConnect_Instance::process() {
     }
 }
 
-// Static holder for the one-shot pin-code client (declared in SSWCP.hpp).
-// Released on the UI thread after the response — never from a Paho callback.
-std::shared_ptr<MqttClient> SSWCP_MachineConnect_Instance::m_pin_client;
-
 void SSWCP_MachineConnect_Instance::sw_get_pin_code()
 {
     try {
@@ -4317,70 +4350,73 @@ void SSWCP_MachineConnect_Instance::sw_get_pin_code()
             std::string nickname  = m_param_data["nickname"].get<std::string>();
             int  port      = m_param_data.count("port") ? m_param_data["port"].get<int>() : 1884;
 
-            auto        weak_self = std::weak_ptr<SSWCP_Instance>(shared_from_this());
+            auto weak_self = std::weak_ptr<SSWCP_MachineConnect_Instance>(
+                std::static_pointer_cast<SSWCP_MachineConnect_Instance>(shared_from_this()));
             wxGetApp().CallAfter([=]() {
-                // Create the one-shot client through the factory so it has a
-                // shared_ptr owner (a raw `new`-ed client can never arm the
-                // auto-reconnect checker and its lifetime is unsafe). The
-                // static holder keeps it alive until the response arrives and
-                // is released on the UI thread (see the callback below).
+                auto self = weak_self.lock();
+                if (!self)
+                    return;   // timed out before the UI thread got here
+                // The factory records the client's own weak reference, which its reconnect checker needs.
                 std::shared_ptr<MqttClient> mqtt_client = MqttClient::create("mqtt://" + ip + ":" + std::to_string(port), "Snapmaker Orca");
-                m_pin_client                           = mqtt_client;
-                std::weak_ptr<MqttClient> weak_client  = mqtt_client;
+                // Every early return below hands the client to dispose_async, so a failed Connect,
+                // Subscribe or Publish does not leak it with its connection or reconnect loop.
                 std::string connect_msg = "";
-                if (mqtt_client->Connect(connect_msg)) {
-                    std::string sub_msg = "success";
-                    if (mqtt_client->Subscribe("cloud/config/response", 1, sub_msg)) {
-                        mqtt_client->SetMessageCallback([weak_self, weak_client](const std::string& topic, const std::string& message) {
-                            auto self        = weak_self.lock();
-                            auto mqtt_client = weak_client.lock();
-                            if (self && mqtt_client) {
-                                if (topic == "cloud/config/response") {
-                                    // Non-throwing parse (allow_exceptions=false):
-                                    // a parse error must not escape into Paho's
-                                    // C callback stack (uncaught = terminate).
-                                    json response = json::parse(message, nullptr, false);
-                                    if (!response.is_discarded() && response.count("result")) {
-                                        self->m_res_data = response["result"];
-                                        self->send_to_js();
-                                        self->finish_job();
-
-                                        std::string dc_msg = "success";
-                                        bool flag = mqtt_client->Disconnect(dc_msg);
-                                        // Drop the holder on the UI thread: destroying
-                                        // the client from inside message_arrived (a
-                                        // Paho thread) is not allowed by Paho.
-                                        wxGetApp().CallAfter([]() { SSWCP_MachineConnect_Instance::release_pin_client(); });
-                                        return;
-                                    }
-                                    self->handle_general_fail();
-                                }
-                            }
-                        });
-                        
-                        json req_body;
-                        req_body["jsonrpc"] = "2.0",
-                        req_body["method"]  = "server.client_manager.request_pin_code";
-                        req_body["params"] = json::object();
-                        req_body["params"]["userid"] = userid;
-                        req_body["params"]["nickname"] = nickname;
-                        Moonraker_Mqtt::SequenceGenerator generator;
-                        req_body["id"]                 = generator.generate_seq_id();
-                        
-                        std::string pub_msg = "success";
-                        if (mqtt_client->Publish("cloud/config/request", req_body.dump(), 1, pub_msg)) {
-                            return;
-                        }
-                    }
+                if (!mqtt_client->Connect(connect_msg)) {
+                    self->handle_general_fail();
+                    MqttClient::dispose_async(std::move(mqtt_client));
                     return;
                 }
-                auto self = weak_self.lock();
-                if (self) {
+                std::string sub_msg = "success";
+                if (!mqtt_client->Subscribe("cloud/config/response", 1, sub_msg)) {
                     self->handle_general_fail();
+                    MqttClient::dispose_async(std::move(mqtt_client));
+                    return;
                 }
-                // Connection failed: nothing to wait for, drop the client here
-                // (UI thread — safe to destroy).
-                m_pin_client.reset();
+                // Runs on the MQTT client's thread; holding the client would be a cycle. Parses
+                // without throwing (no handler on that thread) and touches the instance on the UI thread.
+                mqtt_client->SetMessageCallback([weak_self](const std::string& topic, const std::string& message) {
+                    if (topic != "cloud/config/response")
+                        return;
+                    json result;
+                    const bool parsed = SSWCPProtocol::parse_pin_code_response(message, result);
+                    if (!parsed)
+                        BOOST_LOG_TRIVIAL(warning) << "sw_get_pin_code: unexpected message on cloud/config/response: "
+                                                   << message.substr(0, 200);
+                    wxGetApp().CallAfter([weak_self, parsed, result]() {
+                        auto self = weak_self.lock();
+                        if (!self)
+                            return;
+                        if (parsed) {
+                            self->m_res_data = result;
+                            self->send_to_js();
+                            self->finish_job();
+                        } else {
+                            self->handle_general_fail();
+                        }
+                        // The client's destructor disconnects; the wait for the broker's
+                        // acknowledgement happens on the disposal thread, not here.
+                        self->release_pin_code_client();
+                    });
+                });
+
+                json req_body;
+                req_body["jsonrpc"] = "2.0";
+                req_body["method"]  = "server.client_manager.request_pin_code";
+                req_body["params"] = json::object();
+                req_body["params"]["userid"] = userid;
+                req_body["params"]["nickname"] = nickname;
+                Moonraker_Mqtt::SequenceGenerator generator;
+                req_body["id"]                 = generator.generate_seq_id();
+
+                std::string pub_msg = "success";
+                if (!mqtt_client->Publish("cloud/config/request", req_body.dump(), 1, pub_msg)) {
+                    self->handle_general_fail();
+                    MqttClient::dispose_async(std::move(mqtt_client));
+                    return;
+                }
+                // Awaiting the answer: released with it, or with the instance when the request
+                // times out (SSWCP::DEFAULT_INSTANCE_TIMEOUT).
+                self->m_pin_code_client = std::move(mqtt_client);
             });
         } else {
             handle_general_fail();
@@ -6783,12 +6819,27 @@ void SSWCP_MqttAgent_Instance::set_Instance_illegal()
     clean_current_engine();
 }
 
+// Snapmaker Orca: see SSWCP.hpp. Called by SSWCP::on_webview_delete() with the real pointer.
+// Drops a view's subscriptions (m_subscribe_map, m_subscribe_instance_map), funnel id
+// (m_connect_session_map) and MQTT engine (m_mqtt_engine_map); the engine is released off the
+// UI thread, as its destructor waits for the broker's disconnect acknowledgement.
+void SSWCP_MqttAgent_Instance::forget_webview(wxWebView* view)
+{
+    release_view_state(view);
+}
+
 // detele mqtt instance
 void SSWCP_MqttAgent_Instance::clean_current_engine()
 {
+    release_view_state(m_webview);
+}
 
+// Removes a view's entries from the four maps. Subscription maps are UI-thread state; the engine
+// and funnel id maps share m_engine_map_mtx. The engine is disposed off-thread, outside the lock.
+void SSWCP_MqttAgent_Instance::release_view_state(wxWebView* view)
+{
     for (auto iter = m_subscribe_map.begin(); iter != m_subscribe_map.end();) {
-        if (iter->first.second == m_webview) {
+        if (iter->first.second == view) {
             iter = m_subscribe_map.erase(iter);
         } else {
             iter++;
@@ -6796,16 +6847,44 @@ void SSWCP_MqttAgent_Instance::clean_current_engine()
     }
 
     for (auto iter = m_subscribe_instance_map.begin(); iter != m_subscribe_instance_map.end();) {
-        if (iter->first.second == m_webview) {
+        if (iter->first.second == view) {
             iter = m_subscribe_instance_map.erase(iter);
         } else {
             iter++;
         }
     }
 
-    m_engine_map_mtx.lock();
-    m_mqtt_engine_map.erase(m_webview);
-    m_engine_map_mtx.unlock();
+    std::shared_ptr<MqttClient> engine;
+    {
+        std::lock_guard<std::mutex> lk(m_engine_map_mtx);
+        auto it = m_mqtt_engine_map.find(view);
+        if (it != m_mqtt_engine_map.end()) {
+            engine = std::move(it->second.second);
+            m_mqtt_engine_map.erase(it);
+        }
+        if (m_connect_session_map.erase(view) > 0)
+            BOOST_LOG_TRIVIAL(debug) << "SSWCP_MqttAgent_Instance: connect session id of a view dropped";
+    }
+    if (engine)
+        BOOST_LOG_TRIVIAL(debug) << "SSWCP_MqttAgent_Instance: MQTT engine of a view released";
+    MqttClient::dispose_async(std::move(engine));
+}
+
+// Releases every engine and subscription. Called once from GUI_App::OnExit: remaining engines are
+// destroyed synchronously (a disconnect waits at most 5 s) instead of during static destruction.
+void SSWCP_MqttAgent_Instance::release_all_engines()
+{
+    m_subscribe_map.clear();
+    m_subscribe_instance_map.clear();
+    std::unordered_map<wxWebView*, std::pair<std::string, std::shared_ptr<MqttClient>>> engines;
+    {
+        std::lock_guard<std::mutex> lk(m_engine_map_mtx);
+        engines.swap(m_mqtt_engine_map);
+        m_connect_session_map.clear();
+    }
+    if (!engines.empty())
+        BOOST_LOG_TRIVIAL(info) << "SSWCP_MqttAgent_Instance: releasing " << engines.size() << " MQTT engine(s) at exit";
+    engines.clear();
 }
 
 // mqtt static msg callback
@@ -6943,11 +7022,9 @@ void SSWCP_MqttAgent_Instance::sw_create_mqtt_client()
             return;
         }
 
-        // clear list for current sub machine
-        auto ptr = get_current_engine();
-        if (!ptr) {
-            ptr.reset();
-        }
+        // clear list for current sub machine (the previous engine, if any, is released off the
+        // UI thread by clean_current_engine; a local copy of it here would have destroyed it on
+        // the UI thread at the end of this function instead)
         clean_current_engine();
 
         //
@@ -8016,9 +8093,27 @@ void SSWCP::delete_target(SSWCP_Instance* target) {
     });
 }
 
-// Extend a one-shot instance's timeout by the default timeout
+// Extend a one-shot instance's timeout by the default timeout (also ends a hold)
 void SSWCP::renew_instance_timeout(SSWCP_Instance* instance) {
     m_instance_list.update_timeout(instance, DEFAULT_INSTANCE_TIMEOUT);
+}
+
+// Suspend a one-shot instance's timeout while a modal dialog of its own is open
+void SSWCP::hold_instance_timeout(SSWCP_Instance* instance) {
+    m_instance_list.pause(instance);
+}
+
+// One GUI_App::load_current_presets() for every burst of requests: the flag is UI-thread state,
+// set here and cleared by the deferred call, so requests made before it runs join it.
+void SSWCP::request_preset_reload() {
+    static bool s_pending = false;
+    if (s_pending)
+        return;
+    s_pending = true;
+    wxGetApp().CallAfter([]() {
+        s_pending = false;
+        wxGetApp().load_current_presets();
+    });
 }
 
 // Stop all machine subscriptions
@@ -8070,6 +8165,14 @@ void SSWCP::stop_machine_find() {
     });
 }
 
+// Snapmaker Orca: application exit. Everything SSWCP still holds is released here, before the
+// statics are destroyed with the application object gone.
+void SSWCP::shutdown()
+{
+    m_instance_list.clear();
+    SSWCP_MqttAgent_Instance::release_all_engines();
+}
+
 // Handle webview deletion
 void SSWCP::on_webview_delete(wxWebView* view)
 {
@@ -8089,6 +8192,9 @@ void SSWCP::on_webview_delete(wxWebView* view)
         instance->set_Instance_illegal();
         m_instance_list.remove(instance.get());
     }
+
+    // Snapmaker Orca: the only place where the pointer of the dead view is still known.
+    SSWCP_MqttAgent_Instance::forget_webview(view);
 
     auto& device_map = wxGetApp().m_device_card_subscribers;
     for (auto iter = device_map.begin(); iter != device_map.end();) {

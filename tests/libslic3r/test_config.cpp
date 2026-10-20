@@ -6,6 +6,8 @@
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include "catch2/catch_approx.hpp"
+#include "libslic3r/Flow.hpp"
+#include "libslic3r/Preset.hpp"
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/PrintConfigConstants.hpp"
 #include "libslic3r/LocalesUtils.hpp"
@@ -44,7 +46,8 @@ SCENARIO("Generic config validation performs as expected.", "[Config]") {
             }
         }
         WHEN( "outer_wall_line_width is set to -10, an invalid value") {
-            config.set("outer_wall_line_width", -10);
+            // A column per tool head (coFloatsOrPercents): the numeric interfaces do not reach it.
+            config.set_deserialize_strict("outer_wall_line_width", "-10");
             THEN( "Validate returns error") {
                 REQUIRE_FALSE(config.validate().empty());
             }
@@ -143,36 +146,47 @@ SCENARIO("Config accessor functions perform as expected.", "[Config]") {
                 REQUIRE(config.opt<ConfigOptionString>("machine_end_gcode")->value == float_to_string_decimal_point(100.5));
             }
         }
+        // Snapmaker Orca: the line widths of the Quality page are columns per tool head; the scalar
+        // FloatOrPercent interfaces are exercised on skin_infill_line_width, which stays a scalar.
         WHEN("A float or percent is set as a percent through the string interface.") {
-            config.set_deserialize_strict("initial_layer_line_width", "100%");
+            config.set_deserialize_strict("skin_infill_line_width", "100%");
             THEN("Value and percent flag are 100/true") {
-                auto tmp = config.opt<ConfigOptionFloatOrPercent>("initial_layer_line_width");
+                auto tmp = config.opt<ConfigOptionFloatOrPercent>("skin_infill_line_width");
                 REQUIRE(tmp->percent == true);
                 REQUIRE(tmp->value == 100);
             }
         }
         WHEN("A float or percent is set as a float through the string interface.") {
-            config.set_deserialize_strict("initial_layer_line_width", "100");
+            config.set_deserialize_strict("skin_infill_line_width", "100");
             THEN("Value and percent flag are 100/false") {
-                auto tmp = config.opt<ConfigOptionFloatOrPercent>("initial_layer_line_width");
+                auto tmp = config.opt<ConfigOptionFloatOrPercent>("skin_infill_line_width");
                 REQUIRE(tmp->percent == false);
                 REQUIRE(tmp->value == 100);
             }
         }
         WHEN("A float or percent is set as a float through the int interface.") {
-            config.set("initial_layer_line_width", 100);
+            config.set("skin_infill_line_width", 100);
             THEN("Value and percent flag are 100/false") {
-                auto tmp = config.opt<ConfigOptionFloatOrPercent>("initial_layer_line_width");
+                auto tmp = config.opt<ConfigOptionFloatOrPercent>("skin_infill_line_width");
                 REQUIRE(tmp->percent == false);
                 REQUIRE(tmp->value == 100);
             }
         }
         WHEN("A float or percent is set as a float through the double interface.") {
-            config.set("initial_layer_line_width", 100.5);
+            config.set("skin_infill_line_width", 100.5);
             THEN("Value and percent flag are 100.5/false") {
-                auto tmp = config.opt<ConfigOptionFloatOrPercent>("initial_layer_line_width");
+                auto tmp = config.opt<ConfigOptionFloatOrPercent>("skin_infill_line_width");
                 REQUIRE(tmp->percent == false);
                 REQUIRE(tmp->value == 100.5);
+            }
+        }
+        WHEN("A per tool head line width is set as a percent through the string interface.") {
+            config.set_deserialize_strict("initial_layer_line_width", "100%");
+            THEN("One column, value and percent flag 100/true") {
+                auto tmp = config.opt<ConfigOptionFloatsOrPercentsNullable>("initial_layer_line_width");
+                REQUIRE(tmp->values.size() == 1);
+                REQUIRE(tmp->values.front().percent == true);
+                REQUIRE(tmp->values.front().value == 100);
             }
         }
         WHEN("A numeric vector is set from serialized string") {
@@ -386,6 +400,60 @@ SCENARIO("update_non_diff_values_to_base_config preserves child vectors when chi
             }
         }
     }
+}
+
+TEST_CASE("A user filament preset keeps a High Flow column its parent lacks", "[Config][Variant][FilamentFlow]")
+{
+    std::set<std::string> no_keys;
+    Slic3r::DynamicPrintConfig parent;
+    parent.option<Slic3r::ConfigOptionStrings>("filament_extruder_variant", true)->values = {"Direct Drive Standard"};
+    parent.option<Slic3r::ConfigOptionFloats>("filament_max_volumetric_speed", true)->values = {12.};
+    parent.option<Slic3r::ConfigOptionInts>("nozzle_temperature", true)->values = {255};
+
+    // The user file writes the key it changed in full; the other keys are not written.
+    Slic3r::DynamicPrintConfig child;
+    child.option<Slic3r::ConfigOptionStrings>("filament_extruder_variant", true)->values = {"Direct Drive Standard", "Direct Drive High Flow"};
+    child.option<Slic3r::ConfigOptionFloats>("filament_max_volumetric_speed", true)->values = {12., 22.};
+
+    parent.update_diff_values_to_child_config(child, "", "filament_extruder_variant", Slic3r::filament_options_with_variant, no_keys);
+    CHECK(parent.option<Slic3r::ConfigOptionStrings>("filament_extruder_variant")->values ==
+          std::vector<std::string>({"Direct Drive Standard", "Direct Drive High Flow"}));
+    CHECK_THAT(parent.option<Slic3r::ConfigOptionFloats>("filament_max_volumetric_speed")->values, Catch::Matchers::Approx(std::vector<double>({12., 22.})));
+    // An unwritten key follows the parent's Standard value in both columns.
+    CHECK(parent.option<Slic3r::ConfigOptionInts>("nozzle_temperature")->values == std::vector<int>({255, 255}));
+}
+
+TEST_CASE("A parent that later gains a High Flow column fills the keys the user preset never wrote", "[Config][Variant][FilamentFlow]")
+{
+    std::set<std::string> no_keys;
+    // The vendor update: the parent now has High Flow values of its own.
+    Slic3r::DynamicPrintConfig parent;
+    parent.option<Slic3r::ConfigOptionStrings>("filament_extruder_variant", true)->values = {"Direct Drive Standard", "Direct Drive High Flow"};
+    parent.option<Slic3r::ConfigOptionFloats>("filament_max_volumetric_speed", true)->values = {12., 30.};
+    parent.option<Slic3r::ConfigOptionFloats>("pressure_advance", true)->values = {0.04, 0.02};
+
+    Slic3r::DynamicPrintConfig child;
+    child.option<Slic3r::ConfigOptionStrings>("filament_extruder_variant", true)->values = {"Direct Drive Standard", "Direct Drive High Flow"};
+    child.option<Slic3r::ConfigOptionFloats>("filament_max_volumetric_speed", true)->values = {12., 22.};
+
+    parent.update_diff_values_to_child_config(child, "", "filament_extruder_variant", Slic3r::filament_options_with_variant, no_keys);
+    // The value the user wrote wins, the value the user never wrote comes from the vendor.
+    CHECK_THAT(parent.option<Slic3r::ConfigOptionFloats>("filament_max_volumetric_speed")->values, Catch::Matchers::Approx(std::vector<double>({12., 22.})));
+    CHECK_THAT(parent.option<Slic3r::ConfigOptionFloats>("pressure_advance")->values, Catch::Matchers::Approx(std::vector<double>({0.04, 0.02})));
+}
+
+TEST_CASE("Preset normalization keeps one value per filament column", "[Config][Variant][FilamentFlow]")
+{
+    // A filament preset holds one filament; its per-column keys stay as wide as its column list.
+    Slic3r::DynamicPrintConfig config;
+    config.set_key_value("filament_diameter", new Slic3r::ConfigOptionFloats({1.75}));
+    config.set_key_value("filament_extruder_variant", new Slic3r::ConfigOptionStrings({"Direct Drive Standard", "Direct Drive High Flow"}));
+    config.set_key_value("filament_retract_length_nc", new Slic3r::ConfigOptionFloats({4., 6.}));
+    config.set_key_value("volumetric_speed_coefficients", new Slic3r::ConfigOptionStrings({"0 0 0 0 0 0", "1 1 1 1 1 1"}));
+    Slic3r::Preset::normalize(config);
+    CHECK(config.option<Slic3r::ConfigOptionStrings>("filament_extruder_variant")->values.size() == 2);
+    CHECK_THAT(config.option<Slic3r::ConfigOptionFloats>("filament_retract_length_nc")->values, Catch::Matchers::Approx(std::vector<double>({4., 6.})));
+    CHECK(config.option<Slic3r::ConfigOptionStrings>("volumetric_speed_coefficients")->values.size() == 2);
 }
 
 SCENARIO("update_diff_values_to_child_config tolerates legacy machine-limit vector sizes",
@@ -1664,4 +1732,132 @@ TEST_CASE("Default options of enum lists get their definition's keys map", "[Con
         ++enum_lists;
     }
     CHECK(enum_lists > 0);
+}
+
+// Snapmaker Orca: line widths per tool head column. A scalar loads as one column, equal columns save
+// as one value (scalar_when_uniform), a role width of 0 falls back to the same column's default
+// width, and Flow::extrusion_width resolves one column against one nozzle.
+SCENARIO("Per tool head line widths in the config layer", "[Config][PerHeadWidth]") {
+    GIVEN("A full print config") {
+        DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+        WHEN("A width is set from a scalar string") {
+            config.set_deserialize_strict("line_width", "105%");
+            THEN("It holds one percent column") {
+                const auto *widths = config.opt<ConfigOptionFloatsOrPercentsNullable>("line_width");
+                REQUIRE(widths != nullptr);
+                REQUIRE(widths->values.size() == 1);
+                CHECK(widths->values.front().percent);
+                CHECK(widths->values.front().value == 105.);
+                CHECK(config.opt_serialize("line_width") == "105%");
+            }
+        }
+        WHEN("Every column of a width holds the same value") {
+            config.set_deserialize_strict("outer_wall_line_width", "105%,105%,105%");
+            config.set_deserialize_strict("outer_wall_speed", "200,nil");
+            THEN("opt_serialize and save_to_json write one value; a nil column of a speed still writes an array") {
+                CHECK(config.opt_serialize("outer_wall_line_width") == "105%");
+                std::ostringstream os;
+                config.save_to_json(os, "test", "User", "1.0.0.0");
+                const nlohmann::json j = nlohmann::json::parse(os.str());
+                REQUIRE(j.contains("outer_wall_line_width"));
+                CHECK(j["outer_wall_line_width"].is_string());
+                CHECK(j["outer_wall_line_width"].get<std::string>() == "105%");
+                REQUIRE(j.contains("outer_wall_speed"));
+                CHECK(j["outer_wall_speed"].is_array());
+                CHECK(j["outer_wall_speed"].size() == 2);
+            }
+        }
+        WHEN("The columns of a width differ") {
+            config.set_deserialize_strict("outer_wall_line_width", "105%,105%,0.5");
+            THEN("opt_serialize writes the comma list and save_to_json an array, shared columns first") {
+                CHECK(config.opt_serialize("outer_wall_line_width") == "105%,105%,0.5");
+                std::ostringstream os;
+                config.save_to_json(os, "test", "User", "1.0.0.0");
+                const nlohmann::json j = nlohmann::json::parse(os.str());
+                REQUIRE(j["outer_wall_line_width"].is_array());
+                REQUIRE(j["outer_wall_line_width"].size() == 3);
+                CHECK(j["outer_wall_line_width"][0].get<std::string>() == "105%");
+                CHECK(j["outer_wall_line_width"][2].get<std::string>() == "0.5");
+            }
+        }
+        WHEN("A width has a nil column") {
+            config.set_deserialize_strict("outer_wall_line_width", "nil,105%");
+            THEN("It is written as an array; a nil column reads as 0") {
+                CHECK(config.opt_serialize("outer_wall_line_width") == "nil,105%");
+                CHECK(Flow::width_at(*config.opt<ConfigOptionFloatsOrPercentsNullable>("outer_wall_line_width"), 0).value == 0.);
+                CHECK(Flow::width_at(*config.opt<ConfigOptionFloatsOrPercentsNullable>("outer_wall_line_width"), 1).value == 105.);
+            }
+        }
+        WHEN("A role width of 0 is read with get_abs_value_at") {
+            config.set_deserialize_strict("nozzle_diameter", "0.4,0.6");
+            config.set_deserialize_strict("line_width", "110%,110%");
+            config.set_deserialize_strict("outer_wall_line_width", "0,0");
+            THEN("It falls back to the default width of the same column against that column's nozzle") {
+                CHECK(config.get_abs_value_at("outer_wall_line_width", 0) == Catch::Approx(0.44));
+                CHECK(config.get_abs_value_at("outer_wall_line_width", 1) == Catch::Approx(0.66));
+                CHECK(config.get_abs_value_at("line_width", 1) == Catch::Approx(0.66));
+                // The explicit ratio overload: a percent column against the given nozzle, a scalar as it is.
+                CHECK(config.get_abs_value_at("line_width", 1, 0.8) == Catch::Approx(0.88));
+                config.set_deserialize_strict("skin_infill_line_width", "0.3");
+                CHECK(config.get_abs_value_at("skin_infill_line_width", 7, 0.8) == Catch::Approx(0.3));
+                // The single-argument overload reads the first column (the GUI's shared value).
+                CHECK(config.get_abs_value("line_width") == Catch::Approx(0.44));
+            }
+        }
+        WHEN("Flow::extrusion_width is asked for one column") {
+            config.set_deserialize_strict("nozzle_diameter", "0.4,0.6");
+            config.set_deserialize_strict("outer_wall_line_width", "0.42,120%");
+            config.set_deserialize_strict("internal_solid_infill_line_width", "0,0");
+            config.set_deserialize_strict("bridge_line_width", "0,0");
+            config.set_deserialize_strict("line_width", "0,0");
+            THEN("The column's percent resolves against the given nozzle and the chain is read at the column") {
+                CHECK(Flow::extrusion_width("outer_wall_line_width", config, 0, 0) == Catch::Approx(0.42));
+                CHECK(Flow::extrusion_width("outer_wall_line_width", config, 1, 1) == Catch::Approx(0.72));
+                // bridge -> internal solid -> line -> auto: 1.125 x the nozzle of the head.
+                CHECK(Flow::extrusion_width("bridge_line_width", config, 1, 1) == Catch::Approx(0.675));
+                CHECK(Flow::extrusion_width("bridge_line_width", config, 0, 0) == Catch::Approx(0.45));
+                config.set_deserialize_strict("line_width", "0.5,0.55");
+                CHECK(Flow::extrusion_width("bridge_line_width", config, 1, 1) == Catch::Approx(0.55));
+                CHECK(Flow::extrusion_width("internal_solid_infill_line_width", config, 0, 0) == Catch::Approx(0.5));
+                // The string overload reads the column of the extruder.
+                CHECK(Flow::extrusion_width("line_width", config, 1) == Catch::Approx(0.55));
+            }
+        }
+    }
+    GIVEN("An older reader that defines the width as a scalar") {
+        // Snapmaker Orca 2.4 and mainline read the joined array as a scalar: the first number, the
+        // percent flag from anywhere; shared columns first and no "nil" give them the shared value.
+        ConfigOptionFloatOrPercent old;
+        WHEN("A percent shared value is followed by an absolute head value") {
+            REQUIRE(old.deserialize("105%,105%,105%,0.5"));
+            THEN("The shared percent is read") {
+                CHECK(old.percent);
+                CHECK(old.value == 105.);
+            }
+        }
+        WHEN("An absolute shared value is followed by a percent head value") {
+            REQUIRE(old.deserialize("0.42,0.42,110%"));
+            THEN("The number is read as a percent (the documented hazard the GUI guards against)") {
+                CHECK(old.percent);
+                CHECK(old.value == 0.42);
+            }
+        }
+        WHEN("A nil leads the array") {
+            THEN("The scalar reader fails, which is why a width is never written with nil") {
+                CHECK_FALSE(old.deserialize("nil,105%"));
+            }
+        }
+    }
+}
+
+TEST_CASE("A column index past the loaded values keeps the base value", "[Config]")
+{
+    // A child config with one value where its variant list names two columns.
+    ConfigOptionFloats       base({12., 12.});
+    const ConfigOptionFloats child({22.});
+    std::vector<int>         diff_index{0, 1};
+    REQUIRE_NOTHROW(base.set_only_diff(&child, diff_index, 1));
+    REQUIRE(base.values.size() == 2);
+    CHECK_THAT(base.values[0], Catch::Matchers::WithinAbs(22., 1e-9));
+    CHECK_THAT(base.values[1], Catch::Matchers::WithinAbs(12., 1e-9));
 }

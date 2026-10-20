@@ -36,6 +36,8 @@ set(lisbslic3r_sources
     Algorithm/RegionExpansion.cpp
     Algorithm/RegionExpansion.hpp
     AnyPtr.hpp
+    AllowlistManager.cpp
+    AllowlistManager.hpp
     AppConfig.cpp
     AppConfig.hpp
     Arachne/BeadingStrategy/BeadingStrategy.cpp
@@ -154,8 +156,6 @@ set(lisbslic3r_sources
     Feature/Interlocking/VoxelUtils.cpp
     Feature/Interlocking/VoxelUtils.hpp
     FileParserError.hpp
-    AllowlistManager.cpp
-    AllowlistManager.hpp
     FilamentColorLibrary.cpp
     FilamentColorLibrary.hpp
     FilamentHotBedNozzleRules.cpp
@@ -369,6 +369,7 @@ set(lisbslic3r_sources
     MinimumSpanningTree.hpp
     MixedFilament.cpp
     MixedFilament.hpp
+    MixedFilamentConfigRemap.hpp
     miniz_extension.cpp
     miniz_extension.hpp
     ModelArrange.cpp
@@ -456,6 +457,16 @@ set(lisbslic3r_sources
     ShortEdgeCollapse.hpp
     ShortestPath.cpp
     ShortestPath.hpp
+    FilamentFlowColumns.cpp
+    FilamentFlowColumns.hpp
+    NozzleFilamentPresets.cpp
+    NozzleFilamentPresets.hpp
+    PerHeadProcess.cpp
+    PerHeadProcess.hpp
+    UsedFilaments.cpp
+    UsedFilaments.hpp
+    SSWCPProtocol.cpp
+    SSWCPProtocol.hpp
     SLA/AGGRaster.hpp
     SLA/BoostAdapter.hpp
     SLA/Clustering.cpp
@@ -523,8 +534,6 @@ set(lisbslic3r_sources
     Surface.hpp
     SurfaceMesh.hpp
     SVG.cpp
-    SSWCPProtocol.cpp
-    SSWCPProtocol.hpp
     SVG.hpp
     Technologies.hpp
     Tesselate.cpp

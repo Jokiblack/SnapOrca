@@ -370,6 +370,10 @@ public:
     // get_filament_config_index(). Only for those options; other filament vectors keep using
     // get_filament_config_index().
     size_t filament_flow_index(int filament_id) const;
+    // Snapmaker Orca: the slot of the process table the writer reads the travel and first-layer
+    // speeds and line widths of a filament at: the tool head of the filament (flow variants are
+    // resolved through ConfigFlowDomain::Process, see get_nozzle_config_index()).
+    size_t process_slot_of(int filament_id) const;
 
     // Holds the last slot a resolver returned without locking, so only the G-code generator may
     // call the resolvers.
@@ -870,6 +874,9 @@ protected:
     // Bedslinger mass model: cumulative printed mass at the previous layer, used to derive
     // the current layer mass for the per-layer Y acceleration limit (curr_y_acceleration_limit).
     double                              m_last_layer_accumulated_mass{ 0.0 };
+#if ENABLE_GCODE_VIEWER_DATA_CHECKING
+    double                              m_last_mm3_per_mm;
+#endif // ENABLE_GCODE_VIEWER_DATA_CHECKING
 
     // Always check gcode placeholders when building in debug mode.
 #if !defined(NDEBUG)
@@ -971,6 +978,8 @@ protected:
     std::vector<std::vector<unsigned int>>  m_sorted_layer_filaments;
     // BBS
     int get_bed_temperature(const int extruder_id, const bool is_first_layer, const BedType bed_type) const;
+    // BBS: max bed temperature over all used filaments, so that the bed temperature always
+    // accommodates the highest-temperature filament of a compatible mixed print (e.g. PLA + TPU).
     int get_highest_bed_temperature(const bool is_first_layer,const Print &print) const;
 
     void update_layer_related_config(int layer_id);

@@ -219,10 +219,14 @@ static ExtrusionEntityCollection traverse_loops(const PerimeterGenerator &perime
             // outside the grown lower slices (thus where the distance between
             // the loop centerline and original lower slices is >= half nozzle diameter
             if (remain_polines.size() != 0) {
-                extrusion_paths_append(paths, std::move(remain_polines),
-                                       erOverhangPerimeter, perimeter_generator.mm3_per_mm_overhang(),
-                                       perimeter_generator.overhang_flow.width(),
-                                       perimeter_generator.overhang_flow.height());
+                // External / fully overhanging loops (no supported path at all) dispatch to the outer wall filament (GCode::process_layer()); their overhangs use that filament's flow.
+                const bool  overhang_external = is_external || paths.empty();
+                const Flow &loop_overhang_flow = overhang_external ? perimeter_generator.ext_overhang_flow :
+                                                                     perimeter_generator.overhang_flow;
+                extrusion_paths_append(paths, std::move(remain_polines), erOverhangPerimeter,
+                                       overhang_external ? perimeter_generator.ext_mm3_per_mm_overhang() :
+                                                           perimeter_generator.mm3_per_mm_overhang(),
+                                       loop_overhang_flow.width(), loop_overhang_flow.height());
             }
 
             // Reapply the nearest point search for starting point.
@@ -487,8 +491,13 @@ static ExtrusionEntityCollection traverse_extrusions(const PerimeterGenerator& p
             // get overhang paths by checking what parts of this loop fall
             // outside the grown lower slices (thus where the distance between
             // the loop centerline and original lower slices is >= half nozzle diameter
+            // External / fully overhanging extrusions (no supported path at all) dispatch to the outer
+            // wall filament (GCode::process_layer()); their overhangs use that filament's flow. Known
+            // corner: a fully overhanging fragment of the ExtrusionMultiPath split below keeps the inner
+            // flow, but widths come from the Arachne junctions either way; only thick-bridge height differs.
+            const bool overhang_external = is_external || paths.empty();
             extrusion_paths_append(paths, clip_extrusion(extrusion_path, lower_slices_paths, ctDifference), erOverhangPerimeter,
-                perimeter_generator.overhang_flow);
+                overhang_external ? perimeter_generator.ext_overhang_flow : perimeter_generator.overhang_flow);
 
             // Reapply the nearest point search for starting point.
             // We allow polyline reversal because Clipper may have randomly reversed polylines during clipping.
@@ -893,7 +902,9 @@ void PerimeterGenerator::split_top_surfaces(const ExPolygons &orig_polygons, ExP
     // increase by half peri the inner space to fill the frontier between last and stored.
     top_fills = union_ex(top_fills, top_polygons);
     //set the clip to the external wall but go back inside by infill_extrusion_width/2 to be sure the extrusion won't go outside even with a 100% overlap.
-    double infill_spacing_unscaled = this->config->sparse_infill_line_width.get_abs_value(nozzle_diameter);
+    // Snapmaker Orca: the width is a column per tool head, read at the outer wall's head whose
+    // nozzle is used here (the sparse infill of another head is the pre-existing mismatch).
+    double infill_spacing_unscaled = Flow::width_at(this->config->sparse_infill_line_width, Print::width_slot(*this->print_config, this->config->outer_wall_filament_id)).get_abs_value(nozzle_diameter);
     if (infill_spacing_unscaled == 0) infill_spacing_unscaled = Flow::auto_extrusion_width(frInfill, nozzle_diameter);
     fill_clip = offset_ex(orig_polygons, double(ext_perimeter_spacing / 2.) - scale_(infill_spacing_unscaled / 2.));
     // ExPolygons oldLast = last;
@@ -1333,8 +1344,9 @@ void PerimeterGenerator::apply_extra_perimeters(ExPolygons &infill_area)
     if (!m_spiral_vase && this->lower_slices != nullptr && this->config->detect_overhang_wall && this->config->extra_perimeters_on_overhangs &&
         this->config->wall_loops > 0 && this->layer_id > this->object_config->raft_layers) {
         // Generate extra perimeters on overhang areas, and cut them to these parts only, to save print time and material
+        // Pure erOverhangPerimeter entities dispatch to the outer wall filament, so use its flow.
         auto [extra_perimeters, filled_area] = generate_extra_perimeters_over_overhangs(infill_area, this->lower_slices_polygons(),
-                                                                                        this->config->wall_loops, this->overhang_flow,
+                                                                                        this->config->wall_loops, this->ext_overhang_flow,
                                                                                         this->m_scaled_resolution, *this->object_config,
                                                                                         *this->print_config);
         if (!extra_perimeters.empty()) {
@@ -1475,6 +1487,7 @@ void PerimeterGenerator::process_classic()
 
     // overhang perimeters
     m_mm3_per_mm_overhang      		= this->overhang_flow.mm3_per_mm();
+    m_ext_mm3_per_mm_overhang  		= this->ext_overhang_flow.mm3_per_mm();
 
     // solid infill
     coord_t solid_infill_spacing    = this->solid_infill_flow.scaled_spacing();
@@ -1950,7 +1963,7 @@ void PerimeterGenerator::process_classic()
                     }
                 }
             }
-            
+
             defer_unsupported_loops(*this, entities);
 
             // append perimeters for this slice as a collection
@@ -1998,7 +2011,8 @@ void PerimeterGenerator::process_classic()
 
             if (! polylines.empty()) {
 				ExtrusionEntityCollection gap_fill;
-				variable_width(polylines, erGapFill, this->solid_infill_flow, gap_fill.entities);
+				// Gap fill prints with the outer wall filament (LayerTools::extruder()).
+				variable_width(polylines, erGapFill, this->gap_fill_flow, gap_fill.entities);
                 /*  Make sure we don't infill narrow parts that are already gap-filled
                     (we only consider this surface's gaps to reduce the diff() complexity).
                     Growing actual extrusions ensures that gaps not filled by medial axis
@@ -2039,6 +2053,19 @@ void PerimeterGenerator::process_classic()
                 top_infill_peri_overlap = coord_t(scale_(this->config->top_bottom_infill_wall_overlap.get_abs_value(unscale<double>(inset + solid_infill_spacing / 2))));
             }
             inset -= infill_peri_overlap;
+        }
+        // ORCA: an infill bead wider than the wall band (a coarse infill nozzle behind the walls of
+        // a fine one) would poke through the walls out of the part; keep the boundary at least
+        // half the widest infill bead inside the outline.
+        {
+            const coord_t wall_band        = loop_number < 0 ? 0 : ext_perimeter_width + coord_t(loop_number) * perimeter_spacing - infill_peri_overlap;
+            const coord_t half_infill_bead = std::max(this->sparse_infill_flow.scaled_width(), this->solid_infill_flow.scaled_width()) / 2;
+            // Only an infill nozzle other than the walls' changes the boundary.
+            const bool    infill_nozzle_differs =
+                std::abs(this->sparse_infill_flow.nozzle_diameter() - this->ext_perimeter_flow.nozzle_diameter()) > EPSILON ||
+                std::abs(this->solid_infill_flow.nozzle_diameter() - this->ext_perimeter_flow.nozzle_diameter()) > EPSILON;
+            if (loop_number >= 0 && wall_band < half_infill_bead && infill_nozzle_differs)
+                inset += half_infill_bead - wall_band;
         }
         // simplify infill contours according to resolution
         Polygons pp;
@@ -2550,6 +2577,7 @@ void PerimeterGenerator::process_arachne()
     coord_t ext_perimeter_spacing2 = scaled<coord_t>(0.5f * (this->ext_perimeter_flow.spacing() + this->perimeter_flow.spacing()));
     // overhang perimeters
     m_mm3_per_mm_overhang = this->overhang_flow.mm3_per_mm();
+    m_ext_mm3_per_mm_overhang = this->ext_overhang_flow.mm3_per_mm();
 
     // solid infill
     coord_t solid_infill_spacing = this->solid_infill_flow.scaled_spacing();
@@ -3004,6 +3032,17 @@ void PerimeterGenerator::process_arachne()
             inset = coord_t(scale_(this->config->top_bottom_infill_wall_overlap.get_abs_value(unscale<double>(inset))));
         else
             inset = coord_t(scale_(this->config->infill_wall_overlap.get_abs_value(unscale<double>(inset))));
+        // ORCA: keep an infill bead wider than the wall band inside the walls (see the classic path).
+        {
+            const coord_t wall_band        = loop_number < 0 ? 0 : ext_perimeter_width + coord_t(loop_number) * perimeter_spacing;
+            const coord_t half_infill_bead = std::max(this->sparse_infill_flow.scaled_width(), this->solid_infill_flow.scaled_width()) / 2;
+            // Only an infill nozzle other than the walls' changes the boundary.
+            const bool    infill_nozzle_differs =
+                std::abs(this->sparse_infill_flow.nozzle_diameter() - this->ext_perimeter_flow.nozzle_diameter()) > EPSILON ||
+                std::abs(this->solid_infill_flow.nozzle_diameter() - this->ext_perimeter_flow.nozzle_diameter()) > EPSILON;
+            if (loop_number >= 0 && wall_band - half_infill_bead < inset && infill_nozzle_differs)
+                inset = wall_band - half_infill_bead;
+        }
         
         // simplify infill contours according to resolution
         Polygons pp;

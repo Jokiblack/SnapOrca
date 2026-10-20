@@ -1064,10 +1064,19 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
 		        params.bridge = is_bridge || Fill::use_bridge_flow(params.pattern);
                 const bool is_thick_bridge = surface.is_bridge() && (surface.is_internal_bridge() ? object_config.thick_internal_bridges : object_config.thick_bridges);
 				params.flow   = params.bridge ?
-					//Orca: enable thick bridge based on config
-					layerm.bridging_flow(extrusion_role, is_thick_bridge) :
-					layerm.flow(extrusion_role, (surface.thickness == -1) ? layer.height : surface.thickness);
+					//Orca: enable thick bridge based on config. Combined layers stamp their full thickness on the surface; the non-thick bridge flow must be based on it.
+					layerm.bridging_flow(extrusion_role, is_thick_bridge, params.extruder,
+					                     (surface.thickness == -1) ? 0. : surface.thickness) :
+					// Width resolves against the nozzle of the filament that actually prints
+					// (params.extruder), which may differ from the role's default filament mapping.
+					layerm.flow(extrusion_role, (surface.thickness == -1) ? layer.height : surface.thickness, params.extruder);
 
+				// Orca: record the infill speed of the effective extrusion role, resolved against the
+				// filament that actually prints it (params.extruder, incl. the fork's per-feature remap).
+				// Print::get_extruder_id takes the 0-based filament index while params.extruder is
+				// 1-based here (layerm.flow() above subtracts 1 the same way): the speed is read in
+				// the slot of the tool head that prints the infill.
+				const size_t infill_head = layer.get_extruder_id(params.extruder > 0 ? params.extruder - 1 : 0);
 				params.role_speed = 0;
                 {
                     // Snapmaker: process speed vectors may be laid out per flow variant (standard / high flow);
@@ -1079,7 +1088,7 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
                     const auto         *flow_support  = print_config.option<ConfigOptionStrings>("process_flow_support");
                     const size_t        speed_idx     = (flow_support != nullptr && flow_support->values.size() > 1) ?
                         get_config_idx(print_config, ConfigFlowDomain::Process, filament_id) :
-                        layer.get_extruder_id(params.extruder);
+                        infill_head;
                     if (params.extrusion_role == erBridgeInfill)
                         params.role_speed = region_config.bridge_speed.get_at(speed_idx);
                     else if (params.extrusion_role == erInternalBridgeInfill)
@@ -1430,6 +1439,20 @@ void Layer::make_fills(const FillAdaptive::RegionOctrees* fill_octrees, FillLigh
         }
 
         LayerRegion* layerm = this->m_regions[surface_fill.region_id];
+
+        // ORCA: sparse infill laid by another extruder than the region's walls (a coarser infill
+        // nozzle): an island narrower than one infill spacing cannot carry a line. The fillers
+        // would centre a single bead on such an island's contour, half a bead beyond it - through
+        // a wall band thinner than that (a painted skin of a fine nozzle) out of the part. Drop
+        // such islands and appendages; they lie inside the walls and stay invisible.
+        // Only on a plate whose nozzles differ: with one nozzle size the infill is laid as before.
+        if (using_internal_flow && surface_fill.params.extruder != layerm->extruder(frExternalPerimeter) &&
+            surface_fill.params.extruder != layerm->extruder(frPerimeter) &&
+            std::abs(surface_fill.params.flow.nozzle_diameter() - layerm->flow(frPerimeter).nozzle_diameter()) > EPSILON) {
+            surface_fill.expolygons = opening_ex(surface_fill.expolygons, float(scale_(0.5 * surface_fill.params.spacing)));
+            if (surface_fill.expolygons.empty())
+                continue;
+        }
 
         // Maximum length of the perimeter segment linking two infill lines.
         f->link_max_length = (coord_t)scale_(link_max_length);
@@ -1789,6 +1812,11 @@ void Layer::make_ironing()
 				config,
 				/*spiral_mode=*/this->object()->print()->config().spiral_mode,
 				/*is_topmost_layer=*/layerm->layer()->upper_layer == nullptr);
+			// Mixed filaments: resolve a virtual top_surface_filament_id to the physical filament this
+			// layer prints with, so the ironing overrides and nozzle diameter below index a real one.
+			// Done here because choose_ironing_extruder()'s contract is fixed by mainline's unit test.
+			if (ironing_params.extruder > 0)
+				ironing_params.extruder = int(effective_layer_filament_id(*this, (unsigned int)ironing_params.extruder));
 			if (ironing_params.extruder != -1) {
 				//TODO just_infill is currently not used.
 				ironing_params.just_infill 	= false;

@@ -285,7 +285,7 @@ void ComboBox::DoDeleteOneItem(unsigned int pos)
     drop.Invalidate(true);
 }
 
-void ComboBox::ForceDropdownOpen()
+void ComboBox::ForceDropdownOpen(wxWindow *focus)
 {
     if (!IsEnabled())
         return;
@@ -295,7 +295,7 @@ void ComboBox::ForceDropdownOpen()
         drop.messureSize();
         drop.autoPosition();
         drop_down = true;
-        drop.Popup(&drop);
+        drop.Popup(focus != nullptr ? focus : &drop);
 
         wxCommandEvent e(wxEVT_COMBOBOX_DROPDOWN);
         GetEventHandler()->ProcessEvent(e);
