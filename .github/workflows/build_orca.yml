@@ -788,11 +788,18 @@ jobs:
           # the older entries unless the new one is listed.
           if ! gh cache list --ref "$GITHUB_REF" --key "$CCACHE_ENTRY" --json key \
               | jq -e --arg entry "$CCACHE_ENTRY" 'any(.[]; .key == $entry)' > /dev/null; then
-            echo "$CCACHE_ENTRY was not saved; keeping the older entries."
+            echo "$CCACHE_ENTRY is not listed (not saved, or the token cannot read caches); keeping the older entries."
             exit 0
           fi
+          # A token without actions: write cannot delete; that only costs
+          # storage, so say so and stop instead of failing the step.
           gh cache list --ref "$GITHUB_REF" --key "ccache-$CCACHE_LEG-" --limit 100 --json id,key \
             | jq -r --arg prefix "ccache-$CCACHE_LEG-" --argjson run "$GITHUB_RUN_ID" \
                 '.[] | select((.key | ltrimstr($prefix) | split("-")[0] | tonumber?) < $run) | .id' \
             | tr -d '\r' \
-            | while read -r id; do gh cache delete "$id"; done
+            | while read -r id; do
+                if ! gh cache delete "$id"; then
+                  echo "::notice::Cannot delete cache $id (the token needs actions: write); keeping the older entries."
+                  break
+                fi
+              done

@@ -86,6 +86,13 @@ jobs:
           || '[{"arch":"","os":"ubuntu-24.04"},{"arch":"aarch64","os":"ubuntu-24.04-arm"}]') }}
     # Don't run scheduled builds on forks:
     if: ${{ !cancelled() && !inputs.windows-only && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+    # The fork's token defaults to read-only, without actions access: the
+    # compiler cache cleanup and the PR deps-cache wait list and delete caches
+    # through the API. Nightly deploys (vars.NIGHTLY_RELEASE) would also need
+    # contents: write.
+    permissions:
+      contents: read
+      actions: write
     uses: ./.github/workflows/build_check_cache.yml
     with:
       os: ${{ matrix.os }}
@@ -105,6 +112,10 @@ jobs:
     needs: check_build_script
     # Don't run scheduled builds on forks:
     if: ${{ !cancelled() && needs.check_build_script.result == 'success' && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+    # Same token scopes as build_linux.
+    permissions:
+      contents: read
+      actions: write
     uses: ./.github/workflows/build_check_cache.yml
     with:
       os: ${{ matrix.os }}
@@ -122,6 +133,10 @@ jobs:
           - x86_64
     # Don't run scheduled builds on forks:
     if: ${{ !cancelled() && !inputs.windows-only && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+    # Same token scopes as build_linux.
+    permissions:
+      contents: read
+      actions: write
     uses: ./.github/workflows/build_check_cache.yml
     with:
       os: ${{ vars.SELF_HOSTED && 'orca-macos-arm64' || 'macos-15' }}
@@ -133,6 +148,10 @@ jobs:
     name: Build macOS Universal
     needs: build_macos_arch
     if: ${{ !cancelled() && needs.build_macos_arch.result == 'success' && !inputs.build-deps-only && !inputs.windows-only && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+    # Same token scopes as build_linux.
+    permissions:
+      contents: read
+      actions: write
     uses: ./.github/workflows/build_orca.yml
     with:
       os: ${{ vars.SELF_HOSTED && 'orca-macos-arm64' || 'macos-15' }}
@@ -255,6 +274,10 @@ jobs:
     # Snapmaker_Orca: opt-in (repo variable FLATPAK=true); scripts/flatpak/com.orcaslicer.OrcaSlicer.yml still builds the upstream target names.
     if: ${{ !cancelled() && !vars.SELF_HOSTED && vars.FLATPAK == 'true' && !inputs.windows-only && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
 
+    # Same token scopes as build_linux.
+    permissions:
+      contents: read
+      actions: write
     runs-on: ${{ matrix.variant.runner }}
     env:
       date:
@@ -417,15 +440,20 @@ jobs:
         if ! curl -sSf -H "Authorization: Bearer $GH_TOKEN" \
             "$api?ref=$GITHUB_REF&key=$CCACHE_ENTRY" \
             | jq -e --arg entry "$CCACHE_ENTRY" 'any(.actions_caches[]; .key == $entry)' > /dev/null; then
-          echo "$CCACHE_ENTRY was not saved; keeping the older entries."
+          echo "$CCACHE_ENTRY is not listed (not saved, or the token cannot read caches); keeping the older entries."
           exit 0
         fi
+        # A token without actions: write cannot delete; that only costs
+        # storage, so say so and stop instead of failing the step.
         curl -sSf -H "Authorization: Bearer $GH_TOKEN" \
           "$api?ref=$GITHUB_REF&key=ccache-$CCACHE_LEG-&per_page=100" \
           | jq -r --arg prefix "ccache-$CCACHE_LEG-" --argjson run "$GITHUB_RUN_ID" \
               '.actions_caches[] | select((.key | ltrimstr($prefix) | split("-")[0] | tonumber?) < $run) | .id' \
           | while read -r id; do
-              curl -sSf -X DELETE -H "Authorization: Bearer $GH_TOKEN" "$api/$id"
+              if ! curl -sSf -X DELETE -H "Authorization: Bearer $GH_TOKEN" "$api/$id"; then
+                echo "::notice::Cannot delete cache $id (the token needs actions: write); keeping the older entries."
+                break
+              fi
             done
       shell: bash
     - name: Upload artifacts Flatpak
