@@ -116,9 +116,16 @@ enum class WipeTowerType {
 };
 
 enum PrintHostType {
+<<<<<<< snaporca-int
     htPrusaLink, htPrusaConnect, htOctoPrint, htDuet, htUltiMaker, htFlashAir, htAstroBox, htRepetier, htMKS, htESP3D, htCrealityPrint, htObico, htFlashforge, htSimplyPrint, htElegooLink, ht3DPrinterOS, htMoonraker,
     // Snapmaker: Snapmaker printer connection (MQTT / LAN Moonraker). Not exposed as host_type values in profiles.
     htMoonRaker_mqtt, htMoonRaker
+=======
+    // Orca appends its own host types (htUltiMaker, ht3DPrinterOS, htMoonraker); the Snapmaker device stack keeps
+    // its unserialized htMoonRaker_mqtt / htMoonRaker values at the end (set programmatically, never
+    // round-tripped through the enum string map).
+    htPrusaLink, htPrusaConnect, htOctoPrint, htDuet, htUltiMaker, htFlashAir, htAstroBox, htRepetier, htMKS, htESP3D, htCrealityPrint, htObico, htFlashforge, htSimplyPrint, htElegooLink, ht3DPrinterOS, htMoonraker, htMoonRaker_mqtt, htMoonRaker
+>>>>>>> lixnix/main
 };
 
 enum AuthorizationType {
@@ -385,6 +392,12 @@ inline bool is_auto(SupportType stype)
 {
     return std::set<SupportType>{stNormalAuto, stTreeAuto}.count(stype) != 0;
 };
+// Tree supports with the default style are Hybrid with custom layering or a zero top gap under top
+// interface layers, Organic otherwise.
+inline bool tree_default_style_is_hybrid(double support_top_z_distance, int support_interface_top_layers, bool custom_layering)
+{
+    return custom_layering || (support_top_z_distance == 0. && support_interface_top_layers > 0);
+}
 
 enum SeamPosition {
     spNearest, spAligned, spAlignedBack, spRear, spRandom
@@ -403,6 +416,17 @@ enum EnsureVerticalShellThickness {
     evstCriticalOnly,
     evstModerate,
     evstAll,
+};
+
+// ORCA: split wall layer heights - which wall class gets its wall-only layer height adjusted
+// when the two wall filaments' preferred heights do not divide evenly, and in which direction.
+enum WallSplitFilament {
+    wsfOuterWall,
+    wsfInnerWall,
+};
+enum WallSplitDirection {
+    wsdDecrease,
+    wsdIncrease,
 };
 
 //Orca
@@ -463,6 +487,17 @@ enum BrimType {
 enum TimelapseType : int {
     tlTraditional = 0,
     tlSmooth
+};
+
+// Step granularity for grid-aligned independent support layer heights (prime
+// tower enabled): support boundaries may land on whole object layers or on
+// half / quarter subdivisions of them.
+enum SupportLayerHeightStep : int {
+    slhsWholeLayer = 0,
+    slhsHalfLayer,
+    slhsQuarterLayer,
+    slhsAuto,      // the coarsest step whose ladder reaches the support nozzle's maximum layer height
+    slhsMaxHeight, // like auto, and support pieces run through contact layers (gap rounded to pieces)
 };
 
 enum SkirtType {
@@ -589,57 +624,6 @@ enum RetractLiftEnforceType {
     rletBottomOnly,
     rletTopAndBottom
 };
-
-// Snapmaker: flow-variant (standard / high flow) presets ------------------------------------------
-enum class ConfigFlowDomain {
-    Filament,   // *_flow_support key: filament_flow_support
-    Process,    // *_flow_support key: process_flow_support
-    Printer     // *_flow_support key: printer_flow_support
-};
-
-constexpr const char* FLOW_MODE_STANDARD  = "standard";
-constexpr const char* FLOW_MODE_HIGH_FLOW = "high_flow";
-
-enum FilamentVolumeType {
-    fvtStandard = 0,
-    fvtHighFlow = 1,
-};
-
-constexpr const char* FILAMENT_GROUPING_STANDARD = "standard";
-constexpr const char* FILAMENT_GROUPING_CUSTOM   = "custom";
-
-// Bounds-checked: values outside the mapping render as FLOW_MODE_STANDARD.
-const char* to_string(FilamentVolumeType type);
-
-// Unknown names resolve to fvtStandard.
-FilamentVolumeType filament_volume_type_from_string(const std::string &str);
-
-size_t flow_variant_index(const std::vector<std::string> &flow_support, const std::string &mode);
-
-const char* flow_support_key(ConfigFlowDomain domain);
-
-// Filament options whose vector values are stored per declared flow variant.
-const std::vector<std::string>& filament_flow_variant_options();
-bool is_filament_flow_variant_option(const std::string &key);
-
-// Process / printer options whose vector values are stored per declared flow variant.
-const std::vector<std::string>& process_flow_variant_options();
-bool is_process_flow_variant_option(const std::string &key);
-
-// Machine / print options whose vector values are stored per declared flow variant.
-const std::vector<std::string>& machine_flow_variant_options();
-bool is_machine_flow_variant_option(const std::string &key);
-
-size_t get_config_idx(const ConfigBase &config, ConfigFlowDomain domain, unsigned int filament_id = 0);
-
-template<typename VectorOption>
-inline auto get_value_at(const ConfigBase &config, const VectorOption &opt, ConfigFlowDomain domain, unsigned int filament_id = 0)
-    -> decltype(opt.get_at(0))
-{
-    return opt.get_at(get_config_idx(config, domain, filament_id));
-}
-
-// end Snapmaker: flow variant------------------------------------------------------------------------
 
 enum class GCodeThumbnailsFormat {
     PNG, JPG, QOI, BTT_TFT, ColPic
@@ -840,6 +824,8 @@ extern std::vector<std::string> save_extruder_nozzle_stats_to_string(const std::
     template<> const t_config_enum_values& ConfigOptionEnum<NAME>::get_enum_values();
 
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(PrinterTechnology)
+CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(WallSplitFilament)
+CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(WallSplitDirection)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(GCodeFlavor)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(FuzzySkinType)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(FuzzySkinMode)
@@ -862,6 +848,7 @@ CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(SLADisplayOrientation)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(SLAPillarConnectionMode)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(BrimType)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(TimelapseType)
+CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(SupportLayerHeightStep)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(BedType)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(SkirtType)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(InputShaperType)
@@ -1054,12 +1041,42 @@ public:
 extern std::set<std::string> printer_extruder_options;
 extern std::set<std::string> print_options_with_variant;
 extern std::set<std::string> filament_options_with_variant;
+// Snapmaker: the keys of filament_options_with_variant that High Flow presets tune per flow type and
+// that projects of earlier versions store once per filament.
+const std::vector<std::string>& promoted_filament_variant_keys();
+// First column of a filament in the per-variant filament arrays: with one column per filament,
+// the filament id itself (filament_self_index is 1 based). Reads only its arguments, so the G-code
+// filters beside the generator thread may call it.
+size_t first_filament_variant_column(const std::vector<int>& filament_self_index, size_t filament_id);
+// Snapmaker Orca: per-extruder machine keys adopted from the new size's printer preset when a
+// nozzle size changes (Sidebar::apply_nozzle_diameter): retraction, wipe, z hop, nozzle type and
+// nozzle volume. Machine limits do not depend on the nozzle and are not included.
+const std::vector<std::string>& nozzle_size_extruder_options();
+// The columns of the per-extruder option `key` in `config` that belong to tool head `extruder`
+// (0-based): the columns printer_extruder_id names when the option has one column per variant,
+// else the head's own column. Empty when the option is missing or not a vector.
+std::vector<size_t> extruder_option_columns(const DynamicPrintConfig &config, const std::string &key, size_t extruder);
+// Copies into `config`, for `extruder`, the `keys` on which `size_preset` (new size) and
+// `from_preset` (old size; `config` when nullptr) differ; columns match by printer_extruder_variant,
+// else the extruder's first column. Other keys keep their edits. Returns the changed keys, in order.
+std::vector<std::string> adopt_extruder_values_from_size_preset(DynamicPrintConfig &config, const DynamicPrintConfig &size_preset,
+                                                                const DynamicPrintConfig *from_preset, size_t extruder,
+                                                                const std::vector<std::string> &keys);
 extern std::set<std::string> printer_options_with_variant_1;
 extern std::set<std::string> printer_options_with_variant_2;
 extern std::set<std::string> empty_options;
 
+// Snapmaker Orca: how set_variant_override reads an object, part or layer-range override per slot.
+// `composed`: table composed per tool head, variant_index holds the preset's column per slot.
+// `flow_index`: per slot, its flow among the preset's shared columns (-1: none); `flow_count`: their number.
+struct VariantOverrideRule
+{
+    bool             composed { false };
+    std::vector<int> flow_index;
+    int              flow_count { 0 };
+};
 void set_variant_override(ConfigOptionVectorBase &target, const ConfigOptionVectorBase &source,
-                          const std::vector<int> &variant_index, int stride = 1);
+                          const std::vector<int> &variant_index, int stride = 1, const VariantOverrideRule &rule = VariantOverrideRule());
 
 // Orca: lays every filament_options_with_variant option out one value per filament variant, as
 // filament_self_index maps the variants to filaments. An option holding one value per filament, or a
@@ -1068,6 +1085,7 @@ void normalize_filament_values_to_variants(DynamicPrintConfig &config);
 
 extern std::set<std::string> filament_dev_options;
 
+<<<<<<< snaporca-int
 // Orca: a filament_dev_options option holds several values per filament, and how many is up to the
 // filament preset, so one filament's values cannot be replaced in place. This rebuilds each option from
 // filament_configs, one config per filament in slot order, as the filaments' values one after another.
@@ -1078,6 +1096,9 @@ void set_filament_dev_options(DynamicPrintConfig &config, const std::vector<cons
 void resize_mixed_filament_metadata(DynamicPrintConfig &config, size_t old_slot_count, size_t new_slot_count);
 
 extern void update_static_print_config_from_dynamic(ConfigBase& config, const DynamicPrintConfig& dest_config, std::vector<int> variant_index, std::set<std::string>& key_set1, int stride = 1);
+=======
+extern void update_static_print_config_from_dynamic(ConfigBase& config, const DynamicPrintConfig& dest_config, std::vector<int> variant_index, std::set<std::string>& key_set1, int stride = 1, const VariantOverrideRule &rule = VariantOverrideRule());
+>>>>>>> lixnix/main
 extern void compute_filament_override_value(const std::string& opt_key, const ConfigOption *opt_old_machine, const ConfigOption *opt_new_machine, const ConfigOption *opt_new_filament, const DynamicPrintConfig& new_full_config,
     t_config_option_keys& diff_keys, DynamicPrintConfig& filament_overrides, std::vector<int>& f_map_indices);
 
@@ -1337,10 +1358,13 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionInt,                 elefant_foot_compensation_layers))
     ((ConfigOptionPercent,             elefant_foot_layers_density))
     ((ConfigOptionFloat,               max_bridge_length))
-    ((ConfigOptionFloatOrPercent,      line_width))
+    ((ConfigOptionFloatsOrPercentsNullable,      line_width))
     // Force the generation of solid shells between adjacent materials/volumes.
     ((ConfigOptionBool,                interface_shells))
     ((ConfigOptionFloat,               layer_height))
+    ((ConfigOptionBool,                split_wall_adjust))
+    ((ConfigOptionEnum<WallSplitFilament>,  split_wall_adjust_filament))
+    ((ConfigOptionEnum<WallSplitDirection>, split_wall_adjust_direction))
     ((ConfigOptionFloat,               mmu_segmented_region_max_width))
     ((ConfigOptionFloat,               mmu_segmented_region_interlocking_depth))
     ((ConfigOptionFloat,               raft_contact_distance))
@@ -1364,7 +1388,11 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloat,               support_bottom_z_distance))
     ((ConfigOptionInt,                 enforce_support_layers))
     ((ConfigOptionInt,                 support_filament))
-    ((ConfigOptionFloatOrPercent,      support_line_width))
+    // ORCA: restrict support/raft/interface printing to filaments of this nozzle diameter (0 = no restriction).
+    ((ConfigOptionFloat,               support_nozzle_diameter))
+    ((ConfigOptionString,              support_base_material))
+    ((ConfigOptionString,              support_interface_material))
+    ((ConfigOptionFloatsOrPercentsNullable,      support_line_width))
     ((ConfigOptionBool,                support_interface_not_for_body))
     ((ConfigOptionBool,                support_interface_loop_pattern))
     ((ConfigOptionInt,                 support_interface_filament))
@@ -1372,7 +1400,12 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionInt,                 support_interface_bottom_layers))
     // Spacing between interface lines (the hatching distance). Set zero to get a solid interface.
     ((ConfigOptionFloat,               support_interface_spacing))
+<<<<<<< snaporca-int
     ((ConfigOptionFloat,                support_interface_min_area))
+=======
+    // Tree support overhangs smaller than this area (mm^2) get no support interface (roof).
+    ((ConfigOptionFloat,               support_interface_min_area))
+>>>>>>> lixnix/main
     ((ConfigOptionFloatsNullable,      support_interface_speed))
     ((ConfigOptionEnum<SupportMaterialPattern>, support_base_pattern))
     ((ConfigOptionEnum<SupportMaterialInterfacePattern>, support_interface_pattern))
@@ -1423,6 +1456,8 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloat,              tree_support_branch_diameter_angle))
     ((ConfigOptionFloat,              tree_support_angle_slow))
     ((ConfigOptionInt,                tree_support_wall_count))
+    // Snapmaker: kept although mainline Orca dropped the option, so existing fork profiles stay valid.
+    ((ConfigOptionBool,               tree_support_adaptive_layer_height))
     ((ConfigOptionBool,               tree_support_auto_brim))
     ((ConfigOptionFloat,              tree_support_brim_width))
     ((ConfigOptionBool,               detect_narrow_internal_solid_infill))
@@ -1446,7 +1481,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionPercent,            tree_support_top_rate))
     ((ConfigOptionFloat,              tree_support_branch_diameter_organic))
     ((ConfigOptionFloat,              tree_support_branch_angle_organic))
-    // Snapmaker: Support transition layer parameters
+    // Transition layers between the support interface and the support body.
     ((ConfigOptionInt,                tree_support_transition_layers))
     ((ConfigOptionBool,               support_transition_perimeter))
     ((ConfigOptionFloats,             support_transition_speed))
@@ -1501,6 +1536,9 @@ PRINT_CONFIG_CLASS_DEFINE(
 
     ((ConfigOptionInts,  print_extruder_id))
     ((ConfigOptionStrings,  print_extruder_variant))
+    // Snapmaker Orca: per column of the process layout, the keys set for the column's tool head
+    // on the Speed page (libslic3r/PerHeadProcess.hpp, override_key); empty on a shared column.
+    ((ConfigOptionStrings,  print_extruder_override))
     ((ConfigOptionInt,                  bottom_shell_layers))
     ((ConfigOptionFloat,                bottom_shell_thickness))
     ((ConfigOptionInt,                  bottom_color_penetration_layers))
@@ -1508,7 +1546,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloat,                internal_bridge_angle)) // ORCA: Internal bridge angle override
     ((ConfigOptionBool,                 relative_bridge_angle)) // ORCA: Relative bridge angle flag
     ((ConfigOptionFloat,                bridge_flow))
-    ((ConfigOptionFloatOrPercent,       bridge_line_width))
+    ((ConfigOptionFloatsOrPercentsNullable,       bridge_line_width))
     ((ConfigOptionFloat,                internal_bridge_flow))
     ((ConfigOptionFloatsNullable,       bridge_speed))
     ((ConfigOptionFloatsOrPercentsNullable, internal_bridge_speed))
@@ -1520,7 +1558,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionEnum<SurfaceFillOrder>, top_surface_fill_order))
     ((ConfigOptionEnum<SurfaceFillOrder>, bottom_surface_fill_order))
     ((ConfigOptionEnum<InfillPattern>, internal_solid_infill_pattern))
-    ((ConfigOptionFloatOrPercent,       outer_wall_line_width))
+    ((ConfigOptionFloatsOrPercentsNullable,       outer_wall_line_width))
     ((ConfigOptionFloatsNullable,       outer_wall_speed))
     ((ConfigOptionFloat,                infill_direction))
     ((ConfigOptionFloat,                solid_infill_direction))
@@ -1558,7 +1596,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionInt,                  fuzzy_skin_layers_between_ripple_offset))
     ((ConfigOptionFloatsNullable,       gap_infill_speed))
     ((ConfigOptionInt,                  sparse_infill_filament_id))
-    ((ConfigOptionFloatOrPercent,       sparse_infill_line_width))
+    ((ConfigOptionFloatsOrPercentsNullable,       sparse_infill_line_width))
     ((ConfigOptionPercent,              infill_wall_overlap))
     ((ConfigOptionPercent,              top_bottom_infill_wall_overlap))
     ((ConfigOptionFloatsNullable,       sparse_infill_speed))
@@ -1583,7 +1621,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloat, ironing_spacing))
     ((ConfigOptionFloat, ironing_inset))
     ((ConfigOptionFloat, ironing_direction))
-    ((ConfigOptionFloats, ironing_speed))
+    ((ConfigOptionFloat, ironing_speed))
     ((ConfigOptionFloat, ironing_angle))
     ((ConfigOptionBool, ironing_angle_fixed))
     // Filament Ironing
@@ -1596,7 +1634,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionBool, unsupported_wall_last))
     ((ConfigOptionInt, outer_wall_filament_id))
     ((ConfigOptionInt, inner_wall_filament_id))
-    ((ConfigOptionFloatOrPercent, inner_wall_line_width))
+    ((ConfigOptionFloatsOrPercentsNullable, inner_wall_line_width))
     ((ConfigOptionFloatsNullable, inner_wall_speed))
     // Total number of perimeters.
     ((ConfigOptionInt, wall_loops))
@@ -1605,11 +1643,11 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionInt, internal_solid_filament_id))
     ((ConfigOptionInt, top_surface_filament_id))
     ((ConfigOptionInt, bottom_surface_filament_id))
-    ((ConfigOptionFloatOrPercent, internal_solid_infill_line_width))
+    ((ConfigOptionFloatsOrPercentsNullable, internal_solid_infill_line_width))
     ((ConfigOptionFloatsNullable, internal_solid_infill_speed))
     // Detect thin walls.
     ((ConfigOptionBool, detect_thin_wall))
-    ((ConfigOptionFloatOrPercent, top_surface_line_width))
+    ((ConfigOptionFloatsOrPercentsNullable, top_surface_line_width))
     ((ConfigOptionInt, top_shell_layers))
     ((ConfigOptionFloat, top_shell_thickness))
     ((ConfigOptionFloat, top_surface_expansion))
@@ -1806,6 +1844,16 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionInts,                required_nozzle_HRC))
     ((ConfigOptionEnum<FilamentMapMode>, filament_map_mode))
     ((ConfigOptionInts,                filament_map))
+    // Snapmaker Orca: the process preset each tool head printed with when the plate was last
+    // applied, empty for a head that prints with the selected preset (libslic3r/PerHeadProcess.hpp).
+    // A project option like filament_map.
+    ((ConfigOptionStrings,             extruder_process_preset))
+    // Snapmaker Orca: the process preset chosen for each tool head in the project, empty for a head
+    // that follows the rule (libslic3r/PerHeadProcess.hpp, choice_key). A project option like the record.
+    ((ConfigOptionStrings,             extruder_process_choice))
+    // Snapmaker Orca: the flow type whose speeds column each tool head prints when that is not its
+    // nozzle's own ("Standard" on a High Flow nozzle), empty otherwise (PerHeadProcess::flow_key).
+    ((ConfigOptionStrings,             extruder_process_flow))
     ((ConfigOptionInts,                filament_volume_map))
     ((ConfigOptionInts,                filament_nozzle_map))
     ((ConfigOptionInts,                filament_map_2)) //used for multi nozzle, map filament to the index identified by extruder+nozzle_volume_type
@@ -1961,9 +2009,15 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionEnum<WipeTowerType>, wipe_tower_type))
     ((ConfigOptionBool,                purge_in_prime_tower))
     ((ConfigOptionBool,                enable_filament_ramming))
+<<<<<<< snaporca-int
     ((ConfigOptionFloat,                ramming_line_width_ratio))
     ((ConfigOptionBool,                enable_change_pressure_when_wiping))
     ((ConfigOptionFloat,                ramming_pressure_advance_value))
+=======
+    ((ConfigOptionFloat,               ramming_line_width_ratio))
+    ((ConfigOptionBool,                enable_change_pressure_when_wiping))
+    ((ConfigOptionFloat,               ramming_pressure_advance_value))
+>>>>>>> lixnix/main
     ((ConfigOptionBool,                tool_change_on_wipe_tower))
     ((ConfigOptionBool,                wait_for_temp_on_wipe_tower))
     ((ConfigOptionBool,                support_multi_bed_types))
@@ -2100,6 +2154,10 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
     ((ConfigOptionBools,              reduce_fan_stop_start_freq))
     ((ConfigOptionBools,              dont_slow_down_outer_wall))
     ((ConfigOptionFloats,             fan_cooling_layer_time))
+<<<<<<< snaporca-int
+=======
+    // Snapmaker mixed-filament colour metadata (filament_colour itself moved to the filament block above).
+>>>>>>> lixnix/main
     ((ConfigOptionStrings,            filament_multi_colors))
     ((ConfigOptionInts,               filament_colour_mode))
     ((ConfigOptionBools,              activate_air_filtration))
@@ -2107,7 +2165,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
     ((ConfigOptionBools,              activate_air_filtration_on_completion))
     ((ConfigOptionInts,               during_print_exhaust_fan_speed))
     ((ConfigOptionInts,               complete_print_exhaust_fan_speed))
-    ((ConfigOptionFloatOrPercent,     initial_layer_line_width))
+    ((ConfigOptionFloatsOrPercentsNullable,     initial_layer_line_width))
     ((ConfigOptionFloat,              initial_layer_print_height))
     ((ConfigOptionFloatsNullable,     initial_layer_speed))
 
@@ -2121,6 +2179,8 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
     ((ConfigOptionFloats,             max_layer_height))
     ((ConfigOptionFloats,               fan_min_speed))
     ((ConfigOptionFloats,             min_layer_height))
+    ((ConfigOptionFloats,             extruder_layer_height))
+    ((ConfigOptionBool,               extruder_layer_height_exact))
     ((ConfigOptionFloat,              printable_height))
     ((ConfigOptionFloatsNullable,     extruder_printable_height))
     ((ConfigOptionPoint,              best_object_pos))
@@ -2212,6 +2272,10 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
     ((ConfigOptionInt,                wipe_tower_filament))
     ((ConfigOptionFloats,             wiping_volumes_extruders))
     ((ConfigOptionInts,       idle_temperature))
+<<<<<<< snaporca-int
+=======
+    // filament_tower_ironing_area lives in GCodeConfig (both sides added it; single declaration kept).
+>>>>>>> lixnix/main
 
     // BBS: wipe tower is only used for priming
     ((ConfigOptionFloat,              prime_volume))
@@ -2237,6 +2301,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
     ((ConfigOptionString,             thumbnails))
     // BBS: move from PrintObjectConfig
     ((ConfigOptionBool, independent_support_layer_height))
+    ((ConfigOptionEnum<SupportLayerHeightStep>, support_layer_height_step))
     ((ConfigOptionBool,               combine_brims))
     // SoftFever
     ((ConfigOptionPercents,            filament_shrink))
@@ -2245,7 +2310,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
     ((ConfigOptionBool,                exclude_object))
     ((ConfigOptionFloats,             grab_length))
     ((ConfigOptionBool,                gcode_comments))
-    ((ConfigOptionInts,                slow_down_layers))
+    ((ConfigOptionInt,                 slow_down_layers))
     ((ConfigOptionInts,                support_material_interface_fan_speed))
     ((ConfigOptionInts,                internal_bridge_fan_speed)) // ORCA: Add support for separate internal bridge fan speed control
     ((ConfigOptionInts,                ironing_fan_speed))
@@ -2733,6 +2798,17 @@ private:
 
     static uint64_t             s_last_timestamp;
 };
+
+// 0-based filament of a 1-based feature filament selector ("Default" = 0 falls back to filament 1).
+inline unsigned int feature_filament_idx(int filament_id) { return filament_id > 1 ? (unsigned int)(filament_id - 1) : 0u; }
+
+// True when any extruder carries a per-extruder preferred layer height.
+inline bool has_extruder_layer_heights(const PrintConfig &config) {
+    for (double h : config.extruder_layer_height.values)
+        if (h > 0.)
+            return true;
+    return false;
+}
 
 // const std::vector<double> &fv_matrix:  origin matrix from json
 // size_t extruder_id: -1 means single-nozzle for old file, 0 means the 1st extruder, 1 means the 2nd extruder

@@ -127,7 +127,7 @@ public:
     void on_dpi_changed(const wxRect &suggested_rect) {}
 
 private:
-    int GetFilamentInfo(const std::string& VendorDirectory, json& pFilaList, const std::string& filepath,
+    int GetFilamentInfo(const std::string& VendorDirectory, const json& pFilaList, const std::string& filepath,
                         std::string& sVendor, std::string& sType, std::unordered_set<std::string>& visiting);
 
     GUI_App *m_MainPtr;
@@ -161,7 +161,6 @@ private:
     bool InstallNetplugin;
     bool network_plugin_ready {false};
 
-    json m_ProfileJson;
     json m_OrcaFilaList;
     std::string m_OrcaFilaLibPath;
 

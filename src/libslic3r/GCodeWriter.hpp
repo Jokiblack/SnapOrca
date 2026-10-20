@@ -81,6 +81,12 @@ public:
     bool        need_toolchange(unsigned int filament_id) const;
     std::string set_extruder(unsigned int filament_id);
     void init_extruder(unsigned int filament_id);
+    // Snapmaker Orca: process-table slot for travel and first-layer speeds (tool head, or head x volume type).
+    // toolchange()/init_extruder() seed it with the head; GCode then sets Print::process_slot_of_filament.
+    void set_process_slot(size_t slot) { m_cached_extruder_idx = slot; }
+    // The slot set_process_slot() set: the column a per tool head process value (a line width) of
+    // the active filament is read at.
+    size_t process_slot() const { return m_cached_extruder_idx; }
     // Current parked-retract length of a filament's extruder (share-aware). Used for the
     // new_extruder_retracted_length change-filament placeholder. Returns 0 if the filament is unknown.
     double get_extruder_retracted_length(const int filament_id);
@@ -91,9 +97,12 @@ public:
     std::string set_speed(double F, const std::string &comment = std::string(), const std::string &cooling_marker = std::string());
     // SoftFever NOTE: the returned speed is mm/minute
     double      get_current_speed() const { return m_current_speed;}
+<<<<<<< snaporca-int
     // Snapmaker: config column for the process-domain vector options of the active filament
     // (flow-variant column on flow-variant process presets, extruder column otherwise).
     size_t      process_config_index() const;
+=======
+>>>>>>> lixnix/main
     std::string travel_to_xy(const Vec2d &point, const std::string &comment = std::string());
     std::string travel_to_xyz(const Vec3d &point, const std::string &comment = std::string(), bool force_z = false);
     std::string travel_to_z(double z, const std::string &comment = std::string(), bool force = false);

@@ -15,40 +15,28 @@ bool is_valid_flow_type(const std::string &value)
     return value == FLOW_MODE_STANDARD || value == FLOW_MODE_HIGH_FLOW;
 }
 
-bool append_nozzle_diameter(const nlohmann::json &value, std::vector<std::string> &out)
+// One entry of a flow type list. An unstated entry is "standard" and does not count as a
+// statement; false for a value that is neither unstated nor a known flow type.
+bool append_flow_type(const nlohmann::json &entry, std::vector<std::string> &out, bool &any_stated)
 {
-    if (value.is_string()) {
-        const std::string text = value.get<std::string>();
-        if (text == "0.2" || text == "0.4" || text == "0.6" || text == "0.8") {
-            out.push_back(text);
-            return true;
-        }
-        return false;
+    if (is_unstated_flow_type(entry)) {
+        out.emplace_back(FLOW_MODE_STANDARD);
+        return true;
     }
-
-    if (!value.is_number())
-        return false;
-
-    const double diameter = value.get<double>();
-    for (const auto &[number, text] : std::vector<std::pair<double, const char *>>{
-             {0.2, "0.2"}, {0.4, "0.4"}, {0.6, "0.6"}, {0.8, "0.8"}}) {
-        if (std::abs(diameter - number) < 1e-6) {
-            out.emplace_back(text);
-            return true;
-        }
-    }
-    return false;
+    if (!entry.is_string()) return false;
+    const std::optional<std::string> type = normalize_flow_type(entry.get<std::string>());
+    if (!type) return false;
+    out.push_back(*type);
+    any_stated = true;
+    return true;
 }
 
 bool parse_system_flow_types(const nlohmann::json &value, std::vector<std::string> &out)
 {
     std::vector<std::string> parsed;
-    const auto               append = [&parsed](const nlohmann::json &entry) {
-        if (!entry.is_string()) return false;
-        const std::string type = entry.get<std::string>();
-        if (!is_valid_flow_type(type)) return false;
-        parsed.push_back(type);
-        return true;
+    bool                     any_stated = false;
+    const auto               append = [&parsed, &any_stated](const nlohmann::json &entry) {
+        return append_flow_type(entry, parsed, any_stated);
     };
 
     if (value.is_array()) {
@@ -58,19 +46,132 @@ bool parse_system_flow_types(const nlohmann::json &value, std::vector<std::strin
         return false;
     }
 
+    // Nothing but unstated entries: the firmware reports no flow types.
+    if (!any_stated)
+        parsed.clear();
     out = std::move(parsed);
     return true;
 }
 
 } // namespace
 
+const char *to_wire(NozzleVolumeType type)
+{
+    return type == nvtHighFlow ? FLOW_MODE_HIGH_FLOW : FLOW_MODE_STANDARD;
+}
+
+std::optional<NozzleVolumeType> to_nozzle_volume_type(const std::string &wire)
+{
+    if (wire == FLOW_MODE_STANDARD)
+        return nvtStandard;
+    if (wire == FLOW_MODE_HIGH_FLOW)
+        return nvtHighFlow;
+    return std::nullopt;
+}
+
+std::optional<std::string> normalize_flow_type(const std::string &text)
+{
+    std::string word;
+    for (const char c : text)
+        if (std::isalnum(static_cast<unsigned char>(c)))
+            word += static_cast<char>(std::tolower(static_cast<unsigned char>(c)));
+    if (word == "standard")
+        return std::string(FLOW_MODE_STANDARD);
+    if (word == "highflow")
+        return std::string(FLOW_MODE_HIGH_FLOW);
+    return std::nullopt;
+}
+
+bool is_unstated_flow_type(const nlohmann::json &value)
+{
+    if (value.is_null())
+        return true;
+    if (!value.is_string())
+        return false;
+    const std::string text = value.get<std::string>();
+    return std::all_of(text.begin(), text.end(), [](unsigned char c) { return std::isspace(c) != 0; });
+}
+
+bool append_nozzle_diameter(const nlohmann::json &value, std::vector<std::string> &out)
+{
+    struct Variant { double diameter; const char *text; };
+    static const Variant variants[] = { { 0.2, "0.2" }, { 0.4, "0.4" }, { 0.6, "0.6" }, { 0.8, "0.8" } };
+    if (value.is_string()) {
+        const std::string text = value.get<std::string>();
+        for (const Variant &variant : variants)
+            if (text == variant.text) {
+                out.emplace_back(text);
+                return true;
+            }
+        return false;
+    }
+
+    if (!value.is_number())
+        return false;
+
+    const double diameter = value.get<double>();
+    for (const Variant &variant : variants)
+        if (std::abs(diameter - variant.diameter) < 1e-6) {
+            out.emplace_back(variant.text);
+            return true;
+        }
+    return false;
+}
+
+void parse_nozzle_diameters(const nlohmann::json &value, std::vector<std::string> &out)
+{
+    if (value.is_array()) {
+        for (const nlohmann::json &entry : value)
+            append_nozzle_diameter(entry, out);
+    } else {
+        append_nozzle_diameter(value, out);
+    }
+}
+
 std::vector<std::string> build_filament_volume_types(const std::vector<int> *values, size_t count)
 {
     std::vector<std::string> result(count, FLOW_MODE_STANDARD);
     if (values == nullptr) return result;
     for (size_t i = 0; i < std::min(count, values->size()); ++i)
-        if ((*values)[i] == fvtHighFlow) result[i] = FLOW_MODE_HIGH_FLOW;
+        if ((*values)[i] == nvtHighFlow) result[i] = FLOW_MODE_HIGH_FLOW;
     return result;
+}
+
+std::vector<std::string> build_nozzle_volume_types(const std::vector<int> &values, size_t head_count)
+{
+    return build_filament_volume_types(&values, head_count);
+}
+
+std::vector<int> filament_volume_types_by_head(const std::vector<int> &nozzle_volume_types,
+                                               const std::vector<size_t> &filament_head, size_t filament_count)
+{
+    std::vector<int> result(filament_count, int(nvtStandard));
+    for (size_t filament = 0; filament < std::min(filament_count, filament_head.size()); ++filament)
+        if (const size_t head = filament_head[filament]; head < nozzle_volume_types.size())
+            result[filament] = nozzle_volume_types[head];
+    return result;
+}
+
+size_t sync_reference_head(const std::vector<std::string> &flows, size_t head_count,
+                           const std::function<bool(const std::string &diameter)> &size_offers,
+                           const std::vector<std::string> &diameters)
+{
+    const size_t count = std::min(flows.size(), head_count);
+    if (!size_offers) {
+        for (size_t head = 0; head < count; ++head)
+            if (flows[head] == FLOW_MODE_HIGH_FLOW)
+                return head;
+        return 0;
+    }
+    auto offers = [&size_offers, &diameters](size_t head) { return head < diameters.size() && size_offers(diameters[head]); };
+    // The profile follows tool head 1 unless its nozzle size offers no High Flow while a High Flow
+    // tool head's size does.
+    if (head_count > 0 && offers(0))
+        return 0;
+    for (size_t head = 0; head < count; ++head)
+        if (flows[head] == FLOW_MODE_HIGH_FLOW && offers(head))
+            return head;
+    return 0;
 }
 
 OptionalFlowTypesStatus parse_optional_flow_types(const nlohmann::json &object, const char *key, size_t count,
@@ -83,12 +184,11 @@ OptionalFlowTypesStatus parse_optional_flow_types(const nlohmann::json &object, 
 
     std::vector<std::string> parsed;
     parsed.reserve(count);
-    for (size_t i = 0; i < count; ++i) {
-        if (!(*it)[i].is_string()) return OptionalFlowTypesStatus::Invalid;
-        const std::string type = (*it)[i].get<std::string>();
-        if (!is_valid_flow_type(type)) return OptionalFlowTypesStatus::Invalid;
-        parsed.push_back(type);
-    }
+    bool any_stated = false;
+    for (size_t i = 0; i < count; ++i)
+        if (!append_flow_type((*it)[i], parsed, any_stated)) return OptionalFlowTypesStatus::Invalid;
+    // Nothing but unstated entries is no flow data.
+    if (!any_stated) return OptionalFlowTypesStatus::Missing;
     out = std::move(parsed);
     return OptionalFlowTypesStatus::Valid;
 }
@@ -110,17 +210,13 @@ bool parse_machine_info_response(const nlohmann::json &response, MachineInfo &ou
     if (const auto name = product_info->find("device_name"); name != product_info->end() && name->is_string())
         parsed.device_name = name->get<std::string>();
 
-    if (const auto diameters = product_info->find("nozzle_diameter"); diameters != product_info->end()) {
-        if (diameters->is_array()) {
-            for (const nlohmann::json &entry : *diameters)
-                append_nozzle_diameter(entry, parsed.nozzle_diameters);
-        } else {
-            append_nozzle_diameter(*diameters, parsed.nozzle_diameters);
-        }
-    }
+    if (const auto diameters = product_info->find("nozzle_diameter"); diameters != product_info->end())
+        parse_nozzle_diameters(*diameters, parsed.nozzle_diameters);
 
-    if (const auto flows = product_info->find("nozzle_volume_type"); flows != product_info->end() &&
-        !parse_system_flow_types(*flows, parsed.nozzle_volume_types))
+    auto flows = product_info->find("nozzle_volume_type");
+    if (flows == product_info->end())
+        flows = product_info->find("nozzle_volume_types");
+    if (flows != product_info->end() && !parse_system_flow_types(*flows, parsed.nozzle_volume_types))
         parsed.nozzle_volume_types.clear();
 
     out = std::move(parsed);
@@ -209,7 +305,7 @@ bool parse_extruder_nozzle_info(const nlohmann::json &response,
     std::sort(extruders.begin(), extruders.end(),
               [](const ExtruderEntry &a, const ExtruderEntry &b) { return a.index < b.index; });
 
-    bool all_flows_present = true;
+    bool any_flow_stated = false;
     for (const auto &entry : extruders) {
         const auto extr = status->find(entry.key);
         const auto nd = extr->find("nozzle_diameter");
@@ -219,19 +315,89 @@ bool parse_extruder_nozzle_info(const nlohmann::json &response,
         if (!append_nozzle_diameter(*nd, diameters))
             continue;
 
-        const auto vt = extr->find("nozzle_volume_type");
-        if (vt != extr->end() && vt->is_string()) {
-            const std::string flow = vt->get<std::string>();
-            volume_types.push_back(is_valid_flow_type(flow) ? flow : FLOW_MODE_STANDARD);
-        } else {
-            all_flows_present = false;
+        // A tool head without a flow type, or with one this tree does not know, is a Standard one.
+        const auto                 vt   = extr->find("nozzle_volume_type");
+        std::optional<std::string> flow;
+        if (vt != extr->end() && vt->is_string() && !is_unstated_flow_type(*vt)) {
+            flow            = normalize_flow_type(vt->get<std::string>());
+            any_flow_stated = true;
         }
+        volume_types.push_back(flow ? *flow : std::string(FLOW_MODE_STANDARD));
     }
 
-    if (!all_flows_present)
+    // No tool head states a flow type: the firmware does not report them.
+    if (!any_flow_stated)
         volume_types.clear();
 
     return !diameters.empty();
+}
+
+ResolveResult merge_machine_info(const nlohmann::json &system_info, const nlohmann::json &objects_query)
+{
+    ResolveResult result;
+    MachineInfo  &mi = result.info;
+
+    // model / device_name: system_info is authoritative, normalized for whitelist safety.
+    MachineInfo sys_mi;
+    if (!system_info.is_null() && parse_machine_info_response(system_info, sys_mi)) {
+        mi.model       = normalize_machine_model(sys_mi.model);
+        mi.device_name = sys_mi.device_name;
+        // system_info nozzle data as fallback
+        mi.nozzle_diameters    = sys_mi.nozzle_diameters;
+        mi.nozzle_volume_types = sys_mi.nozzle_volume_types;
+    }
+    // nozzle: objects.query is preferred (real-time), overrides system_info.
+    std::vector<std::string> obj_diameters, obj_flows;
+    if (!objects_query.is_null() && parse_extruder_nozzle_info(objects_query, obj_diameters, obj_flows)) {
+        mi.nozzle_diameters = std::move(obj_diameters);
+        // Flow types are replaced only when objects.query states them; otherwise those of
+        // system_info stay.
+        if (!obj_flows.empty())
+            mi.nozzle_volume_types = std::move(obj_flows);
+    }
+
+    if (mi.model.empty())
+        result.status = ResolveStatus::NoResponse;
+    else if (mi.nozzle_diameters.empty())
+        result.status = ResolveStatus::GotIdentity;
+    else
+        result.status = ResolveStatus::Complete;
+    return result;
+}
+
+FinishFilamentMappingEvent parse_finish_filament_mapping_event(const nlohmann::json &params)
+{
+    if (!params.is_object())
+        return FinishFilamentMappingEvent::None;
+    const auto event = params.find("event");
+    if (event == params.end())
+        return FinishFilamentMappingEvent::None;
+
+    long long number = 0;
+    if (event->is_number_integer()) {
+        number = event->get<long long>();
+    } else if (event->is_string()) {
+        const std::string text = event->get<std::string>();
+        if (text.empty() || text.size() > 9 || !std::all_of(text.begin(), text.end(), [](unsigned char c) { return std::isdigit(c) != 0; }))
+            return FinishFilamentMappingEvent::None;
+        number = std::stoll(text);
+    } else {
+        return FinishFilamentMappingEvent::None;
+    }
+    return number == static_cast<long long>(FinishFilamentMappingEvent::CustomFlowRegroup) ? FinishFilamentMappingEvent::CustomFlowRegroup :
+                                                                                           FinishFilamentMappingEvent::None;
+}
+
+bool parse_pin_code_response(const std::string &message, nlohmann::json &result)
+{
+    const nlohmann::json response = nlohmann::json::parse(message, nullptr, /*allow_exceptions=*/false);
+    if (!response.is_object())
+        return false;   // a parse error is the discarded value, not an object
+    const auto it = response.find("result");
+    if (it == response.end())
+        return false;
+    result = *it;
+    return true;
 }
 
 }} // namespace Slic3r::SSWCPProtocol

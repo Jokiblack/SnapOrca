@@ -4,8 +4,13 @@
 #include "IPrinterAgent.hpp"
 #include "OrcaCloudServiceAgent.hpp"
 #include "libslic3r/Technologies.hpp"
+<<<<<<< snaporca-int
 #include "libslic3r/AllowlistManager.hpp"
 #include "libslic3r/FilamentHotBedNozzleRules.hpp"
+=======
+#include "libslic3r/FilamentHotBedNozzleRules.hpp"
+#include "libslic3r/AllowlistManager.hpp"
+>>>>>>> lixnix/main
 #include "libslic3r/Platform.hpp"
 #include "GUI_App.hpp"
 #include "Shortcuts.hpp"
@@ -26,6 +31,7 @@
 #include "common_func/common_func.hpp"
 #include "libslic3r_version.h"
 #include "BuildCommit.hpp"
+#include "SnapLogWiring.hpp"
 #include "Downloader.hpp"
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
@@ -146,6 +152,10 @@
 #include <exception>
 #include <cstdlib>
 #include <clocale>
+<<<<<<< snaporca-int
+=======
+#include <mutex>
+>>>>>>> lixnix/main
 #include <regex>
 #include <thread>
 #include <string_view>
@@ -209,16 +219,17 @@
 #include "GLCanvas3D.hpp"
 #include "EncodedFilament.hpp"
 #include "GeneratedConfig.hpp"
+#include "MeshLodCache.hpp"
 
 #include "DeviceCore/DevManager.h"
 
+#include "../Utils/CpuMemory.hpp"
 #include "../Utils/PresetUpdater.hpp"
 #include "../Utils/PrintHost.hpp"
 #include "../Utils/Process.hpp"
 #include "../Utils/wxInspectorPlugins/Registration.hpp"
 #include "../Utils/Http.hpp"
 #include "../Utils/InstanceID.hpp"
-#include "../Utils/SnapLogClient.hpp"
 #include "../Utils/UndoRedo.hpp"
 #include "slic3r/Config/Snapshot.hpp"
 #include "Preferences.hpp"
@@ -600,10 +611,15 @@ public:
         m_progress_bg_color = StateColor::darkModeColorFor(wxColour("#DFDFDF"));
         m_progress_fg_color = StateColor::darkModeColorFor(wxColour("#009688"));
         m_progress_h = FromDIP(6);
-        bool dark_mode = m_fg_color != wxColour("#6B6A6A");
-        wxSize sz  = m_window->GetClientSize();
-        BitmapCache bmp_cache;
-        m_logo_bmp = *bmp_cache.load_svg(dark_mode ? "splash_logo_dark" : "splash_logo", sz.GetWidth(), sz.GetHeight());
+
+        // Snapmaker: init constant texts and scale fonts
+        m_constant_text.init();
+        scale_font(m_constant_text.titleFont,   1.5f);
+        scale_font(m_constant_text.versionFont, 1.5f);
+        scale_font(m_constant_text.loadingFont, 1.5f);
+
+        // Snapmaker: compose the branded splash artwork instead of loading a static logo SVG
+        m_logo_bmp = MakeLogoBitmap(m_window->GetClientSize());
 
         m_window->Bind(wxEVT_PAINT, &SplashScreen::OnPaint, this);
         m_window->Refresh();
@@ -623,18 +639,13 @@ public:
         wxRect rc = wxRect(0, 0, c_sz.GetWidth(), 0);
         dc.SetTextForeground(m_fg_color);
 
-        dc.SetFont(m_font_version);
-        rc.y      = c_sz.GetHeight() * 0.72;
-        rc.height = dc.GetTextExtent(m_text_version).GetHeight();
-        dc.DrawLabel(m_text_version, rc, wxALIGN_CENTER);
-
         dc.SetFont(m_font_action);
         rc.y      = c_sz.GetHeight() * 0.85;
         rc.height = dc.GetTextExtent(m_text_action).GetHeight();
         dc.DrawLabel(m_text_action, rc, wxALIGN_CENTER);
 
         const wxRect progress_rc(0, c_sz.GetHeight() - m_progress_h, c_sz.GetWidth(), m_progress_h);
-                
+
         dc.SetPen(*wxTRANSPARENT_PEN);
         dc.SetBrush(wxBrush(m_progress_bg_color));
         dc.DrawRectangle(progress_rc);
@@ -644,6 +655,76 @@ public:
             dc.SetBrush(wxBrush(m_progress_fg_color));
             dc.DrawRectangle(0, progress_rc.GetTop(), fill_width, m_progress_h);
         }
+    }
+
+    // Snapmaker: branded splash artwork (app icon + brand name + version + beta tag),
+    // rendered once into a bitmap that OnPaint blits before the action text / progress bar.
+    wxBitmap MakeLogoBitmap(const wxSize& size)
+    {
+        int width  = size.GetWidth();
+        int height = size.GetHeight();
+
+        wxImage image(width, height);
+        wxBitmap bmp(image);
+
+        wxMemoryDC memDc;
+        memDc.SelectObject(bmp);
+        memDc.SetPen(*wxTRANSPARENT_PEN);
+        memDc.SetBrush(wxBrush(m_bg_color));
+        memDc.DrawRectangle(-1, -1, width + 2, height + 2);
+
+        const int designSize = 480;
+        auto scaleX = [width, designSize](int value) { return value * width / designSize; };
+        auto scaleY = [height, designSize](int value) { return value * height / designSize; };
+
+        const wxColour title_clr     = StateColor::darkModeColorFor(wxColour(23, 23, 23));
+        const wxColour secondary_clr = StateColor::darkModeColorFor(wxColour(143, 143, 143));
+
+        // Logo icon: 140x140, centered horizontally, y=80
+        BitmapCache bmpCache;
+        int logoSize = scaleX(140);
+        int logoX    = scaleX(170);
+        int logoY    = scaleY(80);
+        wxBitmap* logoBmp = bmpCache.load_svg("splash_app_icon", logoSize, logoSize);
+        if (logoBmp != nullptr)
+            memDc.DrawBitmap(*logoBmp, logoX, logoY, true);
+
+        // Brand name: "Snapmaker Orca"
+        memDc.SetFont(m_constant_text.titleFont);
+        wxSize brandExt = memDc.GetTextExtent(m_constant_text.title);
+
+        // Version tag: "V" + current app version
+        memDc.SetFont(m_constant_text.versionFont);
+        wxSize versionExt = memDc.GetTextExtent(m_constant_text.version);
+
+        // Center brand + gap + tag as a group.
+        int gap    = scaleX(10);
+        int totalW = brandExt.GetWidth() + gap + versionExt.GetWidth();
+        int startX = (width - totalW) / 2;
+        int brandY = scaleY(241);
+        int tagY   = scaleY(251);
+
+        memDc.SetFont(m_constant_text.titleFont);
+        memDc.SetTextForeground(title_clr);
+        memDc.DrawText(m_constant_text.title, startX, brandY);
+
+        memDc.SetFont(m_constant_text.versionFont);
+        memDc.SetTextForeground(secondary_clr);
+        memDc.DrawText(m_constant_text.version,
+                       startX + brandExt.GetWidth() + gap,
+                       tagY);
+
+        // Beta text below brand, centered
+        int betaY = scaleY(279);
+        memDc.SetFont(m_constant_text.versionFont);
+        memDc.SetTextForeground(secondary_clr);
+        wxSize betaExt = memDc.GetTextExtent(m_constant_text.betaText);
+        wxRect betaRect(wxPoint(0, betaY),
+                        wxPoint(width, betaY + betaExt.GetHeight()));
+        memDc.DrawLabel(m_constant_text.betaText, betaRect, wxALIGN_CENTER);
+
+        memDc.SelectObject(wxNullBitmap);
+        return bmp;
     }
 
     void SetText(const wxString& text, int progress)
@@ -703,6 +784,30 @@ private:
 
     wxFont m_font_version = Label::Body_16;
     wxFont m_font_action  = Label::Body_16;
+
+    // Snapmaker: constant branded splash texts/fonts
+    struct ConstantText
+    {
+        wxString title;
+        wxString version;
+        wxString betaText;
+
+        wxFont   titleFont;
+        wxFont   versionFont;
+        wxFont   loadingFont;
+
+        void init()
+        {
+            title    = "Snapmaker Orca";
+            version  = std::string("V") + Snapmaker_VERSION;
+            betaText = _L("Beta version");
+
+            titleFont   = Label::sysFont(20, false);
+            versionFont = Label::Body_13;
+            loadingFont = Label::Body_11;
+        }
+    };
+    ConstantText m_constant_text;
 };
 
 #ifdef __linux__
@@ -710,7 +815,7 @@ static void migrate_flatpak_legacy_datadir(const boost::filesystem::path &data_d
 {
     if(!boost::filesystem::exists("/.flatpak-info"))
         return; // Not running as a Flatpak, nothing to migrate.
-    
+
     namespace fs = boost::filesystem;
 
     if (fs::exists(data_dir_path)){
@@ -731,7 +836,8 @@ static void migrate_flatpak_legacy_datadir(const boost::filesystem::path &data_d
 
     try {
         std::cerr << "Migrating Flatpak data dir from " << legacy_data_dir << " to " << data_dir_path << std::endl;
-        copy_directory_recursively(legacy_data_dir, data_dir_path);
+        if (!copy_directory_recursively(legacy_data_dir, data_dir_path))
+            std::cerr << "Failed to migrate Flatpak data dir from " << legacy_data_dir << " to " << data_dir_path << std::endl;
     } catch (const std::exception &ex) {
         std::cerr << "Failed to migrate Flatpak data dir from " << legacy_data_dir << " to " << data_dir_path << ": " << ex.what() << std::endl;
     }
@@ -1078,7 +1184,7 @@ static void generic_exception_handle()
     } catch (const std::exception& ex) {
         BOOST_LOG_TRIVIAL(error) << boost::format("Uncaught exception: %1%") % ex.what();
         flush_logs();
-        wxLogError(format_wxstr(_L("OrcaSlicer got an unhandled exception: %1%"), ex.what()));
+        wxLogError(format_wxstr(_L("Snapmaker Orca got an unhandled exception: %1%"), ex.what()));
         throw;
     } catch (...) {
         // Not an std::exception: nothing to show, but leave a trace before it takes the app down.
@@ -1185,7 +1291,23 @@ void GUI_App::post_init()
     // shown.
     const bool gl_at_idle = !starts_on_prepare() && is_editor();
     if (!switch_to_3d && gl_at_idle) {
+#ifndef __linux__
+        mainframe->Freeze();
+#endif
+        // Snapmaker Orca: select_view_3D() also selects the Prepare tab. Prepare is made current without
+        // the page-changed event first, so that selection builds nothing, and Home is selected again.
+        // Rendering stays off meanwhile: a render of Prepare would load the GL resources right here.
+        plater_->canvas3D()->enable_render(false);
+        mainframe->select_prepare_for_gl_init();
         plater_->select_view_3D("3D");
+        plater_->canvas3D()->enable_render(true);
+        if (m_url_open_pending)
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", url open pending, staying on the 3D view";
+        else
+            mainframe->select_tab(TAB_ID_HOME);
+#ifndef __linux__
+        mainframe->Thaw();
+#endif
     } else if (!switch_to_3d) {
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", begin load_gl_resources";
 #ifndef __linux__
@@ -1229,7 +1351,11 @@ void GUI_App::post_init()
                 BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", finished rendering a first frame for test";
             }
         }
-        if (starts_on_prepare())
+        // A pending URL open has already selected the 3D view; a tab switch here would undo it.
+        // On macOS the URL arrives later through MacOpenURL, so switch_to_3d above cannot see it.
+        if (m_url_open_pending)
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", url open pending, staying on the 3D view";
+        else if (starts_on_prepare())
             mainframe->select_tab(TAB_ID_PREPARE);
 #ifndef __linux__
         mainframe->Thaw();
@@ -1237,7 +1363,14 @@ void GUI_App::post_init()
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", end load_gl_resources";
     }
 
-    plater_->trigger_restore_project(1);
+    // The restore falls back to a blank project when there is no backup, which would discard
+    // the model a pending URL open is loading. The call sits outside the !switch_to_3d block
+    // here, so it needs its own guard.
+    if (m_url_open_pending) {
+        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", url open pending, skipping the blank project";
+    } else {
+        plater_->trigger_restore_project(1);
+    }
     //#endif
     mainframe->prebuild_pages_when_idle();
 
@@ -1279,9 +1412,19 @@ void GUI_App::post_init()
            
             bool cw_showed = this->config_wizard_startup();
 
+<<<<<<< snaporca-int
             SSWCP_MqttAgent_Instance::m_dialog = new WebPresetDialog(this);
 
             if (!app_config->get_stealth_mode()) {
+=======
+            // Snapmaker: preset web dialog used by the SSWCP MQTT agent
+            SSWCP_MqttAgent_Instance::m_dialog = new WebPresetDialog(this);
+
+            // Snapmaker Orca: the sync is not gated by stealth mode. The fork's vendor profile
+            // updates travel through the Snapmaker OTA inside sync(), which Snapmaker upstream runs
+            // ungated; stealth mode only keeps the Orca / Bambu cloud channels off (see below).
+            {
+>>>>>>> lixnix/main
                 std::string http_url = get_http_url(app_config->get_country_code());
                 std::string language = GUI::into_u8(current_language_code());
                 std::string network_ver = Slic3r::NetworkAgent::get_version();
@@ -1289,10 +1432,18 @@ void GUI_App::post_init()
                 this->preset_updater->sync(http_url, language, network_ver, sys_preset ? preset_bundle : nullptr);
                 this->preset_updater->sync_web_async(true);
             }
+<<<<<<< snaporca-int
             // Snapmaker: version check through the Snapmaker config server (gray release)
             this->request_version_from_config(false, false);
             if (!cw_showed)
                 this->check_legacy_user_filament_presets(false);
+=======
+            this->preset_updater->sync_web_async(true);
+
+            // App update check: the snapmaker-config gray release endpoint first, the static
+            // version.json as its fallback.
+            this->request_version_from_config(false, 0);
+>>>>>>> lixnix/main
             const auto cloud_provider = get_printer_cloud_provider();
             if (is_user_login(cloud_provider) && !app_config->get_stealth_mode()) {
               request_user_handle(0, cloud_provider);
@@ -1300,6 +1451,13 @@ void GUI_App::post_init()
         });
     }
 
+<<<<<<< snaporca-int
+=======
+    // Snapmaker Orca: upstream's pre-2.4.0 "profile syncing moved to Orca Cloud"
+    // migration notice is suppressed - the fork syncs profiles via the Snapmaker
+    // account and the Orca Cloud login is hidden.
+
+>>>>>>> lixnix/main
     if(!m_networking_need_update && m_agent) {
         m_agent->set_on_ssdp_msg_fn(
             [this](std::string json_str) {
@@ -1455,6 +1613,11 @@ void GUI_App::shutdown(bool isRecreate)
     if (m_is_recreating_gui) return;
     stop_http_server();
     set_closing(true);
+    // Snapmaker Orca: cancel the render LOD jobs and join their workers while the application is
+    // still whole. Not on the early return above: recreating the GUI keeps the cache, and the jobs
+    // hold neither a window nor an OpenGL object.
+    if (m_mesh_lod_cache)
+        m_mesh_lod_cache->shutdown();
     Slic3r::PluginManager::instance().set_shutting_down();
 
     if (m_agent)
@@ -2427,7 +2590,28 @@ void GUI_App::init_networking_callbacks()
         //set callbacks
         m_agent->set_server_callback([](std::string url, int status) {
             BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": server_callback, url=%1%, status=%2%") % url % status;
-
+            //CallAfter([this]() {
+            //    if (!m_server_error_dialog) {
+            //        /*m_server_error_dialog->EndModal(wxCLOSE);
+            //        m_server_error_dialog->Destroy();
+            //        m_server_error_dialog = nullptr;*/
+            //        m_server_error_dialog = new NetworkErrorDialog(mainframe);
+            //    }
+            //
+            //    if(plater()->get_select_machine_dialog() && plater()->get_select_machine_dialog()->IsShown()){
+            //        return;
+            //    }
+            //
+            //    if (m_server_error_dialog->m_show_again) {
+            //        return;
+            //    }
+            //
+            //    if (m_server_error_dialog->IsShown()) {
+            //        return;
+            //    }
+            //
+            //    m_server_error_dialog->ShowModal();
+            //});
         });
 
         m_agent->set_on_server_connected_fn([this](CloudEvent event, int return_code, int reason_code) {
@@ -2692,6 +2876,10 @@ GUI_App::~GUI_App()
 
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": enter");
 
+    // Snapmaker Orca: a second time for the exits that never went through shutdown(); idempotent.
+    if (m_mesh_lod_cache)
+        m_mesh_lod_cache->shutdown();
+
     if (m_agent)
         m_agent->set_printer_agent(nullptr);
     NetworkAgentFactory::clear_printer_agent_cache();
@@ -2715,13 +2903,18 @@ GUI_App::~GUI_App()
     }
 
     AllowlistManager::uninit();
+<<<<<<< snaporca-int
     stop_page_http_server();
+=======
+>>>>>>> lixnix/main
 
     StaticBambuLib::release();
     BBLNetworkPlugin::shutdown();
 
 
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": exit");
+
+    stop_page_http_server();
     shutdown_console_logging();
 }
 
@@ -2840,10 +3033,16 @@ void GUI_App::init_webview_runtime()
         BOOST_LOG_TRIVIAL(info) << "WebView2 runtime installed successfully.";
     } else {
         BOOST_LOG_TRIVIAL(error) << "WebView2 runtime installation failed or still not detected.";
+<<<<<<< snaporca-int
         wxMessageBox(format_wxstr(_L("The Microsoft WebView2 Runtime could not be installed.\n"
                                      "Some features, including the setup wizard, may appear blank until it is installed.\n"
                                      "Please install it manually from %1% and restart Snapmaker Orca."),
                                   "https://developer.microsoft.com/microsoft-edge/webview2/"),
+=======
+        wxMessageBox(_L("The Microsoft WebView2 Runtime could not be installed.\n"
+                        "Some features, including the setup wizard, may appear blank until it is installed.\n"
+                        "Please install it manually from https://developer.microsoft.com/microsoft-edge/webview2/ and restart Snapmaker Orca."),
+>>>>>>> lixnix/main
                      _L("WebView2 Runtime"), wxOK | wxICON_WARNING);
     }
 }
@@ -3104,7 +3303,13 @@ void GUI_App::set_connect_host(const std::shared_ptr<PrintHost>& input) {
 void GUI_App::on_start_subscribe_again(std::string dev_id)
 {
     auto start_subscribe_timer = new wxTimer(this, wxID_ANY);
+<<<<<<< snaporca-int
     Bind(wxEVT_TIMER, [this, start_subscribe_timer, dev_id](auto& e) {
+=======
+    Bind(wxEVT_TIMER, [start_subscribe_timer, dev_id](auto& e) {
+        // Bind() here targets the app object, so this handler sees every wxEVT_TIMER in the
+        // application; ignore ticks from other timers instead of stopping this one early.
+>>>>>>> lixnix/main
         if (e.GetId() != start_subscribe_timer->GetId()) return;
         start_subscribe_timer->Stop();
         Slic3r::DeviceManager* dev = Slic3r::GUI::wxGetApp().getDeviceManager();
@@ -3161,6 +3366,18 @@ int GUI_App::OnExit()
     ::Slic3r::SnapLog::v1::SnapLogClient::instance().shutdown();
 
     stop_http_server();
+    // Snapmaker Orca: the Flutter run-result watch must not fire into a client that is shut down.
+    if (m_flutter_wcp_timeout_timer) {
+        m_flutter_wcp_timeout_timer->Stop();
+        m_flutter_wcp_timeout_timer.reset();
+    }
+    // Snapmaker Orca: SSWCP instances and the web views' MQTT engines go first, while SnapLog and
+    // the app can still take their callbacks, not left to static destruction.
+    SSWCP::shutdown();
+    // Snapmaker Orca: SnapLog goes down after the local server (its stop must not wait behind the
+    // bounded join of the upload workers, up to 5 s with a hanging network) and before the device
+    // manager and the network agent die, because MQTT callbacks log from foreign threads.
+    SnapLogWiring::shutdown();
     stop_sync_user_preset();
 
     if (m_device_manager) {
@@ -3511,6 +3728,8 @@ bool GUI_App::on_init_inner()
     BOOST_LOG_TRIVIAL(info) << boost::format("gui mode, Current Snapmaker_Orca Version %1%")%Snapmaker_VERSION;
     GUI_App::log_version_info();
     BOOST_LOG_TRIVIAL(info) << get_system_info();
+    // Snapmaker Orca: the figure the render LOD admits its background jobs against (0 = unknown).
+    BOOST_LOG_TRIVIAL(info) << "available physical memory: " << (CpuMemory::available_bytes() >> 20) << " MiB";
 
 // initialize label colors and fonts
     init_label_colours();
@@ -3603,6 +3822,7 @@ bool GUI_App::on_init_inner()
 #endif // __WINDOWS__
 
 #endif
+    profiler.mark("language/theme/fonts");
 
 
 #ifdef _MSW_DARK_MODE
@@ -3643,12 +3863,12 @@ bool GUI_App::on_init_inner()
     //         remove_old_networking_plugins();
     //     }
     // }
+    profiler.mark("version/network plugin cleanup");
 
     //Orca: write OrcaSlicer version
     if(app_config->get("version") != SoftFever_VERSION) {
         app_config->set("version", SoftFever_VERSION);
     }
-    profiler.mark("version/network plugin cleanup");
 
     // Orca: use wxWeakRef to provent wild pointer.
     wxWeakRef<SplashScreen> scrn = nullptr;
@@ -3666,10 +3886,16 @@ bool GUI_App::on_init_inner()
         //BBS use BBL splashScreen
         scrn = new SplashScreen(splashscreen_pos);
         wxYield();
-        scrn->SetText(_L("Loading configuration") + dots, 5);
+        wxString loadingText = _L("Loading configuration");
+        std::string languageCode = app_config->get_language_code();
+        loadingText += languageCode == "zh-cn" || languageCode == "zh" ? dots + dots : dots;
+        scrn->SetText(loadingText, 5);
     }
     BOOST_LOG_TRIVIAL(info) << "loading systen presets...";
     preset_bundle = new PresetBundle();
+    // Snapmaker Orca: before the presets and the selections are loaded, which read it.
+    preset_bundle->nozzle_filament_enabled = app_config->get_bool("filament_follows_nozzle");
+    preset_bundle->process_follows_nozzle  = app_config->get_bool("process_follows_nozzle");
 
     // just checking for existence of Slic3r::data_dir is not enough : it may be an empty directory
     // supplied as argument to --datadir; in that case we should still run the wizard
@@ -3739,7 +3965,11 @@ bool GUI_App::on_init_inner()
                 wxString tips = wxString::Format(_L("Click to download new version in default browser: %s"), version_str);
                 DownloadDialog dialog(this->mainframe,
                     tips,
+<<<<<<< snaporca-int
                     _L("Snapmaker Orca needs an update"),
+=======
+                    _L("The Snapmaker Orca needs an upgrade"),
+>>>>>>> lixnix/main
                     false,
                     wxCENTER | wxICON_INFORMATION);
                 dialog.SetExtendedMessage(description_text);
@@ -3948,6 +4178,12 @@ bool GUI_App::on_init_inner()
         scrn->SetText(scrn_txt, 70);
         wxYield();
     }
+    // Snapmaker Orca: create the render LOD cache before the first canvas and enable it from the
+    // preference (default true); disabled, it has no worker pool.
+    if (!m_mesh_lod_cache)
+        m_mesh_lod_cache = std::make_shared<MeshLodCache>();
+    m_mesh_lod_cache->set_enabled(app_config->get_bool(SETTING_OPENGL_MESH_LOD));
+
     BOOST_LOG_TRIVIAL(info) << "create the main window";
     mainframe = new MainFrame();
     if (!m_updateDialog)
@@ -3966,6 +4202,17 @@ bool GUI_App::on_init_inner()
     // new_project() sets the same view.
     plater_->get_camera().select_view("topfront");
     plater_->get_camera().requires_zoom_to_bed = true;
+    if (!m_updateDialog)
+    {
+        m_updateDialog = new UpdateVersionDialog(mainframe);
+        m_updateDialog->Hide();
+        m_updateDialog->Bind(EVT_DOWN_URL_PACK, [this](wxCommandEvent& event) {
+            auto downloadUlr = m_updateDialog->getUrl();
+            wxLaunchDefaultBrowser(downloadUlr);
+        });
+    }
+    profiler.mark("mainframe construction");
+
     if (is_editor()) {
         if (starts_on_prepare()) {
             mainframe->select_tab(TAB_ID_PREPARE);
@@ -3993,6 +4240,7 @@ bool GUI_App::on_init_inner()
     else {
         if (scrn) { scrn->SetText(_L("Loading current preset") + dots, 85); wxYield(); }
         load_current_presets();
+        profiler.mark("load_current_presets");
     }
     profiler.mark("load_current_presets");
 
@@ -4100,59 +4348,10 @@ bool GUI_App::on_init_inner()
         Slic3r::GUI::SSWCP::enable_debug_mode(false);
     }
 
-    namespace snap = ::Slic3r::SnapLog::v1;
-    snap::SnapLogConfig snap_cfg;
-    std::string snap_cc   = app_config ? app_config->get_country_code() : "";
-    snap_cfg.gateway_base = (snap_cc.find("CN") != std::string::npos) ?
-                                "https://api.snapmaker.cn"
-                                :
-                                "https://api.snapmaker.com";
-    snap_cfg.hmac_secret = SNAP_LOG_HMAC_SECRET;
-    snap_cfg.spool_dir = (boost::filesystem::path(data_dir()) / "log_upload_spool").string();
-    std::string machine_id;
-    if (app_config) {
-        machine_id = ::Slic3r::instance_id::ensure(*app_config);
-    }
-
-    snap::SnapLogDeps deps;
-    deps.do_request            = snap::make_production_do_request(snap_cfg);
-    const bool privacy_consent = app_config && app_config->get("app", PRIVACY_POLICY_FLAGS) == "true";
-    deps.consent_ok            = [privacy_consent]() { return privacy_consent; };
-    deps.machine_id            = [mid = std::move(machine_id)]() -> std::string { return mid; };
-    deps.now_ms                = []() -> int64_t {
-        return static_cast<int64_t>(
-            std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::system_clock::now().time_since_epoch()).count());
-    };
-
-    snap_cfg.app_version = SLIC3R_BUILD_ID;
-    snap_cfg.app_build   = GIT_COMMIT_HASH;
-#if defined(_WIN32)
-    snap_cfg.platform = "Windows";
-#elif defined(__APPLE__)
-    snap_cfg.platform = "macOS";
-#elif defined(__linux__)
-    snap_cfg.platform = "Linux";
-#else
-    snap_cfg.platform = "Unknown";
-#endif
-    snap_cfg.os_version  = wxGetOsDescription().ToUTF8().data();
-    {
-        std::random_device                          rd;
-        std::uniform_int_distribution<unsigned int> dist(0, 255);
-        char                                        hex[33];
-        for (int i = 0; i < 16; ++i) {
-            std::snprintf(hex + i * 2, 3, "%02x", dist(rd));
-        }
-        snap_cfg.session_id.assign(hex, 32);
-    }
-    snap_cfg.process_id = std::to_string(get_current_pid());
-    if (app_config) {
-        snap_cfg.region = app_config->get_country_code();
-    }
-    snap_cfg.home_for_redact = data_dir();
-
-    snap::SnapLogClient::instance().init(std::move(deps), std::move(snap_cfg));
-    BOOST_LOG_TRIVIAL(info) << "SnapLogClient initialized";
+    // Snapmaker Orca: the SnapLog upload (Snapmaker upstream 2d1554e660). It starts here, at the
+    // end of the start-up, and stays silent until the privacy programme and "snaplog_upload" are
+    // both agreed to; every fork rule lives in SnapLogWiring.
+    SnapLogWiring::init(*app_config);
 
     profiler.mark("on_init_inner return");
 
@@ -4357,6 +4556,8 @@ bool GUI_App::install_network_plugin_from_ota(bool& had_cache)
 
 bool GUI_App::on_init_network(bool try_backup)
 {
+    StartupProfiler profiler("GUI_App::on_init_network");
+
     // Clean up stale ".old" files left by install_plugin() when it had to rename an in-use
     // DLL aside (see the rename-aside path in install_plugin). This runs before the plug-in
     // is (re)loaded - at startup nothing is mapped yet, and on a hot reload the previous
@@ -4409,6 +4610,7 @@ bool GUI_App::on_init_network(bool try_backup)
             if (!load_agent_dll) {
                 BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": on_init_network, load dll ok";
 
+<<<<<<< snaporca-int
                 std::string loaded_version = Slic3r::NetworkAgent::get_version();
                 if (app_config && !loaded_version.empty() && loaded_version != "00.00.00.00") {
                     // Self-heal only when a genuinely different series loaded than configured (e.g. the
@@ -4425,6 +4627,37 @@ bool GUI_App::on_init_network(bool try_backup)
                         app_config->set_network_plugin_version(synced);
                         app_config->save();
                     }
+=======
+            if (!m_device_manager)
+                m_device_manager = new Slic3r::DeviceManager();
+            if (!m_user_manager)
+                m_user_manager = new Slic3r::UserManager();
+
+            return false;
+        }
+
+        int load_agent_dll = Slic3r::NetworkAgent::initialize_network_module(false, config_version);
+        profiler.mark("NetworkAgent::initialize_network_module");
+    __retry:
+        if (!load_agent_dll) {
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": on_init_network, load dll ok";
+
+            std::string loaded_version = Slic3r::NetworkAgent::get_version();
+            if (app_config && !loaded_version.empty() && loaded_version != "00.00.00.00") {
+                // Self-heal only when a genuinely different series loaded than configured (e.g. the
+                // configured build was unavailable and a fallback loaded). Within a series the
+                // loaded build (02.08.01.53) differs from the series config (02.08.01) by design, so
+                // compare series, not the raw string, and store the managed series form - a custom
+                // config (02.08.01_custom) keeps its own name.
+                std::string config_version = app_config->get_network_plugin_version();
+                std::string loaded_series  = network_plugin_series(loaded_version);
+                if (network_plugin_series(config_version) != loaded_series) {
+                    std::string synced = is_series_managed_version(loaded_version) ? loaded_series : loaded_version;
+                    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": syncing config version from " << config_version
+                                            << " to loaded " << loaded_version << " (stored as " << synced << ")";
+                    app_config->set_network_plugin_version(synced);
+                    app_config->save();
+>>>>>>> lixnix/main
                 }
 
                 if (check_networking_version()) {
@@ -4471,6 +4704,30 @@ bool GUI_App::on_init_network(bool try_backup)
                     m_networking_need_update = true;
                 }
             }
+<<<<<<< snaporca-int
+=======
+        } else {
+            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": on_init_network, load dll failed";
+            // A failed install can leave the config naming a build that never made it to disk;
+            // fall back to the installed latest instead of dropping the user into the re-download
+            // flow. Only when the configured library is genuinely absent, though - a pinned series
+            // that is on disk but failed to load once must keep its pin, not be rewritten for good.
+            std::string latest = get_latest_network_version();
+            if (config_version != latest && !BBLNetworkPlugin::versioned_library_exists(config_version)
+                && BBLNetworkPlugin::versioned_library_exists(latest)) {
+                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << ": falling back to installed " << latest;
+                config_version = latest;
+                app_config->set_network_plugin_version(latest);
+                app_config->save();
+                load_agent_dll = Slic3r::NetworkAgent::initialize_network_module(false, config_version);
+                profiler.mark("initialize_network_module(fallback)");
+                goto __retry;
+            }
+            if (should_load_networking_plugin) {
+                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": on_init_network, need upload network module";
+                m_networking_need_update = true;
+            }
+>>>>>>> lixnix/main
         }
     }
 
@@ -4532,6 +4789,7 @@ bool GUI_App::on_init_network(bool try_backup)
         std::string country_code = app_config->get_country_code();
         m_agent->set_country_code(country_code);
         m_agent->start();
+        profiler.mark("m_agent->start");
         // Orca: disable Bambu telemetry up-front (before any login) so it never starts.
         check_track_enable();
     }
@@ -4929,13 +5187,8 @@ static bool is_default(wxWindow* win)
 
 void GUI_App::UpdateDarkUI(wxWindow* window, bool highlited/* = false*/, bool just_font/* = false*/)
 {
-    // SideButton manages its own per-state colors via StateColor and adapts
-    // them to the theme at paint time (StateColor::colorForStates runs the
-    // dark palette). Its SetBackgroundColour/SetForegroundColour overrides
-    // replace the WHOLE state table with one color, so letting this walker
-    // touch it permanently flattens the enabled/disabled/hover colors —
-    // seen when toggling dark mode off: the slice/print buttons keep a
-    // washed-out single background until the app restarts.
+    // SideButton themes its StateColor table at paint time; its SetBackgroundColour and
+    // SetForegroundColour would replace it with one colour and flatten the hover/pressed states.
     if (dynamic_cast<SideButton*>(window))
         return;
 
@@ -5395,8 +5648,7 @@ void GUI_App::recreate_GUI(const wxString &msg_name)
 
     if (!preset_bundle->is_bbl_vendor()) {
         if (is_snapmaker_u1) {
-            wxString url      = wxString::FromUTF8(LOCALHOST_URL + std::to_string(get_page_http_port()) +
-                                                   "/web/flutter_web/index.html?path=2");
+            wxString url      = wxString::FromUTF8(LOCALHOST_URL + std::to_string(get_page_http_port()) + "/web/flutter_web/index.html?path=2");
             auto     real_url = wxGetApp().get_international_url(url);
             mainframe->load_printer_url(real_url);
         } else {
@@ -5807,6 +6059,8 @@ void GUI_App::sm_request_user_logout()
     if (m_login_userinfo.is_user_login()) {
         m_login_userinfo.set_user_login(false);
     }
+    // Snapmaker upstream 2d1554e660: the logout event, then the identity leaves the SnapLog client.
+    // An empty token closes the client's login gate for every later event of this session.
     SNAP_LOG_BATCH(Info, "user logout",
         {"eventName", "user_logout"}, {"source", "cpp"});
     ::Slic3r::SnapLog::v1::SnapLogClient::instance().set_user_token("");
@@ -5829,6 +6083,9 @@ void GUI_App::sm_request_user_logout()
     }
 }
 
+// Flutter run-result watch, Snapmaker upstream 5970fea62d. One app-wide one-shot: the home view
+// (WebViewPanel) arms it first, any Flutter WCP message from any view reports success, and a
+// timeout means that no Flutter view spoke within FLUTTER_WCP_TIMEOUT_MS.
 void GUI_App::start_flutter_wcp_timeout_watch()
 {
     if (m_flutter_wcp_reported || m_flutter_wcp_timeout_timer)
@@ -5861,12 +6118,24 @@ void GUI_App::report_flutter_run_result_once(bool success)
 
     m_flutter_wcp_reported = true;
 
+    // Snapmaker Orca: upstream always bypasses the client's login gate here, which sends the event
+    // over the anonymous, signed path. A build without the signing key keeps the gate, so that
+    // nothing is ever queued for a path the transport guard refuses.
+    const bool bypass_login_gate = SnapLogWiring::has_public_key();
     if (success) {
-        SNAP_LOG_BATCH_FORCE(Info, "flutter run success",
-            {"eventName", "flutter_run_result"}, {"source", "cpp"}, {"success", "true"});
+        if (bypass_login_gate)
+            SNAP_LOG_BATCH_FORCE(Info, "flutter run success",
+                {"eventName", "flutter_run_result"}, {"source", "cpp"}, {"success", "true"});
+        else
+            SNAP_LOG_BATCH(Info, "flutter run success",
+                {"eventName", "flutter_run_result"}, {"source", "cpp"}, {"success", "true"});
     } else {
-        SNAP_LOG_BATCH_FORCE(Error, "flutter run failed",
-            {"eventName", "flutter_run_result"}, {"source", "cpp"}, {"success", "false"});
+        if (bypass_login_gate)
+            SNAP_LOG_BATCH_FORCE(Error, "flutter run failed",
+                {"eventName", "flutter_run_result"}, {"source", "cpp"}, {"success", "false"});
+        else
+            SNAP_LOG_BATCH(Error, "flutter run failed",
+                {"eventName", "flutter_run_result"}, {"source", "cpp"}, {"success", "false"});
     }
 }
 
@@ -5956,6 +6225,32 @@ void GUI_App::sm_stop_silent_token_refresh()
         delete sm_login_dlg;
         sm_login_dlg = nullptr;
     }
+}
+
+wxString GUI_App::get_international_url(const wxString& origin_url) {
+
+    wxString baseUrl = origin_url;
+    if (baseUrl.find("?locale=") != std::string::npos) {
+        baseUrl = baseUrl.substr(0, baseUrl.find("?locale="));
+    } else if (baseUrl.find("&locale=") != std::string::npos) {
+        baseUrl = baseUrl.substr(0, baseUrl.find("&locale="));
+    }
+    wxString lang = wxString::FromUTF8(app_config->get_language_code());
+    wxString region = wxString::FromUTF8(app_config->get_country_code());
+    if (region == "Others") {
+        region = "US";
+    }
+
+    string dark_mode = wxGetApp().app_config->get("dark_color_mode");
+
+    if (baseUrl.find("?") != std::string::npos) {
+        return baseUrl + wxString::FromUTF8("&locale=") + lang + wxString::FromUTF8("-") + region +
+               wxString::FromUTF8("&dark_mode=" + dark_mode);
+    } else {
+        return baseUrl + wxString::FromUTF8("?locale=") + lang + wxString::FromUTF8("-") + region +
+               wxString::FromUTF8("&dark_mode=" + dark_mode);
+    }
+
 }
 
 //BBS
@@ -6153,9 +6448,9 @@ std::string GUI_App::handle_web_request(std::string cmd)
                 "get_orca_login_info",
                 "get_bambu_login_info",
             };
+            // Snapmaker Orca: the other homepage login commands are ignored further down; only the
+            // Bambu one is listed, as its handler would call request_login().
             static const std::unordered_set<std::string> stealth_blocked_login_commands = {
-                "homepage_login_or_register",
-                "homepage_orca_login_or_register",
                 "homepage_bambu_login_or_register",
             };
             if (app_config->get_stealth_mode() && stealth_blocked_info_commands.count(command_str)) {
@@ -6166,26 +6461,9 @@ std::string GUI_App::handle_web_request(std::string cmd)
                 return "";
             }
             if (app_config->get_stealth_mode() && stealth_blocked_login_commands.count(command_str)) {
-                CallAfter([this, command_str] {
-                    MessageDialog dlg(mainframe,
-                        _L("You are currently in Stealth Mode. To log into the Cloud, you need to disable Stealth Mode first."),
-                        _L("Stealth Mode"),
-                        wxOK | wxCANCEL | wxCENTRE);
-                    dlg.SetButtonLabel(wxID_OK, _L("Quit Stealth Mode"));
-                    if (dlg.ShowModal() == wxID_OK) {
-                        app_config->set_bool("stealth_mode", false);
-                        app_config->save();
-                        if (WebViewPanel* home = WebViewPanel::if_built())
-                            home->SendCloudProvidersInfo();
-                        // Continue with login
-                        if (command_str == "homepage_login_or_register")
-                            this->request_login(true);
-                        else if (command_str == "homepage_orca_login_or_register")
-                            this->request_login(true, ORCA_CLOUD_PROVIDER);
-                        else if (command_str == "homepage_bambu_login_or_register")
-                            this->request_login(true, BBL_CLOUD_PROVIDER);
-                    }
-                });
+                // Snapmaker Orca: ignored without a dialog, stealth_mode unchanged; the login is the
+                // Snapmaker account of the Flutter home, not the Orca / Bambu cloud.
+                BOOST_LOG_TRIVIAL(info) << command_str << " ignored (Snapmaker login is used)";
                 return "";
             }
             if (command_str.compare("request_project_download") == 0) {
@@ -6212,9 +6490,10 @@ std::string GUI_App::handle_web_request(std::string cmd)
                     });
             }
             else if (command_str.compare("homepage_login_or_register") == 0) {
-                CallAfter([this] {
-                    this->request_login(true);
-                });
+                // Snapmaker Orca: mainline opens the Orca cloud login here (request_login(true) with
+                // the default provider). Ignored like homepage_orca_login_or_register below - the
+                // Snapmaker account (Flutter home, SSWCP sw_UserLogin) is the fork's login.
+                BOOST_LOG_TRIVIAL(info) << "homepage_login_or_register ignored (Snapmaker login is used)";
             }
             else if (command_str.compare("homepage_logout") == 0) {
                 CallAfter([this] {
@@ -6238,7 +6517,9 @@ std::string GUI_App::handle_web_request(std::string cmd)
                 });
             }
             else if (command_str.compare("homepage_orca_login_or_register") == 0) {
-                CallAfter([this] { request_login(true, ORCA_CLOUD_PROVIDER); });
+                // Snapmaker Orca: the Orca cloud login is hidden - the Snapmaker account
+                // (Flutter home) is the fork's login. Kept compiled for upstream-sync ease.
+                BOOST_LOG_TRIVIAL(info) << "homepage_orca_login_or_register ignored (Snapmaker login is used)";
             }
             else if (command_str.compare("homepage_orca_logout") == 0) {
                 CallAfter([this] {
@@ -6857,7 +7138,6 @@ void GUI_App::on_user_login_handle(wxCommandEvent &evt)
             home->set_cloud_mode(true, cloud_webview_handoff(m_cloud_open_path));
 }
 
-
 void GUI_App::check_track_enable()
 {
     // Orca: telemetry only exists on the BBL cloud agent; always disable it.
@@ -7154,6 +7434,7 @@ void GUI_App::check_new_version_sf(bool show_tips, int by_user)
     AppConfig* app_config = wxGetApp().app_config;
 
     Http::get(update_url)
+<<<<<<< snaporca-int
         .on_error([&, by_user](std::string body, std::string error, unsigned http_status) {
           (void)body;
 
@@ -7162,7 +7443,18 @@ void GUI_App::check_new_version_sf(bool show_tips, int by_user)
                                                    error, http_status);
             evt->SetString(errorMsg);
             if(by_user)
+=======
+        // The request is asynchronous: nothing of this frame may be captured by reference.
+        .on_error([by_user](std::string body, std::string error, unsigned http_status) {
+            // The event is allocated only when it is queued, so the silent check does not leak it.
+            if (by_user) {
+                wxCommandEvent* evt = new wxCommandEvent(EVT_REQUEST_SERVER_FAIL);
+                wxString errorMsg   = wxString::Format(_L("request to server update soft fail with body:%s,error:%s,status:%d"), body,
+                                                       error, http_status);
+                evt->SetString(errorMsg);
+>>>>>>> lixnix/main
                 GUI::wxGetApp().QueueEvent(evt);
+            }
           BOOST_LOG_TRIVIAL(error) << format("Error getting: `%1%`: HTTP %2%, %3%", "check_new_version_sf", http_status,
                                              error);
         })
@@ -7288,7 +7580,11 @@ void GUI_App::check_new_version_sf(bool show_tips, int by_user)
         .perform();
 }
 
+<<<<<<< snaporca-int
 void GUI_App::request_version_from_config(bool show_tips, bool by_user)
+=======
+void GUI_App::request_version_from_config(bool show_tips, int by_user)
+>>>>>>> lixnix/main
 {
     std::string url = app_config->get_config_api_url();
 
@@ -7504,6 +7800,10 @@ void GUI_App::request_version_from_config(bool show_tips, bool by_user)
         })
         .perform();
 }
+<<<<<<< snaporca-int
+=======
+
+>>>>>>> lixnix/main
 // return true if handled
 bool GUI_App::process_network_msg(std::string dev_id, std::string msg)
 {
@@ -7758,7 +8058,6 @@ void GUI_App::no_new_version()
 }
 
 std::string GUI_App::version_display = "";
-
 std::string GUI_App::format_display_version()
 {
     if (!version_display.empty()) return version_display;
@@ -8177,7 +8476,8 @@ bool GUI_App::maybe_migrate_user_presets_on_login()
                    filename.compare(filename.size() - 5, 5, ".info") == 0;
         };
 
-        copy_directory_recursively(source_dir, target_dir, info_filter, /*merge_mode=*/true);
+        if (!copy_directory_recursively(source_dir, target_dir, info_filter, /*merge_mode=*/true))
+            throw std::runtime_error("copy_directory_recursively failed");
         BOOST_LOG_TRIVIAL(info) << "User preset migration completed successfully.";
     } catch (const std::exception& ex) {
         BOOST_LOG_TRIVIAL(error) << "Failed to migrate user presets: " << ex.what();
@@ -9061,6 +9361,17 @@ void GUI_App::stop_sync_user_preset()
     }
 }
 
+// Snapmaker: page-loading http server for the embedded Flutter web UI
+void GUI_App::start_page_http_server()
+{
+    if (!m_page_http_server.is_started())
+        m_page_http_server.start();
+}
+void GUI_App::stop_page_http_server()
+{
+    m_page_http_server.stop();
+}
+
 void GUI_App::restart_sync_user_preset()
 {
     // A manual sync's progress dialog is already on screen — ignore repeat triggers so a
@@ -9189,6 +9500,7 @@ void GUI_App::start_http_server(int port, const std::string& provider)
 void GUI_App::stop_http_server()
 {
     m_http_server.stop();
+<<<<<<< snaporca-int
 }
 
 //void GUI_App::start_http_server()
@@ -9209,6 +9521,8 @@ void GUI_App::start_page_http_server()
 void GUI_App::stop_page_http_server()
 {
     m_page_http_server.stop();
+=======
+>>>>>>> lixnix/main
 }
 
 #ifdef __linux__
@@ -9499,7 +9813,11 @@ bool GUI_App::load_language(wxString language, bool initial)
         message += _L("\nYou may need to reconfigure the missing locales, likely by running the \"locale-gen\" and \"dpkg-reconfigure locales\" commands.\n");
 #endif
         if (initial)
+<<<<<<< snaporca-int
         	message += "\n\n" + _L("Application will close.");
+=======
+        	message + "\n\nApplication will close.";
+>>>>>>> lixnix/main
         wxMessageBox(message, _L("Snapmaker Orca - Switching language failed"), wxOK | wxICON_ERROR);
         if (initial)
 			std::exit(EXIT_FAILURE);
@@ -9912,18 +10230,68 @@ void GUI_App::open_exportpresetbundledialog(size_t open_on_tab, const std::strin
     }
 }
 
+void GUI_App::update_filament_follows_nozzle()
+{
+    if (preset_bundle == nullptr || app_config == nullptr)
+        return;
+    const bool enabled = app_config->get_bool("filament_follows_nozzle");
+    if (preset_bundle->nozzle_filament_enabled == enabled)
+        return;
+    preset_bundle->nozzle_filament_enabled = enabled;
+    // The per slot rating of the preset layer starts or stops applying; Preset::is_compatible is
+    // the same either way. Slots are only replaced where they held a preset they may no longer hold.
+    preset_bundle->update_compatible(PresetSelectCompatibleType::OnlyIfWasCompatible);
+    if (Tab *tab = get_tab(Preset::TYPE_FILAMENT); tab != nullptr)
+        tab->update_tab_ui();
+    if (plater_ != nullptr)
+        plater_->sidebar().update_presets(Preset::TYPE_FILAMENT);
+    // Turned on: the slots that hold a preset made for another nozzle size than their tool head
+    // move to the version of that size now, with the notice of a pass. The loop above only
+    // replaces a preset a slot may not hold at all.
+    if (enabled && plater_ != nullptr)
+        plater_->follow_nozzle_sizes_and_notify(Plater::FollowReason::Preference);
+}
+
+void GUI_App::update_process_follows_nozzle()
+{
+    if (preset_bundle == nullptr || app_config == nullptr)
+        return;
+    const bool enabled = app_config->get_bool("process_follows_nozzle");
+    if (preset_bundle->process_follows_nozzle == enabled)
+        return;
+    preset_bundle->process_follows_nozzle = enabled;
+    if (Tab *tab = get_tab(Preset::TYPE_PRINT); tab != nullptr)
+        tab->update_description_lines();
+    if (plater_ != nullptr) {
+        plater_->sidebar().update_nozzle_process_hints();
+        // The next apply composes or decomposes the process table.
+        plater_->schedule_background_process();
+    }
+}
+
 void GUI_App::open_preferences() { open_preferences(PreferencesTab::General); }
 
 void GUI_App::open_preferences(PreferencesTab tab, const std::string& highlight_option)
 {
     // Render settings the canvas reads every frame; a change needs one redraw to show.
     static constexpr const char* opengl_render_setting_keys[] = {
+<<<<<<< snaporca-int
         SETTING_OPENGL_FXAA_ENABLED, SETTING_OPENGL_FPS_CAP, SETTING_OPENGL_SHOW_FPS_OVERLAY, SETTING_OPENGL_SHOW_RENDER_TIMINGS,
         SETTING_OPENGL_SCENE_CACHE, SETTING_OPENGL_SKIP_IDENTICAL_FRAMES, SETTING_OPENGL_REALISTIC_SHADOWS
+=======
+        SETTING_OPENGL_FXAA_ENABLED, SETTING_OPENGL_FPS_CAP, SETTING_OPENGL_SHOW_FPS_OVERLAY, SETTING_OPENGL_SCENE_CACHE,
+        SETTING_OPENGL_SKIP_IDENTICAL_FRAMES,
+        // The Phong options change what a scene pass draws, and nothing else asks for one after the
+        // dialog closes, so with "Skip unchanged frames" or the scene cache on they took effect
+        // only at the next orbit.
+        SETTING_OPENGL_REALISTIC_PHONG, SETTING_OPENGL_PHONG_SSAO, SETTING_OPENGL_PHONG_BASIC_PLATE_SHADOWS
+>>>>>>> lixnix/main
     };
     std::vector<std::string> previous_opengl_render_settings;
     for (const char* key : opengl_render_setting_keys)
         previous_opengl_render_settings.emplace_back(app_config->get(key));
+    // Snapmaker Orca: render LOD is not read per frame, a change is applied below.
+    const bool previous_mesh_lod = app_config->get_bool(SETTING_OPENGL_MESH_LOD);
 
     bool need_recreate_gui = false;
     std::string pending_language;
@@ -9954,7 +10322,8 @@ void GUI_App::open_preferences(PreferencesTab tab, const std::string& highlight_
                     associate_files(L"step");
                     associate_files(L"stp");
                 }
-                associate_url(L"orcaslicer");
+                associate_url(L"Snapmaker_Orca");
+                associate_url(L"snapmaker-orca");
             }
             else {
                 if (app_config->get("associate_gcode") == "true")
@@ -9970,6 +10339,24 @@ void GUI_App::open_preferences(PreferencesTab tab, const std::string& highlight_
     if (opengl_render_settings_changed && !need_recreate_gui && this->plater_ != nullptr) {
         this->plater_->set_current_canvas_as_dirty();
         this->plater_->get_current_canvas3D()->force_set_focus();
+    }
+
+    // Snapmaker Orca: apply the render LOD preference at once. Rebuilding the volumes acquires or
+    // drops GLVolume::m_lod (dropping cancels the jobs); preview shells drop their reduced models
+    // and render_shells() draws them at full detail until the next load_shells().
+    const bool mesh_lod = app_config->get_bool(SETTING_OPENGL_MESH_LOD);
+    if (mesh_lod != previous_mesh_lod && m_mesh_lod_cache) {
+        m_mesh_lod_cache->set_enabled(mesh_lod);
+        if (this->plater_ != nullptr) {
+            for (GLCanvas3D* canvas : { this->plater_->get_view3D_canvas3D(), this->plater_->get_assmeble_canvas3D() }) {
+                if (canvas == nullptr)
+                    continue;
+                canvas->reload_scene(true, true);
+                canvas->set_as_dirty();
+            }
+            if (GLCanvas3D* preview = this->plater_->get_preview_canvas3D(); preview != nullptr)
+                preview->on_render_lod_changed();
+        }
     }
 
     if (!pending_language.empty()) {
@@ -10156,7 +10543,12 @@ bool GUI_App::check_and_keep_current_preset_changes(const wxString& caption, con
                             static_cast<TabPrinter*>(tab)->cache_extruder_cnt();
                         }
                     }
-                    tab->cache_config_diff(selected_options);
+                    std::vector<std::string> selected_options2;
+                    std::transform(selected_options.begin(), selected_options.end(), std::back_inserter(selected_options2), [](auto & o) {
+                        auto i = o.find('#');
+                        return i != std::string::npos ? o.substr(0, i) : o;
+                    });
+                    tab->cache_config_diff(selected_options2);
                     if (!is_called_from_configwizard)
                         tab->m_presets->discard_current_changes();
                 }
@@ -10242,6 +10634,12 @@ void GUI_App::load_current_presets(bool active_preset_combox/*= false*/, bool ch
                 preset_bundle->set_num_filaments(target);
         }
     }
+    // Snapmaker Orca: one filament combo per slot before the tabs load their presets, as the
+    // Printer tab's printer switch does; otherwise the sidebar shows a single slot until the next
+    // extruder count change.
+    if (printer_technology == ptFFF && plater_ != nullptr &&
+        sidebar().combos_filament().size() != preset_bundle->filament_presets.size())
+        sidebar().on_filament_count_change(preset_bundle->filament_presets.size());
 	this->plater()->set_printer_technology(printer_technology);
     for (Tab *tab : tabs_list)
 		if (tab->supports_printer_technology(printer_technology)) {
@@ -11144,7 +11542,9 @@ void GUI_App::cache_notify(const std::string& key, const json& res)
 void GUI_App::user_update_privacy_notify(const bool& res)
 {
     set_privacy_policy(res);
-    ::Slic3r::SnapLog::v1::SnapLogClient::instance().set_consent(res);
+    // Snapmaker Orca: the single place where a change of the programme flag reaches SnapLog. Every
+    // writer stores the key before it calls this function, so the stored values are read, not res.
+    SnapLogWiring::apply_consent(*app_config);
 
     json data;
 
@@ -11388,20 +11788,29 @@ bool GUI_App::check_url_association(std::wstring url_prefix, std::wstring& reg_b
 {
     reg_bin = L"";
 #ifdef WIN32
+<<<<<<< snaporca-int
     const wxString cmd_path = "Software\\Classes\\" + wxString(url_prefix) + "\\shell\\open\\command";
     wxRegKey      key_cu(wxRegKey::HKCU, cmd_path);
     wxRegKey      key_lm(wxRegKey::HKLM, cmd_path);
+=======
+    const std::wstring cmd_path = L"Software\\Classes\\" + url_prefix + L"\\shell\\open\\command";
+    wxRegKey           key_cu(wxRegKey::HKCU, cmd_path);
+    wxRegKey           key_lm(wxRegKey::HKLM, cmd_path);
+>>>>>>> lixnix/main
     if (key_cu.Exists())
         reg_bin = key_cu.QueryDefaultValue().ToStdWstring();
     else if (key_lm.Exists())
         reg_bin = key_lm.QueryDefaultValue().ToStdWstring();
     else
         return false;
+<<<<<<< snaporca-int
     wxString reg_value = reg_bin;
+=======
+>>>>>>> lixnix/main
 
     boost::filesystem::path binary_path(boost::filesystem::canonical(boost::dll::program_location()));
-    wxString key_string = "\"" + from_path(binary_path) + "\" \"%1\"";
-    return key_string == reg_value;
+    std::wstring key_string = L"\"" + binary_path.wstring() + L"\" \"%1\"";
+    return key_string == reg_bin;
 #else
     return false;
 #endif // WIN32
@@ -11536,6 +11945,7 @@ void GUI_App::SMUserInfo::notify() {
     wxGetApp().user_login_notify(data);
 
 }
+<<<<<<< snaporca-int
 //---------------------------------------------------------------------------
 // Extensible incompatible support-material pair detection.
 // Each entry: {interface_material, incompatible_model_material}.
@@ -11667,6 +12077,8 @@ bool check_pla_petg_support_pair(int extruder_id)
 
     return false;
 }
+=======
+>>>>>>> lixnix/main
 
 bool is_soluble_filament(int extruder_id)
 {
@@ -11684,6 +12096,124 @@ bool is_soluble_filament(int extruder_id)
     return support_option->get_at(0);
 }
 
+<<<<<<< snaporca-int
+=======
+
+namespace {
+// Interface / model material pairs that do not bond, so using one as support for the other
+// calls for adjusted support parameters. New pairs only need an entry here.
+struct IncompatibleSupportPair {
+    const char *interface_type;
+    const char *model_type;
+};
+
+const IncompatibleSupportPair INCOMPATIBLE_SUPPORT_PAIRS[] = {
+    {"PETG", "PLA"},
+    {"PLA",  "PETG"},
+};
+} // anonymous namespace
+
+// Whether any model volume on any plate prints with one of the given filament types.
+// Mixed-filament virtual slots are expanded to their physical components first.
+bool has_filaments(const std::vector<std::string> &filament_types)
+{
+    if (filament_types.empty())
+        return false;
+
+    Plater *plater = wxGetApp().plater();
+    if (plater == nullptr)
+        return false;
+
+    PresetBundle *preset_bundle = wxGetApp().preset_bundle;
+    if (preset_bundle == nullptr)
+        return false;
+
+    const std::vector<std::string> &filament_presets = preset_bundle->filament_presets;
+    const PresetCollection         &filaments        = preset_bundle->filaments;
+    const size_t num_physical    = filament_presets.size();
+
+    // Resolve filament_type string for a 1-based extruder index.
+    auto resolve_filament_type = [&](int extruder_id_1based) -> std::string {
+        if (extruder_id_1based <= 0)
+            return std::string();
+        unsigned int idx = static_cast<unsigned int>(extruder_id_1based - 1);
+        if (idx >= filament_presets.size())
+            return std::string();
+        const Preset *preset = filaments.find_preset(filament_presets[idx]);
+        if (preset == nullptr)
+            return std::string();
+        const ConfigOptionStrings *opt = preset->config.option<ConfigOptionStrings>(
+            "filament_type");
+        if (opt == nullptr || opt->values.empty())
+            return std::string();
+        return opt->values[0];
+    };
+
+    // Collect 1-based extruder IDs from all model volumes on all plates.
+    std::vector<int> raw_extruder_ids;
+    const ModelObjectPtrs &model_objects = plater->model().objects;
+    for (const ModelObject *obj : model_objects) {
+        if (obj == nullptr) continue;
+        for (const ModelVolume *vol : obj->volumes) {
+            if (vol == nullptr) continue;
+            std::vector<int> extruders = vol->get_extruders();
+            raw_extruder_ids.insert(raw_extruder_ids.end(),
+                                    extruders.begin(), extruders.end());
+        }
+    }
+
+    // Expand mixed-filament virtual IDs to physical components. Only model materials need
+    // this: a mixed slot cannot be selected as a support filament.
+    if (num_physical > 0)
+        preset_bundle->mixed_filaments.expand_virtual_extruder_ids(raw_extruder_ids, num_physical);
+
+    // Match each expanded physical extruder against the target list.
+    for (int extruder_id : raw_extruder_ids) {
+        std::string filament_type = resolve_filament_type(extruder_id);
+        if (filament_type.empty()) continue;
+        for (const std::string &target : filament_types) {
+            if (filament_type == target)
+                return true;
+        }
+    }
+
+    return false;
+}
+
+// Whether the filament at 0-based extruder_id, used as support interface, forms an
+// incompatible PLA/PETG pair with a model material in the project.
+bool check_pla_petg_support_pair(int extruder_id)
+{
+    PresetBundle *preset_bundle = Slic3r::GUI::wxGetApp().preset_bundle;
+    if (preset_bundle == nullptr)
+        return false;
+
+    const std::vector<std::string> &filament_presets = preset_bundle->filament_presets;
+
+    if (extruder_id < 0 || extruder_id >= static_cast<int>(filament_presets.size()))
+        return false;
+
+    const Preset *filament = preset_bundle->filaments.find_preset(
+        filament_presets[extruder_id]);
+    if (filament == nullptr)
+        return false;
+
+    const ConfigOptionStrings *ft_opt =
+        filament->config.option<ConfigOptionStrings>("filament_type");
+    if (ft_opt == nullptr || ft_opt->values.empty())
+        return false;
+
+    const std::string &interface_type = ft_opt->values[0];
+
+    for (const IncompatibleSupportPair &pair : INCOMPATIBLE_SUPPORT_PAIRS) {
+        if (interface_type == pair.interface_type && has_filaments({pair.model_type}))
+            return true;
+    }
+
+    return false;
+}
+
+>>>>>>> lixnix/main
 bool is_support_filament(int extruder_id, bool strict_check)
 {
     auto &filament_presets = Slic3r::GUI::wxGetApp().preset_bundle->filament_presets;
@@ -11709,7 +12239,7 @@ bool is_support_filament(int extruder_id, bool strict_check)
     }
     if (support_option == nullptr) return false;
     return support_option->get_at(0);
-};
+}
 
 Vec3d build_plate_tilt_up_direction()
 {

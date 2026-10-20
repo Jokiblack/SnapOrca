@@ -61,6 +61,7 @@ using json = nlohmann::json;
 
 namespace Slic3r {
 
+<<<<<<< snaporca-int
 static const std::string VERSION_CHECK_URL_STABLE = "https://api.github.com/repos/Snapmaker/OrcaSlicer/releases/latest";
 static const std::string VERSION_CHECK_URL = "https://api.github.com/repos/Snapmaker/OrcaSlicer/releases";
 static const std::string PROFILE_UPDATE_URL = "/upgrade/profile/";
@@ -68,17 +69,25 @@ static const std::string FLUTTER_UPDATE_URL = "/upgrade/flutter/";
 // Upstream OrcaSlicer profile updater endpoint (kept for profile_update_url(); Snapmaker uses get_preset_upgrade_url()).
 static const std::string ORCA_PROFILE_UPDATE_URL = "https://check-version.orcaslicer.com/profile";
 
+=======
+// SM Orca: Snapmaker update/meta endpoints (branding rule 1) - PROFILE/FLUTTER are
+// relative paths appended to APP_UPDATE_URL_BASE_{CN,EN} below.
+static const std::string VERSION_CHECK_URL_STABLE = "https://api.github.com/repos/Snapmaker/OrcaSlicer/releases/latest";
+static const std::string VERSION_CHECK_URL = "https://api.github.com/repos/Snapmaker/OrcaSlicer/releases";
+static const std::string PROFILE_UPDATE_URL = "/upgrade/profile/";
+// Mainline Orca profile CDN (third-party vendor profile updates only; Snapmaker vendor uses the Snapmaker OTA)
+static const std::string ORCA_PROFILE_UPDATE_URL = "https://check-version.orcaslicer.com/profile";
+// Hidden app config key overriding the Orca profile CDN above.
+>>>>>>> lixnix/main
 constexpr const char* CONFIG_ORCA_UPDATER_URL = "orca_updater_url";
-
+static const std::string FLUTTER_UPDATE_URL = "/upgrade/flutter/";
 static const std::string MODELS_STR = "models";
 
 #define APP_UPDATE_URL_BASE_CN "https://meta-cfg.snapmaker.cn"
 #define APP_UPDATE_URL_BASE_EN "https://meta-cfg.snapmaker.com"
 
-// snapmaker-config gray release API (POST /config/get). Release builds default to the
-// https prod endpoint; internal testing builds (BBL_INTERNAL_TESTING, flipped together
-// with BBL_RELEASE_TO_PUBLIC in common_func.hpp) default to the http dev gateway, which
-// resolves only inside the office network. Per-machine override: "orca_config_api_url".
+// snapmaker-config gray release API (POST /config/get): the prod endpoint for release builds, the dev
+// gateway for BBL_INTERNAL_TESTING builds; the "orca_config_api_url" app setting overrides both.
 #define CONFIG_API_URL_DEV  "http://gateway.s.com/api/config/get"
 #define CONFIG_API_URL_PROD "https://api.snapmaker.com/api/config/get"
 
@@ -336,11 +345,18 @@ void AppConfig::set_defaults()
         set(SETTING_OPENGL_FPS_CAP, std::to_string(fps_cap));
     }
 
+    // Snapmaker Orca: on by default, as in mainline; the fork's canvas state is covered by
+    // SceneCache::Key or marks the canvas dirty. Only an empty value is filled, a stored choice stays.
     if (get(SETTING_OPENGL_SCENE_CACHE).empty())
         set_bool(SETTING_OPENGL_SCENE_CACHE, true);
 
     if (get(SETTING_OPENGL_SKIP_IDENTICAL_FRAMES).empty())
         set_bool(SETTING_OPENGL_SKIP_IDENTICAL_FRAMES, true);
+
+    // Snapmaker Orca: render LOD on by default on every platform, as in Snapmaker Orca 2.4 (#737).
+    // Only an empty value is filled, never "false", so a stored choice stays.
+    if (get(SETTING_OPENGL_MESH_LOD).empty())
+        set_bool(SETTING_OPENGL_MESH_LOD, true);
 
     // The getter already defaults, parses and clamps; write back what it resolves to.
     set(SETTING_PLUGIN_PAGES_VISIBLE_COUNT, std::to_string(get_plugin_pages_visible_count()));
@@ -380,6 +396,10 @@ void AppConfig::set_defaults()
 
     if (get("zoom_to_mouse").empty())
         set_bool("zoom_to_mouse", false);
+
+    // SnapLog event/log upload; only effective while privacy_policy_isagree is true.
+    if (get("snaplog_upload").empty())
+        set_bool("snaplog_upload", true);
 
 #ifdef SLIC3R_CAD
     // Experimental parametric Design tab. Off by default: the tab is not created at all
@@ -428,11 +448,16 @@ void AppConfig::set_defaults()
     if (get("show_plate_gridlines").empty())
         set_bool("show_plate_gridlines", true);
 
+<<<<<<< snaporca-int
     if (get("focus_mode").empty())
         set_bool("focus_mode", false);
 
+=======
+    // Snapmaker Orca: on by default (mainline seeds false), closest to the always-on selection
+    // outline of Snapmaker Orca 2.4 until the highlight of #764 is ported. A stored choice stays.
+>>>>>>> lixnix/main
     if (get("show_outline").empty())
-        set_bool("show_outline", false);
+        set_bool("show_outline", true);
     
     if (get("show_axes").empty())
         set_bool("show_axes", true);
@@ -497,9 +522,10 @@ void AppConfig::set_defaults()
     }
 
     // Orca
-    if (get("stealth_mode").empty()) {
-        set_bool("stealth_mode", false);
-    }
+    // Snapmaker Orca: forced on at every start. The Orca / Bambu cloud channels are not shipped by
+    // this fork, and stealth mode is the switch that keeps them off. The Snapmaker OTA, the Snapmaker
+    // account login (SSWCP) and the application update check do not depend on this flag.
+    set_bool("stealth_mode", true);
     if (get("hide_login_side_panel").empty()) {
         set_bool("hide_login_side_panel", false);
     }
@@ -565,6 +591,19 @@ void AppConfig::set_defaults()
 
     if (get("remember_printer_config").empty()) {
         set_bool("remember_printer_config", true);
+    }
+
+    // Snapmaker Orca: each filament gets the preset made for the nozzle size of the tool head
+    // that prints it (libslic3r/NozzleFilamentPresets.hpp). Read by GUI_App into
+    // PresetBundle::nozzle_filament_enabled; the command line never sets that member.
+    if (get("filament_follows_nozzle").empty()) {
+        set_bool("filament_follows_nozzle", true);
+    }
+
+    // Snapmaker Orca: a tool head of another nozzle size prints with the speeds of a process preset
+    // for its size (PerHeadProcess.hpp). GUI_App copies it into PresetBundle::process_follows_nozzle.
+    if (get("process_follows_nozzle").empty()) {
+        set_bool("process_follows_nozzle", true);
     }
 
     if (get("group_filament_presets").empty()) {
@@ -732,9 +771,8 @@ void AppConfig::set_defaults()
         set_bool("is_split_compound", false);
     }
 
-    if(get("installed_networking").empty()) {
-        set_bool("installed_networking", false);
-    }
+    // Snapmaker Orca: forced off at every start, the Bambu network plug-in is not shipped.
+    set_bool("installed_networking", false);
 
 #ifdef __linux__
     if (get("window_buttons_on_left").empty())
@@ -2034,6 +2072,7 @@ std::string AppConfig::get_version_upgrade_url(bool stable_only /* = false*/)
     return url; 
 }
 
+<<<<<<< snaporca-int
 std::string AppConfig::get_config_api_url()
 {
     std::string overrideUrl = get("orca_config_api_url");
@@ -2055,10 +2094,34 @@ std::string AppConfig::version_check_url(bool stable_only/* = false*/) const
 
 std::string AppConfig::profile_update_url() const
 {
+=======
+std::string AppConfig::orca_profile_update_url() const
+{
+    // Hidden "orca_updater_url" key overrides the mainline profile CDN.
+>>>>>>> lixnix/main
     std::string orca_updater_url = get(CONFIG_ORCA_UPDATER_URL);
     if (orca_updater_url.empty())
         return ORCA_PROFILE_UPDATE_URL;
     return orca_updater_url;
+}
+
+std::string AppConfig::get_config_api_url()
+{
+    std::string overrideUrl = get("orca_config_api_url");
+    if (!overrideUrl.empty())
+        return overrideUrl;
+
+#if BBL_INTERNAL_TESTING
+    return CONFIG_API_URL_DEV;
+#else
+    return CONFIG_API_URL_PROD;
+#endif
+}
+
+std::string AppConfig::version_check_url(bool stable_only/* = false*/) const
+{
+    auto from_settings = get("version_check_url");
+    return from_settings.empty() ? stable_only ? VERSION_CHECK_URL_STABLE : VERSION_CHECK_URL : from_settings;
 }
 
 bool AppConfig::exists()

@@ -18,6 +18,7 @@
 
 #include "libslic3r/FilamentColorLibrary.hpp"
 #include "libslic3r/Preset.hpp"
+#include "libslic3r/NozzleFilamentPresets.hpp"
 #include "wxExtensions.hpp"
 #include "BitmapComboBox.hpp"
 #include "Widgets/ComboBox.hpp"
@@ -135,11 +136,27 @@ protected:
 
     int m_last_selected;
     int m_em_unit;
+    // Snapmaker: swallow mouse-wheel events while the drop-down is closed so scrolling the
+    // sidebar cannot silently switch the selected preset.
+    bool m_suppress_change { true };
 
     // BBS: ams
     int  m_filament_idx       = -1;
     int m_first_ams_filament = 0;
     int m_last_ams_filament = 0;
+
+    // Snapmaker Orca: filament presets follow the nozzle size of their tool head (NozzleFilamentPresets.hpp).
+    // True, with `state` filled, when this combo is a slot under that rule; else Preset::is_compatible applies.
+    bool filament_slot_state(NozzleFilament::State &state) const;
+    // The version of the machine-reported filament `filament_name` for the nozzle size of the slot's
+    // tool head; `mainline_match` (may be nullptr) when that is the printer preset's size or no such version exists.
+    const Preset* machine_filament_for_slot(const NozzleFilament::State &state, const std::string &filament_name, const Preset *mainline_match) const;
+    // Size marker ("0.2 mm") for a preset pinned to a nozzle size other than the slot's tool head or
+    // the printer preset, else empty. Display only, put before the label (size_marked_label) so a
+    // narrow combo cuts the name; the item alias keeps the preset name.
+    wxString nozzle_size_marker(const NozzleFilament::State &state, const Preset &preset) const;
+    // "0.2" for 0.2, "0.25" for 0.25: the number of a nozzle size as the markers spell it.
+    static std::string nozzle_size_text(double size);
 
     // parameters for an icon's drawing
     int icon_height;
@@ -220,7 +237,7 @@ public:
     void update_badge_according_flag();
     void set_sync_badge(bool show);
 
-    FilamentColor get_cur_color_info();
+    EncodedFilamentColor get_cur_color_info();
     void show_default_color_picker();
     void sync_colour_config(const std::vector<std::string> &clrs, bool is_gradient);
     void sys_color_changed() override;
@@ -296,6 +313,46 @@ private:
     std::string CurrentFilamentPresetName() const;
     std::string CurrentFilamentId() const;
     bool    m_sync_badge{false};
+    
+    // 按钮显示标志（仅用于打印机类型）
+    bool m_show_connection_button { false };
+    bool m_show_machine_connecting_button { false };
+    bool m_show_edit_button { false };
+    
+    // 按钮图标
+    ScalableBitmap m_connection_icon;
+    ScalableBitmap m_machine_connecting_icon;
+    ScalableBitmap m_edit_icon;
+    
+    // 鼠标悬停状态
+    enum class HoverState {
+        NONE,
+        CONNECTION_BTN,
+        MACHINE_CONNECTING_BTN,
+        EDIT_BTN,
+        DROPDOWN
+    };
+    HoverState m_hover_state { HoverState::NONE };
+    
+    // 事件处理函数
+    std::function<void()> m_connection_btn_handler;
+    std::function<void()> m_machine_connecting_btn_handler;
+    std::function<void()> m_edit_btn_handler;
+    
+    // Tooltip相关
+    wxString m_connection_tooltip;
+    wxString m_machine_connecting_tooltip;
+    
+    // 计算各个区域的矩形
+    wxRect get_connection_btn_rect() const;
+    wxRect get_machine_connecting_btn_rect() const;
+    wxRect get_edit_btn_rect() const;
+    wxRect get_dropdown_rect() const;
+
+    void SelectLegacyFilamentColor();
+    void ApplyFilamentColor(const FilamentColor& colorData);
+    std::string CurrentFilamentPresetName() const;
+    std::string CurrentFilamentId() const;
 };
 
 

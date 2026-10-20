@@ -48,7 +48,6 @@
 #include "libslic3r/FilamentColorLibrary.hpp"
 #include "common_func/common_func.hpp"
 #include "libslic3r/PresetCacheFormat.hpp"
-#include "libslic3r_version.h"
 #include "slic3r/GUI/GUI.hpp"
 #include "slic3r/GUI/GUI_App.hpp"
 #include "slic3r/GUI/I18N.hpp"
@@ -57,6 +56,8 @@
 #include "slic3r/GUI/format.hpp"
 #include "slic3r/GUI/NotificationManager.hpp"
 #include "slic3r/Utils/Http.hpp"
+#include "slic3r/Utils/OtaPackageDigest.hpp"
+#include "slic3r/Utils/OtaUpdateRules.hpp"
 #include "slic3r/Utils/bambu_networking.hpp"
 #include "slic3r/Config/Version.hpp"
 #include "slic3r/GUI/MarkdownTip.hpp"
@@ -193,7 +194,10 @@ struct Update
 	bool install() const
 	{
 	    if (is_directory) {
+<<<<<<< snaporca-int
             // Snapmaker: replace the directory atomically and validate the staged content first.
+=======
+>>>>>>> lixnix/main
             auto validate_staging = [this](const fs::path &staging) -> bool {
                 if (vendor == "flutter_web") {
                     if (!fs::exists(staging / "version.json")) {
@@ -202,6 +206,7 @@ struct Update
                     }
                     return true;
                 }
+<<<<<<< snaporca-int
                 if (is_printer_config) {
                     if (!fs::exists(staging / "version.txt")) {
                         BOOST_LOG_TRIVIAL(error) << "Printer config staging is missing version.txt";
@@ -209,6 +214,8 @@ struct Update
                     }
                     return true;
                 }
+=======
+>>>>>>> lixnix/main
                 if (vendor.empty())
                     return true;
 
@@ -219,8 +226,15 @@ struct Update
                     return false;
                 }
 
+<<<<<<< snaporca-int
                 const fs::path vendor_json = target.parent_path() / (vendor + ".json");
                 if (!fs::exists(vendor_json)) {
+=======
+                // Orca: a vendor installed as a preset cache has no profile beside it.
+                const fs::path vendor_json = target.parent_path() / (vendor + ".json");
+                const fs::path vendor_cache = target.parent_path() / (vendor + ".opc");
+                if (!fs::exists(vendor_json) && !fs::exists(vendor_cache)) {
+>>>>>>> lixnix/main
                     BOOST_LOG_TRIVIAL(error) << Slic3r::format("Profile staging: %1%.json is not installed yet", vendor);
                     return false;
                 }
@@ -229,20 +243,42 @@ struct Update
             return atomic_replace_directory(source, target, file_filter, validate_staging);
         }
 
+<<<<<<< snaporca-int
+=======
+        // Installing a preset cache removes the vendor directory (below); a file that is
+        // installed into that directory afterwards (the Snapmaker filament rule files)
+        // needs its parent directory back.
+        {
+            boost::system::error_code ec_dir;
+            fs::create_directories(target.parent_path(), ec_dir);
+        }
+>>>>>>> lixnix/main
         copy_file_fix(source, target);
 
         // A vendor must be installed in exactly one form. Remove the
         // representation that would otherwise be stale or shadow this one.
+<<<<<<< snaporca-int
         if (!vendor.empty() && vendor != "flutter_web") {
             boost::system::error_code ec;
+=======
+        // The stale path is never the file just installed (a `.opc` update whose
+        // `is_opc` flag was left unset must not delete its own target).
+        boost::system::error_code ec;
+        const fs::path stale = is_opc ? target.parent_path() / (vendor + ".json")
+                                      : target.parent_path() / (vendor + ".opc");
+        if (stale != target) {
+            fs::remove(stale, ec);
+>>>>>>> lixnix/main
             if (is_opc) {
-                fs::remove(target.parent_path() / (vendor + ".json"), ec);
                 ec.clear();
                 fs::remove_all(target.parent_path() / vendor, ec);
             }
+<<<<<<< snaporca-int
             else if (target.extension() == ".json") {
                 fs::remove(target.parent_path() / (vendor + ".opc"), ec);
             }
+=======
+>>>>>>> lixnix/main
         }
         return true;
 	}
@@ -298,7 +334,9 @@ wxDEFINE_EVENT(EVT_NO_WEB_RESOURCE_UPDATE, wxCommandEvent);
 wxDEFINE_EVENT(EVT_NO_PRESET_UPDATE, wxCommandEvent);
 static bool reload_configs_update_gui();
 
-
+wxDEFINE_EVENT(EVT_REQUEST_SERVER_FAIL, wxCommandEvent);
+wxDEFINE_EVENT(EVT_NO_WEB_RESOURCE_UPDATE, wxCommandEvent);
+wxDEFINE_EVENT(EVT_NO_PRESET_UPDATE, wxCommandEvent);
 wxDEFINE_EVENT(EVT_SLIC3R_VERSION_ONLINE, wxCommandEvent);
 wxDEFINE_EVENT(EVT_SLIC3R_EXPERIMENTAL_VERSION_ONLINE, wxCommandEvent);
 
@@ -357,7 +395,12 @@ struct PresetUpdater::priv
     void sync_config(bool isAuto_check = true);
     void sync_update_flutter_resource(bool isAuto_check = true);
     void download_flutter_resource_async(const std::string& url, const std::string& target_path, const std::string& version, bool isAuto_check);
+<<<<<<< snaporca-int
     void download_profiles_resource_async(const std::string& url, const std::string& target_path, const std::string& version, bool isAuto_check);
+=======
+    void download_profiles_resource_async(const std::string& url, const std::string& target_path, const std::string& version, bool isAuto_check,
+                                          const std::string& expected_sha256, const std::string& expected_md5);
+>>>>>>> lixnix/main
     bool download_file(const std::string&            url,
                        const std::string&            target_path,
                        const std::string&            extract_path,
@@ -402,10 +445,17 @@ void PresetUpdater::priv::set_download_prefs(AppConfig *app_config)
 {
 	version_check_url = app_config->version_check_url();
 
+<<<<<<< snaporca-int
 	// Snapmaker: the Snapmaker preset server and the Orca per-vendor OTA can both feed config updates.
 	auto profile_update_url    = app_config->profile_update_url();
 	auto sm_profile_update_url = app_config->get_preset_upgrade_url();
 	if (!sm_profile_update_url.empty() || (!profile_update_url.empty() && app_config->get_bool("enable_ota")))
+=======
+	// Snapmaker OTA is the fork's update channel: it is not gated on mainline's
+	// `enable_ota` flag (default false), which only concerns the Orca CDN.
+	auto profile_update_url = app_config->get_preset_upgrade_url();
+	if (!profile_update_url.empty())
+>>>>>>> lixnix/main
 		enabled_config_update = true;
 	else
 		enabled_config_update = false;
@@ -453,8 +503,90 @@ bool PresetUpdater::priv::get_file(const std::string &url, const fs::path &targe
 //BBS: refine preset update logic
 bool PresetUpdater::priv::extract_file(const fs::path &source_path, const fs::path &dest_path)
 {
-    const std::string parent_path = (!dest_path.empty() ? dest_path : source_path.parent_path()).string();
-    return extract_archive_confined(source_path.string(), parent_path);
+    bool res = true;
+    std::string file_path = source_path.string();
+    fs::path parent_path = !dest_path.empty() ? dest_path : source_path.parent_path();
+    mz_zip_archive archive;
+    mz_zip_zero_struct(&archive);
+
+    if (!open_zip_reader(&archive, file_path))
+    {
+        BOOST_LOG_TRIVIAL(error) << "Unable to open zip reader for "<<file_path;
+        return false;
+    }
+
+    mz_uint num_entries = mz_zip_reader_get_num_files(&archive);
+    fs::path base_path = parent_path.lexically_normal();
+
+    mz_zip_archive_file_stat stat;
+    // Every entry is validated first (as extract_archive_confined does), so an archive with one entry
+    // resolving outside the target is rejected whole and leaves no partial output behind.
+    for (mz_uint i = 0; i < num_entries; ++i) {
+        if (mz_zip_reader_file_stat(&archive, i, &stat) && !is_path_within_root(stat.m_filename, base_path)) {
+            BOOST_LOG_TRIVIAL(error) << "[Orca Updater]Unzip: rejecting " << file_path << ", entry " << stat.m_filename
+                                     << " resolves outside " << base_path.string();
+            close_zip_reader(&archive);
+            return false;
+        }
+    }
+
+    // Unlike extract_archive_confined, the parent directory of every file is created (a Snapmaker OTA
+    // archive may hold no directory entries) and Windows falls back to a wide path.
+    for (mz_uint i = 0; i < num_entries; ++i)
+    {
+        if (mz_zip_reader_file_stat(&archive, i, &stat))
+        {
+            fs::path full_dest = (base_path / stat.m_filename).lexically_normal();
+            if (stat.m_is_directory) {
+                if (!fs::exists(full_dest))
+                    fs::create_directories(full_dest);
+                continue;
+            }
+            if (stat.m_uncomp_size == 0) {
+                BOOST_LOG_TRIVIAL(warning) << "[Orca Updater]Unzip: invalid size for file "<<stat.m_filename;
+                continue;
+            }
+            try
+            {
+                // Ensure parent directory exists (zip often has no directory entries, e.g. "flutter_web/version.json" only)
+                fs::path parent_dir = full_dest.parent_path();
+                if (!parent_dir.empty() && !fs::exists(parent_dir))
+                    fs::create_directories(parent_dir);
+                // Replace a symlink at the destination rather than writing through it.
+                if (fs::is_symlink(fs::symlink_status(full_dest)))
+                    fs::remove(full_dest);
+
+                std::string dest_file_encoded = encode_path(full_dest.string().c_str());
+                res = mz_zip_reader_extract_to_file(&archive, stat.m_file_index, dest_file_encoded.c_str(), 0);
+#ifdef _WIN32
+                if (!res) {
+                    std::wstring dest_file_w = boost::nowide::widen(full_dest.generic_string());
+                    res = mz_zip_reader_extract_to_file_w(&archive, stat.m_file_index, dest_file_w.c_str(), 0);
+                }
+#endif
+                if (!res) {
+                    mz_zip_error zip_err = mz_zip_get_last_error(&archive);
+                    BOOST_LOG_TRIVIAL(error) << "[Orca Updater]extract file "<<stat.m_filename<<" to dest "<<full_dest.string()
+                        << " failed: " << (zip_err != MZ_ZIP_NO_ERROR ? mz_zip_get_error_string(zip_err) : "unknown");
+                    close_zip_reader(&archive);
+                    return false;
+                }
+                BOOST_LOG_TRIVIAL(info) << "[Orca Updater]successfully extract file " << stat.m_file_index << " to "<<full_dest.string();
+            }
+            catch (const std::exception& e)
+            {
+                close_zip_reader(&archive);
+                BOOST_LOG_TRIVIAL(error) << "[Orca Updater]Archive read exception:"<<e.what();
+                return false;
+            }
+        }
+        else {
+            BOOST_LOG_TRIVIAL(warning) << "[Orca Updater]Unzip: read file stat failed";
+        }
+    }
+    close_zip_reader(&archive);
+
+    return true;
 }
 
 // Remove a leftover partial archive for the vendor about to be synchronized.
@@ -598,7 +730,7 @@ void PresetUpdater::priv::sync_resources(std::string http_url, std::map<std::str
             }
         })
         .on_complete([&resource_list, resources](std::string body, unsigned) {
-            try {
+            {
                 BOOST_LOG_TRIVIAL(info) << "[Orca Updater]: request_resources, body=" << body;
 
                 json        j       = json::parse(body);
@@ -859,7 +991,12 @@ void PresetUpdater::priv::download_flutter_resource_async(const std::string& url
         .perform_sync();  
 }
 
+<<<<<<< snaporca-int
 void PresetUpdater::priv::download_profiles_resource_async(const std::string& url, const std::string& target_path, const std::string& version, bool isAuto_check)
+=======
+void PresetUpdater::priv::download_profiles_resource_async(const std::string& url, const std::string& target_path, const std::string& version, bool isAuto_check,
+                                                           const std::string& expected_sha256, const std::string& expected_md5)
+>>>>>>> lixnix/main
 {
     bool res = false;
     fs::path tmp_path = target_path + ".tmp";
@@ -879,7 +1016,11 @@ void PresetUpdater::priv::download_profiles_resource_async(const std::string& ur
                 GUI::wxGetApp().QueueEvent(evt);
             }
         })
+<<<<<<< snaporca-int
         .on_complete([this, target_path, tmp_path, version, isAuto_check](std::string body, unsigned http_status) {
+=======
+        .on_complete([this, target_path, tmp_path, version, isAuto_check, expected_sha256, expected_md5](std::string body, unsigned http_status) {
+>>>>>>> lixnix/main
             if (http_status != 200) {
                 BOOST_LOG_TRIVIAL(error) << "[Profiles Updater] Download failed with HTTP status: " << http_status;
                 return;
@@ -899,6 +1040,27 @@ void PresetUpdater::priv::download_profiles_resource_async(const std::string& ur
             file.write(body.c_str(), body.size());
             file.close();
 
+<<<<<<< snaporca-int
+=======
+            // Snapmaker Orca: verify the package against file_sha256 / file_md5 of the OTA version.json
+            // before renaming it; skipped when the server sends neither.
+            const OtaPackageDigest::Verdict verdict = OtaPackageDigest::verify_file(tmp_path, expected_sha256, expected_md5);
+            if (!verdict.ok) {
+                boost::system::error_code remove_ec;
+                fs::remove(tmp_path, remove_ec);
+                BOOST_LOG_TRIVIAL(error) << "[Profiles Updater] Package rejected, " << verdict.reason << ": " << target_path;
+                if (!isAuto_check) {
+                    wxCommandEvent* evt = new wxCommandEvent(EVT_REQUEST_SERVER_FAIL);
+                    wxString errorMsg = wxString::Format(_L("Profiles resource download failed: %s"), wxString::FromUTF8(verdict.reason.c_str()));
+                    evt->SetString(errorMsg);
+                    GUI::wxGetApp().QueueEvent(evt);
+                }
+                return;
+            }
+            if (!expected_sha256.empty() || !expected_md5.empty())
+                BOOST_LOG_TRIVIAL(info) << "[Profiles Updater] Package digest verified: " << target_path;
+
+>>>>>>> lixnix/main
             boost::system::error_code ec;
             fs::rename(tmp_path, target_path, ec);
             if (ec) {
@@ -908,6 +1070,7 @@ void PresetUpdater::priv::download_profiles_resource_async(const std::string& ur
 
             BOOST_LOG_TRIVIAL(info) << "[Profiles Updater] Download completed: " << target_path;
 
+<<<<<<< snaporca-int
             // Zip entries use "profiles/..." prefix; extract to ota/ so files land in ota/profiles/, the cache
             // folder that get_config_updates() reads (shared with the Orca per-vendor OTA).
             auto parent_path = fs::path(target_path).parent_path();
@@ -915,6 +1078,14 @@ void PresetUpdater::priv::download_profiles_resource_async(const std::string& ur
             BOOST_LOG_TRIVIAL(info) << "[Profiles Updater] Extracting to: " << parent_path.string();
 
             if (!extract_file(target_path, parent_path.string())) {
+=======
+            // Zip entries use "profiles/..." prefix; extract to ota/profiles/ so files land in ota/profiles/profiles/.
+            auto parent_path = fs::path(target_path).parent_path();
+            auto profiles_cache_dir = (parent_path / "profiles/profiles").string();
+            BOOST_LOG_TRIVIAL(info) << "[Profiles Updater] Extracting to: " << (parent_path / "profiles").string();
+
+            if (!extract_file(target_path, (parent_path / "profiles").string())) {
+>>>>>>> lixnix/main
                 BOOST_LOG_TRIVIAL(error) << "[Profiles Updater] Failed to extract file: " << target_path;
                 return;
             }
@@ -965,11 +1136,21 @@ void PresetUpdater::priv::sync_update_flutter_resource(bool isAuto_check)
 
     Http::get(preset_update_url)
         .on_error([cache_profile_path, isAuto_check](std::string body, std::string error, unsigned http_status) {
+<<<<<<< snaporca-int
             wxCommandEvent* evt = new wxCommandEvent(EVT_REQUEST_SERVER_FAIL);
             wxString errorMsg = wxString::Format(_L("request to server update web resource fail with body:%s,error:%s,status:%d"), body, error, http_status);
             evt->SetString(errorMsg);
             if (!isAuto_check)
                 GUI::wxGetApp().QueueEvent(evt);
+=======
+            // The event is allocated only when it is queued, so the silent check does not leak it.
+            if (!isAuto_check) {
+                wxCommandEvent* evt = new wxCommandEvent(EVT_REQUEST_SERVER_FAIL);
+                wxString errorMsg = wxString::Format(_L("request to server update web resource fail with body:%s,error:%s,status:%d"), body, error, http_status);
+                evt->SetString(errorMsg);
+                GUI::wxGetApp().QueueEvent(evt);
+            }
+>>>>>>> lixnix/main
             BOOST_LOG_TRIVIAL(info) << format("Error getting: `%1%`: HTTP %2%, %3%", "sync_update_flutter_resource", http_status, error);
         })
         .timeout_connect(TIMEOUT_CONNECT)
@@ -1078,7 +1259,11 @@ void PresetUpdater::priv::sync_update_flutter_resource(bool isAuto_check)
         })
         .perform_sync();
 }
+<<<<<<< snaporca-int
 // Snapmaker: sync the Snapmaker preset package for the current app version
+=======
+// Orca: sync config update for currect App version
+>>>>>>> lixnix/main
 void PresetUpdater::priv::sync_config(bool isAuto_check)
 {
     auto cache_profile_path        = cache_path;
@@ -1088,15 +1273,31 @@ void PresetUpdater::priv::sync_config(bool isAuto_check)
     auto profile_update_url = app_config->get_preset_upgrade_url();
     // parse the assets section and get the latest asset by comparing the name
 
+<<<<<<< snaporca-int
+=======
+    // Snapmaker Orca: one line per OTA profile check, so a log shows whether the check ran at all.
+    BOOST_LOG_TRIVIAL(info) << "[Profiles Updater] checking " << profile_update_url << (isAuto_check ? " (automatic)" : " (manual)");
+
+>>>>>>> lixnix/main
     Http::get(profile_update_url)
         .on_error([cache_profile_path, isAuto_check](std::string body, std::string error, unsigned http_status) {
             // Orca: we check the response body to see if it's "Not Found", if so, it means for the current Orca version we don't have OTA
             // updates, we can delete the cache file
+<<<<<<< snaporca-int
             wxCommandEvent* evt = new wxCommandEvent(EVT_REQUEST_SERVER_FAIL);
             wxString errorMsg   = wxString::Format(_L("request to server update preset resource fail with body:%s,error:%s,status:%d"), body,error, http_status);
             evt->SetString(errorMsg);
             if (!isAuto_check)
                 GUI::wxGetApp().QueueEvent(evt);
+=======
+            // The event is allocated only when it is queued, so the silent check does not leak it.
+            if (!isAuto_check) {
+                wxCommandEvent* evt = new wxCommandEvent(EVT_REQUEST_SERVER_FAIL);
+                wxString errorMsg   = wxString::Format(_L("request to server update preset resource fail with body:%s,error:%s,status:%d"), body,error, http_status);
+                evt->SetString(errorMsg);
+                GUI::wxGetApp().QueueEvent(evt);
+            }
+>>>>>>> lixnix/main
             BOOST_LOG_TRIVIAL(info) << format("Error getting: `%1%`: HTTP %2%, %3%", "sync_config_orca", http_status, error);
         })
         .timeout_connect(TIMEOUT_CONNECT)
@@ -1203,6 +1404,7 @@ void PresetUpdater::priv::sync_config(bool isAuto_check)
             }
 
             if (currentPresetVersion < remoteVersion) {
+<<<<<<< snaporca-int
                 // Clear only the Snapmaker vendor in the shared OTA profile cache (ota/profiles).
                 fs::path tmpPath = fileName;
                 auto     cacheDir = tmpPath.parent_path() / "profiles";
@@ -1212,6 +1414,16 @@ void PresetUpdater::priv::sync_config(bool isAuto_check)
 
                 // Download profiles file and automatically check updates after download completes
                 download_profiles_resource_async(fileUrl, fileName, fileVersion, isAuto_check);
+=======
+                fs::path tmpPath = fileName;
+                auto     dirPath = tmpPath.parent_path() / "profiles/profiles";
+
+                if (fs::exists(dirPath))
+                    fs::remove_all(dirPath);
+
+                // Download profiles file and automatically check updates after download completes
+                download_profiles_resource_async(fileUrl, fileName, fileVersion, isAuto_check, fileSha256, fileMd5);
+>>>>>>> lixnix/main
             }
             else {
                 if (!isAuto_check) {
@@ -1230,6 +1442,13 @@ void PresetUpdater::priv::sync_vendor_config(const std::string& vendor_id)
 {
     if (!enabled_config_update) return;
 
+    // Snapmaker Orca: the Snapmaker vendor profiles are updated exclusively through the
+    // Snapmaker OTA channel (sync_config); never overwrite them from the Orca profile CDN.
+    if (vendor_id == PresetBundle::SM_BUNDLE) {
+        BOOST_LOG_TRIVIAL(info) << "[Orca Updater] skipping Orca CDN update for Snapmaker vendor (managed by Snapmaker OTA)";
+        return;
+    }
+
     BOOST_LOG_TRIVIAL(info) << "[Orca Updater] checking vendor update for " << vendor_id;
 
     auto check_cancel = [this](Http::Progress, bool &cancel_http) {
@@ -1237,7 +1456,7 @@ void PresetUpdater::priv::sync_vendor_config(const std::string& vendor_id)
     };
 
     AppConfig *app_config = GUI::wxGetApp().app_config;
-    std::string url = app_config->profile_update_url()
+    std::string url = app_config->orca_profile_update_url()
         + "?vendor=" + Http::url_encode(vendor_id)
         + "&orca_version=" + Http::url_encode(SoftFever_VERSION);
 
@@ -1353,7 +1572,6 @@ void PresetUpdater::priv::sync_vendor_config(const std::string& vendor_id)
         GUI::wxGetApp().check_config_updates_from_updater();
     });
 }
-
 void PresetUpdater::priv::sync_tooltip(std::string http_url, std::string language)
 {
     try {
@@ -1622,17 +1840,104 @@ void PresetUpdater::priv::sync_printer_config(std::string http_url)
 
 bool PresetUpdater::priv::install_bundles_rsrc(const std::vector<std::string>& bundles, bool snapshot) const
 {
-	// Use the Core library function to install bundles
-	// This function is now in libslic3r so both Core and GUI can use it
-	if (!Slic3r::install_vendor_bundles_from_resources(bundles)) {
-		BOOST_LOG_TRIVIAL(error) << "Failed to install bundles from resources";
-		return false;
+	Updates updates;
+
+	BOOST_LOG_TRIVIAL(info) << format("Installing %1% bundles from resources ...", bundles.size());
+
+	for (const auto &bundle : bundles) {
+		auto path_in_rsrc = (this->rsrc_path / bundle).replace_extension(".json");
+		auto path_in_vendors = (this->vendor_path / bundle).replace_extension(".json");
+		// A vendor the build ships as a preset cache installs as that cache (it carries the
+		// vendor profile, the presets and their version): scripts/build_preset_cache.sh prunes
+		// the profile JSON the cache replaces from the bundle, and copying the profile that was
+		// not there aborted the start of every packaged build (the filament library is always
+		// installed). Same choice of form as install_vendor_bundles_from_resources().
+		const bool from_cache = installable_cache_version(this->rsrc_path, bundle).valid();
+		if (from_cache) {
+			auto cache_in_rsrc    = (this->rsrc_path / bundle).replace_extension(".opc");
+			auto cache_in_vendors = (this->vendor_path / bundle).replace_extension(".opc");
+			auto &update = updates.updates.emplace_back(std::move(cache_in_rsrc), std::move(cache_in_vendors), Version(), bundle, "", "");
+			// Marks the cache form: Update::install() then removes the superseded <vendor>.json
+			// and <vendor>/ instead of the <vendor>.opc that was just copied.
+			update.is_opc = true;
+		} else if (fs::exists(path_in_rsrc)) {
+			updates.updates.emplace_back(std::move(path_in_rsrc), std::move(path_in_vendors), Version(), bundle, "", "");
+		} else {
+			BOOST_LOG_TRIVIAL(warning) << "[Orca Updater]: vendor " << bundle << " ships neither a profile nor a preset cache, skipped";
+			continue;
+		}
+
+        //BBS: add directory support
+        auto print_in_rsrc = this->rsrc_path / bundle;
+		auto print_in_vendors = this->vendor_path / bundle;
+        bool source_dir_valid = fs::exists(print_in_rsrc) && fs::is_directory(print_in_rsrc);
+        bool source_dir_has_entries = false;
+        if (source_dir_valid) {
+            source_dir_has_entries = (boost::filesystem::directory_iterator(print_in_rsrc) != boost::filesystem::directory_iterator());
+        }
+
+        // Guard against empty / missing source: never clear target unless we do have source content to copy.
+        if (from_cache) {
+            // The cache carries the presets; the pruned vendor directory holds only covers, bed
+            // models and textures, which are read from resources. An installed profile tree of
+            // an earlier version would be parsed in place of the cache, so it goes (as in
+            // install_vendor_bundles_from_resources()).
+            fs::path print_folder(print_in_vendors);
+            if (fs::exists(print_folder))
+                fs::remove_all(print_folder);
+        } else if (source_dir_valid && source_dir_has_entries) {
+            fs::path print_folder(print_in_vendors);
+            if (fs::exists(print_folder))
+                fs::remove_all(print_folder);
+            fs::create_directories(print_folder);
+		    updates.updates.emplace_back(std::move(print_in_rsrc), std::move(print_in_vendors), Version(), bundle, "", "",[](const std::string name){
+            // return false if name is end with .stl, case insensitive
+            return boost::iends_with(name, ".stl") || boost::iends_with(name, ".png") || boost::iends_with(name, ".svg") ||
+                   boost::iends_with(name, ".jpeg") || boost::iends_with(name, ".jpg") || boost::iends_with(name, ".3mf");
+            }, false, true, true);
+        } else {
+            BOOST_LOG_TRIVIAL(warning) << "[Orca Updater]: skip vendor directory replace, source missing or empty: "
+                                       << print_in_rsrc.string();
+        }
+
+        // Rules and colour-library files are not slicer presets; deploy even when full vendor dir sync was skipped above.
+        if (bundle == PresetBundle::SM_BUNDLE) {
+            {
+                fs::path rules_src = rsrc_path / bundle / "filament" / "filament_hot_bed_nozzles.json";
+                fs::path rules_dst = vendor_path / bundle / "filament" / "filament_hot_bed_nozzles.json";
+                if (fs::exists(rules_src)) {
+                    fs::create_directories(rules_dst.parent_path());
+                    updates.updates.emplace_back(std::move(rules_src), std::move(rules_dst), Version(), bundle, "", "", false, false, true);
+                }
+            }
+            {
+                fs::path rules_src = rsrc_path / bundle / "filament" / "filament_compatibility.json";
+                fs::path rules_dst = vendor_path / bundle / "filament" / "filament_compatibility.json";
+                if (fs::exists(rules_src)) {
+                    fs::create_directories(rules_dst.parent_path());
+                    updates.updates.emplace_back(std::move(rules_src), std::move(rules_dst), Version(), bundle, "", "", false, false, true);
+                }
+            }
+            {
+                fs::path rules_src = rsrc_path / bundle / "filament" / "filament_allow_list.json";
+                fs::path rules_dst = vendor_path / bundle / "filament" / "filament_allow_list.json";
+                if (fs::exists(rules_src)) {
+                    fs::create_directories(rules_dst.parent_path());
+                    updates.updates.emplace_back(std::move(rules_src), std::move(rules_dst), Version(), bundle, "", "", false, false, true);
+                }
+            }
+            {
+                fs::path rules_src = rsrc_path / bundle / "filament" / "filaments_colours.json";
+                fs::path rules_dst = vendor_path / bundle / "filament" / "filaments_colours.json";
+                if (fs::exists(rules_src)) {
+                    fs::create_directories(rules_dst.parent_path());
+                    updates.updates.emplace_back(std::move(rules_src), std::move(rules_dst), Version(), bundle, "", "", false, false, true);
+                }
+            }
+        }
 	}
 
-	// Snapshot logic is currently commented out in perform_updates, so we don't need to handle it here
-	// If snapshot logic is needed in the future, it can be added here
-
-	return true;
+	return perform_updates(std::move(updates), snapshot);
 }
 
 
@@ -1649,9 +1954,9 @@ void PresetUpdater::priv::check_installed_vendor_profiles() const
     // A vendor is named by its profile or, where the build ships preset caches
     // instead of the raw profile JSONs, by its cache alone.
     for (const std::string &vendor_name : vendor_names_in(rsrc_path)) {
-        // enabled_vendors lists the vendors whose printer models the user picked, and
-        // neither of these two is ever in it.
-        const auto is_vendor_enabled = (vendor_name == PresetBundle::ORCA_DEFAULT_BUNDLE)
+        // enabled_vendors lists the vendors whose printer models the user picked, and neither of
+        // these two is ever in it. Snapmaker Orca: the Snapmaker bundle is the one refreshed always.
+        const auto is_vendor_enabled = (vendor_name == PresetBundle::SM_BUNDLE)
                                        || (vendor_name == PresetBundle::ORCA_FILAMENT_LIBRARY)
                                        || (enabled_vendors.find(vendor_name) != enabled_vendors.end());
         if (is_vendor_installed(vendor_name)) {
@@ -1740,6 +2045,7 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 	Updates updates;
 
 	BOOST_LOG_TRIVIAL(info) << "[Orca Updater]:Checking for cached configuration updates...";
+<<<<<<< snaporca-int
     // Shared cache of the Snapmaker preset package and the Orca per-vendor OTA.
     auto cache_profile_path =  cache_path / "profiles";
     BOOST_LOG_TRIVIAL(info) << "[Orca Updater]:cache_profile_path: " << cache_profile_path.string()
@@ -1748,6 +2054,13 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
         BOOST_LOG_TRIVIAL(warning) << "[Orca Updater]:cache_profile_path missing or not a directory, no updates";
         return updates;
     }
+=======
+    // Snapmaker OTA packages extract into ota/profiles/profiles, Orca's per-vendor CDN
+    // updates (sync_vendor_config) extract into ota/profiles. Scan both roots; the
+    // Snapmaker OTA root takes precedence for a vendor present in both.
+    const fs::path cache_roots[] = { cache_path / "profiles/profiles", cache_path / "profiles" };
+    std::set<std::string> seen_vendors;
+>>>>>>> lixnix/main
 
 	// Orca (PR #130): vendor changelogs are captured in memory during
 	// sync_vendor_config()/check_new_vendors(), not written beside the cache.
@@ -1757,6 +2070,16 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 		changelogs = vendor_changelogs;
 	}
 
+    for (const auto &cache_profile_path : cache_roots) {
+    BOOST_LOG_TRIVIAL(info) << "[Orca Updater]:cache_profile_path: " << cache_profile_path.string()
+                            << ", exists: " << fs::exists(cache_profile_path);
+    if (!fs::exists(cache_profile_path) || !fs::is_directory(cache_profile_path)) {
+        BOOST_LOG_TRIVIAL(warning) << "[Orca Updater]:cache_profile_path missing or not a directory, skipped";
+        continue;
+    }
+    // The Snapmaker OTA root is the first entry of cache_roots.
+    const bool is_snapmaker_ota_root = &cache_profile_path == &cache_roots[0];
+
 	for (auto &dir_entry : boost::filesystem::directory_iterator(cache_profile_path)) {
 		const auto &path = dir_entry.path();
 		std::string file_path = path.string();
@@ -1765,6 +2088,8 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 			continue;
 
 		const std::string vendor_name = path.stem().string();
+		if (!seen_vendors.insert(vendor_name).second)
+			continue;
 		auto print_in_cache = (cache_profile_path / vendor_name / PRESET_PRINT_NAME);
 		auto filament_in_cache = (cache_profile_path / vendor_name / PRESET_FILAMENT_NAME);
 		auto machine_in_cache = (cache_profile_path / vendor_name / PRESET_PRINTER_NAME);
@@ -1773,11 +2098,12 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 		// <vendor>/ preset directory; a stray or half-downloaded <vendor>.json is
 		// skipped. An .opc cache is a single self-contained file (validated below),
 		// so this check does not apply to it.
+		// Snapmaker Orca: the Snapmaker OTA root too; an incomplete package is skipped rather than
+		// raising the installed version, so the next sync_config() downloads it again.
 		if (!is_opc_file) {
-			const auto vendor_folder_in_cache = cache_profile_path / vendor_name;
-			if (!fs::is_regular_file(path) || !fs::is_directory(vendor_folder_in_cache) ||
-			    fs::is_empty(vendor_folder_in_cache)) {
-				BOOST_LOG_TRIVIAL(warning) << "[Orca Updater]:ignoring invalid cached update for "
+			if (!OtaUpdateRules::json_cache_entry_complete(path, cache_profile_path / vendor_name)) {
+				BOOST_LOG_TRIVIAL(warning) << "[Orca Updater]:ignoring " << (is_snapmaker_ota_root ? "incomplete Snapmaker OTA" : "invalid")
+				                           << " cached update for "
 				                           << vendor_name << ": expected " << vendor_name
 				                           << ".json and a non-empty " << vendor_name << " directory";
 				continue;
@@ -1790,16 +2116,31 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 			|| fs::exists(filament_in_cache)
 			|| fs::exists(machine_in_cache)) {
 			// Orca: a vendor installed as a preset cache carries its version there.
+			// This also covers the Snapmaker OTA case that used to need a guard here:
+			// OTA may ship a new vendor before any system vendor JSON exists, and
+			// installed_vendor_version() checks for the file instead of reading a
+			// missing path, yielding 0.0.0 so the cached bundle still counts as newer.
 			Semver vendor_ver = installed_vendor_version(vendor_name);
 
 			Semver cache_ver;
 			std::string description;
 			bool force_update = false;
+			// Snapmaker Orca: a whole cache whose writer lacked options of this build.
+			bool opc_lacks_options = false;
 			if (is_opc_file) {
 				cache_ver = VendorCacheFile::usable_version(file_path, vendor_name);
 				if (!cache_ver.valid()) {
-					BOOST_LOG_TRIVIAL(warning) << "[Orca Updater]:ignoring unreadable vendor cache " << file_path;
-					continue;
+					// Such a cache is offered with its reason and cannot be installed, the
+					// counterpart of the minimum application version gate of a JSON package
+					// below; anything else that does not answer is unreadable and skipped.
+					const auto stamped = Semver::parse(VendorCacheFile::peek_version(file_path, vendor_name));
+					if (stamped && VendorCacheFile::lacks_options_of_this_build(file_path, vendor_name)) {
+						cache_ver         = *stamped;
+						opc_lacks_options = true;
+					} else {
+						BOOST_LOG_TRIVIAL(warning) << "[Orca Updater]:ignoring unreadable vendor cache " << file_path;
+						continue;
+					}
 				}
 			}
 			else {
@@ -1820,6 +2161,24 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 			// Orca (PR #130): changelog for this vendor was captured in memory at sync time.
 			const auto changelog_it = changelogs.find(vendor_name);
 			std::string changelog = changelog_it != changelogs.end() ? changelog_it->second : std::string();
+			// The Snapmaker OTA channel never fills the in-memory map (sync_vendor_config()
+			// is skipped for it); its changelog is written beside the cache.
+			if (changelog_it == changelogs.end()) {
+				std::string changelog_file = (cache_profile_path / (vendor_name + ".changelog")).string();
+				boost::nowide::ifstream ifs(changelog_file);
+				if (ifs) {
+					std::ostringstream oss;
+					oss<< ifs.rdbuf();
+					changelog = oss.str();
+					ifs.close();
+					// 替换所有的 \\n 为 \n
+					size_t pos = 0;
+					while ((pos = changelog.find("\\n", pos)) != std::string::npos) {
+						changelog.replace(pos, 2, "\n");
+						pos += 1; // 移动到下一个可能的位置
+					}
+				}
+			}
 
 			// Snapmaker: a profile package may require a newer app version than the running one.
 			bool legal = true;
@@ -1833,29 +2192,96 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 			}
 
 			if (vendor_ver < cache_ver) {
+				// Minimum application version gate. A preset cache (.opc) carries no such
+				// key; its counterpart is the option schema of the build that wrote it
+				// (VendorCacheFile::usable_version), judged above.
+				bool legal = true;
+				if (is_opc_file) {
+					legal = !opc_lacks_options;
+					if (!legal)
+						changelog += (wxString("\n") + _L("This profile package was built by an earlier Snapmaker Orca and does not carry every setting of this version; a package built for this version is needed.") + "\n").ToStdString();
+				} else {
+					Semver min_ver  = get_min_version_from_json(file_path);
+					// Snapmaker Orca: parsed, not constructed - an unparseable build label means no gate, not a throw.
+					const boost::optional<Semver> soft_ver = OtaUpdateRules::application_version(Snapmaker_VERSION);
+
+					legal      = OtaUpdateRules::min_app_version_satisfied(min_ver, soft_ver);
+					if (!legal) {
+						wxString str = _L("needed, but current version is ");
+						wxString str2 = _L("Bind with Pin Code");
+						changelog += ("\nSnapmaker Orca " + min_ver.to_string() + " " + _L("needed, but current version is ") +
+						              soft_ver->to_string() + "\n")
+						                 .ToStdString();
+					}
+				}
+
 				BOOST_LOG_TRIVIAL(info) << "[Orca Updater]:need to update settings from " << vendor_ver.to_string()
 				                        << " to newer version " << cache_ver.to_string() << ", app version " << SLIC3R_VERSION;
 				Version version;
 				version.config_version = cache_ver;
 				version.comment        = description;
+				// Set once this update removes or replaces the installed <vendor>/ directory.
+				bool vendor_dir_replaced = false;
 				if (is_opc_file) {
 					// A cache contains the vendor profile and all presets.
 					// Install it directly; Update::install removes any
 					// superseded JSON representation.
 					auto &update = updates.updates.emplace_back(
-					    std::move(file_path), vendor_path / (vendor_name + ".opc"),
-					    std::move(version), vendor_name, changelog, "", force_update, false);
+					    fs::path(path), fs::path(vendor_path / (vendor_name + ".opc")),
+					    version, vendor_name, changelog, "", force_update, false, legal);
 					update.is_opc = true;
+					vendor_dir_replaced = true;
 				}
 				else {
 					// JSON profile and its preset directory are installed
 					// separately, as before.
+<<<<<<< snaporca-int
 					updates.updates.emplace_back(std::move(file_path),
 					    vendor_path / (vendor_name + ".json"), std::move(version),
 					    vendor_name, changelog, "", force_update, false, legal);
 					updates.updates.emplace_back(cache_profile_path / vendor_name,
 					    vendor_path / vendor_name, Version(), vendor_name,
 					    "", "", force_update, true, legal);
+=======
+					// Update expects fs::path (not std::string paths from file_path / .string()).
+					updates.updates.emplace_back(fs::path(path), fs::path(vendor_path / (vendor_name + ".json")),
+					                             version, vendor_name, changelog, "", force_update, false, legal);
+
+					//BBS: add directory support
+					// The directory is replaced once, without the binary/large files.
+					auto vendor_dir_in_cache = cache_profile_path / vendor_name;
+					if (fs::exists(vendor_dir_in_cache) && fs::is_directory(vendor_dir_in_cache)) {
+						updates.updates.emplace_back(fs::path(vendor_dir_in_cache), fs::path(vendor_path / vendor_name),
+						                             Version(), vendor_name, "", "",
+						                             should_skip_file, force_update, true, legal);
+						vendor_dir_replaced = true;
+					} else {
+						BOOST_LOG_TRIVIAL(warning) << "[Orca Updater]: skip vendor directory update, source missing: "
+						                           << vendor_dir_in_cache.string();
+					}
+				}
+
+				// Rules and colour-library files are not presets: redeploy them after both installs,
+				// which remove or replace <vendor>/. The bundled copy is used only where none is left.
+				if (vendor_name == PresetBundle::SM_BUNDLE) {
+					for (const char *rules_name : { "filament_hot_bed_nozzles.json", "filament_compatibility.json",
+					                                "filament_allow_list.json", "filaments_colours.json" }) {
+						fs::path rules_src = cache_profile_path / vendor_name / "filament" / rules_name;
+						if (!fs::exists(rules_src)) {
+							if (!vendor_dir_replaced)
+								continue;
+							rules_src = rsrc_path / vendor_name / "filament" / rules_name;
+							if (!fs::exists(rules_src))
+								continue;
+						}
+						fs::path rules_dst = vendor_path / vendor_name / "filament" / rules_name;
+						// The target directory is not created here: collecting updates has no side
+						// effect on the installed tree (the user may decline). Update::install()
+						// creates the parent directory of every file it installs.
+						updates.updates.emplace_back(std::move(rules_src), std::move(rules_dst), version, vendor_name, "", "",
+						                             force_update, false, legal);
+					}
+>>>>>>> lixnix/main
 				}
 			} else {
 				BOOST_LOG_TRIVIAL(info) << "[Orca Updater]:cached settings for " << vendor_name
@@ -1864,6 +2290,7 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 			}
 		}
 	}
+    }
 
 	return updates;
 }
@@ -1923,6 +2350,10 @@ PresetUpdater::~PresetUpdater()
         p->m_web_thread_cancel = true;
         p->m_web_resource_thread.join();
     }
+<<<<<<< snaporca-int
+=======
+
+>>>>>>> lixnix/main
 	if (p) {
 		p->vendor_check_cancel = true;
 		for (auto& t : p->vendor_check_threads)
@@ -1933,27 +2364,43 @@ PresetUpdater::~PresetUpdater()
 
 //BBS: change directories by design
 //BBS: refine the preset updater logic
-void PresetUpdater::sync(std::string http_url, std::string language, std::string plugin_version, PresetBundle * /*preset_bundle*/)
+void PresetUpdater::sync(std::string http_url, std::string language, std::string plugin_version, PresetBundle *preset_bundle)
 {
 
 	if (!p->enabled_version_check && !p->enabled_config_update) { return; }
 
-	p->thread = std::thread([this, http_url, language, plugin_version]() {
+    VendorMap vendors = preset_bundle ? preset_bundle->vendors : VendorMap{};
+
+	p->thread = std::thread([this, vendors, http_url, language, plugin_version]() {
 		try {
+			BOOST_LOG_TRIVIAL(info) << "[Orca Updater] background sync started, " << vendors.size() << " vendors";
 			this->p->sync_version();
 			if (p->cancel)
 				return;
+<<<<<<< snaporca-int
 			// Snapmaker: preset package from the Snapmaker server (downloads and then asks the GUI to apply it)
 			this->p->sync_config();
 			if (p->cancel)
 				return;
 			// Vendor profile updates are triggered by check_vendor_update()
+=======
+			// Snapmaker: vendor profiles and web resources are updated through the
+			// Snapmaker OTA channel (sync_config / sync_update_flutter_resource).
+			if (!vendors.empty()) {
+				this->p->sync_config();
+				if (p->cancel)
+					return;
+				// Note: check_config_updates_from_updater will be called automatically after download completes in download_profiles_resource_async
+			}
+			if (p->cancel)
+				return;
+			// Orca: per-vendor CDN updates for other vendors are triggered by check_vendor_update()
+>>>>>>> lixnix/main
 			// after the startup printer preset has been restored.
             this->p->sync_plugins(http_url, plugin_version);
             this->p->sync_printer_config(http_url);
-            // Orca (PR #130): the filament library is always installed, so refresh it
-            // from the updater on every startup sync rather than deferring to check_vendor_update().
-            this->p->sync_vendor_config(PresetBundle::ORCA_FILAMENT_LIBRARY);
+            // Snapmaker Orca: mainline's startup sync_vendor_config(ORCA_FILAMENT_LIBRARY) is an
+            // Orca profile CDN request and is left out (Snapmaker OTA only, see check_vendor_update()).
 			//if (p->cancel)
 			//	return;
 			//remove the tooltip currently
@@ -1968,6 +2415,11 @@ void PresetUpdater::sync(std::string http_url, std::string language, std::string
 
 void PresetUpdater::check_vendor_update(const std::string& vendor_id)
 {
+    // Snapmaker Orca: vendor profile updates come exclusively through the
+    // Snapmaker OTA channel (sync_config); the mainline Orca profile CDN is
+    // not used by this fork. Shipped third-party vendor profiles update with
+    // the application itself.
+    return;
     if (!p->enabled_config_update) return;
     if (vendor_id.empty()) return;
 
@@ -2001,9 +2453,15 @@ void PresetUpdater::check_vendor_update(const std::string& vendor_id)
 void PresetUpdater::priv::check_new_vendors(const std::set<std::string>& system_vendors,
                                              std::function<void(std::vector<std::string>, bool)> callback)
 {
+    // Snapmaker Orca: vendor profiles come only through the Snapmaker OTA channel (as in
+    // check_vendor_update()). The callback still fires on the UI thread with "nothing installed".
+    if (callback)
+        GUI::wxGetApp().CallAfter([callback]() { callback({}, false); });
+    return;
+
     vendor_check_threads.emplace_back([this, system_vendors, callback]() {
         AppConfig* app_config = GUI::wxGetApp().app_config;
-        std::string url       = app_config->profile_update_url() + "/new?orcaslicer_version=" + Http::url_encode(SoftFever_VERSION);
+        std::string url       = app_config->orca_profile_update_url() + "/new?orcaslicer_version=" + Http::url_encode(SoftFever_VERSION);
 
         auto check_cancel = [this](Http::Progress, bool& cancel_http) {
             if (cancel || vendor_check_cancel)
@@ -2100,7 +2558,13 @@ void PresetUpdater::priv::check_new_vendors(const std::set<std::string>& system_
                 updates_msg.emplace_back(candidate.vendor_id, candidate.version, std::string(), candidate.changelog);
 
             GUI::MsgUpdateConfig dlg(updates_msg);
-            if (dlg.ShowModal() != wxID_OK) {
+            int dlg_res = wxID_CANCEL;
+            {
+                // No stacking with the Flutter web update modal.
+                ProfileConfigUpdateDlgScope profile_dlg_scope(&GUI::wxGetApp());
+                dlg_res = dlg.ShowModal();
+            }
+            if (dlg_res != wxID_OK) {
                 BOOST_LOG_TRIVIAL(info) << "[Orca Updater] user declined installing new vendors";
                 callback({}, true);
                 return;
@@ -2117,10 +2581,16 @@ void PresetUpdater::priv::check_new_vendors(const std::set<std::string>& system_
                         vendor_list += ", ";
                     vendor_list += candidate.vendor_id;
                 }
+<<<<<<< snaporca-int
                 GUI::wxGetApp().plater()->get_notification_manager()->push_notification(GUI::format(
                     // TRN %1% is a comma-separated list of vendor names.
                     _L_PLURAL("Downloading new vendor profile: %1%...", "Downloading new vendor profiles: %1%...", candidates.size()),
                     vendor_list));
+=======
+                if (GUI::Plater* plater = GUI::wxGetApp().plater())
+                    plater->get_notification_manager()->push_notification(
+                        _u8L("Downloading new vendor profile(s): ") + vendor_list + _u8L("..."));
+>>>>>>> lixnix/main
             }
 
             vendor_check_threads.emplace_back([this, candidates, callback]() {
@@ -2251,10 +2721,11 @@ void PresetUpdater::priv::check_new_vendors(const std::set<std::string>& system_
                         BOOST_LOG_TRIVIAL(info) << "[Orca Updater] new vendors installed";
                         for (const auto& vendor_id : new_vendor_ids) {
                             Semver cur_ver = GUI::wxGetApp().preset_bundle->get_vendor_profile_version(vendor_id);
-                            GUI::wxGetApp().plater()->get_notification_manager()->push_notification(
-                                GUI::NotificationType::PresetUpdateFinished,
-                                GUI::NotificationManager::NotificationLevel::ImportantNotificationLevel,
-                                Slic3r::format(_u8L("Configuration package: %1% updated to %2%"), vendor_id, cur_ver.to_string()));
+                            if (GUI::Plater* plater = GUI::wxGetApp().plater())
+                                plater->get_notification_manager()->push_notification(
+                                    GUI::NotificationType::PresetUpdateFinished,
+                                    GUI::NotificationManager::NotificationLevel::ImportantNotificationLevel,
+                                    Slic3r::format(_u8L("Configuration package: %1% updated to %2%"), vendor_id, cur_ver.to_string()));
                         }
                     });
                 }
@@ -2267,10 +2738,16 @@ void PresetUpdater::priv::check_new_vendors(const std::set<std::string>& system_
                                 vendor_list += ", ";
                             vendor_list += vendor_id;
                         }
+<<<<<<< snaporca-int
                         GUI::wxGetApp().plater()->get_notification_manager()->push_notification(GUI::format(
                             // TRN %1% is a comma-separated list of vendor names.
                             _L_PLURAL("Failed to download vendor profile: %1%", "Failed to download vendor profiles: %1%", failed_vendor_ids.size()),
                             vendor_list));
+=======
+                        if (GUI::Plater* plater = GUI::wxGetApp().plater())
+                            plater->get_notification_manager()->push_notification(
+                                _u8L("Failed to download vendor profile(s): ") + vendor_list);
+>>>>>>> lixnix/main
                     });
                 }
 
@@ -2323,13 +2800,23 @@ PresetUpdater::UpdateResult PresetUpdater::config_update(const Semver& old_slic3
 
     if (updates.updates.size() > 0) {
 
+        // Snapmaker Orca: packages needing a newer application have can_install == false. If none is
+        // installable, the automatic check stays silent and the manual check shows the dialog naming
+        // the required version; either way the result is R_NOOP.
+        const bool any_installable = OtaUpdateRules::any_installable(updates.updates);
+        if (!any_installable && params != UpdateParams::SHOW_TEXT_BOX) {
+            BOOST_LOG_TRIVIAL(info) << format("[Orca Updater]:%1% cached updates, none installable with this application version, skipped",
+                                              updates.updates.size());
+            return R_NOOP;
+        }
+
         bool force_update = false;
         for (const auto& update : updates.updates) {
             force_update = (update.forced_update ? true : force_update);
         }
 
         //forced update
-        if (force_update)
+        if (force_update && any_installable)
         {
             BOOST_LOG_TRIVIAL(info) << format("[Orca Updater]:Force updating will start, size %1% ", updates.updates.size());
             std::vector<std::string> bundles;
@@ -2388,6 +2875,10 @@ PresetUpdater::UpdateResult PresetUpdater::config_update(const Semver& old_slic3
 
             if (res == wxID_OK) {
                 BOOST_LOG_TRIVIAL(debug) << "[Orca Updater]:selected yes to update";
+                if (!any_installable) {
+                    BOOST_LOG_TRIVIAL(info) << "[Orca Updater]:nothing installable with this application version";
+                    return R_NOOP;
+                }
                 if (! p->perform_updates(std::move(updates)) ||
                     ! reload_configs_update_gui())
                     return R_ALL_CANCELED;
@@ -2600,13 +3091,19 @@ void PresetUpdater::load_flutter_web(const std::string& resource_path, bool serv
                 }
 
                 Semver min_ver  = get_min_version_from_json(version_path.string());
-                Semver soft_ver = Semver(std::string(Snapmaker_VERSION));
+                // Snapmaker Orca: parsed, not constructed - an unparseable build label means no gate, not a throw.
+                const boost::optional<Semver> soft_ver = OtaUpdateRules::application_version(Snapmaker_VERSION);
 
                 bool legal = true;
-                legal      = min_ver <= soft_ver;
+                legal      = OtaUpdateRules::min_app_version_satisfied(min_ver, soft_ver);
                 if (!legal) {
+<<<<<<< snaporca-int
                     changelog += ("\n" + format_wxstr(_L("Snapmaker Orca %1% needed, but current version is %2%"), min_ver.to_string(), soft_ver.to_string()) +
                                   "\n")
+=======
+                    changelog += ("\nSnapmaker Orca " + min_ver.to_string() + " " + _L("needed, but current version is ") +
+                                  soft_ver->to_string() + "\n")
+>>>>>>> lixnix/main
                                      .ToStdString();
                 }
 
@@ -2776,13 +3273,19 @@ void PresetUpdater::import_system_profile()
                         }
                         
                         Semver min_ver  = get_min_version_from_json(source_path.string());
-                        Semver soft_ver = Semver(std::string(Snapmaker_VERSION));
+                        // Snapmaker Orca: parsed, not constructed - an unparseable build label means no gate, not a throw.
+                        const boost::optional<Semver> soft_ver = OtaUpdateRules::application_version(Snapmaker_VERSION);
 
                         bool legal = true;
-                        legal      = min_ver <= soft_ver;
+                        legal      = OtaUpdateRules::min_app_version_satisfied(min_ver, soft_ver);
                         if (!legal) {
+<<<<<<< snaporca-int
                             changelog += ("\n" + format_wxstr(_L("Snapmaker Orca %1% needed, but current version is %2%"), min_ver.to_string(), soft_ver.to_string()) +
                                           "\n")
+=======
+                            changelog += ("\nSnapmaker Orca " + min_ver.to_string() + " " + _L("needed, but current version is ") +
+                                          soft_ver->to_string() + "\n")
+>>>>>>> lixnix/main
                                              .ToStdString();
                         }
 

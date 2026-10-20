@@ -609,7 +609,10 @@ static ExPolygons outer_inner_brim_area(const Print& print,
             }
             support_material_extruder = object->config().support_filament;
             if (support_material_extruder == 0 && object->has_support_material()) {
-                if (print.config().print_sequence == PrintSequence::ByObject)
+                // ORCA: under the support nozzle diameter restriction the brim uses the support's resolved filament.
+                if (unsigned int resolved = object->resolved_default_support_filament(); resolved > 0)
+                    support_material_extruder = resolved;
+                else if (print.config().print_sequence == PrintSequence::ByObject)
                     support_material_extruder = objectWithExtruder.second;
                 else
                     support_material_extruder = printExtruders.front() + 1;
@@ -660,6 +663,10 @@ static ExPolygons outer_inner_brim_area(const Print& print,
         expolygons_append(no_brim_area, expolyFromLines);
     }
 
+<<<<<<< snaporca-int
+=======
+    // Snapmaker: connect scattered small areas to prevent generating very small brims
+>>>>>>> lixnix/main
     const float scaled_flow_width = print.brim_flow().scaled_spacing();
     no_brim_area = offset2_ex(no_brim_area, scaled_flow_width, -scaled_flow_width);
 

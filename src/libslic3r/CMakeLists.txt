@@ -36,6 +36,8 @@ set(lisbslic3r_sources
     Algorithm/RegionExpansion.cpp
     Algorithm/RegionExpansion.hpp
     AnyPtr.hpp
+    AllowlistManager.cpp
+    AllowlistManager.hpp
     AppConfig.cpp
     AppConfig.hpp
     Arachne/BeadingStrategy/BeadingStrategy.cpp
@@ -154,8 +156,6 @@ set(lisbslic3r_sources
     Feature/Interlocking/VoxelUtils.cpp
     Feature/Interlocking/VoxelUtils.hpp
     FileParserError.hpp
-    AllowlistManager.cpp
-    AllowlistManager.hpp
     FilamentColorLibrary.cpp
     FilamentColorLibrary.hpp
     FilamentHotBedNozzleRules.cpp
@@ -369,6 +369,16 @@ set(lisbslic3r_sources
     MinimumSpanningTree.hpp
     MixedFilament.cpp
     MixedFilament.hpp
+<<<<<<< snaporca-int
+=======
+    MixedFilamentConfigRemap.hpp
+    # SM Orca: filament_mixer.cpp / filament_mixer_model.h were upstreamed as
+    # FilamentMixer.cpp / FilamentMixerModel.hpp (listed above), which define the
+    # identical Slic3r::filament_mixer_lerp* symbols. Only the declaration header
+    # stays listed here because fork code (MixedFilament.cpp, MixedGradientSelector,
+    # MixedFilamentColorMapPanel, Plater) still includes it by its old name.
+    filament_mixer.h
+>>>>>>> lixnix/main
     miniz_extension.cpp
     miniz_extension.hpp
     ModelArrange.cpp
@@ -425,8 +435,6 @@ set(lisbslic3r_sources
     PresetCacheFormat.hpp
     Preset.cpp
     Preset.hpp
-    PresetFlowVariant.cpp
-    PresetFlowVariant.hpp
     PrincipalComponents2D.cpp
     PrincipalComponents2D.hpp
     PublishSettings.cpp
@@ -449,6 +457,9 @@ set(lisbslic3r_sources
     ProjectTask.hpp
     QuadricEdgeCollapse.cpp
     QuadricEdgeCollapse.hpp
+    # Snapmaker Orca: level of detail for the 3D scene, GUI-less part (upstream #737)
+    MeshLod.cpp
+    MeshLod.hpp
     Semver.cpp
     Shape/TextShape.cpp
     Shape/TextShape.hpp
@@ -456,6 +467,18 @@ set(lisbslic3r_sources
     ShortEdgeCollapse.hpp
     ShortestPath.cpp
     ShortestPath.hpp
+    FilamentFlowColumns.cpp
+    FilamentFlowColumns.hpp
+    NozzleFilamentPresets.cpp
+    NozzleFilamentPresets.hpp
+    PerHeadProcess.cpp
+    PerHeadProcess.hpp
+    UsedFilaments.cpp
+    UsedFilaments.hpp
+    SnapmakerFlowCompat.cpp
+    SnapmakerFlowCompat.hpp
+    SSWCPProtocol.cpp
+    SSWCPProtocol.hpp
     SLA/AGGRaster.hpp
     SLA/BoostAdapter.hpp
     SLA/Clustering.cpp
@@ -523,8 +546,6 @@ set(lisbslic3r_sources
     Surface.hpp
     SurfaceMesh.hpp
     SVG.cpp
-    SSWCPProtocol.cpp
-    SSWCPProtocol.hpp
     SVG.hpp
     Technologies.hpp
     Tesselate.cpp
@@ -688,16 +709,25 @@ target_compile_definitions(libslic3r PUBLIC -DUSE_TBB -DTBB_USE_CAPTURED_EXCEPTI
 if (USE_SLIC3R_CONSOLE_LOG)
     target_compile_definitions(libslic3r PRIVATE $<$<CONFIG:RelWithDebInfo>:SLIC3R_CONSOLE_LOG>)
 endif()
+<<<<<<< snaporca-int
 # Snapmaker: make source directory PUBLIC so other modules (like libslic3r_gui) can include headers like SentryWrapper.hpp
 target_include_directories(libslic3r PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/TextureToColor PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+=======
+# SM Orca: source directory stays PUBLIC so other modules (like libslic3r_gui) can
+# include headers such as SentryWrapper.hpp.
+target_include_directories(libslic3r PRIVATE ${CMAKE_CURRENT_SOURCE_DIR}/TextureToColor PUBLIC ${CMAKE_CURRENT_SOURCE_DIR} ${CMAKE_CURRENT_BINARY_DIR})
+>>>>>>> lixnix/main
 target_include_directories(libslic3r SYSTEM PUBLIC ${EXPAT_INCLUDE_DIRS})
 
 # Find the OCCT and related libraries
 set(OpenCASCADE_DIR "${CMAKE_PREFIX_PATH}/lib/cmake/occt")
 find_package(OpenCASCADE REQUIRED)
 target_include_directories(libslic3r SYSTEM PUBLIC ${OpenCASCADE_INCLUDE_DIR})
+<<<<<<< snaporca-int
 target_link_libraries(libslic3r PUBLIC nlohmann_json)
 target_link_libraries(libslic3r PUBLIC snapmaker_common)
+=======
+>>>>>>> lixnix/main
 
 find_package(JPEG REQUIRED)
 find_package(Draco REQUIRED)
@@ -802,6 +832,7 @@ target_link_libraries(libslic3r
     )
 
 if (WIN32)
+<<<<<<< snaporca-int
     # Snapmaker: extra Windows system libs
     target_link_libraries(libslic3r PRIVATE crypt32 ws2_32)
 else()
@@ -811,6 +842,13 @@ else()
         add_library(freetype INTERFACE IMPORTED GLOBAL)
         target_link_libraries(freetype INTERFACE ${FREETYPE_LIBRARIES})
     endif ()
+=======
+    # Static OpenSSL libcrypto needs the Windows crypto and socket system libraries
+    target_link_libraries(libslic3r PRIVATE crypt32 ws2_32)
+endif()
+
+if(NOT WIN32)
+>>>>>>> lixnix/main
     # Link freetype for OCCT dependency (CAD operations need font rendering)
     target_link_libraries(libslic3r PRIVATE ${FREETYPE_LIBRARIES})
     if (NOT APPLE)

@@ -227,7 +227,10 @@ private:
 class WebViewWebKit : public wxWebViewWebKit
 {
 public:
+<<<<<<< snaporca-int
     // Snapmaker: the initial URL is held back until the "wx" script handler is installed.
+=======
+>>>>>>> lixnix/main
     explicit WebViewWebKit(const wxString &initialUrl)
         : wxWebViewWebKit(MakeConfiguration())
         , m_pendingUrl(initialUrl)
@@ -239,10 +242,13 @@ public:
         RemoveScriptMessageHandler("wx");
     }
 
+    // WKWebView starts loading inside Create(), but the "wx" handler is installed later from
+    // a CallAfter; the navigation is held back until then so page JS finds messageHandlers.wx.
     void LoadURL(const wxString &url) override
     {
         if (!m_scriptMessageHandlerInstalled && url != wxString("about:blank")) {
             m_pendingUrl = url;
+            m_hasPendingPage = false;
             return;
         }
         RequestLoad(url);
@@ -253,7 +259,14 @@ public:
         m_scriptMessageHandlerInstalled = true;
         auto url = std::move(m_pendingUrl);
         m_pendingUrl.clear();
-        if (!url.empty() && url != wxString("about:blank"))
+        if (m_hasPendingPage) {
+            m_hasPendingPage = false;
+            auto html    = std::move(m_pendingHtml);
+            auto baseUrl = std::move(m_pendingBaseUrl);
+            m_pendingHtml.clear();
+            m_pendingBaseUrl.clear();
+            wxWebViewWebKit::DoSetPage(html, baseUrl);
+        } else if (!url.empty() && url != wxString("about:blank"))
             RequestLoad(url);
     }
 
@@ -261,6 +274,24 @@ public:
     {
         Bind(wxEVT_WEBVIEW_LOADED, &WebViewWebKit::OnNavigationSettled, this);
         Bind(wxEVT_WEBVIEW_ERROR, &WebViewWebKit::OnNavigationSettled, this);
+    }
+
+protected:
+    // SetPage() is held back the same way and replaces the pending URL, so whichever of
+    // LoadURL() / SetPage() came last is released once the handler is installed.
+    void DoSetPage(const wxString &html, const wxString &baseUrl) override
+    {
+        if (!m_scriptMessageHandlerInstalled) {
+            m_pendingUrl.clear();
+            m_pendingHtml    = html;
+            m_pendingBaseUrl = baseUrl;
+            m_hasPendingPage = true;
+            return;
+        }
+        // The page replaces whatever navigation is in flight or queued.
+        m_inFlightUrl.clear();
+        m_queuedUrl.clear();
+        wxWebViewWebKit::DoSetPage(html, baseUrl);
     }
 
 private:
@@ -297,6 +328,9 @@ private:
         return wxURI(url).GetPath();
     }
 
+    // A loadRequest during a provisional navigation cancels it (-999) and can blank the view.
+    // Serialized: the in-flight canonical URL (query included: Flutter pages differ only in
+    // ?path=) is dropped, Flutter over Flutter is queued, anything else loads at once.
     void RequestLoad(const wxString &url)
     {
         if (IsBlankUrl(url)) {
@@ -306,12 +340,20 @@ private:
 
         const wxString target = CanonicalUrl(url);
         if (!m_inFlightUrl.empty()) {
-            if (UrlPath(target) == UrlPath(m_inFlightUrl))
+            if (target == m_inFlightUrl) {
+                // The most recent request is the one already loading, so an older queued
+                // switch to another page is obsolete and must not replace it afterwards.
+                if (!m_queuedUrl.empty())
+                    BOOST_LOG_TRIVIAL(info) << "WebViewWebKit: unqueued " << m_queuedUrl.ToUTF8().data() << ", superseded";
+                m_queuedUrl.clear();
+                BOOST_LOG_TRIVIAL(info) << "WebViewWebKit: dropped " << target.ToUTF8().data() << ", same URL in flight";
                 return;
+            }
             // Flutter interrupted by another Flutter → -999 white screen. Queue that case only.
             // missing_connection.gif sitting in-flight while the view is hidden never settles,
             // so queuing path=2 behind it leaves Device on the GIF forever.
             if (IsFlutterUrl(m_inFlightUrl) && IsFlutterUrl(target)) {
+                BOOST_LOG_TRIVIAL(info) << "WebViewWebKit: queued " << target.ToUTF8().data() << " behind " << m_inFlightUrl.ToUTF8().data();
                 m_queuedUrl = target;
                 return;
             }
@@ -338,15 +380,27 @@ private:
         const wxString eventUrl = CanonicalUrl(evt.GetURL());
         if (IsBlankUrl(eventUrl))
             return;
-        // Ignore the document we just replaced (GIF -999 after jumping to path=2).
+        // Ignore the document that was just replaced (GIF -999 after jumping to path=2).
         if (!m_inFlightUrl.empty() && UrlPath(eventUrl) != UrlPath(m_inFlightUrl))
             return;
         m_inFlightUrl.clear();
         FlushQueued();
     }
 
+    static wxWebViewConfiguration MakeConfiguration()
+    {
+        wxWebViewConfiguration config = wxWebView::NewConfiguration(wxWebViewBackendWebKit);
+        // Must be applied to the native WKWebViewConfiguration before the
+        // WKWebView is created (post-creation the configuration is a copy).
+        Slic3r::GUI::WKWebViewConfiguration_keepActiveWhenHidden(config.GetNativeConfiguration());
+        return config;
+    }
+
     bool     m_scriptMessageHandlerInstalled = false;
+    bool     m_hasPendingPage                = false;
     wxString m_pendingUrl;
+    wxString m_pendingHtml;
+    wxString m_pendingBaseUrl;
     wxString m_inFlightUrl;
     wxString m_queuedUrl;
 };
@@ -482,7 +536,11 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
 #ifdef __WIN32__
     wxWebView* webView = new WebViewEdge(edge_configuration());
 #elif defined(__WXOSX__)
+<<<<<<< snaporca-int
     wxWebView *webView = new WebViewWebKit(url2);
+=======
+    wxWebView* webView = new WebViewWebKit(url2);
+>>>>>>> lixnix/main
 #else
     auto webView = wxWebView::New();
 #endif
@@ -492,17 +550,26 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
         wxString language_code = Slic3r::GUI::wxGetApp().current_language_code().BeforeFirst('_');
         language_code          = language_code.ToStdString();
 #ifdef __WIN32__
+<<<<<<< snaporca-int
         // Snapmaker: keep the SM-Slicer tag (read by the Snapmaker web pages) in front of the upstream user agent.
         webView->SetUserAgent(wxString::Format("SM-Slicer/v%s (%s) Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
                                                "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.52 BBL-Slicer/v%s (%s) BBL-Language/%s",
                                                SLIC3R_VERSION, Slic3r::GUI::wxGetApp().dark_mode() ? "dark" : "light",
                                                Slic3r::GUI::wxGetApp().get_bbl_client_version(), Slic3r::GUI::wxGetApp().dark_mode() ? "dark" : "light", language_code.mb_str()));
+=======
+        // Snapmaker: keep the "SM-Slicer" product token (fork branding) while adopting Orca's
+        // trailing token layout and the BBL-Language segment expected by the embedded web pages.
+        webView->SetUserAgent(wxString::Format("SM-Slicer/v%s (%s) Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+                                               "AppleWebKit/537.36 (KHTML, like Gecko) Chrome/107.0.0.0 Safari/537.36 Edg/107.0.1418.52 BBL-Language/%s",
+                                               SLIC3R_VERSION, Slic3r::GUI::wxGetApp().dark_mode() ? "dark" : "light", language_code.mb_str()));
+>>>>>>> lixnix/main
         webView->Create(parent, wxID_ANY, url2, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
         // We register the wxfs:// protocol for testing purposes
         webView->RegisterHandler(wxSharedPtr<wxWebViewHandler>(new wxWebViewArchiveHandler("bbl")));
         // And the memory: file system
         webView->RegisterHandler(wxSharedPtr<wxWebViewHandler>(new wxWebViewFSHandler("memory")));
 #else
+<<<<<<< snaporca-int
         // With WKWebView handlers need to be registered before creation.
         // On Linux (WebKit2GTK), URI schemes are registered globally and can only
         // be registered once, so guard against multiple registrations.
@@ -514,10 +581,21 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
             webView->RegisterHandler(wxSharedPtr<wxWebViewHandler>(new wxWebViewFSHandler("memory")));
             s_schemes_registered = true;
         }
+=======
+        // Handlers must be registered before Create(). Linux (WebKit2): scheme is process-global, register once to avoid "Cannot register URI scheme ... more than once".
+        // macOS (WKWebView): scheme is per-view, each WebView needs its own handlers.
+#if defined(__linux__)
+        static std::once_flag s_wxfs_memory_handlers_once;
+        std::call_once(s_wxfs_memory_handlers_once, [webView]() {
+            webView->RegisterHandler(wxSharedPtr<wxWebViewHandler>(new wxWebViewArchiveHandler("wxfs")));
+            webView->RegisterHandler(wxSharedPtr<wxWebViewHandler>(new wxWebViewFSHandler("memory")));
+        });
+>>>>>>> lixnix/main
 #else
         webView->RegisterHandler(wxSharedPtr<wxWebViewHandler>(new wxWebViewArchiveHandler("wxfs")));
         webView->RegisterHandler(wxSharedPtr<wxWebViewHandler>(new wxWebViewFSHandler("memory")));
 #endif
+<<<<<<< snaporca-int
 #ifdef __WXMAC__
         // Snapmaker: WKWebView starts loading during Create(), before the delayed handler callback runs.
         // Keep its initial document blank; the subclass flushes the pending URL after installation.
@@ -532,6 +610,26 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
         webView->SetUserAgent(wxString::Format("SM-Slicer/v%s (%s) Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) BBL-Slicer/v%s (%s) BBL-Language/%s",
                                                SLIC3R_VERSION, Slic3r::GUI::wxGetApp().dark_mode() ? "dark" : "light",
                                                Slic3r::GUI::wxGetApp().get_bbl_client_version(), Slic3r::GUI::wxGetApp().dark_mode() ? "dark" : "light", language_code.mb_str()));
+=======
+        const wxString user_agent = wxString::Format("SM-Slicer/v%s (%s) Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) BBL-Language/%s",
+                                                     SLIC3R_VERSION, Slic3r::GUI::wxGetApp().dark_mode() ? "dark" : "light", language_code.mb_str());
+#ifdef __WXMAC__
+        // WKWebView starts loading during Create(), before the delayed handler callback
+        // runs. The initial document is kept blank; the subclass flushes the pending URL
+        // once the "wx" handler is installed.
+        webView->Create(parent, wxID_ANY, wxString("about:blank"), wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+        static_cast<WebViewWebKit *>(webView)->AttachNavigationGate();
+        // SetUserAgent() only after Create(): before it the native view pointer is
+        // uninitialised. Only about:blank is loading yet, so the real navigation has the agent.
+        webView->SetUserAgent(user_agent);
+#else
+        // Set the user agent BEFORE Create(): wx buffers it and applies it ahead of the
+        // first navigation, so the live view is not mutated mid-provisional-load.
+        // Mirrors the Windows branch order.
+        webView->SetUserAgent(user_agent);
+        webView->Create(parent, wxID_ANY, url2, wxDefaultPosition, wxDefaultSize, wxBORDER_NONE);
+#endif
+>>>>>>> lixnix/main
 #endif
 #endif
 #ifdef __WXMAC__
@@ -540,6 +638,19 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
         Slic3r::GUI::WKWebView_keepActiveWhenHidden(wkWebView);
 #endif
         auto addScriptMessageHandler = [] (wxWebView *webView) {
+#ifdef __WXMAC__
+            // Releases the deferred initial URL on every exit path, after
+            // set_adding_script_handler(false). AddScriptMessageHandler() pumps the event
+            // loop and can destroy the view, so the guard checks g_webviews first.
+            struct ReleasePendingUrl {
+                wxWebView *view;
+                ~ReleasePendingUrl()
+                {
+                    if (std::find(g_webviews.begin(), g_webviews.end(), view) != g_webviews.end())
+                        static_cast<WebViewWebKit *>(view)->SetScriptMessageHandlerInstalled();
+                }
+            } release{webView};
+#endif
             // Skip if SendAPIKey() already registered "wx"; a duplicate add throws an
             // uncatchable NSException on WKWebView, killing the app at startup.
             WebViewRef *ref = webview_ref(webView);
@@ -549,13 +660,12 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
             Slic3r::GUI::wxGetApp().set_adding_script_handler(true);
             if (!webView->AddScriptMessageHandler("wx"))
                 wxLogError("Could not add script message handler");
-            else if (ref)
+            // The call above pumps the event loop. A view destroyed meanwhile has taken its
+            // WebViewRef along, so the ref is only written while the view is still registered.
+            else if (ref && std::find(g_webviews.begin(), g_webviews.end(), webView) != g_webviews.end())
                 ref->m_script_handler_added = true;
             Slic3r::GUI::wxGetApp().set_adding_script_handler(false);
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ": finished add script message handler for wx.";
-#ifdef __WXMAC__
-            static_cast<WebViewWebKit *>(webView)->SetScriptMessageHandlerInstalled();
-#endif
         };
 #ifndef __WIN32__
         webView->CallAfter([webView, addScriptMessageHandler] {
@@ -705,12 +815,17 @@ void WebView::RecreateAll()
     wxString language_code = Slic3r::GUI::wxGetApp().current_language_code().BeforeFirst('_');
     language_code          = language_code.ToStdString();
     for (auto webView : g_webviews) {
+<<<<<<< snaporca-int
 #ifdef __linux__
         webView->SetUserAgent(wxString::Format("SM-Slicer/v%s (%s) ", SLIC3R_VERSION, dark ? "dark" : "light") + linux_user_agent());
 #else
         webView->SetUserAgent(wxString::Format("SM-Slicer/v%s (%s) Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) BBL-Slicer/v%s (%s) BBL-Language/%s",
                                                SLIC3R_VERSION, dark ? "dark" : "light", Slic3r::GUI::wxGetApp().get_bbl_client_version(), dark ? "dark" : "light", language_code.mb_str()));
 #endif
+=======
+        webView->SetUserAgent(wxString::Format("SM-Slicer/v%s (%s) Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/605.1.15 (KHTML, like Gecko) BBL-Language/%s",
+                                               SLIC3R_VERSION, dark ? "dark" : "light", language_code.mb_str()));
+>>>>>>> lixnix/main
         // A host-themed WebViewHostDialog re-themes in place (no reload). If it handles
         // the event, skip the reload; legacy pages fall through and reload as before
         // (their own dark.css swap re-themes them on reload).

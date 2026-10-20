@@ -21,7 +21,11 @@ add_executable(${_TEST_NAME}_tests
     test_clipper_utils.cpp
     test_config.cpp
     test_config_variant_expansion.cpp
+<<<<<<< snaporca-int
     test_data_dir_migration.cpp
+=======
+    test_custom_gcode.cpp
+>>>>>>> lixnix/main
     test_locales_utils.cpp
     test_drc.cpp
     test_gcodereader.cpp
@@ -30,7 +34,9 @@ add_executable(${_TEST_NAME}_tests
     test_preset_bundle_loading.cpp
     test_preset_setting_id.cpp
     test_preset_diff.cpp
+    test_filament_flow_columns.cpp # Snapmaker Orca: Standard / High Flow columns of a filament preset
     test_vendor_cache.cpp
+    test_profile_load_util.cpp
     test_preset_options.cpp
     test_elephant_foot_compensation.cpp
     test_fill_corner_smoothing.cpp
@@ -38,9 +44,16 @@ add_executable(${_TEST_NAME}_tests
     test_fill_plane_path.cpp
     test_fill_tpms_adaptive.cpp
     test_geometry.cpp
+<<<<<<< snaporca-int
     test_imex_arrange.cpp
     test_imex_helpers.cpp
     test_imex_zones.cpp
+=======
+    test_icns.cpp
+    test_mixed_filament.cpp
+    test_mixed_filament_color_golden.cpp
+    test_local_z_order_optimizer.cpp
+>>>>>>> lixnix/main
     test_multimaterial_segmentation.cpp
     test_placeholder_parser.cpp
     test_png_read_write.cpp
@@ -49,13 +62,24 @@ add_executable(${_TEST_NAME}_tests
     test_mutable_priority_queue.cpp
     test_minimum_spanning_tree.cpp
     test_nozzle_volume_type.cpp
+    test_nozzle_filament_presets.cpp # Snapmaker Orca: filament presets follow the nozzle size of their tool head
+    test_per_head_process.cpp # Snapmaker Orca: process speeds follow the nozzle size of their tool head
+    test_first_run_presets.cpp # Snapmaker Orca: the presets the setup wizard leaves for a Snapmaker U1
+    test_snapmaker_flow_compat.cpp # Snapmaker Orca: older project layouts of the per flow type filament keys
+    test_sswcp_protocol.cpp # Snapmaker Orca: device protocol conversion (upstream #807)
+    test_snapmaker_hf_profiles.cpp # Snapmaker Orca: High Flow columns of the shipped U1 profiles
     test_obj.cpp
     test_step.cpp
     test_stl.cpp
     test_triangle_selector.cpp
+    test_tree_support_wall.cpp
     test_meshboolean.cpp
+<<<<<<< snaporca-int
     test_mesh_repair.cpp
     test_trianglemesh_slicer.cpp
+=======
+    test_mesh_lod.cpp # Snapmaker Orca: level rule and reduced meshes of the render LOD (upstream #737)
+>>>>>>> lixnix/main
     test_marchingsquares.cpp
     test_lay_on_face.cpp
     test_model.cpp
@@ -63,6 +87,7 @@ add_executable(${_TEST_NAME}_tests
     test_miniz_extension.cpp
     test_timeutils.cpp
     test_voronoi.cpp
+    test_used_filaments.cpp # Snapmaker Orca: the filaments a plate counts before slicing
     test_wipe_tower_estimate.cpp
     test_wipe_tower.cpp
     test_wipe_path.cpp
@@ -70,9 +95,13 @@ add_executable(${_TEST_NAME}_tests
     test_ordering_strategies.cpp
     # test_png_io.cpp
     test_indexed_triangle_set.cpp
+<<<<<<< snaporca-int
     test_connected_bodies.cpp
     test_texture_displacement.cpp
     test_instance_lock.cpp
+=======
+    TestMD5.cpp
+>>>>>>> lixnix/main
     ../libnest2d/printer_parts.cpp
     )
 
@@ -93,7 +122,10 @@ endif()
 
 # libslic3r links Draco privately; test_drc.cpp encodes its own fixtures.
 find_package(Draco REQUIRED)
-target_link_libraries(${_TEST_NAME}_tests test_common libslic3r draco::draco Catch2::Catch2WithMain)
+target_link_libraries(${_TEST_NAME}_tests test_common libslic3r draco::draco Catch2::Catch2WithMain OpenSSL::Crypto)
+if (WIN32)
+    target_link_libraries(${_TEST_NAME}_tests bcrypt.lib crypt32.lib)
+endif()
 target_include_directories(${_TEST_NAME}_tests PRIVATE ${CMAKE_SOURCE_DIR}/src)
 set_property(TARGET ${_TEST_NAME}_tests PROPERTY FOLDER "tests")
 

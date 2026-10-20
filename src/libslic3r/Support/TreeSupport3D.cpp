@@ -253,7 +253,9 @@ static std::vector<std::pair<TreeSupportSettings, std::vector<size_t>>> group_me
     const coordf_t radius_sample_resolution = g_config_tree_support_collision_resolution;
 
     // calc the extrudable expolygons of each layer
-    const coordf_t extrusion_width = config.line_width.value;
+    // Snapmaker Orca: the width is a column per tool head, read at the support head; the raw
+    // number as the scalar read (a percent read as a number, the pre-existing quirk).
+    const coordf_t extrusion_width = Flow::width_at(config.line_width, support_head(&print_object, config.support_filament, false)).value;
     const coordf_t extrusion_width_scaled = scale_(extrusion_width);
     tbb::parallel_for(tbb::blocked_range<size_t>(0, print_object.layer_count()),
         [&](const tbb::blocked_range<size_t>& range) {
@@ -3502,7 +3504,7 @@ static void generate_support_areas(Print &print, TreeSupport* tree_support, cons
         const int       num_raft_layers = int(config.raft_layers.size());
         const int       num_layers = int(print_object.layer_count()) + num_raft_layers;
         overhangs.resize(num_layers);
-        
+        // Pure sharp tail overhangs are expanded by 0.2 mm.
         for (size_t i = 0; i < print_object.layer_count(); i++) {
             for (const std::pair<ExPolygon, int>& overhang_with_type : print_object.get_layer(i)->loverhangs_with_type) {
                 Polygons polys = to_polygons(overhang_with_type.first);

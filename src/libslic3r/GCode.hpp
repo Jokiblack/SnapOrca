@@ -108,7 +108,10 @@ public:
         const Vec3d                                                  plate_origin,
         const std::vector<WipeTower::ToolChangeResult>              &priming,
         const std::vector<std::vector<WipeTower::ToolChangeResult>> &tool_changes,
+<<<<<<< snaporca-int
         // Snapmaker: Local-Z toolchanges preplanned on the wipe tower, and the reserved tower slots.
+=======
+>>>>>>> lixnix/main
         const std::vector<std::vector<WipeTower::ToolChangeResult>> &local_z_tool_changes,
         const std::vector<std::vector<WipeTower::box_coordinates>>  &local_z_reserve_boxes,
         const WipeTower::ToolChangeResult                           &final_purge,
@@ -205,10 +208,16 @@ private:
     // Current layer index.
     int                                                          m_layer_idx;
     int                                                          m_tool_change_idx;
+<<<<<<< snaporca-int
     // Snapmaker: Local-Z cursors per layer.
     std::vector<size_t>                                          m_local_z_tool_change_idx;
     std::vector<size_t>                                          m_local_z_reserve_slot_idx;
     double                                                       m_last_wipe_tower_print_z;
+=======
+    std::vector<size_t>                                          m_local_z_tool_change_idx;
+    std::vector<size_t>                                          m_local_z_reserve_slot_idx;
+    double                                                       m_last_wipe_tower_print_z = 0.f;
+>>>>>>> lixnix/main
 
     // BBS
     Vec3d                                                        m_plate_origin;
@@ -361,6 +370,7 @@ public:
     // which run behind the current layer and concurrently with the generator.
     size_t get_filament_config_index(int filament_id, size_t layer_id) const;
     size_t get_nozzle_config_index(int filament_id) const;
+<<<<<<< snaporca-int
     // Snapmaker: flow variant (standard / high flow) presets. A flow-variant process preset
     // (process_flow_support with several variants, Snapmaker U1) lays its process vectors out per
     // flow variant; get_nozzle_config_index() then returns the flow-variant column.
@@ -388,6 +398,12 @@ public:
             return index;
         }
     };
+=======
+    // Snapmaker Orca: the slot of the process table the writer reads the travel and first-layer
+    // speeds of a filament at (Print::process_slot_of_filament at the current layer; the tool
+    // head of the filament without a Print).
+    size_t process_slot_of(int filament_id) const;
+>>>>>>> lixnix/main
 
     // Object and support extrusions of the same PrintObject at the same print_z.
     // public, so that it could be accessed by free helper functions from GCode.cpp
@@ -867,9 +883,16 @@ protected:
     float                               m_last_layer_z{ 0.0f };
     float                               m_max_layer_z{ 0.0f };
     float                               m_last_width{ 0.0f };
+
+    // SM_Orca
+    float                               m_next_wipe_x {0.0f};
+    float                               m_next_wipe_y {0.0f};
     // Bedslinger mass model: cumulative printed mass at the previous layer, used to derive
     // the current layer mass for the per-layer Y acceleration limit (curr_y_acceleration_limit).
     double                              m_last_layer_accumulated_mass{ 0.0 };
+#if ENABLE_GCODE_VIEWER_DATA_CHECKING
+    double                              m_last_mm3_per_mm;
+#endif // ENABLE_GCODE_VIEWER_DATA_CHECKING
 
     // Always check gcode placeholders when building in debug mode.
 #if !defined(NDEBUG)
@@ -971,6 +994,8 @@ protected:
     std::vector<std::vector<unsigned int>>  m_sorted_layer_filaments;
     // BBS
     int get_bed_temperature(const int extruder_id, const bool is_first_layer, const BedType bed_type) const;
+    // BBS: max bed temperature over all used filaments, so that the bed temperature always
+    // accommodates the highest-temperature filament of a compatible mixed print (e.g. PLA + TPU).
     int get_highest_bed_temperature(const bool is_first_layer,const Print &print) const;
 
     void update_layer_related_config(int layer_id);

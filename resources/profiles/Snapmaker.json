@@ -1,6 +1,10 @@
 {
   "name": "Snapmaker",
+<<<<<<< snaporca-int
   "version": "02.03.04.06",
+=======
+  "version": "02.03.03.11",
+>>>>>>> lixnix/main
   "force_update": "0",
   "description": "Snapmaker configurations",
   "machine_model_list": [
@@ -287,6 +291,13 @@
       "sub_path": "process/0.24 Standard @Snapmaker (0.6 nozzle).json"
     },
     {
+<<<<<<< snaporca-int
+=======
+      "name": "0.24 Standard @Snapmaker (0.8 nozzle)",
+      "sub_path": "process/0.24 Standard @Snapmaker (0.8 nozzle).json"
+    },
+    {
+>>>>>>> lixnix/main
       "name": "0.24 Standard @Snapmaker J1 (0.6 nozzle)",
       "sub_path": "process/0.24 Standard @Snapmaker J1 (0.6 nozzle).json"
     },

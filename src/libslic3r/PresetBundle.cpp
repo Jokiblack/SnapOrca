@@ -32,12 +32,20 @@
 #include <sstream>
 
 #include "PresetBundle.hpp"
+<<<<<<< snaporca-int
 #include "FilamentColorLibrary.hpp"
 #include "PrinterBedAssets.hpp"
 
 #include "Config.hpp"
 #include "Exception.hpp"
 #include "AppConfig.hpp"
+=======
+#include "Slicing.hpp"
+#include "PerHeadProcess.hpp"
+#include "FilamentFlowColumns.hpp"
+
+#include "FilamentColorLibrary.hpp"
+>>>>>>> lixnix/main
 #include "ParallelResolve.hpp"
 #include "Preset.hpp"
 #include "PresetCacheFormat.hpp"
@@ -45,6 +53,7 @@
 #include "Zipper.hpp"
 #include "PrintConfig.hpp"
 #include "PublishSettings.hpp"
+#include "SnapmakerFlowCompat.hpp"
 #include "FilamentMixer.hpp"
 #include "Semver.hpp"
 #include "libslic3r.h"
@@ -56,6 +65,8 @@
 #include "format.hpp"
 #include "common_func/common_func.hpp"
 #include "TriangleSelector.hpp"
+#include "format.hpp"
+#include "common_func/common_func.hpp"
 #include "libslic3r_version.h"
 
 #include <algorithm>
@@ -156,11 +167,19 @@ std::vector<FilamentColorMode> LoadFilamentColourModes(const AppConfig &config, 
     return modes;
 }
 
+<<<<<<< snaporca-int
 std::vector<SMFilamentColor> BuildFilamentColors(const std::vector<std::string>& colors,
                                                const std::vector<std::string>& multiColors,
                                                const std::vector<FilamentColorMode>& modes, size_t targetCount)
 {
     std::vector<SMFilamentColor> filamentColors;
+=======
+std::vector<FilamentColor> BuildFilamentColors(const std::vector<std::string>& colors,
+                                               const std::vector<std::string>& multiColors,
+                                               const std::vector<FilamentColorMode>& modes, size_t targetCount)
+{
+    std::vector<FilamentColor> filamentColors;
+>>>>>>> lixnix/main
     filamentColors.reserve(targetCount);
 
     for (size_t i = 0; i < targetCount; ++i)
@@ -170,13 +189,21 @@ std::vector<SMFilamentColor> BuildFilamentColors(const std::vector<std::string>&
         FilamentColorMode colorMode = FilamentColorMode::Segment;
         if (i < modes.size())
             colorMode = modes[i];
+<<<<<<< snaporca-int
         filamentColors.emplace_back(SMFilamentColor::FromMultiColors(multiColor, colorMode, fallbackColor));
+=======
+        filamentColors.emplace_back(FilamentColor::FromMultiColors(multiColor, colorMode, fallbackColor));
+>>>>>>> lixnix/main
     }
 
     return filamentColors;
 }
 
+<<<<<<< snaporca-int
 std::vector<SMFilamentColor> LoadFilamentColors(const AppConfig &config, const std::string &printerName, size_t targetCount)
+=======
+std::vector<FilamentColor> LoadFilamentColors(const AppConfig &config, const std::string &printerName, size_t targetCount)
+>>>>>>> lixnix/main
 {
     const std::vector<std::string> colors = SplitPrinterSetting(config, printerName, "filament_colors");
     const std::vector<std::string> multiColors = SplitPrinterSetting(config, printerName, "filament_multi_colors");
@@ -211,7 +238,11 @@ void EnsureFilamentColorFieldsAligned(DynamicPrintConfig &config)
     }
 }
 
+<<<<<<< snaporca-int
 void ApplyFilamentColors(DynamicPrintConfig &config, const std::vector<SMFilamentColor>& filamentColors)
+=======
+void ApplyFilamentColors(DynamicPrintConfig &config, const std::vector<FilamentColor>& filamentColors)
+>>>>>>> lixnix/main
 {
     std::vector<std::string> colors;
     std::vector<std::string> multiColors;
@@ -220,7 +251,11 @@ void ApplyFilamentColors(DynamicPrintConfig &config, const std::vector<SMFilamen
     multiColors.reserve(filamentColors.size());
     modes.reserve(filamentColors.size());
 
+<<<<<<< snaporca-int
     for (const SMFilamentColor& color : filamentColors)
+=======
+    for (const FilamentColor& color : filamentColors)
+>>>>>>> lixnix/main
     {
         colors.emplace_back(color.PrimaryColor("#26A69A"));
         multiColors.emplace_back(color.ToMultiColorsString());
@@ -247,6 +282,7 @@ void EraseIntOptionAt(DynamicPrintConfig &config, const std::string &key, size_t
         option->values.erase(option->values.begin() + index);
 }
 
+<<<<<<< snaporca-int
 void EraseEnumsOptionAt(DynamicPrintConfig &config, const std::string &key, size_t index)
 {
     ConfigOptionEnumsGeneric *option = config.option<ConfigOptionEnumsGeneric>(key, true);
@@ -254,6 +290,8 @@ void EraseEnumsOptionAt(DynamicPrintConfig &config, const std::string &key, size
         option->values.erase(option->values.begin() + index);
 }
 
+=======
+>>>>>>> lixnix/main
 void EraseFilamentColorFields(DynamicPrintConfig &config, size_t index)
 {
     EraseStringOptionAt(config, "filament_multi_colors", index);
@@ -261,6 +299,7 @@ void EraseFilamentColorFields(DynamicPrintConfig &config, size_t index)
     EnsureFilamentColorFieldsAligned(config);
 }
 
+<<<<<<< snaporca-int
 void EnsureFilamentVolumeTypesAligned(DynamicPrintConfig &config, size_t num_filaments)
 {
     auto *volume_types = config.option<ConfigOptionEnumsGeneric>("filament_volume_type", true);
@@ -284,6 +323,10 @@ static std::map<std::string, std::vector<std::string>> legacy_compatible_printer
     }
 }
 
+=======
+} // namespace
+
+>>>>>>> lixnix/main
 // Project-level options imported from a loaded 3MF into project_config. s_project_options_published
 // below is the reduced subset that crosses over in "published" 3MF mode; keep both in sync.
 // s_project_options_published additionally carries wipe_tower_rotation_angle, which normal
@@ -300,10 +343,30 @@ static std::vector<std::string> s_project_options {
     "wipe_tower_x",
     "wipe_tower_y",
     "curr_bed_type",
+<<<<<<< snaporca-int
     // Snapmaker: flow variants
     "filament_volume_type",
     "filament_grouping_mode",
+=======
+>>>>>>> lixnix/main
     "flush_multiplier",
+    // Mixed filament / local-Z settings
+    "mixed_filament_gradient_mode",
+    "mixed_filament_height_lower_bound",
+    "mixed_filament_height_upper_bound",
+    "mixed_filament_advanced_dithering",
+    "mixed_filament_component_bias_enabled",
+    "mixed_filament_surface_indentation",
+    "mixed_filament_region_collapse",
+    "mixed_filament_definitions",
+    "mixed_color_layer_height_a",
+    "mixed_color_layer_height_b",
+    "dithering_z_step_size",
+    "dithering_local_z_mode",
+    "dithering_local_z_whole_objects",
+    "dithering_local_z_infill",
+    "dithering_local_z_direct_multicolor",
+    "dithering_step_painted_zones_only",
     // Fast-purge mode: project-level purge control, inert at Default.
     "flush_multiplier_fast",
     "prime_volume_mode",
@@ -322,6 +385,13 @@ static std::vector<std::string> s_project_options {
     // Per-filament physical-nozzle choice the grouping engine writes back; project-level so a
     // saved project round-trips the assignment alongside filament_map/filament_volume_map.
     "filament_nozzle_map",
+    // Snapmaker Orca: the process preset each tool head printed with (PerHeadProcess), a record
+    // the load compares and reports, the preset chosen for each tool head on the Speed page and
+    // the speeds flow type chosen for a High Flow tool head there; preset data like filament_map,
+    // not published.
+    "extruder_process_preset",
+    "extruder_process_choice",
+    "extruder_process_flow",
     // Filament Track Switch device state: whether the switch is installed and ready, and
     // whether dynamic per-nozzle filament mapping is active. Persisted with the project and
     // restored from a saved 3mf; reset to false on load and set true only by live device sync.
@@ -371,20 +441,56 @@ static std::vector<std::string> s_project_options {
 // assertions in tests/libslic3r/test_preset_bundle_loading.cpp guard both directions.
 static std::vector<std::string> s_project_options_published{"wipe_tower_x", "wipe_tower_y", "wipe_tower_rotation_angle"};
 
+<<<<<<< snaporca-int
 
+=======
+>>>>>>> lixnix/main
 // SM_FEATURE: add Snapmaker machine as default
 const char* PresetBundle::SM_BUNDLE = "Snapmaker";
 const char* PresetBundle::SM_DEFAULT_PRINTER_MODEL = "Snapmaker U1";
 const char* PresetBundle::SM_DEFAULT_PRINTER_VARIANT = "0.4";
 const char* PresetBundle::SM_DEFAULT_FILAMENT        = "Snapmaker PLA SnapSpeed";
+<<<<<<< snaporca-int
 
 //Orca: add custom as default
 const char *PresetBundle::ORCA_DEFAULT_BUNDLE = "Custom";
 const char *PresetBundle::ORCA_DEFAULT_PRINTER_MODEL = "MyKlipper 0.4 nozzle";
 const char *PresetBundle::ORCA_DEFAULT_PRINTER_VARIANT = "0.4";
 const char *PresetBundle::ORCA_DEFAULT_FILAMENT = "Generic PLA @System";
+=======
+>>>>>>> lixnix/main
 const char *PresetBundle::ORCA_FILAMENT_LIBRARY = "OrcaFilamentLibrary";
+const char *PresetBundle::ORCA_DEFAULT_BUNDLE  = "Custom";
 const char *PresetBundle::ORCA_DEFAULT_FILAMENT_PLACEHOLDER = "Default Filament";
+
+std::string PresetBundle::wizard_printer_variant(const std::string &bundle_name, const VendorProfile::PrinterModel *model,
+                                                 const std::set<std::string> &ticked)
+{
+    if (ticked.empty())
+        return {};
+    // The Snapmaker bundle alone prefers the default size: other vendors' model entries may list
+    // another size first on purpose (a 0.8 mm K1 SE), and there the first ticked variant in model
+    // order is what mainline activates.
+    if (bundle_name == SM_BUNDLE && ticked.count(SM_DEFAULT_PRINTER_VARIANT) != 0)
+        return SM_DEFAULT_PRINTER_VARIANT;
+    if (model != nullptr)
+        for (const VendorProfile::PrinterVariant &variant : model->variants)
+            if (ticked.count(variant.name) != 0)
+                return variant.name;
+    // No model entry (mainline's fallback): the default size when it is ticked, else the first name.
+    if (ticked.count(SM_DEFAULT_PRINTER_VARIANT) != 0)
+        return SM_DEFAULT_PRINTER_VARIANT;
+    return *ticked.begin();
+}
+
+// Snapmaker Orca: a filament copy whose per-column keys disagree with its variant list is repaired
+// before the filaments are joined, so one narrow value cannot shift the values of the next filament.
+static void repair_filament_copy(DynamicPrintConfig &config, const std::string &preset_name)
+{
+    if (filament_repair_columns(config))
+        BOOST_LOG_TRIVIAL(error) << "full config: the columns of filament preset " << preset_name
+                                 << " disagreed with filament_extruder_variant and were repaired";
+}
 
 DynamicPrintConfig PresetBundle::construct_full_config(
     Preset& in_printer_preset,
@@ -471,6 +577,7 @@ DynamicPrintConfig PresetBundle::construct_full_config(
     if (num_filaments <= 1) {
         // BBS: update filament config related with variants
         DynamicPrintConfig filament_config = in_filament_presets[0].config;
+        repair_filament_copy(filament_config, in_filament_presets[0].name);
         // Orca: a multi-variant filament resolves its variants on a single-variant printer too.
         if (apply_extruder && ((extruder_count > 1) || different_extruder || filament_config.has_multi_variant_filament()))
             filament_config.update_values_to_printer_extruders(out, extruder_count, extruder_volume_type_count, nozzle_volume_types, filament_options_with_variant, "", "filament_extruder_variant", 1, filament_maps[0], (NozzleVolumeType)filament_volume_maps[0]);
@@ -496,6 +603,7 @@ DynamicPrintConfig PresetBundle::construct_full_config(
         filament_temp_configs.resize(num_filaments);
         for (size_t i = 0; i < num_filaments; ++i) {
             filament_temp_configs[i] = *(filament_configs[i]);
+            repair_filament_copy(filament_temp_configs[i], filament_presets[i]->name);
             // Orca: a multi-variant filament resolves its variants on a single-variant printer too.
             if (apply_extruder && ((extruder_count > 1) || different_extruder || filament_temp_configs[i].has_multi_variant_filament()))
                 filament_temp_configs[i].update_values_to_printer_extruders(out, extruder_count, extruder_volume_type_count, nozzle_volume_types, filament_options_with_variant, "", "filament_extruder_variant", 1, filament_maps[i], (NozzleVolumeType)filament_volume_maps[i]);
@@ -747,7 +855,6 @@ PresetBundle::PresetBundle()
 
     this->project_config.apply_only(FullPrintConfig::defaults(), s_project_options);
     EnsureFilamentColorFieldsAligned(this->project_config);
-    EnsureFilamentVolumeTypesAligned(this->project_config, this->filament_presets.size());
 }
 
 bool PresetBundle::resolve_preset_config(DynamicPrintConfig &config, Preset::Type type,
@@ -970,6 +1077,7 @@ PresetBundle& PresetBundle::operator=(const PresetBundle &rhs)
     physical_printers   = rhs.physical_printers;
 
     filament_presets    = rhs.filament_presets;
+    nozzle_filament_enabled = rhs.nozzle_filament_enabled;
     project_config      = rhs.project_config;
     vendors             = rhs.vendors;
     obsolete_presets    = rhs.obsolete_presets;
@@ -1103,6 +1211,13 @@ PresetsConfigSubstitutions PresetBundle::load_presets(AppConfig &config, Forward
     }
     if (errors != nullptr)
         *errors = errors_cummulative;
+    if (startup_profile) {
+        const auto now = std::chrono::steady_clock::now();
+        startup_profile_log("PresetBundle::load_presets step=load_system_presets_from_json step_ms=" +
+                            std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(now - phase_start).count()) +
+                            " total_ms=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(now - total_start).count()));
+        phase_start = now;
+    }
 
     // BBS load preset from user's folder, load system default if
     // BBS: change directories by design
@@ -1121,6 +1236,13 @@ PresetsConfigSubstitutions PresetBundle::load_presets(AppConfig &config, Forward
     }
     if (errors != nullptr && errors->empty() && m_errors != 0)
         *errors = "Preset loading reported " + std::to_string(m_errors) + " error(s)";
+    if (startup_profile) {
+        const auto now = std::chrono::steady_clock::now();
+        startup_profile_log("PresetBundle::load_presets step=load_user_presets step_ms=" +
+                            std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(now - phase_start).count()) +
+                            " total_ms=" + std::to_string(std::chrono::duration_cast<std::chrono::milliseconds>(now - total_start).count()));
+        phase_start = now;
+    }
 
     // Rewrite renamed compatible_printers / compatible_prints references before selection. Skipped
     // in validation mode so the profile validator (has_errors -> check_preset_references) sees the
@@ -2310,13 +2432,18 @@ bool PresetBundle::apply_vendor_config(
     if (!supplemented_filaments.empty()) {
         bool active_filament_selected = supplemented_filaments.count(this->filament_presets.front()) > 0;
         if (!active_filament_selected) {
+            // Snapmaker Orca: the best of the ticked filaments by default_material_rank(), the
+            // first by name among equals (the map is ordered by name, which was the whole rule).
+            const Preset *best = nullptr;
             for (const auto& [filament_name, _] : supplemented_filaments) {
                 const Preset* preset = this->filaments.find_preset(filament_name);
-                if (preset && preset->is_visible && preset->is_compatible) {
-                    this->filaments.select_preset_by_name(filament_name, true);
-                    this->filament_presets.front() = this->filaments.get_selected_preset_name();
-                    break;
-                }
+                if (preset && preset->is_visible && preset->is_compatible &&
+                    (best == nullptr || this->default_material_rank(*preset) > this->default_material_rank(*best)))
+                    best = preset;
+            }
+            if (best != nullptr) {
+                this->filaments.select_preset_by_name(best->name, true);
+                this->filament_presets.front() = this->filaments.get_selected_preset_name();
             }
         }
     }
@@ -2855,10 +2982,14 @@ bool PresetBundle::import_json_presets(PresetsConfigSubstitutions &            s
             if (inherit_preset)
                 inherits_value = inherit_preset->name;  // keep the base_id redo below in sync
         }
+<<<<<<< snaporca-int
         if (collection == &printers) {
             for (const auto &entry : bed_asset_paths)
                 config.option<ConfigOptionString>(entry.first, true)->value = entry.second;
         }
+=======
+        normalize_snapmaker_flow_preset(config);
+>>>>>>> lixnix/main
         if (inherit_preset) {
             new_config = inherit_preset->config;
             new_config.apply(std::move(config));
@@ -3571,6 +3702,11 @@ std::pair<PresetsConfigSubstitutions, std::string> PresetBundle::load_system_pre
 
     //BBS: add config related logs
     BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(" finished, errors_cummulative %1%")%result.second;
+    if (startup_profile) {
+        const auto total_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - total_start).count();
+        startup_profile_log("PresetBundle::load_system_presets_from_json end vendor_count=" + std::to_string(vendors.size()) +
+                            " total_ms=" + std::to_string(total_ms));
+    }
     return result;
 }
 
@@ -3736,7 +3872,10 @@ std::pair<PresetsConfigSubstitutions, std::string> PresetBundle::load_vendors(co
                 BOOST_LOG_TRIVIAL(error) << "Found duplicated preset: " + vendor_duplicates[k] + " in vendor: " + vendor_name + ": ";
             }
         }
+<<<<<<< snaporca-int
 
+=======
+>>>>>>> lixnix/main
     }
 
     if (first) {
@@ -4203,8 +4342,16 @@ void PresetBundle::update_selections(AppConfig &config)
     if (config.has_printer_setting(initial_printer_profile_name, "filament_multi_colors")) {
         boost::algorithm::split(multi_filament_colors, config.get_printer_setting(initial_printer_profile_name, "filament_multi_colors"), boost::algorithm::is_any_of(","));
     }
-    if (multi_filament_colors.size() == 0) project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = filament_colors;
-    else project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = multi_filament_colors;
+    if (multi_filament_colors.size() == 0) {
+        project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = filament_colors;
+    } else {
+        // export_selections stores the app config key "filament_multi_colors" as '|'-joined
+        // FilamentColor packs; "filament_multi_colour" is the space-separated BBS pack that
+        // read_color_pack() and the AMS sync paths parse.
+        for (std::string &pack : multi_filament_colors)
+            std::replace(pack.begin(), pack.end(), '|', ' ');
+        project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = multi_filament_colors;
+    }
 
     std::vector<std::string> filament_color_types;
     if (config.has_printer_setting(initial_printer_profile_name, "filament_color_types")) {
@@ -4228,12 +4375,20 @@ void PresetBundle::update_selections(AppConfig &config)
     }
     this->extruder_ams_counts = get_extruder_ams_count(extruder_ams_count_str);
 
+<<<<<<< snaporca-int
     // Snapmaker: multi-colour (gradient/segment) filament colours and per-filament flow (volume) types.
     {
         std::vector<SMFilamentColor> filamentColors = LoadFilamentColors(config, initial_printer_profile_name, filament_presets.size());
         ApplyFilamentColors(project_config, filamentColors);
         EnsureFilamentVolumeTypesAligned(project_config, filament_presets.size());
     }
+=======
+    // Snapmaker: multi-color filament library state (filament_multi_colors / filament_colour_mode)
+    // computed on top of the plain colors loaded above.
+    std::vector<FilamentColor> filamentColors = LoadFilamentColors(config, initial_printer_profile_name,
+                                                                    filament_presets.size());
+    ApplyFilamentColors(project_config, filamentColors);
+>>>>>>> lixnix/main
 
     std::vector<std::string> matrix;
     if (config.has_printer_setting(initial_printer_profile_name, "flush_volumes_matrix")) {
@@ -4262,15 +4417,20 @@ void PresetBundle::update_selections(AppConfig &config)
     this->update_compatible(PresetSelectCompatibleType::Always);
     this->update_multi_material_filament_presets();
 
-    std::string first_visible_filament_name;
-    for (auto & fp : filament_presets) {
-        // Orca: also match the ORCA_DEFAULT_FILAMENT_PLACEHOLDER placeholder. update_compatible_internal
-        // iterates from m_num_default_presets, so the placeholder's is_compatible flag
-        // stays true and the not-found/visible/compatible predicate alone would miss it.
-        if (auto it = filaments.find_preset_internal(fp); fp == ORCA_DEFAULT_FILAMENT_PLACEHOLDER || it == filaments.end() || !it->is_visible || !it->is_compatible) {
-            if (first_visible_filament_name.empty())
-                first_visible_filament_name = filaments.first_compatible().name;
-            fp = first_visible_filament_name;
+    // Snapmaker Orca: with tool heads of different nozzle sizes a broken slot gets a preset for the
+    // size of its own tool head (repair_filament_slots_per_head); otherwise mainline's loop, with
+    // the editor's filament as the replacement (filament_slot_fallback_name).
+    if (! this->repair_filament_slots_per_head()) {
+        std::string first_visible_filament_name;
+        for (auto & fp : filament_presets) {
+            // Orca: also match the ORCA_DEFAULT_FILAMENT_PLACEHOLDER placeholder. update_compatible_internal
+            // iterates from m_num_default_presets, so the placeholder's is_compatible flag
+            // stays true and the not-found/visible/compatible predicate alone would miss it.
+            if (auto it = filaments.find_preset_internal(fp); fp == ORCA_DEFAULT_FILAMENT_PLACEHOLDER || it == filaments.end() || !it->is_visible || !it->is_compatible) {
+                if (first_visible_filament_name.empty())
+                    first_visible_filament_name = this->filament_slot_fallback_name();
+                fp = first_visible_filament_name;
+            }
         }
     }
 
@@ -4352,6 +4512,7 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
             initial_print_profile_name = prefered_print_profile;
 
         const std::vector<std::string>& prefered_filament_profiles = selected_printer->config.option<ConfigOptionStrings>("default_filament_profile")->values;
+<<<<<<< snaporca-int
         if (is_placeholder_filament_selection(initial_filament_profile_name) && !prefered_filament_profiles.empty())
             initial_filament_profile_name = prefered_filament_profiles[0];
         // Upstream: keep the placeholder when the preferred filament is not visible; it is resolved later.
@@ -4362,6 +4523,16 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
         }
 
 
+=======
+        if (is_placeholder_filament_selection(initial_filament_profile_name) && !prefered_filament_profiles.empty()) {
+            // Orca: check if the preferred filament is visible before selecting it.
+            const Preset* preferred_preset = this->filaments.find_preset(prefered_filament_profiles[0], false);
+            if (preferred_preset && preferred_preset->is_visible)
+                initial_filament_profile_name = prefered_filament_profiles[0];
+            // If not visible, keep the placeholder which will be resolved later.
+        }
+
+>>>>>>> lixnix/main
         if (fallback_printer != nullptr) {
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": recovered active printer selection from %1% to %2%")
                 % initial_printer_profile_name % fallback_printer->name;
@@ -4403,8 +4574,16 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     if (config.has_printer_setting(initial_printer_profile_name, "filament_multi_colors")) {
         boost::algorithm::split(multi_filament_colors, config.get_printer_setting(initial_printer_profile_name, "filament_multi_colors"), boost::algorithm::is_any_of(","));
     }
-    if (multi_filament_colors.size() == 0) project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = filament_colors;
-    else project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = multi_filament_colors;
+    if (multi_filament_colors.size() == 0) {
+        project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = filament_colors;
+    } else {
+        // export_selections stores the app config key "filament_multi_colors" as '|'-joined
+        // FilamentColor packs; "filament_multi_colour" is the space-separated BBS pack that
+        // read_color_pack() and the AMS sync paths parse.
+        for (std::string &pack : multi_filament_colors)
+            std::replace(pack.begin(), pack.end(), '|', ' ');
+        project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = multi_filament_colors;
+    }
 
     std::vector<std::string> filament_color_types;
     if (config.has_printer_setting(initial_printer_profile_name, "filament_color_types")) {
@@ -4428,12 +4607,20 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     }
     this->extruder_ams_counts = get_extruder_ams_count(extruder_ams_count_str);
 
+<<<<<<< snaporca-int
     // Snapmaker: multi-colour (gradient/segment) filament colours and per-filament flow (volume) types.
     {
         std::vector<SMFilamentColor> filamentColors = LoadFilamentColors(config, initial_printer_profile_name, filament_presets.size());
         ApplyFilamentColors(project_config, filamentColors);
         EnsureFilamentVolumeTypesAligned(project_config, filament_presets.size());
     }
+=======
+    // Snapmaker: multi-color filament library state (filament_multi_colors / filament_colour_mode)
+    // computed on top of the plain colors loaded above.
+    std::vector<FilamentColor> filamentColors = LoadFilamentColors(config, initial_printer_profile_name,
+                                                                    filament_presets.size());
+    ApplyFilamentColors(project_config, filamentColors);
+>>>>>>> lixnix/main
 
     std::vector<std::string> matrix;
     if (config.has_printer_setting(initial_printer_profile_name, "flush_volumes_matrix")) {
@@ -4479,13 +4666,18 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
         }
     }
 
-    std::string first_visible_filament_name;
-    for (auto & fp : filament_presets) {
-        // Orca: also match the ORCA_DEFAULT_FILAMENT_PLACEHOLDER placeholder — see update_selections.
-        if (auto it = filaments.find_preset_internal(fp); fp == ORCA_DEFAULT_FILAMENT_PLACEHOLDER || it == filaments.end() || !it->is_visible || !it->is_compatible) {
-            if (first_visible_filament_name.empty())
-                first_visible_filament_name = filaments.first_compatible().name;
-            fp = first_visible_filament_name;
+    // Snapmaker Orca: with tool heads of different nozzle sizes a broken slot gets a preset for the
+    // size of its own tool head (see update_selections); otherwise mainline's loop, with the
+    // editor's filament as the replacement (filament_slot_fallback_name).
+    if (! this->repair_filament_slots_per_head()) {
+        std::string first_visible_filament_name;
+        for (auto & fp : filament_presets) {
+            // Orca: also match the ORCA_DEFAULT_FILAMENT_PLACEHOLDER placeholder — see update_selections.
+            if (auto it = filaments.find_preset_internal(fp); fp == ORCA_DEFAULT_FILAMENT_PLACEHOLDER || it == filaments.end() || !it->is_visible || !it->is_compatible) {
+                if (first_visible_filament_name.empty())
+                    first_visible_filament_name = this->filament_slot_fallback_name();
+                fp = first_visible_filament_name;
+            }
         }
     }
 
@@ -4558,12 +4750,39 @@ void PresetBundle::export_selections(AppConfig &config)
     }
     // Load project config data into app config
     CNumericLocalesSetter locales_setter;
-    std::string           filament_colors = boost::algorithm::join(project_config.option<ConfigOptionStrings>("filament_colour")->values, ",");
-    config.set_printer_setting(printer_name, "filament_colors", filament_colors);
+    std::vector<std::string> projectColors = project_config.option<ConfigOptionStrings>("filament_colour")->values;
+    std::vector<std::string> projectMultiColors;
+    std::vector<FilamentColorMode> projectModes;
+    if (ConfigOptionStrings *multiColors = project_config.option<ConfigOptionStrings>("filament_multi_colors"))
+        projectMultiColors = multiColors->values;
+    if (ConfigOptionInts *modes = project_config.option<ConfigOptionInts>("filament_colour_mode"))
+    {
+        projectModes.reserve(modes->values.size());
+        for (const int modeValue : modes->values)
+            projectModes.emplace_back(FilamentColorModeFromConfig(modeValue));
+    }
 
-    // Load filament multi color data into app config
-    std::string           filament_multi_colors = boost::algorithm::join(project_config.option<ConfigOptionStrings>("filament_multi_colour")->values, ",");
-    config.set_printer_setting(printer_name, "filament_multi_colors", filament_multi_colors);
+    const std::vector<FilamentColor> projectFilamentColors =
+        BuildFilamentColors(projectColors, projectMultiColors, projectModes, filament_presets.size());
+    std::vector<std::string> filamentColorValues;
+    std::vector<std::string> filamentMultiColorValues;
+    std::vector<std::string> filamentColourModeStrings;
+    filamentColorValues.reserve(projectFilamentColors.size());
+    filamentMultiColorValues.reserve(projectFilamentColors.size());
+    filamentColourModeStrings.reserve(projectFilamentColors.size());
+    for (const FilamentColor& color : projectFilamentColors)
+    {
+        filamentColorValues.emplace_back(color.PrimaryColor("#26A69A"));
+        filamentMultiColorValues.emplace_back(color.ToMultiColorsString());
+        filamentColourModeStrings.emplace_back(std::to_string(FilamentColorModeToConfig(color.NormalizedMode())));
+    }
+
+    const std::string filamentColors = boost::algorithm::join(filamentColorValues, ",");
+    const std::string filamentMultiColors = boost::algorithm::join(filamentMultiColorValues, ",");
+    const std::string filamentColourModes = boost::algorithm::join(filamentColourModeStrings, ",");
+    config.set_printer_setting(printer_name, "filament_colors", filamentColors);
+    config.set_printer_setting(printer_name, "filament_multi_colors", filamentMultiColors);
+    config.set_printer_setting(printer_name, "filament_colour_mode", filamentColourModes);
 
     // Load filament color type data into app config
     std::string           filament_color_types = boost::algorithm::join(project_config.option<ConfigOptionStrings>("filament_colour_type")->values, ",");
@@ -4631,6 +4850,7 @@ void PresetBundle::export_selections(AppConfig &config)
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(": printer %1%, print %2%, filaments[0] %3% ")%printers.get_selected_preset_name() % prints.get_selected_preset_name() %filament_presets[0];
 }
 
+<<<<<<< snaporca-int
 // Snapmaker: flow-variant per-filament volume types.
 std::vector<FilamentVolumeType> PresetBundle::get_filament_volume_types() const
 {
@@ -4672,6 +4892,84 @@ void PresetBundle::set_num_filaments(unsigned int n, std::vector<std::string> ne
             multi_colors->values[i] = color;
     }
     EnsureFilamentColorFieldsAligned(project_config);
+=======
+static std::string usable_nozzle_filament_target(const PresetBundle &bundle, const NozzleFilament::State &state, size_t slot);
+
+// Snapmaker Orca: a slot that set_num_filaments() added starts as a copy of the last slot. With the
+// nozzle size rule on it gets the version of that material for its own tool head. No notice: the
+// user asked for a new filament, not for a change.
+static void follow_nozzle_size_in_new_slots(PresetBundle &bundle, size_t old_count)
+{
+    if (bundle.filament_presets.size() <= old_count || old_count == 0)
+        return;
+    const NozzleFilament::State state = NozzleFilament::state(bundle);
+    if (!state.rule_on)
+        return;
+    for (size_t slot = old_count; slot < bundle.filament_presets.size(); ++slot)
+        if (std::string name = usable_nozzle_filament_target(bundle, state, slot); !name.empty())
+            bundle.filament_presets[slot] = std::move(name);
+}
+
+void PresetBundle::set_num_filaments(unsigned int n, std::vector<std::string> new_colors) {
+    int old_filament_count = this->filament_presets.size();
+    if (n > old_filament_count && old_filament_count != 0)
+        filament_presets.resize(n, filament_presets.back());
+    else {
+        filament_presets.resize(n);
+    }
+    ConfigOptionStrings* filament_color = project_config.option<ConfigOptionStrings>("filament_colour");
+    ConfigOptionStrings *filament_multi_color = project_config.option<ConfigOptionStrings>("filament_multi_colour");
+    ConfigOptionStrings* filament_color_type = project_config.option<ConfigOptionStrings>("filament_colour_type");
+    ConfigOptionInts* filament_map = project_config.option<ConfigOptionInts>("filament_map");
+    ConfigOptionInts* filament_nozzle_map = project_config.option<ConfigOptionInts>("filament_nozzle_map");
+    ConfigOptionInts* filament_volume_map = project_config.option<ConfigOptionInts>("filament_volume_map");
+
+    filament_color->resize(n);
+    // Sync filament multi colour
+    filament_multi_color->values.resize(n);
+    for (size_t i = 0; i < n; i++) {
+        filament_multi_color->values[i] = filament_color->values[i];
+    }
+    filament_color_type->resize(n);
+    filament_map->values.resize(n, 1);
+    filament_nozzle_map->values.resize(n, 0);
+    filament_volume_map->values.resize(n, static_cast<int>(NozzleVolumeType::nvtStandard));
+    ams_multi_color_filment.resize(n);
+    EnsureFilamentColorFieldsAligned(project_config);
+
+    // Mixed-color metadata is a parallel per-filament array set, so it has to grow and shrink
+    // with the filament count exactly like filament_colour above.
+    if (auto* opt = project_config.option<ConfigOptionBools>("filament_is_mixed"))
+        opt->values.resize(n, false);
+    if (auto* opt = project_config.option<ConfigOptionStrings>("filament_mixed_components"))
+        opt->values.resize(n, std::string{});
+    if (auto* opt = project_config.option<ConfigOptionStrings>("filament_mixed_sublayer_ratios"))
+        opt->values.resize(n, std::string{});
+    if (auto* opt = project_config.option<ConfigOptionBools>("filament_mixed_gradient"))
+        opt->values.resize(n, false);
+    if (auto* opt = project_config.option<ConfigOptionStrings>("filament_mixed_gradient_range"))
+        opt->values.resize(n, std::string{});
+    if (auto* opt = project_config.option<ConfigOptionStrings>("filament_mixed_gradient_curve"))
+        opt->values.resize(n, std::string{});
+    if (auto* opt = project_config.option<ConfigOptionBools>("filament_mixed_gradient_per_part"))
+        opt->values.resize(n, false);
+
+    // BBS set new filament color to new_color
+    if (old_filament_count < n) {
+        if (!new_colors.empty()) {
+            ConfigOptionStrings *multi_colors = project_config.option<ConfigOptionStrings>("filament_multi_colors", true);
+            for (int i = old_filament_count; i < n; i++) {
+                filament_color->values[i] = new_colors[i - old_filament_count];
+                multi_colors->values[i] = new_colors[i - old_filament_count];
+                filament_multi_color->values[i] = new_colors[i - old_filament_count];
+                filament_color_type->values[i]  = "1";  // default color type
+            }
+            EnsureFilamentColorFieldsAligned(project_config);
+        }
+    }
+    follow_nozzle_size_in_new_slots(*this, size_t(old_filament_count));
+    update_multi_material_filament_presets(size_t(-1), size_t(old_filament_count));
+>>>>>>> lixnix/main
 }
 
 void PresetBundle::set_num_filaments(unsigned int n, std::string new_color)
@@ -4706,23 +5004,28 @@ void PresetBundle::set_num_filaments(unsigned int n, std::string new_color)
     filament_volume_map->values.resize(n, static_cast<int>(NozzleVolumeType::nvtStandard));
     ams_multi_color_filment.resize(n);
     EnsureFilamentColorFieldsAligned(project_config);
-    EnsureFilamentVolumeTypesAligned(project_config, n);
 
     resize_mixed_filament_metadata(project_config, old_slot_count, n);
 
     //BBS set new filament color to new_color
     if (!new_color.empty()) {
+<<<<<<< snaporca-int
         // Snapmaker: also seed the multi-colour field of the new slots.
+=======
+>>>>>>> lixnix/main
         ConfigOptionStrings *multi_colors = project_config.option<ConfigOptionStrings>("filament_multi_colors", true);
         for (size_t i = old_slot_count; i < n; i++) {
             filament_color->values[i] = new_color;
+            multi_colors->values[i] = new_color;
             filament_multi_color->values[i] = new_color;
             filament_color_type->values[i]  = "1";  // default color type
             if (i < multi_colors->values.size())
                 multi_colors->values[i] = new_color;
         }
+        EnsureFilamentColorFieldsAligned(project_config);
     }
 
+    follow_nozzle_size_in_new_slots(*this, size_t(old_filament_count));
     update_multi_material_filament_presets(size_t(-1), size_t(old_filament_count));
 }
 
@@ -4784,6 +5087,9 @@ void PresetBundle::update_num_filaments(unsigned int to_del_flament_id)
     erase_or_resize(filament_color_type->values);
     erase_or_resize(ams_multi_color_filment);
 
+    // Snapmaker: keep the multi-color filament library fields in sync.
+    EraseFilamentColorFields(project_config, to_del_flament_id);
+
     // Mixed-color metadata. Component IDs reference other slots by 1-based index, so a deleted
     // *physical* filament must be remapped out of every mix before the arrays themselves shrink.
     // Deleting a mixed slot needs no remap (nothing references a mixed slot as a component).
@@ -4813,7 +5119,160 @@ void PresetBundle::update_num_filaments(unsigned int to_del_flament_id)
     if (auto *opt = project_config.option<ConfigOptionBools>("filament_mixed_gradient_per_part"))
         erase_or_resize(opt->values);
 
-    update_multi_material_filament_presets(to_del_flament_id);
+    update_multi_material_filament_presets(to_del_flament_id, old_filament_count);
+}
+
+// Snapmaker Orca: filament presets follow the nozzle size of their tool head, the per slot half of
+// the preset layer. See PresetBundle.hpp and libslic3r/NozzleFilamentPresets.hpp.
+bool PresetBundle::filament_slot_fits(const NozzleFilament::State &state, const Preset &preset, size_t slot) const
+{
+    const Preset *machine = state.mixed ? state.machine_of(slot) : nullptr;
+    return machine == nullptr ? preset.is_compatible : NozzleFilament::fits(*this, preset, *machine);
+}
+
+bool PresetBundle::filament_slot_fits(const Preset &preset, size_t slot) const
+{
+    return this->filament_slot_fits(NozzleFilament::state(*this), preset, slot);
+}
+
+bool PresetBundle::filament_slot_selectable(const NozzleFilament::State &state, const Preset &preset, size_t slot) const
+{
+    const Preset *machine = state.mixed ? state.machine_of(slot) : nullptr;
+    if (machine == nullptr)
+        return preset.is_compatible;
+    if (NozzleFilament::fits(*this, preset, *machine))
+        return true;
+    // Made for the size of the printer preset: a user preset is never hidden by its size, and a
+    // material without a version for the size of this tool head prints with the one it has.
+    return preset.is_compatible && (!preset.is_system || NozzleFilament::version_for(this->filaments, preset, *machine) == nullptr);
+}
+
+bool PresetBundle::filament_slot_selectable(const Preset &preset, size_t slot) const
+{
+    return this->filament_slot_selectable(NozzleFilament::state(*this), preset, slot);
+}
+
+const Preset& PresetBundle::first_slot_fit(size_t slot, const std::function<int(const Preset&)> &preference) const
+{
+    // Without a preference of the caller the default material of the printer ranks first.
+    auto quality = [this, &preference](const Preset &preset) -> int { return preference ? preference(preset) : this->default_material_rank(preset); };
+    const NozzleFilament::State state = NozzleFilament::state(*this);
+    if (state.mixed && state.machine_of(slot) != nullptr) {
+        const size_t idx = this->filaments.first_compatible_idx(quality, [this, &state, slot](const Preset &preset) { return this->filament_slot_fits(state, preset, slot); });
+        const Preset &fit = this->filaments.preset(idx);
+        // Index 0 is the answer for "nothing found" as well as the default preset.
+        if (this->filament_slot_fits(state, fit, slot) && fit.is_visible)
+            return fit;
+    }
+    return this->filaments.preset(this->filaments.first_compatible_idx(quality));
+}
+
+std::vector<NozzleFilament::SlotTarget> PresetBundle::nozzle_filament_targets(const std::vector<size_t> &heads) const
+{
+    std::vector<NozzleFilament::SlotTarget> targets;
+    const NozzleFilament::State             state = NozzleFilament::state(*this);
+    if (!state.rule_on)
+        return targets;
+    for (size_t slot = 0; slot < this->filament_presets.size(); ++slot)
+        if (heads.empty() || std::find(heads.begin(), heads.end(), state.head_of(slot)) != heads.end())
+            targets.emplace_back(NozzleFilament::target_for_slot(*this, state, slot, heads));
+    return targets;
+}
+
+size_t PresetBundle::apply_nozzle_filament_targets(const std::vector<NozzleFilament::SlotTarget> &targets, AppConfig *app_config)
+{
+    size_t changed = 0;
+    for (const NozzleFilament::SlotTarget &target : targets) {
+        if (!target.switches())
+            continue;
+        // The state may have moved on since the targets were computed.
+        if (target.slot >= this->filament_presets.size() || this->filament_presets[target.slot] != target.from) {
+            BOOST_LOG_TRIVIAL(info) << "NozzleFilament: filament " << target.slot + 1 << " not written: it no longer holds \"" << target.from << "\"";
+            continue;
+        }
+        Preset *to = this->filaments.find_preset(target.to, false, true);
+        if (to == nullptr || to->name != target.to) {
+            BOOST_LOG_TRIVIAL(warning) << "NozzleFilament: filament " << target.slot + 1 << " not written: no preset \"" << target.to << "\"";
+            continue;
+        }
+        if (!to->is_visible) {
+            BOOST_LOG_TRIVIAL(info) << "NozzleFilament: installing \"" << to->name << "\" for filament " << target.slot + 1;
+            to->is_visible = true;
+            if (app_config != nullptr)
+                app_config->set(AppConfig::SECTION_FILAMENTS, to->name, "true");
+        }
+        // A user preset that leaves its slot for its size is noted for the way back.
+        NozzleFilament::remember_user_preset(*this, target.slot, target.from);
+        this->filament_presets[target.slot] = to->name;
+        BOOST_LOG_TRIVIAL(info) << "NozzleFilament: filament " << target.slot + 1 << " written: \"" << target.from << "\" -> \"" << to->name << "\"";
+        ++changed;
+    }
+    return changed;
+}
+
+// The preset a broken or new slot gets from the rule: the target of the slot when it switches to
+// an installed preset the slot may hold. Empty otherwise. The preset layer installs nothing on its
+// own; only apply_nozzle_filament_targets() does.
+static std::string usable_nozzle_filament_target(const PresetBundle &bundle, const NozzleFilament::State &state, size_t slot)
+{
+    const NozzleFilament::SlotTarget target = NozzleFilament::target_for_slot(bundle, state, slot);
+    if (!target.switches())
+        return {};
+    const Preset *to = bundle.filaments.find_preset(target.to, false);
+    return to != nullptr && to->name == target.to && to->is_visible && bundle.filament_slot_selectable(state, *to, slot) ? to->name : std::string();
+}
+
+// Snapmaker Orca: per slot form of the repair loop of update_selections() / load_selections(); false
+// unless nozzle sizes are mixed. A slot with a missing or unselectable preset gets the rule's target,
+// else the first preset that fits its tool head.
+std::string PresetBundle::filament_slot_fallback_name() const
+{
+    if (this->filaments.get_selected_idx() != size_t(-1)) {
+        const Preset &selected = this->filaments.get_selected_preset();
+        if (! selected.is_default && selected.is_visible && selected.is_compatible)
+            return selected.name;
+    }
+    return this->filaments.preset(this->filaments.first_compatible_idx([this](const Preset &preset) { return this->default_material_rank(preset); })).name;
+}
+
+int PresetBundle::default_material_rank(const Preset &filament) const
+{
+    if (filament.is_default)
+        return 0;
+    const Preset &printer = this->printers.get_edited_preset();
+    if (printer.vendor == nullptr || printer.vendor->id != SM_BUNDLE)
+        return 0;
+    if (const VendorProfile::PrinterModel *model = PresetUtils::system_printer_model(printer); model != nullptr)
+        if (std::find(model->default_materials.begin(), model->default_materials.end(), filament.name) != model->default_materials.end())
+            return 3;
+    const auto *type = filament.config.option<ConfigOptionStrings>("filament_type");
+    if (type == nullptr || type->values.empty() || type->values.front() != "PLA")
+        return 0;
+    const auto *vendor = filament.config.option<ConfigOptionStrings>("filament_vendor");
+    if (vendor == nullptr || vendor->values.empty())
+        return 0;
+    if (boost::iequals(vendor->values.front(), "Generic"))
+        return 2;
+    if (boost::iequals(vendor->values.front(), SM_BUNDLE))
+        return 1;
+    return 0;
+}
+
+bool PresetBundle::repair_filament_slots_per_head()
+{
+    const NozzleFilament::State state = NozzleFilament::state(*this);
+    if (!state.mixed)
+        return false;
+    for (size_t slot = 0; slot < this->filament_presets.size(); ++slot) {
+        std::string  &name   = this->filament_presets[slot];
+        // The preset of the collection, not the edited copy of the selected one: visibility is kept there.
+        const Preset *preset = name == ORCA_DEFAULT_FILAMENT_PLACEHOLDER ? nullptr : this->filaments.find_preset(name, false, true);
+        if (preset != nullptr && preset->is_visible && this->filament_slot_selectable(state, *preset, slot))
+            continue;
+        std::string replacement = preset == nullptr ? std::string() : usable_nozzle_filament_target(*this, state, slot);
+        name = replacement.empty() ? this->first_slot_fit(slot).name : replacement;
+    }
+    return true;
 }
 
 bool PresetBundle::is_mixed_filament(size_t idx) const
@@ -5467,6 +5926,69 @@ std::vector<int> PresetBundle::get_used_tpu_filaments(const std::vector<int> &us
     return tpu_filaments;
 }
 
+// Snapmaker: legacy single-counter AMS sync kept alongside Orca's map-based overload.
+unsigned int PresetBundle::sync_ams_list(unsigned int &unknowns)
+{
+    std::vector<std::string> filament_presets;
+    std::vector<std::string> filament_colors;
+    ams_multi_color_filment.clear();
+    for (auto &entry : filament_ams_list) {
+        auto & ams = entry.second;
+        auto filament_id = ams.opt_string("filament_id", 0u);
+        auto filament_color = ams.opt_string("filament_colour", 0u);
+        auto filament_changed = !ams.has("filament_changed") || ams.opt_bool("filament_changed");
+        std::vector<std::string> filament_multi_color = ams.opt<ConfigOptionStrings>("filament_multi_colors")->values;
+        if (filament_id.empty()) continue;
+        if (!filament_changed && this->filament_presets.size() > filament_presets.size()) {
+            filament_presets.push_back(this->filament_presets[filament_presets.size()]);
+            filament_colors.push_back(filament_color);
+            ams_multi_color_filment.push_back(filament_multi_color);
+            continue;
+        }
+        auto iter = std::find_if(filaments.begin(), filaments.end(), [this, &filament_id](auto &f) {
+            return f.is_compatible && filaments.get_preset_base(f) == &f && f.filament_id == filament_id; });
+        if (iter == filaments.end()) {
+            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": filament_id %1% not found or system or compatible") % filament_id;
+            auto filament_type = ams.opt_string("filament_type", 0u);
+            if (!filament_type.empty()) {
+                filament_type = "Generic " + filament_type;
+                iter = std::find_if(filaments.begin(), filaments.end(), [&filament_type](auto &f) {
+                    return f.is_compatible && f.is_system
+                        && boost::algorithm::starts_with(f.name, filament_type);
+                });
+            }
+            if (iter == filaments.end()) {
+                // Prefer old selection
+                if (filament_presets.size() < this->filament_presets.size()) {
+                    filament_presets.push_back(this->filament_presets[filament_presets.size()]);
+                    filament_colors.push_back(filament_color);
+                    ++unknowns;
+                    continue;
+                }
+                iter = std::find_if(filaments.begin(), filaments.end(), [&filament_type](auto &f) {
+                        return f.is_compatible && f.is_system;
+                });
+                if (iter == filaments.end())
+                    continue;
+            }
+            ++unknowns;
+            filament_id = iter->filament_id;
+        }
+        filament_presets.push_back(iter->name);
+        filament_colors.push_back(filament_color);
+        ams_multi_color_filment.push_back(filament_multi_color);
+    }
+    if (filament_presets.empty())
+        return 0;
+    this->filament_presets = filament_presets;
+    ConfigOptionStrings *filament_color = project_config.option<ConfigOptionStrings>("filament_colour");
+    filament_color->resize(filament_presets.size());
+    filament_color->values = filament_colors;
+    EnsureFilamentColorFieldsAligned(project_config);
+    update_multi_material_filament_presets();
+    return filament_presets.size();
+}
+
 void PresetBundle::set_calibrate_printer(std::string name)
 {
     if (name.empty()) {
@@ -5781,6 +6303,38 @@ DynamicPrintConfig PresetBundle::full_config(bool apply_extruder, std::optional<
         this->full_sla_config();
 }
 
+DynamicPrintConfig PresetBundle::full_config_for_print(bool apply_extruder, std::optional<std::vector<int>> filament_maps,
+                                                       std::optional<std::vector<int>> filament_volume_maps,
+                                                       std::vector<PerHeadProcess::Source> *sources) const
+{
+    if (sources != nullptr)
+        sources->clear();
+    // Snapmaker Orca: the preferred layer heights as entered are planned here, for slicing only
+    // (Slicing.hpp); the presets keep the entered values and the process preset's layer height.
+    auto planned = [](DynamicPrintConfig config) {
+        apply_extruder_layer_height_plan(config);
+        return config;
+    };
+    // The preference off and no head with a chosen preset: the plain config (PerHeadProcess::active).
+    if (!PerHeadProcess::active(*this) || this->printers.get_edited_preset().printer_technology() != ptFFF)
+        return planned(this->full_config(apply_extruder, filament_maps, filament_volume_maps));
+    std::vector<PerHeadProcess::Source> heads = PerHeadProcess::head_sources(*this);
+    if (sources != nullptr)
+        *sources = heads;
+    // A head with a chosen flow (a High Flow nozzle printing the Standard speeds) composes too.
+    const bool any_derived = std::any_of(heads.begin(), heads.end(), [](const PerHeadProcess::Source &source) { return source.derived || source.flow_chosen; });
+    if (!any_derived)
+        return planned(this->full_config(apply_extruder, filament_maps, filament_volume_maps));
+    // Composed on the unexpanded config: Print::apply narrows the composed per-head layout the
+    // same way the expansion of full_fff_config(true) would.
+    DynamicPrintConfig out = this->full_fff_config(false, filament_maps, filament_volume_maps);
+    if (!PerHeadProcess::compose(out, PerHeadProcess::all_edited_keys(*this), heads))
+        return planned(this->full_config(apply_extruder, filament_maps, filament_volume_maps));
+    if (sources != nullptr)
+        *sources = heads;
+    return planned(std::move(out));
+}
+
 DynamicPrintConfig PresetBundle::full_config_secure(std::optional<std::vector<int>>filament_maps) const
 {
     DynamicPrintConfig config = this->full_fff_config(false, filament_maps);
@@ -5935,6 +6489,7 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
     if (num_filaments <= 1) {
         //BBS: update filament config related with variants
         DynamicPrintConfig filament_config = this->filaments.get_edited_preset().config;
+        repair_filament_copy(filament_config, this->filaments.get_edited_preset().name);
         // Orca: a multi-variant filament resolves its variants on a single-variant printer too.
         if (apply_extruder && ((extruder_count > 1) || different_extruder || filament_config.has_multi_variant_filament()))
             filament_config.update_values_to_printer_extruders(out, extruder_count, extruder_volume_type_count, nozzle_volume_types, filament_options_with_variant, "", "filament_extruder_variant", 1, filament_maps[0], (NozzleVolumeType)filament_volume_maps[0]);
@@ -6082,6 +6637,7 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
         filament_temp_configs.resize(num_filaments);
         for (size_t i = 0; i < num_filaments; ++i) {
             filament_temp_configs[i] = *(filament_configs[i]);
+            repair_filament_copy(filament_temp_configs[i], filament_presets[i]->name);
             // Orca: a multi-variant filament resolves its variants on a single-variant printer too.
             if (apply_extruder && ((extruder_count > 1) || different_extruder || filament_temp_configs[i].has_multi_variant_filament()))
                 filament_temp_configs[i].update_values_to_printer_extruders(out, extruder_count, extruder_volume_type_count, nozzle_volume_types, filament_options_with_variant, "", "filament_extruder_variant", 1, filament_maps[i], (NozzleVolumeType)filament_volume_maps[i]);
@@ -6099,7 +6655,8 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
                 const ConfigOption *opt_src = filament_temp_configs.front().option(key);
                 if (opt_src != nullptr)
                     opt_dst->set(opt_src);
-            } else if (is_filament_flow_variant_option(key) || key == "filament_flow_support") {
+            } else {
+                // BBS
                 ConfigOptionVectorBase* opt_vec_dst = static_cast<ConfigOptionVectorBase*>(opt_dst);
                 opt_vec_dst->resize(flow_total_size);
                 size_t segment_start = 0;
@@ -6154,7 +6711,6 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
                 }
             }
         }
-        out.option<ConfigOptionInts>("filament_flow_step_size", true)->values = flow_step_sizes;
     }
 
     //BBS: add logic for settings check between different system presets
@@ -6185,9 +6741,8 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
         auto *opt = dynamic_cast<ConfigOptionInt*>(out.option(key, false));
         assert(opt != nullptr);
         if (opt == nullptr) {
-            // Defensive: a type-mismatched entry must not be left in the merged
-            // config -- Print::apply would throw ConfigurationError on it with no
-            // catcher. Re-cast to the option default instead of crashing.
+            // A type-mismatched entry would make Print::apply throw ConfigurationError;
+            // replace it with the option default instead.
             out.erase(key);
             out.set_key_value(key, new ConfigOptionInt(0));
             continue;
@@ -6204,7 +6759,11 @@ DynamicPrintConfig PresetBundle::full_fff_config(bool apply_extruder, std::optio
         auto *opt = dynamic_cast<ConfigOptionInt*>(out.option(key, false));
         assert(opt != nullptr);
         if (opt == nullptr) {
+<<<<<<< snaporca-int
             // Same defensive re-cast as above; these keys default to 0 (inherit).
+=======
+            // Same re-cast as above; 0 selects the object or part filament.
+>>>>>>> lixnix/main
             out.erase(key);
             out.set_key_value(key, new ConfigOptionInt(0));
             continue;
@@ -6524,6 +7083,15 @@ static void apply_receiver_mix_relocations(DynamicPrintConfig&                  
     move_ints("filament_map");
     move_ints("filament_nozzle_map");
     move_ints("filament_volume_map");
+    // Snapmaker Orca: filament_multi_colors / filament_colour_mode move with the displaced mix. The
+    // vacated slot is reset (empty, Segment) so EnsureFilamentColorFieldsAligned() refills it.
+    move_strings("filament_multi_colors", true);
+    move_ints("filament_colour_mode");
+    if (auto* colour_modes = config.option<ConfigOptionInts>("filament_colour_mode")) {
+        for (const auto& [from, to] : moves)
+            if (from < colour_modes->values.size())
+                colour_modes->values[from] = FilamentColorModeToConfig(FilamentColorMode::Segment);
+    }
     {
         const std::vector<std::vector<std::string>> frozen = ams_multi_color_filment;
         for (const auto& [from, to] : moves) {
@@ -6574,6 +7142,11 @@ void PresetBundle::load_config_file_config(const std::string &name_or_path, bool
     // drop it from any imported config so it only comes from the connected printer.
     config.erase("enable_filament_dynamic_map");
 
+    // Snapmaker Orca 2.4 flow keys become variant columns before the filament columns are counted;
+    // the tool head changes are kept for the import notice.
+    this->last_flow_import_report.clear();
+    normalize_snapmaker_flow_config(config, this->last_flow_import_report);
+
 #if 0
     size_t num_extruders = (printer_technology == ptFFF) ?
         std::min(config.option<ConfigOptionFloats>("nozzle_diameter"  )->values.size(),
@@ -6587,26 +7160,6 @@ void PresetBundle::load_config_file_config(const std::string &name_or_path, bool
     if (num_filaments == 0)
         throw Slic3r::RuntimeError((boost::format(L("Invalid configuration file: %1%")) % name_or_path).str());
 #endif
-
-    // Snapmaker: flow variant. Newer 3MF files store flow-aware filament options as concatenated
-    // per-filament segments. Keep the segment table before splitting the full config back into presets.
-    // Legacy files do not contain the table and retain the original one-value-per-filament layout.
-    std::vector<int> filament_flow_step_sizes(num_filaments, 1);
-    bool has_filament_flow_segments = false;
-    if (const auto *stored_step_sizes = config.option<ConfigOptionInts>("filament_flow_step_size");
-        stored_step_sizes != nullptr && stored_step_sizes->values.size() == num_filaments) {
-        has_filament_flow_segments = true;
-        for (size_t i = 0; i < num_filaments; ++i)
-            filament_flow_step_sizes[i] = std::max(1, stored_step_sizes->values[i]);
-    }
-
-    std::vector<size_t> filament_flow_segment_starts(num_filaments, 0);
-    for (size_t i = 1; i < num_filaments; ++i)
-        filament_flow_segment_starts[i] = filament_flow_segment_starts[i - 1] + size_t(filament_flow_step_sizes[i - 1]);
-
-    // filament_flow_step_size describes the composed config only. It must not be copied into an
-    // individual filament preset; full_fff_config() will regenerate it after presets are restored.
-    config.erase("filament_flow_step_size");
 
     //BBS: add config related logs
     BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(": , name_or_path %1%, is_external %2%, num_filaments %3%") % name_or_path % is_external % num_filaments;
@@ -6645,6 +7198,7 @@ void PresetBundle::load_config_file_config(const std::string &name_or_path, bool
     bool process_multi_extruder = false;
     std::vector<int> filament_variant_index;
     size_t extruder_variant_count;
+<<<<<<< snaporca-int
     // A config loaded over the full defaults has a one-entry index even when the file has none.
     ConfigOptionInts* filament_self_index_opt = config.option<ConfigOptionInts>("filament_self_index", true);
     if (filament_self_index_opt->size() < num_filaments) {
@@ -6654,6 +7208,25 @@ void PresetBundle::load_config_file_config(const std::string &name_or_path, bool
             filament_self_indice[index] = index + 1;
     }
     std::vector<int> filament_self_indice = std::move(filament_self_index_opt->values);
+=======
+    // Old project files (and configs carrying only the size-1 default) predate the
+    // per-extruder variant machinery: rebuild the identity mapping whenever the
+    // stored index list is shorter than the filament count, exactly like the
+    // filament_extruder_variant backfill below.
+    {
+        ConfigOptionInts* filament_self_index_opt = config.option<ConfigOptionInts>("filament_self_index");
+        if (!filament_self_index_opt || filament_self_index_opt->size() < num_filaments) {
+            std::vector<int>& filament_self_indice = config.option<ConfigOptionInts>("filament_self_index", true)->values;
+            filament_self_indice.resize(num_filaments);
+            for (int index = 0; index < num_filaments; index++)
+                filament_self_indice[index] = index + 1;
+        }
+    }
+    // Keys stored once per filament (older projects, or configs built without a loader) get one value
+    // per filament variant column here, before the split loop below resizes the shared vectors.
+    normalize_filament_values_to_variants(config);
+    std::vector<int> filament_self_indice = std::move(config.option<ConfigOptionInts>("filament_self_index")->values);
+>>>>>>> lixnix/main
     // ORCA: Initialize filament_extruder_variant for backward compatibility with old 3mf files
     // that don't have this option saved or have it with default single-element value
     ConfigOptionStrings* filament_extruder_variant_opt = config.option<ConfigOptionStrings>("filament_extruder_variant");
@@ -6862,13 +7435,21 @@ void PresetBundle::load_config_file_config(const std::string &name_or_path, bool
 
         // Load the project config values. In published mode only the plate/bed geometry keys
         // cross over (the receiver must not inherit the author's filament/purge data).
+        // Snapmaker Orca: the per-head process record, choices and chosen flows are the file's or empty, never the
+        // previous project's; choices naming renamed vendor presets are rewritten before the dirty state's first copy.
+        this->project_config.apply_only(FullPrintConfig::defaults(), {PerHeadProcess::record_key, PerHeadProcess::choice_key, PerHeadProcess::flow_key});
         this->project_config.apply_only(config, is_published ? s_project_options_published : s_project_options);
+<<<<<<< snaporca-int
         // Older projects inherit one-element mixed defaults, regardless of their filament count.
         if (!is_published)
             resize_mixed_filament_metadata(this->project_config, num_filaments, num_filaments);
         // Snapmaker: keep the multi-colour fields and the per-filament flow types aligned.
         EnsureFilamentColorFieldsAligned(this->project_config);
         EnsureFilamentVolumeTypesAligned(this->project_config, this->filament_presets.size());
+=======
+        PerHeadProcess::resolve_renamed_choices(*this);
+        EnsureFilamentColorFieldsAligned(this->project_config);
+>>>>>>> lixnix/main
 
         break;
     }
@@ -7562,6 +8143,7 @@ void PresetBundle::load_config_file_config(const std::string &name_or_path, bool
                 // so the incoming real filaments can claim them. Runs before mixed_final_slots is
                 // built, so the rebalanced layout is what the mix validation sees.
                 apply_receiver_mix_relocations(this->project_config, this->ams_multi_color_filment, receiver_mix_moves);
+                EnsureFilamentColorFieldsAligned(this->project_config);
                 // Final layout for mix-definition validation: every slot that will hold a
                 // mixed definition once this load completes - the receiver's own virtual
                 // slots, each published mixed entry's final (possibly relocated) slot, and
@@ -8009,6 +8591,11 @@ void PresetBundle::load_config_file_config(const std::string &name_or_path, bool
         // a slot-0 preset change (type replacement) still needs a re-select to surface; when
         // slot 0 is unchanged the edited layer already carries the overlay, and re-selecting
         // would discard both it and the user's unsaved edits.
+        // Snapmaker Orca: the material pass above grows and recolours filament_colour per slot
+        // without touching filament_multi_colors / filament_colour_mode; realign them so that no
+        // slot is left with a short or stale swatch array.
+        EnsureFilamentColorFieldsAligned(this->project_config);
+
         if (material_applied && !this->filament_presets.empty() &&
             this->filament_presets.front() != this->filaments.get_edited_preset().name)
             this->filaments.select_preset_by_name(this->filament_presets.front(), false);
@@ -8062,6 +8649,18 @@ PresetBundle::PresetInstall PresetBundle::resolve_vendor_preset(const CachedPres
     out.filament_id  = entry.filament_id;
     out.renamed_from = entry.renamed_from;
 
+    if (out.filament_id.empty() &&
+        presets_collection.type() == Preset::TYPE_FILAMENT &&
+        install.flags.has(LoadConfigBundleAttribute::LoadSystem) &&
+        !entry.setting_id.empty())
+    {
+        // Some system bundles only provide setting_id for filaments. Treat it as a stable fallback
+        // instead of aborting the entire vendor import and losing all dependent presets.
+        // Applied here rather than in parse_vendor_json so it also covers entries restored from the
+        // vendor preset cache, and so it keeps taking precedence over the inherits lookup below.
+        out.filament_id = entry.setting_id;
+    }
+
     //check whether it inherits other preset or not
     if (! entry.inherits.empty()) {
         auto it2 = install.config_maps.find(entry.inherits);
@@ -8106,6 +8705,9 @@ PresetBundle::PresetInstall PresetBundle::resolve_vendor_preset(const CachedPres
         out.config.apply(it->second);
     }
     out.config.apply(entry.config_src);
+    // The shipped Snapmaker presets keep upstream's *_flow_support entries as markers; their columns
+    // are declared by the variant keys, so the markers are not part of the preset.
+    drop_snapmaker_flow_keys(out.config);
     // Record what a base states, its diff against the default, for the presets
     // that include it. It is taken before extend_default_config_length pads every
     // per-variant key to the base's variant count: the padded defaults would
@@ -8118,7 +8720,15 @@ PresetBundle::PresetInstall PresetBundle::resolve_vendor_preset(const CachedPres
     // Report configuration fields, which are misplaced into a wrong group, before
     // Preset::normalize derives keys from them. An include diff holds only keys of the
     // collection default, so only the entry's own keys can be missing from default_config.
-    std::string incorrect_keys = Preset::remove_invalid_keys(out.config, *default_config, &entry.config_src);
+    // The dropped flow markers are not reported.
+    const bool         has_flow_markers = has_snapmaker_flow_keys(entry.config_src);
+    DynamicPrintConfig own_keys_without_markers;
+    if (has_flow_markers) {
+        own_keys_without_markers = entry.config_src;
+        drop_snapmaker_flow_keys(own_keys_without_markers);
+    }
+    std::string incorrect_keys = Preset::remove_invalid_keys(out.config, *default_config,
+                                                             has_flow_markers ? &own_keys_without_markers : &entry.config_src);
     if (!incorrect_keys.empty())
         out.errors.push_back(std::string(__FUNCTION__) + ": The config " + path + "/" + vendor_name + "/" + entry.sub_path +
                              " contains incorrect keys: " + incorrect_keys + ", which were removed");
@@ -8265,6 +8875,8 @@ std::string PresetBundle::commit_vendor_preset(const CachedPreset& entry, Preset
         loaded.vendor = current_vendor_profile;
         loaded.version = current_vendor_profile->config_version;
         loaded.description = entry.description;
+        // Snapmaker Orca: the same from a JSON file and from the vendor cache, see Preset::system_inherits.
+        loaded.system_inherits = entry.inherits;
         loaded.setting_id = entry.setting_id;
         // Derive the preset setting_id on the fly when a profile ships without one,
         // matching scripts/orca_profile_tool.py. Only instantiated presets carry an id;
@@ -8622,6 +9234,17 @@ void PresetBundle::parse_vendor_json(VendorRead& read)
                                 << " OrcaFilamentLibrary filament profiles from disk";
     }
 
+<<<<<<< snaporca-int
+=======
+    if (startup_profile_enabled()) {
+        startup_profile_log("PresetBundle::parse_vendor_json vendor=" + vendor_name +
+                            " machine_models=" + std::to_string(machine_model_subfiles.size()) +
+                            " process=" + std::to_string(process_subfiles.size()) +
+                            " filaments=" + std::to_string(filament_subfiles.size()) +
+                            " machines=" + std::to_string(machine_subfiles.size()));
+    }
+
+>>>>>>> lixnix/main
     if (flags.has(LoadConfigBundleAttribute::LoadFilamentOnly)) {
         machine_model_subfiles.clear();
         machine_subfiles.clear();
@@ -8796,6 +9419,7 @@ void PresetBundle::parse_vendor_json(VendorRead& read)
             auto filament_it = key_values.find(BBL_JSON_KEY_FILAMENT_ID);
             if (filament_it != key_values.end())
                 entry.filament_id = filament_it->second;
+            //check whether it inherits other preset or not
             auto it1 = key_values.find(BBL_JSON_KEY_INHERITS);
             if (it1 != key_values.end()) {
                 entry.inherits = it1->second;
@@ -8895,6 +9519,7 @@ std::pair<PresetsConfigSubstitutions, size_t> PresetBundle::install_vendor_read(
         for (const EntryParse& entry_parsed : *list)
             parse_errors += int(entry_parsed.errors.size());
     const int    errors_before_install = m_errors;
+    const auto   install_start         = std::chrono::steady_clock::now();
     const size_t presets_loaded = install_vendor(dir, vendor_name, base_bundle, read.flags, read.data, &read.parsed,
                                                  read.reason.empty(), substitutions);
     // Errors added by install are counted apart: a cache load runs install again,
@@ -8909,6 +9534,10 @@ std::pair<PresetsConfigSubstitutions, size_t> PresetBundle::install_vendor_read(
         BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(", got error when parse %1% setting from %2%") % read.failed_kind % subfile_path;
         throw failed_loading_error(subfile_path, dir);
     }
+<<<<<<< snaporca-int
+=======
+
+>>>>>>> lixnix/main
     if (read.will_cache) {
         // Clamped: the count is a difference of three tallies, and a stamp that
         // wrapped would be added to every future load of this vendor.
@@ -8918,6 +9547,16 @@ std::pair<PresetsConfigSubstitutions, size_t> PresetBundle::install_vendor_read(
                                     read.version, read.data))
             BOOST_LOG_TRIVIAL(warning) << "PresetBundle: failed to save vendor cache for " << vendor_name;
     }
+<<<<<<< snaporca-int
+=======
+    if (startup_profile_enabled()) {
+        const auto install_ms = std::chrono::duration_cast<std::chrono::milliseconds>(std::chrono::steady_clock::now() - install_start).count();
+        startup_profile_log("PresetBundle::install_vendor_read vendor=" + vendor_name +
+                            " presets_loaded=" + std::to_string(presets_loaded) +
+                            " install_ms=" + std::to_string(install_ms));
+    }
+
+>>>>>>> lixnix/main
     //BBS: add config related logs
     BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(", finished, presets_loaded %1%")%presets_loaded;
     return std::make_pair(std::move(substitutions), presets_loaded);
@@ -8949,6 +9588,11 @@ void PresetBundle::update_multi_material_filament_presets(size_t to_delete_filam
     const std::vector<MixedFilament> old_mixed = this->mixed_filaments.mixed_filaments();
     m_last_filament_id_remap.clear();
 
+    // The nozzle-count top-up below grows filament_presets on its own; the per-filament arrays
+    // (filament_colour and friends) stay at the real slot count, so any colour alignment further
+    // down has to use this pre-top-up count, not the topped-up num_filaments.
+    const size_t num_filament_slots = num_filaments;
+
     auto* nozzle_diameter = static_cast<const ConfigOptionFloats*>(printers.get_edited_preset().config.option("nozzle_diameter"));
     size_t num_extruders  = nozzle_diameter->values.size();
     if (num_extruders > num_filaments) { // Verify validity of the current filament presets.
@@ -8959,6 +9603,16 @@ void PresetBundle::update_multi_material_filament_presets(size_t to_delete_filam
                                                                                       this->filament_presets.back());
         num_filaments = this->filament_presets.size();
     }
+
+    // Snapmaker: mixed (virtual) filament bookkeeping for the painted-data remap.
+    // deleting_filament must be computed before to_delete_filament_id is normalized below.
+    const bool deleting_filament = (to_delete_filament_id != size_t(-1));
+    const size_t old_num_filaments = (old_num_filaments_arg != size_t(-1))
+        ? old_num_filaments_arg
+        : (deleting_filament ? (num_filaments + 1) : num_filaments);
+    const std::vector<MixedFilament> old_mixed = this->mixed_filaments.mixed_filaments();
+    m_last_filament_id_remap.clear();
+
     if (to_delete_filament_id == -1)
         to_delete_filament_id = num_filaments;
 
@@ -9076,12 +9730,21 @@ void PresetBundle::update_multi_material_filament_presets(size_t to_delete_filam
                     this->project_config.set_key_value(key, new ConfigOptionString(value));
             };
 
+<<<<<<< snaporca-int
             // The nozzle-count top-up above grows filament_presets on its own; the per-filament
             // arrays (filament_colour among them) are resized together by set_num_filaments(), so
             // only a padded copy feeds the mixed filament manager here.
             std::vector<std::string> physical_colors = color_opt->values;
             physical_colors.resize(num_filaments, "#26A69A");
             this->mixed_filaments.auto_generate(physical_colors);
+=======
+            // Grow-only, and to the pre-top-up slot count: the filament_presets top-up above is
+            // not a new slot, so padding colours to the topped-up num_filaments would hand the
+            // extruder-count handler a colour for a slot no per-filament array has yet.
+            if (color_opt->values.size() < num_filament_slots)
+                color_opt->values.resize(num_filament_slots, "#26A69A");
+            this->mixed_filaments.auto_generate(color_opt->values);
+>>>>>>> lixnix/main
 
             int   gradient_mode = get_mixed_mode(false) ? 1 : 0;
             float lower_bound = get_mixed_float("mixed_filament_height_lower_bound", 0.04f);
@@ -9108,6 +9771,24 @@ void PresetBundle::update_multi_material_filament_presets(size_t to_delete_filam
     if (old_num_filaments != num_filaments || deleting_filament || old_mixed != this->mixed_filaments.mixed_filaments())
         build_filament_id_remap(old_mixed, old_num_filaments, num_filaments, deleting_filament,
                                 deleting_filament ? unsigned(to_delete_filament_id + 1) : 0u);
+}
+
+// Rewrite a preset-name-list field (compatible_printers / compatible_prints) so references to a
+// renamed system preset point at the current name. Sibling-collection analog of
+// Preset::normalize_inherits: target.find_preset(name, false) resolves "renamed_from" recursively
+// and returns nullptr for unknown names, so we rewrite only on a positive, changed match and leave
+// user/deleted names untouched.
+static void normalize_compatible_field(Preset &preset, const char *field_key, PresetCollection &target)
+{
+    auto *opt = preset.config.option<ConfigOptionStrings>(field_key);
+    if (opt == nullptr)
+        return;
+    for (std::string &name : opt->values) {
+        if (name.empty())
+            continue;
+        if (const Preset *resolved = target.find_preset(name, false); resolved != nullptr && resolved->name != name)
+            name = resolved->name;
+    }
 }
 
 void PresetBundle::update_mixed_filament_id_remap(const std::vector<MixedFilament> &old_mixed,
@@ -9317,24 +9998,6 @@ void PresetBundle::build_filament_id_remap(const std::vector<MixedFilament> &old
                             << " remap=" << summarize_uint_vector(m_last_filament_id_remap);
 }
 
-// Rewrite a preset-name-list field (compatible_printers / compatible_prints) so references to a
-// renamed system preset point at the current name. Sibling-collection analog of
-// Preset::normalize_inherits: target.find_preset(name, false) resolves "renamed_from" recursively
-// and returns nullptr for unknown names, so we rewrite only on a positive, changed match and leave
-// user/deleted names untouched.
-static void normalize_compatible_field(Preset &preset, const char *field_key, PresetCollection &target)
-{
-    auto *opt = preset.config.option<ConfigOptionStrings>(field_key);
-    if (opt == nullptr)
-        return;
-    for (std::string &name : opt->values) {
-        if (name.empty())
-            continue;
-        if (const Preset *resolved = target.find_preset(name, false); resolved != nullptr && resolved->name != name)
-            name = resolved->name;
-    }
-}
-
 // Resolve compatible_printers / compatible_prints references that point at a renamed system preset
 // to the current name, mirroring Preset::normalize_inherits for the "inherits" field. Because these
 // fields reference presets in sibling collections (printers / prints / sla_prints), the resolution
@@ -9384,6 +10047,10 @@ void PresetBundle::update_compatible(PresetSelectCompatibleType select_other_pri
                         preset.name == m_prefered_name;
         }
 
+    protected:
+        // The preset the printer preset names as its default ("default_print_profile").
+        bool is_prefered_name(const Preset &preset) const { return ! m_prefered_name.empty() && preset.name == m_prefered_name; }
+
     private:
         const std::string  m_prefered_alias;
         const std::string &m_prefered_name;
@@ -9393,8 +10060,11 @@ void PresetBundle::update_compatible(PresetSelectCompatibleType select_other_pri
     class PreferedPrintProfileMatch : public PreferedProfileMatch
     {
     public:
-        PreferedPrintProfileMatch(const Preset *preset, const std::string &prefered_name) :
-            PreferedProfileMatch(preset ? preset->alias : std::string(), prefered_name), m_prefered_layer_height(preset ? preset->config.opt_float("layer_height") : 0) {}
+        // `default_wins`: the rule of a Snapmaker printer, see operator().
+        PreferedPrintProfileMatch(const Preset *preset, const std::string &prefered_name, bool default_wins) :
+            PreferedProfileMatch(preset ? preset->alias : std::string(), prefered_name),
+            m_prefered_layer_height(preset ? preset->config.opt_float("layer_height") : 0),
+            m_default_wins(default_wins) {}
 
         int operator()(const Preset &preset) const
         {
@@ -9403,6 +10073,11 @@ void PresetBundle::update_compatible(PresetSelectCompatibleType select_other_pri
                 return 0;
             int match_quality = PreferedProfileMatch::operator()(preset);
             if (match_quality < std::numeric_limits<int>::max()) {
+                // Snapmaker Orca: for a Snapmaker printer the printer's default process beats the
+                // previously selected layer height; a preset of the same alias still wins. Other
+                // vendors keep mainline's order (alias, layer height, default name, first).
+                if (m_default_wins && this->is_prefered_name(preset) && preset.is_visible)
+                    return std::numeric_limits<int>::max() - 1;
                 match_quality += 1;
                 if (preset.is_visible)
                     match_quality += 1;
@@ -9414,14 +10089,16 @@ void PresetBundle::update_compatible(PresetSelectCompatibleType select_other_pri
 
     private:
         const double m_prefered_layer_height;
+        const bool   m_default_wins;
     };
 
     // Matching by the layer height in addition.
     class PreferedFilamentProfileMatch : public PreferedProfileMatch
     {
     public:
-        PreferedFilamentProfileMatch(const Preset *preset, const std::string &prefered_name) :
+        PreferedFilamentProfileMatch(const PresetBundle &bundle, const Preset *preset, const std::string &prefered_name) :
             PreferedProfileMatch(preset ? preset->alias : std::string(), prefered_name),
+            m_bundle(bundle),
             m_prefered_filament_type(preset ? preset->config.opt_string("filament_type", 0) : std::string()) {}
 
         int operator()(const Preset &preset) const
@@ -9436,19 +10113,24 @@ void PresetBundle::update_compatible(PresetSelectCompatibleType select_other_pri
                     match_quality += 1;
                 if (! m_prefered_filament_type.empty() && m_prefered_filament_type == preset.config.opt_string("filament_type", 0))
                     match_quality *= 10;
+                // Snapmaker Orca: among presets that match equally the default material of the
+                // printer, not the alphabetically first (PresetBundle::default_material_rank).
+                match_quality = match_quality * 4 + m_bundle.default_material_rank(preset);
             }
             return match_quality;
         }
 
     private:
-        const std::string m_prefered_filament_type;
+        const PresetBundle &m_bundle;
+        const std::string   m_prefered_filament_type;
     };
 
     // Matching by the layer height in addition.
     class PreferedFilamentsProfileMatch
     {
     public:
-        PreferedFilamentsProfileMatch(const Preset *preset, const std::vector<std::string> &prefered_names) :
+        PreferedFilamentsProfileMatch(const PresetBundle &bundle, const Preset *preset, const std::vector<std::string> &prefered_names) :
+            m_bundle(bundle),
             m_prefered_alias(preset ? preset->alias : std::string()),
             m_prefered_filament_type(preset ? preset->config.opt_string("filament_type", 0) : std::string("PLA")), // BBS: default choose PLA
             m_prefered_names(prefered_names)
@@ -9465,16 +10147,22 @@ void PresetBundle::update_compatible(PresetSelectCompatibleType select_other_pri
             int match_quality = (std::find(m_prefered_names.begin(), m_prefered_names.end(), preset.name) != m_prefered_names.end()) + 1;
             if (! m_prefered_filament_type.empty() && m_prefered_filament_type == preset.config.opt_string("filament_type", 0))
                 match_quality *= 10;
-            return match_quality;
+            // Snapmaker Orca: among presets that match equally the default material of the
+            // printer, not the alphabetically first (PresetBundle::default_material_rank).
+            return match_quality * 4 + m_bundle.default_material_rank(preset);
         }
 
     private:
+        const PresetBundle             &m_bundle;
         const std::string               m_prefered_alias;
         const std::string               m_prefered_filament_type;
         const std::vector<std::string> &m_prefered_names;
     };
 
     BOOST_LOG_TRIVIAL(info) << boost::format("update_compatibility for all presets enter, select_other_print_if_incompatible %1%, select_other_filament_if_incompatible %2%")%(int)select_other_print_if_incompatible %(int)select_other_filament_if_incompatible;
+    // Snapmaker Orca: the vendor of the printer preset, or of the system preset a user copy inherits
+    // (get_preset_with_vendor_profile), decides whether the default process rule applies.
+    const bool snapmaker_printer = printer_preset_with_vendor_profile.vendor != nullptr && printer_preset_with_vendor_profile.vendor->id == SM_BUNDLE;
 	switch (printer_preset.printer_technology()) {
     case ptFFF:
     {
@@ -9482,13 +10170,28 @@ void PresetBundle::update_compatible(PresetSelectCompatibleType select_other_pri
 		assert(printer_preset.config.has("default_filament_profile"));
         const std::vector<std::string> &prefered_filament_profiles = printer_preset.config.option<ConfigOptionStrings>("default_filament_profile")->values;
         this->prints.update_compatible(printer_preset_with_vendor_profile, nullptr, select_other_print_if_incompatible,
-            PreferedPrintProfileMatch(this->prints.get_selected_idx() == size_t(-1) ? nullptr : &this->prints.get_edited_preset(), printer_preset.config.opt_string("default_print_profile")));
+            PreferedPrintProfileMatch(this->prints.get_selected_idx() == size_t(-1) ? nullptr : &this->prints.get_edited_preset(), printer_preset.config.opt_string("default_print_profile"), snapmaker_printer));
         const PresetWithVendorProfile   print_preset_with_vendor_profile = this->prints.get_edited_preset_with_vendor_profile();
         // Remember whether the filament profiles were compatible before updating the filament compatibility.
         std::vector<char> 				filament_preset_was_compatible(this->filament_presets.size(), false);
         for (size_t idx = 0; idx < this->filament_presets.size(); ++ idx) {
             Preset *preset = this->filaments.find_preset(this->filament_presets[idx], false);
             filament_preset_was_compatible[idx] = preset != nullptr && preset->is_compatible;
+        }
+        // Snapmaker Orca: with mixed nozzle sizes a slot is rated against its tool head's machine preset.
+        // "Was selectable" is taken before the flags change; the editor keeps a preset a slot holds fittingly.
+        const NozzleFilament::State nozzle_filament_state = NozzleFilament::state(*this);
+        std::vector<char>           filament_preset_was_selectable(this->filament_presets.size(), false);
+        bool                        keep_selected_filament = false;
+        if (nozzle_filament_state.mixed) {
+            const std::string edited_filament = this->filaments.get_selected_idx() == size_t(-1) ? std::string() : this->filaments.get_edited_preset().name;
+            for (size_t idx = 0; idx < this->filament_presets.size(); ++ idx) {
+                const Preset *preset = this->filaments.find_preset(this->filament_presets[idx], false);
+                filament_preset_was_selectable[idx] = preset != nullptr && this->filament_slot_selectable(nozzle_filament_state, *preset, idx);
+                if (preset != nullptr && ! edited_filament.empty() && preset->name == edited_filament && nozzle_filament_state.machine_of(idx) != nullptr &&
+                    this->filament_slot_fits(nozzle_filament_state, *preset, idx))
+                    keep_selected_filament = true;
+            }
         }
         // First select a first compatible profile for the preset editor.
         BOOST_LOG_TRIVIAL(info) << boost::format("prefered filaments: size %1%, previous selected %2%") %prefered_filament_profiles.size() % this->filaments.get_selected_idx();
@@ -9500,11 +10203,29 @@ void PresetBundle::update_compatible(PresetSelectCompatibleType select_other_pri
             BOOST_LOG_TRIVIAL(info) << boost::format("prefered filament： %1%") % prefered_filament_profiles[idx];
         }
         this->filaments.update_compatible(printer_preset_with_vendor_profile, &print_preset_with_vendor_profile, select_other_filament_if_incompatible,
-            PreferedFilamentsProfileMatch(this->filaments.get_selected_idx() == size_t(-1) ? nullptr : &this->filaments.get_edited_preset(), prefered_filament_profiles));
+            PreferedFilamentsProfileMatch(*this, this->filaments.get_selected_idx() == size_t(-1) ? nullptr : &this->filaments.get_edited_preset(), prefered_filament_profiles),
+            keep_selected_filament);
         if (select_other_filament_if_incompatible != PresetSelectCompatibleType::Never) {
             // Verify validity of the current filament presets.
             const std::string prefered_filament_profile = prefered_filament_profiles.empty() ? std::string() : prefered_filament_profiles.front();
-            if (this->filament_presets.size() == 1) {
+            if (nozzle_filament_state.mixed) {
+                // Snapmaker Orca: the general loop, also for one filament, per slot. A slot that may not
+                // keep its preset gets the version of its material for its tool head, else the best
+                // preset that fits the tool head. Mainline's block below is untouched.
+                for (size_t idx = 0; idx < this->filament_presets.size(); ++ idx) {
+                    std::string  &filament_name = this->filament_presets[idx];
+                    const Preset *preset = this->filaments.find_preset(filament_name, false);
+                    if (preset != nullptr &&
+                        (this->filament_slot_selectable(nozzle_filament_state, *preset, idx) ||
+                         ! (select_other_filament_if_incompatible == PresetSelectCompatibleType::Always || filament_preset_was_selectable[idx])))
+                        continue;
+                    std::string replacement = preset == nullptr ? std::string() : usable_nozzle_filament_target(*this, nozzle_filament_state, idx);
+                    if (replacement.empty())
+                        replacement = this->first_slot_fit(idx, PreferedFilamentProfileMatch(*this, preset,
+                            (idx < prefered_filament_profiles.size()) ? prefered_filament_profiles[idx] : prefered_filament_profile)).name;
+                    filament_name = replacement;
+                }
+            } else if (this->filament_presets.size() == 1) {
                 // The compatible profile should have been already selected for the preset editor. Just use it.
             	if (select_other_filament_if_incompatible == PresetSelectCompatibleType::Always || filament_preset_was_compatible.front())
                 	this->filament_presets.front() = this->filaments.get_edited_preset().name;
@@ -9512,11 +10233,18 @@ void PresetBundle::update_compatible(PresetSelectCompatibleType select_other_pri
                 for (size_t idx = 0; idx < this->filament_presets.size(); ++ idx) {
                     std::string &filament_name = this->filament_presets[idx];
                     Preset      *preset = this->filaments.find_preset(filament_name, false);
-                    if (preset == nullptr || (! preset->is_compatible && (select_other_filament_if_incompatible == PresetSelectCompatibleType::Always || filament_preset_was_compatible[idx])))
+                    if (preset == nullptr || (! preset->is_compatible && (select_other_filament_if_incompatible == PresetSelectCompatibleType::Always || filament_preset_was_compatible[idx]))) {
                         // Pick a compatible profile. If there are prefered_filament_profiles, use them.
+                        // Snapmaker Orca: a slot without a material of its own (none, or the
+                        // default one) is matched like the editor's filament, which the block above
+                        // chose for the printer, so every slot starts with the same material.
+                        const Preset *like = preset;
+                        if ((like == nullptr || like->is_default) && this->filaments.get_selected_idx() != size_t(-1))
+                            like = &this->filaments.get_selected_preset();
                         filament_name = this->filaments.first_compatible(
-                            PreferedFilamentProfileMatch(preset,
+                            PreferedFilamentProfileMatch(*this, like,
                                 (idx < prefered_filament_profiles.size()) ? prefered_filament_profiles[idx] : prefered_filament_profile)).name;
+                    }
                 }
             }
         }
@@ -9527,7 +10255,7 @@ void PresetBundle::update_compatible(PresetSelectCompatibleType select_other_pri
 		assert(printer_preset.config.has("default_sla_print_profile"));
 		assert(printer_preset.config.has("default_sla_material_profile"));
 		this->sla_prints.update_compatible(printer_preset_with_vendor_profile, nullptr, select_other_print_if_incompatible,
-            PreferedPrintProfileMatch(this->sla_prints.get_selected_idx() == size_t(-1) ? nullptr : &this->sla_prints.get_edited_preset(), printer_preset.config.opt_string("default_sla_print_profile")));
+            PreferedPrintProfileMatch(this->sla_prints.get_selected_idx() == size_t(-1) ? nullptr : &this->sla_prints.get_edited_preset(), printer_preset.config.opt_string("default_sla_print_profile"), snapmaker_printer));
         const PresetWithVendorProfile sla_print_preset_with_vendor_profile = this->sla_prints.get_edited_preset_with_vendor_profile();
 		this->sla_materials.update_compatible(printer_preset_with_vendor_profile, &sla_print_preset_with_vendor_profile, select_other_filament_if_incompatible,
             PreferedProfileMatch(this->sla_materials.get_selected_idx() == size_t(-1) ? std::string() : this->sla_materials.get_edited_preset().alias, printer_preset.config.opt_string("default_sla_material_profile")));

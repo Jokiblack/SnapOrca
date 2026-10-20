@@ -157,7 +157,11 @@ BundleMap BundleMap::load()
     const auto vendor_dir = (boost::filesystem::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR).make_preferred();
     const auto rsrc_vendor_dir = (boost::filesystem::path(resources_dir()) / "profiles").make_preferred();
 
+<<<<<<< snaporca-int
     // SM_FEATURE: load the Snapmaker bundle first as the default one
+=======
+    // SM_FEATURE: the Snapmaker bundle is this fork's default vendor
+>>>>>>> lixnix/main
     //Orca: add json logic for vendor bundle
     {
         const bool from_rsrc = ! is_vendor_installed(PresetBundle::SM_BUNDLE);
@@ -1421,7 +1425,8 @@ void PageDiameters::apply_custom_config(DynamicPrintConfig &config)
     auto set_extrusion_width = [&config, opt_nozzle](const char *key, double dmr) {
         char buf[64]; // locales don't matter here (sprintf/atof)
         sprintf(buf, "%.2lf", dmr * opt_nozzle->values.front() / 0.4);
-        config.set_key_value(key, new ConfigOptionFloatOrPercent(atof(buf),false));
+        // Snapmaker Orca: the widths are columns per tool head; one value for the one head of this printer.
+        config.set_key_value(key, new ConfigOptionFloatsOrPercentsNullable{FloatOrPercent(atof(buf), false)});
     };
 
     set_extrusion_width("support_line_width", 0.35);

@@ -13,11 +13,11 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include "nlohmann/json.hpp"
+#include "libslic3r/SSWCPProtocol.hpp"
 #include "slic3r/Utils/Bonjour.hpp"
 #include "slic3r/Utils/TimeoutMap.hpp"
 #include "slic3r/Utils/PrintHost.hpp"
 #include "slic3r/Utils/MQTT.hpp"
-#include "libslic3r/SSWCPProtocol.hpp"
 #include "WebSocketDebugServer.hpp"
 
 
@@ -246,6 +246,10 @@ public:
     {
         if (m_work_thread.joinable())
             m_work_thread.detach();
+        // The instance may die on the checker thread of SSWCP::m_instance_list, under its lock,
+        // when the printer never answered the pin code request; the client's destructor can wait
+        // seconds, so it is not run here.
+        MqttClient::dispose_async(std::move(m_pin_code_client));
     }
 
     void process() override;
@@ -261,15 +265,13 @@ private:
     void sw_connect_other_device();
 
     void sw_get_pin_code();
+    // Snapmaker Orca: the instance owns the MQTT client of sw_get_pin_code until the answer
+    // (release_pin_code_client, UI thread) or the timeout; its callback holds only a weak reference.
+    void release_pin_code_client() { MqttClient::dispose_async(std::move(m_pin_code_client)); }
+    std::shared_ptr<MqttClient> m_pin_code_client;
 
     // Subscribe to foreground/background change events (event_id=205890)
     void sw_SubscribeForegroundChange();
-
-    // Owns the one-shot pin-code MQTT client (sw_get_pin_code). Released on
-    // the UI thread after the response — never from a Paho callback thread,
-    // where destroying a client is not allowed.
-    static std::shared_ptr<MqttClient> m_pin_client;
-    static void release_pin_client() { m_pin_client.reset(); }
 
 };
 
@@ -345,6 +347,12 @@ public:
         std::lock_guard<std::mutex> lk(m_engine_map_mtx);
         m_connect_session_map.erase(m_webview);
     }
+    // Snapmaker Orca: drops the subscriptions, funnel id and MQTT engine (released off the UI
+    // thread) of a web view being destroyed. Takes the view as an argument: on_webview_delete()
+    // has already nulled m_webview of every instance.
+    static void forget_webview(wxWebView* view);
+    // Snapmaker Orca: everything of every view, synchronously; for SSWCP::shutdown() at exit.
+    static void release_all_engines();
 
     void set_Instance_illegal() override;
 
@@ -360,6 +368,7 @@ private:
 
 private:
     void clean_current_engine();
+    static void release_view_state(wxWebView* view);
 
     static void mqtt_msg_cb(const std::string& topic, const std::string& payload, void* client);
 
@@ -377,8 +386,8 @@ public:
 
     void process() override;
 
-    bool is_stop() { return m_stop; }
-    void set_stop(bool stop);
+    bool is_stop() override { return m_stop; }
+    void set_stop(bool stop) override;
 
 private:
     // Machine discovery methods
@@ -453,8 +462,7 @@ private:
     void sw_GetFileFilamentMapping();
     void sw_SetFilamentMappingComplete();
     void sw_FinishFilamentMapping();
-    // sw_FinishFilamentMapping post-close handlers, one per FinishFilamentMappingEvent.
-    // Add a new handler here when a new event value is introduced.
+    // params.event == 1 of sw_FinishFilamentMapping, run after the preprint webview closed.
     void on_finish_filament_mapping_custom_flow_regroup();
 
     // new
@@ -687,6 +695,12 @@ public:
     // long-running modal commands (e.g. sw_AskUserLogin) so their pending
     // response is not dropped after the default 80 s.
     static void renew_instance_timeout(SSWCP_Instance* instance);
+    // Snapmaker Orca: suspends the timeout of a one-shot instance while a modal dialog of its own
+    // is open (the user's time is not the printer's); renew_instance_timeout arms it again.
+    static void hold_instance_timeout(SSWCP_Instance* instance);
+    // Snapmaker Orca: asks for one GUI_App::load_current_presets() on the UI thread; requests
+    // made before it runs are folded into it. UI thread only.
+    static void request_preset_reload();
 
     // Stop machine discovery
     static void stop_machine_find();
@@ -696,16 +710,18 @@ public:
 
     // Handle webview deletion
     static void on_webview_delete(wxWebView* webview);
+    // Snapmaker Orca: releases the instance list and every MQTT engine at application exit
+    // (GUI_App::OnExit), before static destruction.
+    static void shutdown();
 
     // query the info of the machine
-    static bool query_machine_info(std::shared_ptr<PrintHost>& host, MachineInfo& out, int timeout_second = 5);
+    // A wrapper around resolve_machine_info() for callers that need the model, the nozzle sizes
+    // and the device name only. False when the printer did not identify itself in time.
+    static bool query_machine_info(std::shared_ptr<PrintHost>& host, std::string& out_model, std::vector<std::string>& out_nozzle_diameters, std::string& device_name, int timeout_second = 5);
 
-    // Resolve machine info via parallel system_info + objects.query, then merge by field priority.
-    // model/device_name from system_info (real-time, authoritative), normalized.
-    // nozzle from objects.query (real-time, preferred) or system_info fallback.
-    // Status: NoResponse / GotIdentity / Complete.
-    // Must be called from a thread that is NOT the UI thread if timeout_second is large,
-    // or from UI thread if cache hit is expected to short-circuit quickly.
+    // Resolves machine identity and nozzle info (sizes, flow types) from system_info and
+    // printer.objects.query in parallel, merged by SSWCPProtocol::merge_machine_info(). Once system_info
+    // is in, the extruder objects get a short wait only, so firmware without them skips the full timeout.
     static SSWCPProtocol::ResolveResult resolve_machine_info(std::shared_ptr<PrintHost>& host, int timeout_second = 8);
 
     // update the active file name
@@ -723,7 +739,11 @@ public:
     static long long m_active_file_size;
 
 
+<<<<<<< snaporca-int
     static std::unordered_map<std::string, std::string> m_tab_map; // JS tab name -> MainFrame TAB_ID_*
+=======
+    static std::unordered_map<std::string, wxString> m_tab_map; // for switching tab (TAB_ID_* names)
+>>>>>>> lixnix/main
 
     // WebSocket Debug Server methods
     static void enable_debug_mode(bool enable = true, unsigned short port = 8766);
@@ -761,17 +781,22 @@ public:
 
     void add_instance(const std::string& ip, const std::string& machine_type)
     {
-        std::lock_guard<std::mutex> lock(m_map_mtx);
+        m_map_mtx.lock();
         m_ip_type_map[ip] = machine_type;
+        m_map_mtx.unlock();
     }
 
     bool get_machine_type(const std::string& ip, std::string& output)
     {
-        std::lock_guard<std::mutex> lock(m_map_mtx);
-        auto it = m_ip_type_map.find(ip);
-        if (it == m_ip_type_map.end()) return false;
-        output = it->second;
-        return true;
+        bool res = true;
+        m_map_mtx.lock();
+        if (m_ip_type_map.count(ip)) {
+            output = m_ip_type_map[ip];
+        } else {
+            res = false;
+        }
+        m_map_mtx.unlock();
+        return res;
     }
 
 private:

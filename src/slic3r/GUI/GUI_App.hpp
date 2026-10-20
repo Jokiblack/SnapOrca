@@ -1,6 +1,7 @@
 #ifndef slic3r_GUI_App_hpp_
 #define slic3r_GUI_App_hpp_
 
+<<<<<<< snaporca-int
 #include <boost/algorithm/string/split.hpp>
 #include <boost/algorithm/string/classification.hpp>
 #include <atomic>
@@ -8,6 +9,8 @@
 #include <chrono>
 #include <cstdint>
 #include <cstddef>
+=======
+>>>>>>> lixnix/main
 #include <functional>
 #include <map>
 #include "libslic3r/Config.hpp"
@@ -15,8 +18,12 @@
 #include "libslic3r/Technologies.hpp"
 #include "libslic3r/Semver.hpp"
 #include <memory>
+<<<<<<< snaporca-int
 #include <set>
 #include "slic3r/GUI/GLShader.hpp"
+=======
+#include <chrono>
+>>>>>>> lixnix/main
 #include <string>
 #include "ActionRegistry.hpp"
 #include "ImGuiWrapper.hpp"
@@ -26,6 +33,7 @@
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r_version.h"
 #include "slic3r/GUI/UserNotification.hpp"
+<<<<<<< snaporca-int
 #include "slic3r/Utils/NetworkAgent.hpp"
 #include "slic3r/GUI/WebViewDialog.hpp"
 #include "slic3r/GUI/WebUserLoginDialog.hpp"
@@ -34,6 +42,15 @@
 #include "slic3r/GUI/WebPreprintDialog.hpp"
 #include "slic3r/GUI/BindDialog.hpp"
 #include "slic3r/GUI/HMS.hpp"
+=======
+#include "slic3r/Utils/CloudProvider.hpp"
+// Snapmaker: WebViewPanel must be complete here (inline Fltviews::reload_all calls load_url);
+// fork translation units rely on these dialog headers transitively. Other Web types are forward-declared.
+#include "slic3r/GUI/WebViewDialog.hpp"
+#include "slic3r/GUI/WebSMUserLoginDialog.hpp"
+#include "slic3r/GUI/WebDeviceDialog.hpp"
+#include "slic3r/GUI/WebPreprintDialog.hpp"
+>>>>>>> lixnix/main
 #include "slic3r/GUI/Jobs/UpgradeNetworkJob.hpp"
 #include "slic3r/GUI/HttpServer.hpp"
 #include "../Utils/PrintHost.hpp"
@@ -129,6 +146,7 @@ class ParamsPanel;
 class NotificationManager;
 class Downloader;
 class DownloadManager;
+class MeshLodCache;
 struct GUI_InitParams;
 class ParamsDialog;
 class HMSQuery;
@@ -296,10 +314,8 @@ public:
 private:
     bool            m_initialized { false };
     bool            m_post_initialized { false };
-    // Set when a snapmaker-orca:// URL is handed to us after launch (macOS delivers these
-    // through MacOpenURL rather than argv, so post_init cannot see them in input_files).
-    // post_init must not start a blank project in that case, or it discards the model the
-    // URL is in the middle of loading.
+    // Set when a snapmaker-orca:// URL arrives via MacOpenURL rather than argv; post_init
+    // then skips the blank project so the model the URL is loading is kept.
     bool            m_url_open_pending { false };
     bool            m_app_conf_exists{ false };
     EAppMode        m_app_mode{ EAppMode::Editor };
@@ -359,6 +375,10 @@ private:
 
     std::unique_ptr<Downloader> m_downloader;
     DownloadManager* m_download_manager;
+    // Snapmaker Orca: the render LOD models and their worker pool. Created before the main frame,
+    // shut down (workers joined) in shutdown() and again in the destructor; whatever still holds a
+    // MeshLod after that stays valid, see MeshLodCache.hpp.
+    std::shared_ptr<MeshLodCache> m_mesh_lod_cache;
 
     //BBS
     std::atomic<bool> m_is_closing {false};
@@ -422,10 +442,15 @@ private:
     uint64_t         m_cloud_handoff_gen { 0 };
     bool             m_show_error_msgdlg{false};
     wxString         m_info_dialog_content;
+<<<<<<< snaporca-int
     // Orca cloud login callback server (LOCALHOST_PORT); separate from Snapmaker's page server below.
+=======
+    // Orca auth callback http server (cloud login flows)
+>>>>>>> lixnix/main
     HttpServer       m_http_server;
 
 public:
+    // Snapmaker: page loading http server for the embedded Flutter web UI
     HttpServer       m_page_http_server;
     
 private:
@@ -534,6 +559,20 @@ private:
     int  FilterEvent(wxEvent& event) override;
     // The Preferences "Default page" choice, stored as its index: 0 Home, 1 Prepare.
     bool starts_on_prepare() const;
+<<<<<<< snaporca-int
+=======
+    bool flutter_web_config_update_dlg_open() const
+    {
+        return m_flutter_web_config_update_dlg_open.load(std::memory_order_acquire);
+    }
+    void set_flutter_web_config_update_dlg_open(bool v)
+    {
+        m_flutter_web_config_update_dlg_open.store(v, std::memory_order_release);
+    }
+    bool profile_config_update_dlg_open() const { return m_profile_config_update_dlg_open.load(std::memory_order_acquire); }
+    void set_profile_config_update_dlg_open(bool v) { m_profile_config_update_dlg_open.store(v, std::memory_order_release); }
+    std::string logo_name() const { return is_editor() ? "Snapmaker_Orca" : "Snapmaker_Orca-gcodeviewer"; }
+>>>>>>> lixnix/main
 
     bool is_closing() const { return m_is_closing.load(std::memory_order_acquire); }
     void set_closing(bool closing) { m_is_closing.store(closing, std::memory_order_release); }
@@ -735,15 +774,88 @@ private:
 
     void            request_user_login(int online_login = 0, const std::string& provider = ORCA_CLOUD_PROVIDER);
     void            request_user_handle(int online_login = 0, const std::string& provider = ORCA_CLOUD_PROVIDER);
+<<<<<<< snaporca-int
     // `user_initiated` distinguishes a user sign-out from the desktop losing its session on its
     // own (refresh failed, 401). Only an explicit sign-out also ends the cloud webview's own
     // session; an involuntary one leaves the webview alone (guide §8). Defaults to the safe
     // direction: a new caller that forgets the flag will not silently sign the webview out.
     void            request_user_logout(const std::string& provider = ORCA_CLOUD_PROVIDER, bool user_initiated = false);
+=======
+>>>>>>> lixnix/main
     void            post_logout_to_webview(const std::string& provider);
+    void            handle_script_message(std::string msg, const std::string& provider = ORCA_CLOUD_PROVIDER);
+
+    wxString get_international_url(const wxString& origin_url);
+
+    // SM
+    struct SMUserInfo
+    {
+    public:
+        bool is_user_login() { return m_login; }
+        void set_user_login(bool login)
+        {
+            m_login = login;
+            notify();
+        }
+
+        std::string get_user_name() { return m_login_user_name; }
+        void     set_user_name(const std::string& name) { m_login_user_name = name; }
+
+        std::string get_user_token() { return m_login_user_token; }
+        void     set_user_token(const std::string& token) { m_login_user_token = token; }
+
+        std::string get_user_icon_url() { return m_login_user_icon_url; }
+        void     set_user_icon_url(const std::string& url) { m_login_user_icon_url = url; }
+
+        std::string get_user_id() { return m_login_user_id; }
+        void        set_user_id(const std::string& id) { m_login_user_id = id; }
+
+        std::string get_user_account() { return m_login_user_account; }
+        void        set_user_account(const std::string& account) { m_login_user_account = account; }
+
+        void clear() {
+            m_login_user_name = "";
+            m_login_user_token = "";
+            m_login_user_icon_url = "";
+            m_login_user_id       = "";
+            m_login_user_account  = "";
+            m_login               = false;
+        }
+
+        void notify();
+    private:
+        std::string m_login_user_name = "";
+        std::string m_login_user_token = "";
+        std::string m_login_user_icon_url = "";
+        std::string m_login_user_id       = "";
+        std::string m_login_user_account  = "";
+        bool     m_login = false;
+    };
+
+    SMUserInfo*     sm_get_userinfo() { return &m_login_userinfo; }
+    void            sm_get_login_info();
+    void            sm_request_login(bool show_user_info = false);
+    void            sm_ShowUserLogin(bool show  =  true);
+    void            sm_request_user_logout();
+
+    // Silent login-token maintenance: the Snapmaker access token expires after
+    // ~24 h; a hidden login webview re-runs the cookie session and picks up a
+    // fresh token without user interaction.
+    void            sm_maybe_refresh_login_token();  // due-check + guards; main thread
+    void            sm_on_token_captured(std::size_t refresh_generation); // call on every token acquisition
+    void            sm_stop_silent_token_refresh();  // drop an in-flight silent refresh
+    bool            sm_is_token_refresh_current(std::size_t refresh_generation) const;
+    std::size_t     sm_token_refresh_generation() const { return m_silent_refresh_generation; }
+
+    // Flutter run-result watch (Snapmaker upstream 5970fea62d): one report per process, success when
+    // the first WCP message of a Flutter view arrives, failure when none arrived within the timeout.
+    void            start_flutter_wcp_timeout_watch();
+    void            on_flutter_wcp_received();
+    void            report_flutter_run_result_once(bool success);
+
+    void            request_user_logout(const std::string& provider = ORCA_CLOUD_PROVIDER);
     int             request_user_unbind(std::string dev_id, const std::string& provider = ORCA_CLOUD_PROVIDER);
     std::string     handle_web_request(std::string cmd);
-    void            handle_script_message(std::string msg, const std::string& provider = ORCA_CLOUD_PROVIDER);
     void            request_model_download(wxString url);
     void            download_project(std::string project_id);
     void            request_project_download(std::string project_id);
@@ -775,6 +887,7 @@ private:
 
     void            check_web_version();
     void            check_preset_version();
+<<<<<<< snaporca-int
     // Gray release: POST /config/get (snapmaker-config) first, falls back to check_new_version_sf on failure
     void            request_version_from_config(bool show_tips = false, bool by_user = false);
     void            check_new_version_sf(bool show_tips = false, int by_user = 0);
@@ -783,6 +896,11 @@ private:
     // reminded; while the user presets sync with the cloud, it waits until they have been pulled. by_user also
     // reports when there is nothing to migrate.
     void            check_legacy_user_filament_presets(bool by_user);
+=======
+    void            check_new_version_sf(bool show_tips = false, int by_user = 0);
+    // Gray release: POST /config/get (snapmaker-config) first, falls back to check_new_version_sf on failure
+    void            request_version_from_config(bool show_tips = false, int by_user = 0);
+>>>>>>> lixnix/main
     bool            process_network_msg(std::string dev_id, std::string msg);
     void            enter_force_upgrade();
     void            set_skip_version(bool skip = true);
@@ -839,10 +957,21 @@ private:
     TerminalDialog* m_terminal_dlg{nullptr};
     ActionRegistry  m_action_registry;
 
-
     void            start_http_server(const std::string& provider = ORCA_CLOUD_PROVIDER);
     void            start_http_server(int port, const std::string& provider = ORCA_CLOUD_PROVIDER);
     void            stop_http_server();
+
+    // Snapmaker: page loading http server for the embedded Flutter web UI
+    void            start_page_http_server();
+    void            stop_page_http_server();
+    /// Actual listen port (may differ from PAGE_HTTP_PORT if the default was in use).
+    boost::asio::ip::port_type get_page_http_port() const { return m_page_http_server.get_port(); }
+
+    enum class FlutterWebCopyStatus { Ok, UpgradeFailed, InstallFailed, Other };
+    /// Copy bundled flutter_web into the user data directory. On failure, records status for deferred user notification.
+    bool            copy_bundled_flutter_web(bool upgrade);
+    void            report_flutter_web_copy_failure(FlutterWebCopyStatus status);
+    void            try_notify_flutter_web_copy_failure();
 
     void            on_show_check_privacy_dlg(int online_login = 0, const std::string& provider = ORCA_CLOUD_PROVIDER);
     void            show_check_privacy_dlg(wxCommandEvent& evt);
@@ -909,6 +1038,12 @@ private:
 
     void            open_preferences();   // on the General tab
     void            open_preferences(PreferencesTab tab, const std::string& highlight_option = std::string());
+    // Snapmaker Orca: hands the preference "filament_follows_nozzle" to the preset bundle and lets
+    // the filament slots and their combos follow.
+    void            update_filament_follows_nozzle();
+    // Snapmaker Orca: hands the preference "process_follows_nozzle" to the preset bundle, refreshes
+    // the nozzle tab hints and the Speed page line and re-applies the background process.
+    void            update_process_follows_nozzle();
     void            open_presetbundledialog(size_t open_on_tab = 0, const std::string& highlight_option = std::string());
     void            open_plugins_dialog(size_t open_on_tab = 0, const std::string& highlight_option = std::string());
     // Dialog-free plugin actions used by the speed dial: they never require the Plugins dialog to be open.
@@ -1109,10 +1244,6 @@ private:
     bool                    m_config_corrupted { false };
     FlutterWebCopyStatus    m_flutter_web_copy_status{ FlutterWebCopyStatus::Ok };
     bool                    m_flutter_web_copy_notified{ false };
-    bool                    m_flutter_wcp_reported{false};
-    std::unique_ptr<wxTimer> m_flutter_wcp_timeout_timer;
-    static constexpr int    FLUTTER_WCP_TIMEOUT_MS = 120 * 1000;
-    void                    on_flutter_wcp_timeout(wxTimerEvent &event);
     std::string             m_open_method;
     SMUserInfo m_login_userinfo;
 
@@ -1131,6 +1262,12 @@ private:
     std::unique_ptr<wxTimer>              m_silent_refresh_timeout_timer;
     void     on_token_check_timer(wxTimerEvent &event);
     void     on_silent_refresh_timeout(wxTimerEvent &event);
+
+    // Flutter run-result watch (Snapmaker upstream 5970fea62d)
+    bool                     m_flutter_wcp_reported{false};
+    std::unique_ptr<wxTimer> m_flutter_wcp_timeout_timer;
+    static constexpr int     FLUTTER_WCP_TIMEOUT_MS = 120 * 1000;
+    void                     on_flutter_wcp_timeout(wxTimerEvent &event);
 
 public:
     std::unordered_map<void*, std::weak_ptr<SSWCP_Instance>> m_recent_file_subscribers;
@@ -1245,11 +1382,17 @@ wxDECLARE_EVENT(EVT_UPDATE_BUNDLE_COMPLETE, wxCommandEvent);
 
 bool is_support_filament(int extruder_id, bool strict_check = true);
 bool is_soluble_filament(int extruder_id);
+<<<<<<< snaporca-int
 // check if the filament for model is in the list
 bool has_filaments(const std::vector<std::string>& model_filaments);
 // Up direction of the edited printer's tilted build plate (+Z when untilted).
 Vec3d build_plate_tilt_up_direction();
 // Snapmaker: incompatible PLA <-> PETG support interface pair detection
+=======
+// Whether any model volume prints with one of the given filament types (mixed slots expanded).
+bool has_filaments(const std::vector<std::string>& filament_types);
+// Whether the 0-based support interface filament forms a PLA/PETG pair with a model material.
+>>>>>>> lixnix/main
 bool check_pla_petg_support_pair(int extruder_id);
 } // namespace GUI
 } // Slic3r

@@ -1,11 +1,16 @@
 #include "ConfigManipulation.hpp"
+#include <algorithm>
+#include <numeric>
+#include <limits>
 #include "I18N.hpp"
 #include "GUI_App.hpp"
+#include "GUI.hpp"
 #include "DeviceCore/DevConfigUtil.h"
 #include "format.hpp"
 #include "libslic3r/Config.hpp"
 #include "libslic3r/Model.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/FilamentFlowColumns.hpp"
 #include "libslic3r/MaterialType.hpp"
 #include "MsgDialog.hpp"
 #include "libslic3r/PrintConfig.hpp"
@@ -21,10 +26,19 @@
 #include <set>
 #include <map>
 #include <sstream>
+<<<<<<< snaporca-int
 #include <string>
 #include <vector>
 #include <wx/msgdlg.h>
 #include <wx/string.h>
+=======
+
+#include <wx/msgdlg.h>
+#include <wx/combobox.h>
+#include <wx/dialog.h>
+#include <wx/sizer.h>
+#include <wx/stattext.h>
+>>>>>>> lixnix/main
 
 namespace Slic3r {
 namespace GUI {
@@ -57,6 +71,18 @@ void ConfigManipulation::apply(DynamicPrintConfig* config, DynamicPrintConfig* n
 }
 
 bool ConfigManipulation::is_applying() const { return is_msg_dlg_already_exist; }
+
+// ORCA: printers whose extruders have differing nozzle diameters.
+bool ConfigManipulation::printer_has_mixed_nozzle_sizes()
+{
+    const auto *diameters = wxGetApp().preset_bundle->printers.get_edited_preset().config.option<ConfigOptionFloats>("nozzle_diameter");
+    if (diameters == nullptr || diameters->values.empty())
+        return false;
+    for (double d : diameters->values)
+        if (std::abs(d - diameters->values.front()) > EPSILON)
+            return true;
+    return false;
+}
 
 t_config_option_keys const &ConfigManipulation::applying_keys() const
 {
@@ -203,10 +229,10 @@ void ConfigManipulation::check_adaptive_pressure_advance_model(DynamicPrintConfi
 
 void ConfigManipulation::check_filament_max_volumetric_speed(DynamicPrintConfig *config)
 {
-    auto *max_speeds = config->option<ConfigOptionFloats>("filament_max_volumetric_speed");
-    if (max_speeds == nullptr || max_speeds->values.empty())
-        return;
+    //if (is_msg_dlg_already_exist) return;
+    //float max_volumetric_speed = config->opt_float("filament_max_volumetric_speed");
 
+<<<<<<< snaporca-int
     size_t variant_count = max_speeds->values.size();
     if (const auto *flow_support = config->option<ConfigOptionStrings>("filament_flow_support");
         flow_support != nullptr && !flow_support->values.empty())
@@ -228,17 +254,25 @@ void ConfigManipulation::check_filament_max_volumetric_speed(DynamicPrintConfig 
     }
 
     if (needs_correction) {
+=======
+    // BBS: limite the min max_volumetric_speed
+    // Snapmaker Orca: per variant column; only a column below the limit is reset, the others keep their value.
+    const std::vector<size_t> too_small = filament_columns_below(*config, "filament_max_volumetric_speed", 0.5);
+    if (!too_small.empty()) {
+        const wxString     msg_text = _(L("Too small max volumetric speed.\nValue was reset to 0.5"));
+        MessageDialog      dialog(nullptr, msg_text, "", wxICON_WARNING | wxOK);
+>>>>>>> lixnix/main
         DynamicPrintConfig new_conf = *config;
-        if (has_invalid_value) {
-            const wxString msg_text = _(L("Too small max volumetric speed.\nReset to 0.5."));
-            MessageDialog  dialog(nullptr, msg_text, "", wxICON_WARNING | wxOK);
-            is_msg_dlg_already_exist = true;
-            dialog.ShowModal();
-        }
-        new_conf.set_key_value("filament_max_volumetric_speed", corrected.clone());
+        is_msg_dlg_already_exist    = true;
+        dialog.ShowModal();
+        const ConfigOptionFloat minimum(0.5);
+        if (auto *speeds = dynamic_cast<ConfigOptionVectorBase *>(new_conf.option("filament_max_volumetric_speed")); speeds != nullptr)
+            for (size_t column : too_small)
+                speeds->set_at(&minimum, column, 0);
         apply(config, &new_conf);
         is_msg_dlg_already_exist = false;
     }
+
 }
 
 void ConfigManipulation::check_filament_ironing_spacing(DynamicPrintConfig *config)
@@ -272,7 +306,9 @@ void ConfigManipulation::check_chamber_temperature(DynamicPrintConfig* config)
         std::string filament_type = config->option<ConfigOptionStrings>("filament_type")->get_at(0);
         int chamber_min_temp, chamber_max_temp;
     if (MaterialType::get_chamber_temperature_range(filament_type, chamber_min_temp, chamber_max_temp)) {
-            if (chamber_max_temp < config->option<ConfigOptionInts>("chamber_temperature")->get_at(0)) {
+            // One value per filament variant column (Standard, High Flow): the highest one is checked.
+            const std::vector<int> &targets = config->option<ConfigOptionInts>("chamber_temperature")->values;
+            if (!targets.empty() && chamber_max_temp < *std::max_element(targets.begin(), targets.end())) {
                 wxString msg_text = wxString::Format(_L("Current chamber temperature is higher than the material\'s safe temperature; this may result in material softening and nozzle clogs. The maximum safe temperature for the material is %d"), chamber_max_temp);
                 MessageDialog dialog(m_msg_dlg_parent, msg_text, "", wxICON_WARNING | wxOK);
                 is_msg_dlg_already_exist = true;
@@ -289,9 +325,15 @@ void ConfigManipulation::check_chamber_minimal_temperature(DynamicPrintConfig* c
     // print start macro. It must not exceed the target chamber temperature, otherwise the macro
     // could wait forever for a temperature the heater is never asked to reach.
     if (config->has("chamber_minimal_temperature") && config->has("chamber_temperature")) {
-        const int chamber_min_temp    = config->option<ConfigOptionInts>("chamber_minimal_temperature")->get_at(0);
-        const int chamber_target_temp = config->option<ConfigOptionInts>("chamber_temperature")->get_at(0);
-        if (chamber_min_temp > chamber_target_temp) {
+        // Both keys hold one value per filament variant column; each column is checked against its own target.
+        std::vector<int>        minimal = config->option<ConfigOptionInts>("chamber_minimal_temperature")->values;
+        const ConfigOptionInts *targets = config->option<ConfigOptionInts>("chamber_temperature");
+        size_t                  column  = 0;
+        while (column < minimal.size() && minimal[column] <= targets->get_at(column))
+            ++column;
+        if (column < minimal.size()) {
+            const int chamber_min_temp    = minimal[column];
+            const int chamber_target_temp = targets->get_at(column);
             wxString msg_text = wxString::Format(_L("The minimal chamber temperature (%d℃) is higher than the target chamber temperature (%d℃). "
                                                     "The minimal value is the threshold at which printing starts while the chamber keeps heating toward the target, "
                                                     "so it should not exceed it. It will be clamped to the target."),
@@ -300,7 +342,9 @@ void ConfigManipulation::check_chamber_minimal_temperature(DynamicPrintConfig* c
             DynamicPrintConfig new_conf = *config;
             is_msg_dlg_already_exist    = true;
             dialog.ShowModal();
-            new_conf.set_key_value("chamber_minimal_temperature", new ConfigOptionInts({chamber_target_temp}));
+            for (size_t i = column; i < minimal.size(); ++i)
+                minimal[i] = std::min(minimal[i], targets->get_at(i));
+            new_conf.set_key_value("chamber_minimal_temperature", new ConfigOptionInts(minimal));
             apply(config, &new_conf);
             is_msg_dlg_already_exist = false;
         }
@@ -358,6 +402,47 @@ bool ConfigManipulation::layer_height_out_of_range_dialog(DynamicPrintConfig* co
     }
     is_msg_dlg_already_exist = false;
     return adjust;
+}
+
+void ConfigManipulation::validate_paint_penetration_layers(DynamicPrintConfig* config, const bool is_top)
+{
+    const char* pen_key   = is_top ? "top_color_penetration_layers" : "bottom_color_penetration_layers";
+    const char* shell_key = is_top ? "top_shell_layers" : "bottom_shell_layers";
+    if (!config->has(pen_key) || !config->has(shell_key))
+        return;
+    const int   cur_shell = config->opt_int(shell_key);
+    const int   cur_pen   = config->opt_int(pen_key);
+
+    // Both fields of the pair highlight together, whichever value was edited.
+    const bool is_invalid = cur_pen > cur_shell;
+    if (cb_highlight_field) {
+        cb_highlight_field(pen_key, is_invalid);
+        cb_highlight_field(shell_key, is_invalid);
+    }
+    if (!is_invalid)
+        return;
+
+    const wxString msg_text = is_top ?
+        wxString::Format(_L("The paint penetration layers (current: %d) exceed the shell layers (current: %d). "
+                           "The top paint penetration layers will be reset automatically."), cur_pen, cur_shell) :
+        wxString::Format(_L("The paint penetration layers (current: %d) exceed the shell layers (current: %d). "
+                           "The bottom paint penetration layers will be reset automatically."), cur_pen, cur_shell);
+    // No wxICON_* flag, so the dialog shows the brand logo like the filament-sync confirm dialogs.
+    MessageDialog dialog(m_msg_dlg_parent, msg_text, "", wxOK);
+    // Centered on the screen rather than on the left-anchored parent panel, so it never covers the edited fields.
+    dialog.CentreOnScreen();
+    DynamicPrintConfig new_conf = *config;
+    is_msg_dlg_already_exist = true;
+    dialog.ShowModal();
+    new_conf.set_key_value(pen_key, new ConfigOptionInt(cur_shell));
+    apply(config, &new_conf);
+    is_msg_dlg_already_exist = false;
+    // apply() re-ran the update, so the highlights are re-synced with the post-reset state.
+    if (cb_highlight_field) {
+        const bool still_invalid = config->opt_int(pen_key) > config->opt_int(shell_key);
+        cb_highlight_field(pen_key, still_invalid);
+        cb_highlight_field(shell_key, still_invalid);
+    }
 }
 
 void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, const bool is_global_config, const bool is_plate_config)
@@ -491,6 +576,10 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
             apply(config, &new_conf);
         }
     }
+
+    // Paint penetration must not exceed the shell layers: both fields turn red, a warning shows, the value resets.
+    validate_paint_penetration_layers(config, true);
+    validate_paint_penetration_layers(config, false);
 
     double sparse_infill_density = config->option<ConfigOptionPercent>("sparse_infill_density")->value;
     int    fill_multiline        = config->option<ConfigOptionInt>("fill_multiline")->value;
@@ -657,43 +746,6 @@ void ConfigManipulation::update_print_fff_config(DynamicPrintConfig* config, con
         }
     }
 
-    if (config->option<ConfigOptionPercent>("sparse_infill_density")->value == 100) {
-        std::string  sparse_infill_pattern = config->option<ConfigOptionEnum<InfillPattern>>("sparse_infill_pattern")->serialize();
-        const auto& top_fill_pattern_values = config->def()->get("top_surface_pattern")->enum_values;
-        bool correct_100p_fill = std::find(top_fill_pattern_values.begin(), top_fill_pattern_values.end(), sparse_infill_pattern) != top_fill_pattern_values.end();
-        if (!correct_100p_fill) {
-            // get sparse_infill_pattern name from enum_labels for using this one at dialog_msg
-            const ConfigOptionDef* fill_pattern_def = config->def()->get("sparse_infill_pattern");
-            assert(fill_pattern_def != nullptr);
-            auto it_pattern = std::find(fill_pattern_def->enum_values.begin(), fill_pattern_def->enum_values.end(), sparse_infill_pattern);
-            assert(it_pattern != fill_pattern_def->enum_values.end());
-            if (it_pattern != fill_pattern_def->enum_values.end()) {
-                wxString msg_text = GUI::format_wxstr(_L("%1% infill pattern doesn't support 100%% density."),
-                    _(fill_pattern_def->enum_labels[it_pattern - fill_pattern_def->enum_values.begin()]));
-                if (is_global_config)
-                    msg_text += "\n" + _L("Switch to rectilinear pattern?\n"
-                        "Yes - switch to rectilinear pattern automatically\n"
-                        "No  - reset density to default non 100% value automatically") + "\n";
-                MessageDialog dialog(m_msg_dlg_parent, msg_text, "",
-                    wxICON_WARNING | (is_global_config ? wxYES | wxNO : wxOK));
-                DynamicPrintConfig new_conf = *config;
-                is_msg_dlg_already_exist = true;
-                auto answer = dialog.ShowModal();
-                if (is_object_config || answer == wxID_YES) {
-                    new_conf.set_key_value("sparse_infill_pattern", new ConfigOptionEnum<InfillPattern>(ipRectilinear));
-                    sparse_infill_density = 100;
-                }
-                else
-                    sparse_infill_density = wxGetApp().preset_bundle->prints.get_selected_preset().config.option<ConfigOptionPercent>("sparse_infill_density")->value;
-                new_conf.set_key_value("sparse_infill_density", new ConfigOptionPercent(sparse_infill_density));
-                apply(config, &new_conf);
-                if (cb_value_change)
-                    cb_value_change("sparse_infill_density", sparse_infill_density);
-                is_msg_dlg_already_exist = false;
-            }
-        }
-    }
-
     // BBS
     // Reset filament overrides pointing at a slot that no longer exists. Support and the wipe
     // tower additionally reject mixed slots: the engine consumes those keys directly, so a virtual
@@ -832,11 +884,13 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
     PresetBundle *preset_bundle  = wxGetApp().preset_bundle;
 
     const GCodeFlavor gcflavor = preset_bundle->printers.get_edited_preset().config.option<ConfigOptionEnum<GCodeFlavor>>("gcode_flavor")->value;
+    const bool bSEMM = preset_bundle->printers.get_edited_preset().config.opt_bool("single_extruder_multi_material");
 
     // Orca: use booleans to avoid repeated comparisons with enum values
     const bool gcf_is_marlin_firmware = gcflavor == GCodeFlavor::gcfMarlinFirmware;
     const bool gcf_is_klipper = gcflavor == GCodeFlavor::gcfKlipper;
 
+<<<<<<< snaporca-int
     // Belt printer: detect early since it affects multiple toggle decisions below.
     // `is_belt_tilted` is the stricter test that mirrors PrintObject::has_belt_brim():
     // only a tilted belt gets the belt-plane brim, while a belt printer with no
@@ -901,12 +955,17 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
     bool have_volumetric_extrusion_rate_slope = process_flow_float("max_volumetric_extrusion_rate_slope", 0) > 0;
     float have_volumetric_extrusion_rate_slope_segment_length = process_flow_float("max_volumetric_extrusion_rate_slope_segment_length", 0);
     toggle_field("enable_arc_fitting", !have_volumetric_extrusion_rate_slope && !is_belt_printer);
+=======
+    bool have_volumetric_extrusion_rate_slope = config->option<ConfigOptionFloat>("max_volumetric_extrusion_rate_slope")->value > 0;
+    float have_volumetric_extrusion_rate_slope_segment_length = config->option<ConfigOptionFloat>("max_volumetric_extrusion_rate_slope_segment_length")->value;
+    toggle_field("enable_arc_fitting", !have_volumetric_extrusion_rate_slope);
+>>>>>>> lixnix/main
     toggle_line("max_volumetric_extrusion_rate_slope_segment_length", have_volumetric_extrusion_rate_slope);
     toggle_line("extrusion_rate_smoothing_external_perimeter_only", have_volumetric_extrusion_rate_slope);
     if(have_volumetric_extrusion_rate_slope) config->set_key_value("enable_arc_fitting", new ConfigOptionBool(false));
     if(have_volumetric_extrusion_rate_slope_segment_length < 0.5) {
         DynamicPrintConfig new_conf = *config;
-        new_conf.set_key_value("max_volumetric_extrusion_rate_slope_segment_length", new ConfigOptionFloats { 1. });
+        new_conf.set_key_value("max_volumetric_extrusion_rate_slope_segment_length", new ConfigOptionFloat(1));
         apply(config, &new_conf);
     }
 
@@ -916,6 +975,12 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
         toggle_field(el, have_perimeters);
     for (auto el : { "inner_wall_speed", "outer_wall_speed", "small_perimeter_speed", "small_perimeter_threshold" })
         toggle_field(el, have_perimeters, variant_index);
+
+    // ORCA: split wall layer heights - the adjustment target and direction only matter while
+    // the adjustment itself is enabled.
+    const bool split_wall_adjust = config->opt_bool("split_wall_adjust");
+    toggle_line("split_wall_adjust_filament", split_wall_adjust);
+    toggle_line("split_wall_adjust_direction", split_wall_adjust);
 
     bool have_infill = config->option<ConfigOptionPercent>("sparse_infill_density")->value > 0;
     // sparse_infill_filament_id uses the same logic as in Print::extruders()
@@ -1044,7 +1109,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
     // Gap fill is newly allowed in between perimeter lines even for empty infill (see GH #1476).
     toggle_field("gap_infill_speed", have_perimeters, variant_index);
     
-    toggle_field("top_surface_line_width", has_top_shell);
+    toggle_field("top_surface_line_width", has_top_shell, variant_index);
     toggle_field("top_surface_speed", has_top_shell, variant_index);
 
     bool have_default_acceleration = process_flow_float("default_acceleration", 0) > 0;
@@ -1145,14 +1210,21 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
         "bridge_no_support", "max_bridge_length", "support_top_z_distance", "support_bottom_z_distance",
         "support_type", "support_on_build_plate_only", "support_critical_regions_only", "support_interface_not_for_body",
         "support_object_xy_distance", "support_object_first_layer_gap", "independent_support_layer_height",
+<<<<<<< snaporca-int
         "support_interface_min_area" /* Snapmaker */})
+=======
+        "support_interface_min_area"})
+>>>>>>> lixnix/main
         toggle_field(el, have_support_material);
     toggle_field("support_threshold_angle", have_support_material && is_auto(support_type));
     toggle_field("support_threshold_overlap", config->opt_int("support_threshold_angle") == 0 && have_support_material && is_auto(support_type));
     //toggle_field("support_closing_radius", have_support_material && support_style == smsSnug);
 
     bool support_is_tree = config->opt_bool("enable_support") && is_tree(support_type);
-    bool support_is_organic = support_is_tree && (support_style == smsTreeOrganic || support_style == smsDefault);
+    // The object's layer profile is unknown here, so custom layering counts as off.
+    bool support_is_organic = support_is_tree && (support_style == smsTreeOrganic ||
+        (support_style == smsDefault && !tree_default_style_is_hybrid(config->opt_float("support_top_z_distance"),
+                                                                      config->opt_int("support_interface_top_layers"), false)));
     bool support_is_normal_tree = support_is_tree && !support_is_organic;
 
     // hide settings that are not used by tree supports
@@ -1166,6 +1238,13 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
     // ORCA: Independent support layer height is not compatible with organic tree supports,
     // as they rely on the support layers being the same as the object layers to determine where to place branches.
     toggle_line("independent_support_layer_height", have_support_material && !support_is_organic);
+    // With the prime tower only tree supports keep independent (grid-aligned) heights; the classic
+    // generator synchronizes to the object layers (SupportMaterial::synchronize_layers()).
+    toggle_field("independent_support_layer_height", have_support_material && (support_is_tree || !config->opt_bool("enable_prime_tower")));
+    // The step only has an effect for non-organic tree supports with independent layer heights
+    // under the prime tower; single-extruder multi-material keeps whole steps.
+    toggle_line("support_layer_height_step", support_is_normal_tree && config->opt_bool("independent_support_layer_height") &&
+                                                 config->opt_bool("enable_prime_tower") && !bSEMM);
 
     toggle_field("tree_support_brim_width", support_is_tree && !config->opt_bool("tree_support_auto_brim"));
     // tree support use max_bridge_length instead of bridge_no_support
@@ -1198,8 +1277,20 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
     // BBS
     //toggle_field("support_material_synchronize_layers", have_support_soluble);
 
-    toggle_field("inner_wall_line_width", have_perimeters || have_skirt || have_brim);
+    toggle_field("inner_wall_line_width", have_perimeters || have_skirt || have_brim, variant_index);
     toggle_field("support_filament", have_support_material || have_skirt);
+
+    // ORCA: support_nozzle_diameter only applies to printers whose extruders have differing
+    // nozzle diameters; the material options serve any multi-filament setup and stay visible
+    // like the other support rows. The legacy base/interface selectors show only while the
+    // "Show legacy filament selection" toggle is on; opening a 3mf project with an assigned
+    // selector switches the toggle on (see Plater's project loading).
+    toggle_line("support_nozzle_diameter", have_support_material && printer_has_mixed_nozzle_sizes());
+    toggle_field("support_base_material", have_support_material || have_skirt);
+    toggle_field("support_interface_material", have_support_material);
+    const bool legacy_support_selectors = wxGetApp().app_config->get_bool("show_legacy_support_filament");
+    toggle_line("support_filament", legacy_support_selectors);
+    toggle_line("support_interface_filament", legacy_support_selectors);
 
     toggle_line("raft_contact_distance", have_raft && !have_support_soluble);
     // Orca:Hide raft expansion when raft is not enabled
@@ -1209,10 +1300,9 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
 
     // Orca: First-layer density is available for supports broadly.
     toggle_field("raft_first_layer_density", have_support_material);
-    // Orca: For regular tree (Slim/Strong) without raft, hide first-layer expansion.
-    // Keep it enabled for non-tree supports, organic tree, hybrid tree, and any raft case.
-    toggle_field("raft_first_layer_expansion",
-                 have_support_material && ((!support_is_normal_tree || support_style == smsTreeHybrid) || have_raft));
+    // raft_first_layer_expansion also drives the no-raft tree first-layer expansion,
+    // so it stays editable whenever support is enabled, raft or not.
+    toggle_field("raft_first_layer_expansion", have_support_material);
 
     bool has_ironing = (config->opt_enum<IroningType>("ironing_type") != IroningType::NoIroning);
     for (auto el : { "ironing_pattern", "ironing_flow", "ironing_spacing", "ironing_angle", "ironing_inset", "ironing_angle_fixed" })
@@ -1234,7 +1324,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
 
     toggle_field("single_extruder_multi_material", !is_BBL_Printer);
 
-    auto bSEMM = preset_bundle->printers.get_edited_preset().config.opt_bool("single_extruder_multi_material");
+    // ORCA: bSEMM is read once at the top of this function.
     const bool supports_wipe_tower_2 = !is_BBL_Printer && preset_bundle->printers.get_edited_preset().config.opt_enum<WipeTowerType>("wipe_tower_type") == WipeTowerType::Type2;
 
     toggle_field("ooze_prevention", !bSEMM);
@@ -1261,12 +1351,6 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
 
     toggle_line("enable_tower_interface_cooldown_during_tower",
                 have_prime_tower && !is_belt_printer && config->opt_bool("enable_tower_interface_features"));
-
-    std::string printer_model = wxGetApp().preset_bundle->printers.get_edited_preset().config.opt_string("printer_model");
-    bool is_tower_interface_supported = printer_model.find("Snapmaker U1") != std::string::npos;
-    toggle_line("enable_tower_interface_features", have_prime_tower && is_tower_interface_supported);
-    toggle_line("enable_tower_interface_cooldown_during_tower",
-                have_prime_tower && is_tower_interface_supported && config->opt_bool("enable_tower_interface_features"));
 
     bool purge_in_primetower = preset_bundle->printers.get_edited_preset().config.opt_bool("purge_in_prime_tower");
 
@@ -1295,12 +1379,20 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
     toggle_line("wipe_tower_fillet_wall", have_rib_wall);
     toggle_field("prime_tower_width", have_prime_tower && !have_rib_wall && !is_belt_printer);
 
+<<<<<<< snaporca-int
     // Snapmaker: wipe tower wall gap and brim chamfer options
     toggle_line("wipe_tower_wall_gap", have_prime_tower && !is_belt_printer && supports_wipe_tower_2);
     toggle_line("prime_tower_brim_chamfer_max_width", have_prime_tower && !is_belt_printer);
     toggle_line("prime_tower_brim_chamfer", have_prime_tower && !is_belt_printer);
 
     toggle_line("single_extruder_multi_material_priming", !bSEMM && have_prime_tower && supports_wipe_tower_2 && !is_belt_printer);
+=======
+    toggle_line("wipe_tower_wall_gap", have_prime_tower);
+    toggle_line("prime_tower_brim_chamfer_max_width", have_prime_tower);
+    toggle_line("prime_tower_brim_chamfer", have_prime_tower);
+
+    toggle_line("single_extruder_multi_material_priming", !bSEMM && have_prime_tower && supports_wipe_tower_2);
+>>>>>>> lixnix/main
 
     bool use_cyclic_ordering = config->opt_enum<ToolChangeOrderingType>("toolchange_ordering") == ToolChangeOrderingType::Cyclic;
     toggle_line("toolchange_cyclic_order", use_cyclic_ordering);
@@ -1516,6 +1608,91 @@ void ConfigManipulation::toggle_print_sla_options(DynamicPrintConfig* config)
     toggle_field("pad_object_connector_stride", zero_elev);
     toggle_field("pad_object_connector_width", zero_elev);
     toggle_field("pad_object_connector_penetration", zero_elev);
+}
+
+// ORCA: dialog raised when the user enables support on a printer with differing nozzle sizes:
+// the nozzle size that prints the support, and the loaded filament types used for the raft/base
+// and the interface. Writes support_nozzle_diameter and the two support material options, which
+// exclude extruders of other types at slice time; the legacy selectors stay untouched.
+int ConfigManipulation::show_support_filament_dialog(DynamicPrintConfig* config, DynamicPrintConfig* new_conf)
+{
+    PresetBundle &bundle = *wxGetApp().preset_bundle;
+    const auto *nozzle_opt = bundle.printers.get_edited_preset().config.option<ConfigOptionFloats>("nozzle_diameter");
+    if (nozzle_opt == nullptr || nozzle_opt->values.empty())
+        return wxID_CANCEL;
+    const std::vector<double> &nozzles = nozzle_opt->values;
+
+    // The distinct nozzle sizes and the loaded filaments' types, keeping extruder / slot order.
+    std::vector<double> sizes;
+    for (double d : nozzles)
+        if (std::find_if(sizes.begin(), sizes.end(), [d](double s) { return std::abs(s - d) < EPSILON; }) == sizes.end())
+            sizes.emplace_back(d);
+    std::vector<std::string> types;
+    for (const std::string &name : bundle.filament_presets) {
+        const Preset *preset = bundle.filaments.find_preset(name);
+        const std::string type = preset != nullptr ? preset->config.opt_string("filament_type", 0u) : std::string();
+        if (! type.empty() && std::find(types.begin(), types.end(), type) == types.end())
+            types.emplace_back(type);
+    }
+
+    wxDialog dlg(m_msg_dlg_parent, wxID_ANY, _(L("Support for mixed nozzle sizes")));
+    auto *sizer = new wxBoxSizer(wxVERTICAL);
+    auto *intro = new wxStaticText(&dlg, wxID_ANY,
+        _(L("This printer uses different nozzle sizes. Select the nozzle size that prints the "
+            "support, and the filament types used for the raft and the support interface.")));
+    intro->Wrap(dlg.FromDIP(400));
+    sizer->Add(intro, 0, wxALL, 10);
+    auto add_choice = [&dlg, sizer](const wxString &label, const wxArrayString &items, int selection) {
+        auto *row = new wxBoxSizer(wxHORIZONTAL);
+        row->Add(new wxStaticText(&dlg, wxID_ANY, label), 1, wxALIGN_CENTER_VERTICAL | wxRIGHT, 8);
+        auto *choice = new wxComboBox(&dlg, wxID_ANY, wxEmptyString, wxDefaultPosition, wxDefaultSize, items, wxCB_READONLY);
+        choice->SetSelection(selection);
+        row->Add(choice, 1, wxALIGN_CENTER_VERTICAL);
+        sizer->Add(row, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, 10);
+        return choice;
+    };
+
+    wxArrayString size_items;
+    int size_selection = 0;
+    for (size_t i = 0; i < sizes.size(); ++ i) {
+        size_items.Add(wxString::Format("%g mm", sizes[i]));
+        if (std::abs(sizes[i] - config->opt_float("support_nozzle_diameter")) < EPSILON)
+            size_selection = int(i);
+    }
+    wxArrayString type_items;
+    type_items.Add(_(L("Default")));
+    for (const std::string &type : types)
+        type_items.Add(wxString::FromUTF8(type));
+    // Preselect the currently configured materials.
+    auto type_selection = [&](const char *key) {
+        const std::string &material = config->opt_string(key);
+        for (size_t i = 0; i < types.size(); ++ i)
+            if (types[i] == material)
+                return int(i) + 1;
+        return 0;
+    };
+    auto *size_choice      = add_choice(_(L("Support nozzle size")),    size_items, size_selection);
+    auto *base_choice      = add_choice(_(L("Raft and support base")),  type_items, type_selection("support_base_material"));
+    auto *interface_choice = add_choice(_(L("Support interface")),      type_items, type_selection("support_interface_material"));
+    sizer->Add(dlg.CreateSeparatedButtonSizer(wxOK | wxCANCEL), 0, wxEXPAND | wxALL, 10);
+    if (wxWindow *btn = dlg.FindWindow(wxID_OK); btn != nullptr)
+        btn->SetLabel(_(L("OK")));
+    if (wxWindow *btn = dlg.FindWindow(wxID_CANCEL); btn != nullptr)
+        btn->SetLabel(_(L("Cancel")));
+    dlg.SetSizerAndFit(sizer);
+    dlg.CentreOnScreen();
+    const int answer = dlg.ShowModal();
+    if (answer != wxID_OK)
+        return answer;
+
+    const double size = sizes[std::max(0, size_choice->GetSelection())];
+    auto material_of = [&types](int choice) {
+        return choice <= 0 ? std::string() : types[choice - 1];
+    };
+    new_conf->set_key_value("support_nozzle_diameter", new ConfigOptionFloat(size));
+    new_conf->set_key_value("support_base_material", new ConfigOptionString(material_of(base_choice->GetSelection())));
+    new_conf->set_key_value("support_interface_material", new ConfigOptionString(material_of(interface_choice->GetSelection())));
+    return answer;
 }
 
 int ConfigManipulation::show_spiral_mode_settings_dialog(bool is_object_config)

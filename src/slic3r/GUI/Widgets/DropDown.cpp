@@ -1,6 +1,7 @@
 #include "DropDown.hpp"
 #include "Label.hpp"
 
+<<<<<<< snaporca-int
 #include <cassert>
 #include <algorithm>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
@@ -11,6 +12,11 @@
 #include <iterator>
 #include <wx/dc.h>
 #include <wx/dcclient.h>
+=======
+#include <algorithm>
+#include <cstdio>
+
+>>>>>>> lixnix/main
 #include <wx/display.h>
 #include <wx/dcbuffer.h>
 #include <wx/dcgraph.h>
@@ -328,9 +334,9 @@ void DropDown::render(wxDC &dc)
     int selected_item = selectedItem();
     int hover_index   = hoverIndex();
 
-    // draw hover rectangle
+    // draw hover rectangle (a row highlighted from the keyboard is drawn like a hovered one)
     wxRect rcContent = {{0, offset.y}, rowSize};
-    if (hover_item >= 0 && (states & StateColor::Hovered) && (hover_index < 0 || !(items[hover_index].style & DD_ITEM_STYLE_SPLIT_ITEM))) {
+    if (hover_item >= 0 && ((states & StateColor::Hovered) || key_highlight) && (hover_index < 0 || !(items[hover_index].style & DD_ITEM_STYLE_SPLIT_ITEM))) {
         rcContent.y += rowSize.y * hover_item;
         if (rcContent.GetBottom() > 0 && rcContent.y < size.y) {
             if (selected_item == hover_item)
@@ -635,8 +641,12 @@ void DropDown::messureSize()
     wxWindow::SetSize(szContent);
 #ifdef __WXGTK__
     // Gtk has a wrapper window for popup widget
-    if (szContent.x > 0 && szContent.y > 0)
-        gtk_window_resize (GTK_WINDOW (m_widget), szContent.x, szContent.y);
+    // Fix for GNOME Platform 48 X11 backend: ensure size is valid before calling gtk_window_resize
+    int gtk_width  = szContent.x;
+    int gtk_height = szContent.y;
+    if (gtk_width <= 0) gtk_width = 100;
+    if (gtk_height <= 0) gtk_height = 100;
+    gtk_window_resize(GTK_WINDOW(m_widget), gtk_width, gtk_height);
 #endif
     if (!groups.empty() && subDropDown == nullptr) {
         subDropDown = new DropDown(items);
@@ -895,7 +905,8 @@ void DropDown::mouseMove(wxMouseEvent &event)
         int hover = (pt.y - offset.y) / rowSize.y;
         if (hover >= (int) count) hover = -1;
         if (hover == hover_item) return;
-        hover_item = hover;
+        hover_item    = hover;
+        key_highlight = false;
         int index  = hoverIndex();
         if (index < -1) {
             auto & drop = *subDropDown;
@@ -962,6 +973,7 @@ void DropDown::sendDropDownEvent()
     GetEventHandler()->ProcessEvent(event);
 }
 
+<<<<<<< snaporca-int
 void DropDown::sendDropDownActionEvent(int index)
 {
     if (index < 0 || index >= int(items.size()) || (items[index].style & DD_ITEM_STYLE_DISABLED))
@@ -971,6 +983,55 @@ void DropDown::sendDropDownActionEvent(int index)
     event.SetInt(index);
     event.SetString(items[index].text);
     GetEventHandler()->ProcessEvent(event);
+=======
+void DropDown::MoveHighlight(int step)
+{
+    messureSize();
+    if (count == 0 || step == 0)
+        return;
+    const int rows  = int(count);
+    int       row   = hover_item;
+    // Up to `rows` steps: past every split and disabled item, around the ends.
+    for (int tries = 0; tries < rows; ++tries) {
+        row = row < 0 ? (step > 0 ? 0 : rows - 1) : ((row + step) % rows + rows) % rows;
+        hover_item      = row;
+        const int index = hoverIndex();
+        if (index >= 0 && (items[index].style & (DD_ITEM_STYLE_SPLIT_ITEM | DD_ITEM_STYLE_DISABLED)) == 0)
+            break;
+        if (tries + 1 == rows) {
+            hover_item = -1;
+            return;
+        }
+    }
+    key_highlight = true;
+    // The row scrolled into view.
+    const wxSize size = GetSize();
+    if (rowSize.y * hover_item + offset.y < 0)
+        offset.y = -rowSize.y * hover_item;
+    else if (rowSize.y * (hover_item + 1) + offset.y > size.y)
+        offset.y = size.y - rowSize.y * (hover_item + 1);
+    if (const int index = hoverIndex(); index >= 0)
+        SetToolTip(items[index].tip);
+    paintNow();
+}
+
+int DropDown::HighlightedItem()
+{
+    return hoverIndex();
+}
+
+void DropDown::CommitHighlighted()
+{
+    if (hover_item < 0)
+        return;
+    sendDropDownEvent();
+    DismissAndNotify();
+}
+
+void DropDown::Cancel()
+{
+    DismissAndNotify();
+>>>>>>> lixnix/main
 }
 
 void DropDown::Dismiss()
@@ -1006,8 +1067,9 @@ void DropDown::OnDismiss()
     }
     if (subDropDown && subDropDown->IsShown())
         return;
-    dismissTime = boost::posix_time::microsec_clock::universal_time();
-    hover_item  = -1;
+    dismissTime   = boost::posix_time::microsec_clock::universal_time();
+    hover_item    = -1;
+    key_highlight = false;
     wxCommandEvent e(EVT_DISMISS);
     GetEventHandler()->ProcessEvent(e);
 }

@@ -1932,13 +1932,23 @@ size_t get_available_physical_memory()
 	long page_size   = sysconf(_SC_PAGE_SIZE);
 	return (avail_pages > 0 && page_size > 0) ? static_cast<size_t>(avail_pages) * static_cast<size_t>(page_size) : 0;
 #elif defined(__APPLE__)
-	// Memory guard detection on macOS is intentionally disabled by product
-	// decision: the vm_statistics64-based "available" estimate counts free
-	// pages only and ignores reclaimable cache (inactive/purgeable), so it
-	// sits far below the guard threshold on any normally-used system and
-	// raised false low-memory warnings even for small models. Returning 0
-	// makes check_memory_guard() skip the sample entirely (avail == 0).
-	return 0;
+	vm_size_t page_size = 0;
+	mach_port_t host_port = mach_host_self();
+	if (host_page_size(host_port, &page_size) != KERN_SUCCESS)
+		return 0;
+	vm_statistics64_data_t vm_stats;
+	mach_msg_type_number_t count = sizeof(vm_stats) / sizeof(natural_t);
+	if (host_statistics64(host_port, HOST_VM_INFO64, reinterpret_cast<host_info64_t>(&vm_stats), &count) != KERN_SUCCESS)
+		return 0;
+	// free_count alone is misleading on macOS: the kernel keeps almost all RAM
+	// in inactive/cache/purgeable states and reclaims those pages on demand, so
+	// "free" is routinely a few hundred MB even on an otherwise idle machine.
+	// Count reclaimable pages as available, the way Activity Monitor does;
+	// under genuine memory pressure these pools are drained as well.
+	uint64_t avail_pages = static_cast<uint64_t>(vm_stats.free_count)
+	                     + static_cast<uint64_t>(vm_stats.inactive_count)
+	                     + static_cast<uint64_t>(vm_stats.purgeable_count);
+	return static_cast<size_t>(avail_pages * page_size);
 #else
 	return 0;
 #endif
@@ -1997,8 +2007,47 @@ bool bbl_calc_md5(const std::string& filename, std::string& md5_out)
     return true;
 }
 
+bool calc_file_sha256(const std::string& filename, std::array<unsigned char, 32>& digest_out)
+{
+    digest_out.fill(0);
+
+    boost::system::error_code error_code;
+    if (!boost::filesystem::is_regular_file(filename, error_code) || error_code)
+        return false;
+
+    std::unique_ptr<EVP_MD_CTX, decltype(&EVP_MD_CTX_free)> mdctx(EVP_MD_CTX_new(), EVP_MD_CTX_free);
+    if (!mdctx || EVP_DigestInit_ex(mdctx.get(), EVP_sha256(), nullptr) != 1)
+        return false;
+
+    // nowide: the path is UTF-8, which std::ifstream does not understand on Windows.
+    boost::nowide::ifstream ifs(filename, std::ios::binary);
+    if (!ifs)
+        return false;
+
+    std::string buffer(64 * 1024, 0);
+    while (ifs) {
+        ifs.read(buffer.data(), buffer.size());
+        const std::streamsize read_bytes = ifs.gcount();
+        if (read_bytes > 0 && EVP_DigestUpdate(mdctx.get(), buffer.data(), static_cast<std::size_t>(read_bytes)) != 1)
+            return false;
+    }
+    if (!ifs.eof())
+        return false;
+
+    unsigned char digest[EVP_MAX_MD_SIZE];
+    unsigned int  digest_size = 0;
+    if (EVP_DigestFinal_ex(mdctx.get(), digest, &digest_size) != 1 || digest_size != digest_out.size())
+        return false;
+
+    std::copy(digest, digest + digest_size, digest_out.begin());
+    return true;
+}
+
 // SoftFever: copy directory recursively
+<<<<<<< snaporca-int
 // Snapmaker: returns false on failure (used by atomic_replace_directory); upstream adds merge_mode.
+=======
+>>>>>>> lixnix/main
 bool copy_directory_recursively(const boost::filesystem::path &source, const boost::filesystem::path &target,
                                 std::function<bool(const std::string)> filter, bool merge_mode)
 {
@@ -2183,7 +2232,7 @@ std::set<std::string> vendor_names_in(const boost::filesystem::path& dir)
 // be read is no installation at all — and the vendor is installed the way it was
 // before caches existed, as its profile and the preset JSONs it points at. Returns
 // the version the cache is stamped with, invalid when it is not the form to install.
-static Semver installable_cache_version(const boost::filesystem::path& dir, const std::string& vendor)
+Semver installable_cache_version(const boost::filesystem::path& dir, const std::string& vendor)
 {
     const auto cache_ver = Semver::parse(VendorCacheFile::peek_version((dir / (vendor + ".opc")).string(), vendor));
     if (! cache_ver)
@@ -2300,9 +2349,18 @@ bool install_vendor_bundles_from_resources(
                            boost::iends_with(name, ".3mf");
                 };
 
+<<<<<<< snaporca-int
                 if (!copy_directory_recursively(dir_in_rsrc, dir_in_vendors, file_filter))
                     throw Slic3r::CriticalException(Slic3r::format(
                         _u8L("Copying directory %1% to %2% failed"), dir_in_rsrc, dir_in_vendors));
+=======
+                // SM Orca: copy_directory_recursively() now reports failure by returning false
+                // instead of throwing, so check it explicitly here.
+                if (!copy_directory_recursively(dir_in_rsrc, dir_in_vendors, file_filter)) {
+                    BOOST_LOG_TRIVIAL(error) << "Failed to copy vendor directory for bundle: " << bundle;
+                    return false;
+                }
+>>>>>>> lixnix/main
             }
 
             BOOST_LOG_TRIVIAL(info) << "Successfully installed bundle: " << bundle;

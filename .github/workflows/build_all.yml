@@ -1,6 +1,7 @@
 name: Build all
 
 on:
+<<<<<<< snaporca-int
   # SnapOrca: every push to main or a release branch builds, with no paths
   # filter. A branch created at a commit the repository already has (e.g.
   # pushing release/bambu at the tip of an already pushed branch) is a push
@@ -38,31 +39,51 @@ on:
       - cron: '15 2 * * *' # 10:15 AM Singapore time (UTC+8), when macOS runners are least busy
 
   workflow_dispatch: # allows for manual dispatch
+=======
+  # Snapmaker fork policy: no push/PR triggers, one nightly build.
+  schedule:
+    - cron: '0 18 * * *' # everyday 2:00(beijing time UTC+8)
+
+  workflow_dispatch:
+>>>>>>> lixnix/main
     inputs:
       build-deps-only:
         description: 'Only build dependencies (bypasses caching)'
         type: boolean
         default: false
+<<<<<<< snaporca-int
       windows-only:
         description: 'Only build the Windows x64 installer (skips Linux, macOS, Flatpak, arm64 and tests)'
+=======
+      force-build:
+        description: 'Force full rebuild (bypass dependency cache)'
+>>>>>>> lixnix/main
         type: boolean
         default: false
 
 concurrency:
+<<<<<<< snaporca-int
   # cancel_closed_pr_builds.yml joins this group by name, so update that file
   # with any change here.
   group: build-all-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
   # Pushes don't cancel a running build, because only a finished branch build
   # saves caches every pull request can restore.
   cancel-in-progress: ${{ github.event_name == 'pull_request' }}
+=======
+  group: ${{ github.workflow }}-${{ github.event_name }}-${{ github.event.pull_request.number || github.ref }}
+  cancel-in-progress: true
+>>>>>>> lixnix/main
   
 
 jobs:
   # build_win.bat ships a test suite. Run it before the Windows builds.
   check_build_script:
     name: Windows build script tests
+<<<<<<< snaporca-int
     # Don't run scheduled builds on forks:
     if: ${{ github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer' }}
+=======
+>>>>>>> lixnix/main
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -86,6 +107,7 @@ jobs:
         include: ${{ fromJSON(vars.SELF_HOSTED
           && '[{"arch":"","os":"orca-lnx-server"}]'
           || '[{"arch":"","os":"ubuntu-24.04"},{"arch":"aarch64","os":"ubuntu-24.04-arm"}]') }}
+<<<<<<< snaporca-int
     # Don't run scheduled builds on forks:
     if: ${{ !cancelled() && !inputs.windows-only && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
     # The fork's token defaults to read-only, without actions access: the
@@ -95,11 +117,19 @@ jobs:
     permissions:
       contents: read
       actions: write
+=======
+    # Scheduled builds run only in the repository that publishes the nightlies:
+    if: ${{ !cancelled() && (github.event_name != 'schedule' || github.repository == (vars.NIGHTLY_REPO || 'LixNix-Swap-Org/Snapmaker-Orca')) }}
+>>>>>>> lixnix/main
     uses: ./.github/workflows/build_check_cache.yml
     with:
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
       build-deps-only: ${{ inputs.build-deps-only || false }}
+<<<<<<< snaporca-int
+=======
+      force-build: ${{ inputs.force-build || false }}
+>>>>>>> lixnix/main
     secrets: inherit
   build_windows:
     name: Build Windows ${{ matrix.arch }}
@@ -109,6 +139,7 @@ jobs:
       matrix:
         include: ${{ fromJSON(vars.SELF_HOSTED
           && '[{"arch":"x64","os":"orca-win-server","compiler":"clang"}]'
+<<<<<<< snaporca-int
           || (inputs.windows-only && '[{"arch":"x64","os":"windows-latest","compiler":"clang"}]')
           || '[{"arch":"x64","os":"windows-latest","compiler":"clang"},{"arch":"arm64","os":"windows-11-vs2026-arm","compiler":"clang"}]') }}
     needs: check_build_script
@@ -118,13 +149,23 @@ jobs:
     permissions:
       contents: read
       actions: write
+=======
+          || '[{"arch":"x64","os":"windows-latest","compiler":"clang"},{"arch":"arm64","os":"windows-11-vs2026-arm","compiler":"clang"}]') }}
+    needs: check_build_script
+    # Scheduled builds run only in the repository that publishes the nightlies:
+    if: ${{ !cancelled() && needs.check_build_script.result == 'success' && (github.event_name != 'schedule' || github.repository == (vars.NIGHTLY_REPO || 'LixNix-Swap-Org/Snapmaker-Orca')) }}
+>>>>>>> lixnix/main
     uses: ./.github/workflows/build_check_cache.yml
     with:
       os: ${{ matrix.os }}
       arch: ${{ matrix.arch }}
       compiler: ${{ matrix.compiler }}
       build-deps-only: ${{ inputs.build-deps-only || false }}
+<<<<<<< snaporca-int
       force-build: ${{ github.event_name == 'schedule' }}
+=======
+      force-build: ${{ inputs.force-build || false }}
+>>>>>>> lixnix/main
     secrets: inherit
   build_macos_arch:
     strategy:
@@ -133,6 +174,7 @@ jobs:
         arch:
           - arm64
           - x86_64
+<<<<<<< snaporca-int
     # Don't run scheduled builds on forks:
     if: ${{ !cancelled() && !inputs.windows-only && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
     # Same token scopes as build_linux.
@@ -145,10 +187,21 @@ jobs:
       arch: ${{ matrix.arch }}
       build-deps-only: ${{ inputs.build-deps-only || false }}
       force-build: ${{ github.event_name == 'schedule' }}
+=======
+    # Scheduled builds run only in the repository that publishes the nightlies:
+    if: ${{ !cancelled() && (github.event_name != 'schedule' || github.repository == (vars.NIGHTLY_REPO || 'LixNix-Swap-Org/Snapmaker-Orca')) }}
+    uses: ./.github/workflows/build_check_cache.yml
+    with:
+      os: ${{ vars.SELF_HOSTED && 'orca-macos-arm64' || 'macos-14' }}
+      arch: ${{ matrix.arch }}
+      build-deps-only: ${{ inputs.build-deps-only || false }}
+      force-build: ${{ inputs.force-build || false }}
+>>>>>>> lixnix/main
     secrets: inherit
   build_macos_universal:
     name: Build macOS Universal
     needs: build_macos_arch
+<<<<<<< snaporca-int
     if: ${{ !cancelled() && needs.build_macos_arch.result == 'success' && !inputs.build-deps-only && !inputs.windows-only && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
     # Same token scopes as build_linux.
     permissions:
@@ -160,6 +213,31 @@ jobs:
       arch: universal
       macos-combine-only: true
     secrets: inherit
+=======
+    if: ${{ !cancelled() && needs.build_macos_arch.result == 'success' && !inputs.build-deps-only && (github.event_name != 'schedule' || github.repository == (vars.NIGHTLY_REPO || 'LixNix-Swap-Org/Snapmaker-Orca')) }}
+    uses: ./.github/workflows/build_orca.yml
+    with:
+      os: ${{ vars.SELF_HOSTED && 'orca-macos-arm64' || 'macos-14' }}
+      arch: universal
+      macos-combine-only: true
+    secrets: inherit
+  # One Sentry upload for every platform: the macOS dSYM from the universal
+  # combine leg, the Windows PDB from the x64 build leg and the unstripped
+  # Linux binaries. upload-dif handles all formats from a single runner.
+  upload_symbols:
+    name: Upload Debug Symbols to Sentry
+    needs: [build_macos_universal, build_windows, build_linux]
+    # Needs the Sentry org secrets; forks without them skip instead of failing.
+    if: ${{ !cancelled() && !vars.SELF_HOSTED && (needs.build_macos_universal.result == 'success' || needs.build_windows.result == 'success' || needs.build_linux.result == 'success') && (github.repository_owner == 'Snapmaker' || vars.SENTRY_UPLOAD == '1') }}
+    uses: ./.github/workflows/sentry_cli.yml
+    with:
+      os: ubuntu-latest
+      pdb-artifact-name: PDB
+      dsym-artifact-name: ${{ needs.build_macos_universal.result == 'success' && format('dSYM_Mac_{0}', needs.build_macos_universal.outputs.release) || '' }}
+      linux-symbols-pattern: Linux_symbols_*
+      release: ${{ needs.build_macos_universal.outputs.release || github.sha }}
+    secrets: inherit
+>>>>>>> lixnix/main
   # One test job per built arch, on the runner that built it.
   unit_tests_linux_x86_64:
     name: Linux x86_64
@@ -180,7 +258,11 @@ jobs:
   unit_tests_windows_x64:
     name: Windows x64
     needs: build_windows
+<<<<<<< snaporca-int
     if: ${{ !cancelled() && success() && vars.BUILD_TESTS == 'true' }}
+=======
+    if: ${{ !cancelled() && success() }}
+>>>>>>> lixnix/main
     uses: ./.github/workflows/unit_tests.yml
     with:
       os: ${{ vars.SELF_HOSTED && 'orca-win-server' || 'windows-latest' }}
@@ -188,7 +270,11 @@ jobs:
   unit_tests_windows_arm64:
     name: Windows arm64
     needs: build_windows
+<<<<<<< snaporca-int
     if: ${{ !cancelled() && success() && !vars.SELF_HOSTED && vars.BUILD_TESTS == 'true' && !inputs.windows-only }}
+=======
+    if: ${{ !cancelled() && success() && !vars.SELF_HOSTED }}
+>>>>>>> lixnix/main
     uses: ./.github/workflows/unit_tests.yml
     with:
       os: windows-11-vs2026-arm
@@ -200,7 +286,11 @@ jobs:
     if: ${{ !cancelled() && success() }}
     uses: ./.github/workflows/unit_tests.yml
     with:
+<<<<<<< snaporca-int
       os: ${{ vars.SELF_HOSTED && 'orca-macos-arm64' || 'macos-15' }}
+=======
+      os: ${{ vars.SELF_HOSTED && 'orca-macos-arm64' || 'macos-14' }}
+>>>>>>> lixnix/main
       artifact: ${{ github.sha }}-tests-macos-arm64
       test-dir: build/arm64/tests
   # Slice a two-colour cube through every shipped printer, and through every
@@ -232,8 +322,12 @@ jobs:
   publish_test_results:
     name: Publish Test Results
     needs: [unit_tests_linux_x86_64, unit_tests_linux_aarch64, unit_tests_windows_x64, unit_tests_windows_arm64, unit_tests_macos_arm64, unit_tests_flatpak_x86_64, unit_tests_flatpak_aarch64]
+<<<<<<< snaporca-int
     # Don't run scheduled builds on forks:
     if: ${{ !cancelled() && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
+=======
+    if: ${{ !cancelled() }}
+>>>>>>> lixnix/main
     runs-on: ubuntu-latest
     steps:
       - name: Download Test Results
@@ -256,8 +350,17 @@ jobs:
           failOnError: false
   flatpak:
     name: "Flatpak"
+<<<<<<< snaporca-int
     container:
       image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-50
+=======
+    concurrency:
+      group: flatpak-${{ matrix.variant.arch }}-${{ github.ref }}
+      cancel-in-progress: false
+    container:
+      # Must track `runtime-version` in scripts/flatpak/io.github.Snapmaker.Snapmaker_Orca.yml
+      image: ghcr.io/flathub-infra/flatpak-github-actions:gnome-49
+>>>>>>> lixnix/main
       options: --privileged
       volumes:
         - /usr/local/lib/android:/usr/local/lib/android
@@ -273,6 +376,7 @@ jobs:
             runner: ubuntu-24.04
           - arch: aarch64
             runner: ubuntu-24.04-arm
+<<<<<<< snaporca-int
     # Don't run scheduled builds on forks; skip entirely on self-hosted runners
     # Snapmaker_Orca: opt-in (repo variable FLATPAK=true); scripts/flatpak/com.orcaslicer.OrcaSlicer.yml still builds the upstream target names.
     if: ${{ !cancelled() && !vars.SELF_HOSTED && vars.FLATPAK == 'true' && !inputs.windows-only && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
@@ -281,11 +385,23 @@ jobs:
     permissions:
       contents: read
       actions: write
+=======
+    # Scheduled builds run only in the repository that publishes the nightlies;
+    # skip entirely on self-hosted runners
+    if: ${{ !cancelled() && !vars.SELF_HOSTED && (github.event_name != 'schedule' || github.repository == (vars.NIGHTLY_REPO || 'LixNix-Swap-Org/Snapmaker-Orca')) }}
+
+>>>>>>> lixnix/main
     runs-on: ${{ matrix.variant.runner }}
     env:
       date:
       ver:
       ver_pure:
+<<<<<<< snaporca-int
+=======
+      # Belt-printer nightlies share the main nightly release but carry a `_belt`
+      # suffix so they never overwrite the main assets.
+      nightly_suffix: ${{ github.ref == 'refs/heads/belt-printer' && '_belt' || '' }}
+>>>>>>> lixnix/main
     steps:
     - name: "Remove unneeded stuff to free disk space"
       run:
@@ -308,7 +424,11 @@ jobs:
       shell: bash
     - name: Compute the flatpak-builder cache key
       id: fp_cache_key
+<<<<<<< snaporca-int
       run: echo "key=flatpak-builder-${{ matrix.variant.arch }}-${{ hashFiles('deps/**', 'scripts/flatpak/com.orcaslicer.OrcaSlicer.yml', 'scripts/flatpak/make_deps_tar.sh') }}" >> "$GITHUB_OUTPUT"
+=======
+      run: echo "key=flatpak-builder-${{ matrix.variant.arch }}-${{ hashFiles('deps/**', 'scripts/flatpak/io.github.Snapmaker.Snapmaker_Orca.yml') }}" >> "$GITHUB_OUTPUT"
+>>>>>>> lixnix/main
       shell: bash
     # Manage flatpak-builder cache externally so PRs restore but never upload.
     # The compiler cache under it is keyed per run below, so it is left out.
@@ -330,7 +450,11 @@ jobs:
           !.flatpak-builder/ccache
         key: ${{ steps.fp_cache_key.outputs.key }}
         restore-keys: flatpak-builder-${{ matrix.variant.arch }}-
+<<<<<<< snaporca-int
     # Compiler cache for the OrcaSlicer module, as in build_orca.yml. Pull
+=======
+    # Compiler cache for the Snapmaker_Orca module, as in build_orca.yml. Pull
+>>>>>>> lixnix/main
     # requests only restore it; every other run (main, release branches, the
     # nightly, a dispatch) saves it. orca_deps stays on the state cache above.
     - name: Name the compiler cache leg
@@ -349,11 +473,19 @@ jobs:
     - name: Disable debug info for faster CI builds
       run: |
         sed -i '/^build-options:/a\  no-debuginfo: true\n  strip: true' \
+<<<<<<< snaporca-int
           scripts/flatpak/com.orcaslicer.OrcaSlicer.yml
       shell: bash
     # flatpak-builder reuses a module from its cache when the definition and
     # sources are unchanged, so a re-run of the same commit would skip the
     # OrcaSlicer module and ship no test asset. A per-run value in that module's
+=======
+          scripts/flatpak/io.github.Snapmaker.Snapmaker_Orca.yml
+      shell: bash
+    # flatpak-builder reuses a module from its cache when the definition and
+    # sources are unchanged, so a re-run of the same commit would skip the
+    # Snapmaker_Orca module and ship no test asset. A per-run value in that module's
+>>>>>>> lixnix/main
     # env keeps it rebuilding; orca_deps stays cached, and the compiler cache
     # still serves the rebuild. run-tests on the same module builds the test
     # binaries.
@@ -361,8 +493,13 @@ jobs:
       env:
         flatpak_builder_cache_buster: ${{ github.run_id }}-${{ github.run_attempt }}
       run: |
+<<<<<<< snaporca-int
         sed -i "/name: OrcaSlicer/{n;s|buildsystem: simple|buildsystem: simple\n    run-tests: true\n    build-options:\n      env:\n        flatpak_builder_cache_buster: \"$flatpak_builder_cache_buster\"\n        git_commit_hash: \"$git_commit_hash\"|}" \
           scripts/flatpak/com.orcaslicer.OrcaSlicer.yml
+=======
+        sed -i "/name: Snapmaker_Orca/{n;s|buildsystem: simple|buildsystem: simple\n    run-tests: true\n    build-options:\n      env:\n        flatpak_builder_cache_buster: \"$flatpak_builder_cache_buster\"\n        git_commit_hash: \"$git_commit_hash\"|}" \
+          scripts/flatpak/io.github.Snapmaker.Snapmaker_Orca.yml
+>>>>>>> lixnix/main
       shell: bash
     # flatpak-builder's --ccache only wraps cc and gcc, and the manifest builds
     # with clang, so CMake's launcher runs ccache instead; --ccache is still what
@@ -374,8 +511,13 @@ jobs:
           'CMAKE_C_COMPILER_LAUNCHER: ccache' \
           'CMAKE_CXX_COMPILER_LAUNCHER: ccache' > "$RUNNER_TEMP/ccache-env.yml"
         sed -i "/^        git_commit_hash: /r $RUNNER_TEMP/ccache-env.yml" \
+<<<<<<< snaporca-int
           scripts/flatpak/com.orcaslicer.OrcaSlicer.yml
         grep -q '^        CMAKE_CXX_COMPILER_LAUNCHER: ccache$' scripts/flatpak/com.orcaslicer.OrcaSlicer.yml
+=======
+          scripts/flatpak/io.github.Snapmaker.Snapmaker_Orca.yml
+        grep -q '^        CMAKE_CXX_COMPILER_LAUNCHER: ccache$' scripts/flatpak/io.github.Snapmaker.Snapmaker_Orca.yml
+>>>>>>> lixnix/main
         mkdir -p .flatpak-builder/ccache
         export CCACHE_DIR=$PWD/.flatpak-builder/ccache
         ccache --set-config=max_size=3G
@@ -391,6 +533,7 @@ jobs:
         # The restored directory carries the previous run's counters.
         ccache -z
       shell: bash
+<<<<<<< snaporca-int
     - name: Check the manifest keeps orca_deps cacheable
       run: ./scripts/flatpak/check_manifest_cacheable.sh
       shell: bash
@@ -401,6 +544,16 @@ jobs:
       with:
         bundle: OrcaSlicer-Linux-flatpak_${{ env.ver }}_${{ matrix.variant.arch }}.flatpak
         manifest-path: scripts/flatpak/com.orcaslicer.OrcaSlicer.yml
+=======
+    # No deps.tar step here: the manifest's orca_deps module still takes the
+    # source tree directly (`type: dir`), so nothing produces or reads the
+    # tarball. Re-add check_manifest_cacheable.sh and make_deps_tar.sh with the
+    # manifest if that module moves to `tar xf deps.tar`.
+    - uses: flatpak/flatpak-github-actions/flatpak-builder@master
+      with:
+        bundle: Snapmaker_Orca-Linux-flatpak_${{ env.ver }}_${{ matrix.variant.arch }}.flatpak
+        manifest-path: scripts/flatpak/io.github.Snapmaker.Snapmaker_Orca.yml
+>>>>>>> lixnix/main
         # cache only turns on flatpak-builder --ccache; the caching itself is above.
         cache: true
         restore-cache: false
@@ -443,16 +596,23 @@ jobs:
         if ! curl -sSf -H "Authorization: Bearer $GH_TOKEN" \
             "$api?ref=$GITHUB_REF&key=$CCACHE_ENTRY" \
             | jq -e --arg entry "$CCACHE_ENTRY" 'any(.actions_caches[]; .key == $entry)' > /dev/null; then
+<<<<<<< snaporca-int
           echo "$CCACHE_ENTRY is not listed (not saved, or the token cannot read caches); keeping the older entries."
           exit 0
         fi
         # A token without actions: write cannot delete; that only costs
         # storage, so say so and stop instead of failing the step.
+=======
+          echo "$CCACHE_ENTRY was not saved; keeping the older entries."
+          exit 0
+        fi
+>>>>>>> lixnix/main
         curl -sSf -H "Authorization: Bearer $GH_TOKEN" \
           "$api?ref=$GITHUB_REF&key=ccache-$CCACHE_LEG-&per_page=100" \
           | jq -r --arg prefix "ccache-$CCACHE_LEG-" --argjson run "$GITHUB_RUN_ID" \
               '.actions_caches[] | select((.key | ltrimstr($prefix) | split("-")[0] | tonumber?) < $run) | .id' \
           | while read -r id; do
+<<<<<<< snaporca-int
               if ! curl -sSf -X DELETE -H "Authorization: Bearer $GH_TOKEN" "$api/$id"; then
                 echo "::notice::Cannot delete cache $id (the token needs actions: write); keeping the older entries."
                 break
@@ -470,22 +630,106 @@ jobs:
       with:
         asset_path: ${{ github.workspace }}/OrcaSlicer-Linux-flatpak_${{ env.ver }}_${{ matrix.variant.arch }}.flatpak
         asset_name: OrcaSlicer-Linux-flatpak_nightly_${{ matrix.variant.arch }}.flatpak
+=======
+              curl -sSf -X DELETE -H "Authorization: Bearer $GH_TOKEN" "$api/$id"
+            done
+      shell: bash
+    - name: Find Flatpak bundle file
+      id: find_bundle
+      working-directory: ${{ github.workspace }}
+      run: |
+        BUNDLE_NAME="Snapmaker_Orca-Linux-flatpak_${{ env.ver }}_${{ matrix.variant.arch }}.flatpak"
+        # Try multiple possible locations
+        if [ -f "$BUNDLE_NAME" ]; then
+          BUNDLE_PATH="$(pwd)/$BUNDLE_NAME"
+        elif [ -f "/__w/Snapmaker_Orca/Snapmaker_Orca/$BUNDLE_NAME" ]; then
+          BUNDLE_PATH="/__w/Snapmaker_Orca/Snapmaker_Orca/$BUNDLE_NAME"
+        else
+          # Search in current directory and subdirectories
+          FOUND=$(find . -name "$BUNDLE_NAME" -type f | head -1)
+          if [ -z "$FOUND" ]; then
+            echo "Error: Could not find $BUNDLE_NAME"
+            echo "Searching for any .flatpak files:"
+            find . -name "*.flatpak" -type f || true
+            exit 1
+          fi
+          # Convert relative path to absolute
+          BUNDLE_PATH="$(cd "$(dirname "$FOUND")" && pwd)/$(basename "$FOUND")"
+        fi
+        echo "path=$BUNDLE_PATH" >> $GITHUB_OUTPUT
+        echo "Found bundle at: $BUNDLE_PATH"
+        ls -lh "$BUNDLE_PATH" || true
+      shell: bash
+
+    - name: Upload artifacts Flatpak
+      uses: actions/upload-artifact@v7
+      with:
+        name: Snapmaker_Orca-Linux-flatpak_${{ env.ver }}_${{ matrix.variant.arch }}.flatpak
+        path: ${{ steps.find_bundle.outputs.path }}
+        if-no-files-found: error
+
+    # The release tagged nightly-builds of this repository, as in build_orca.yml.
+    # The container has no gh, so the lookup goes over the REST API.
+    - name: Resolve the nightly release
+      id: nightly
+      if: ${{ github.repository == (vars.NIGHTLY_REPO || 'LixNix-Swap-Org/Snapmaker-Orca') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/2.3.0-final') }}
+      env:
+        GH_TOKEN: ${{ github.token }}
+      run: |
+        id=$(curl -sSf -H "Authorization: Bearer ${GH_TOKEN}" \
+               "${GITHUB_API_URL}/repos/${GITHUB_REPOSITORY}/releases/tags/nightly-builds" \
+             | jq -r '.id // empty') || id=""
+        if [ -n "${id}" ]; then
+          echo "release_id=${id}" >> "${GITHUB_OUTPUT}"
+        else
+          echo "::notice::${GITHUB_REPOSITORY} has no release tagged nightly-builds, so the Flatpak is not published. Create that release to publish the nightly builds."
+        fi
+      shell: bash
+    - name: Deploy Flatpak to nightly release
+      if: ${{ github.repository == (vars.NIGHTLY_REPO || 'LixNix-Swap-Org/Snapmaker-Orca') && (github.ref == 'refs/heads/main' || github.ref == 'refs/heads/2.3.0-final') && steps.nightly.outputs.release_id != '' }}
+      uses: WebFreak001/deploy-nightly@v3.2.0
+      with:
+        upload_url: https://uploads.github.com/repos/${{ github.repository }}/releases/${{ steps.nightly.outputs.release_id }}/assets{?name,label}
+        release_id: ${{ steps.nightly.outputs.release_id }}
+        asset_path: ${{ steps.find_bundle.outputs.path }}
+        asset_name: Snapmaker_Orca-Linux-flatpak_${{ env.ver }}_${{ matrix.variant.arch }}_Beta.flatpak
+        asset_content_type: application/octet-stream
+        max_releases: 1 # optional, if there are more releases than this matching the asset_name, the oldest ones are going to be deleted
+>>>>>>> lixnix/main
     # The asset is /app (the exes link it at runtime) plus the build tree
     # slimmed to what ctest needs.
     - name: Package flatpak test asset
       shell: bash
       run: |
+<<<<<<< snaporca-int
         d=$(ls -d .flatpak-builder/build/OrcaSlicer-* | tail -1)
+=======
+        # --keep-build-dirs names the dir <module>-<n>; the module is Snapmaker_Orca.
+        d=$(ls -d .flatpak-builder/build/Snapmaker_Orca-* | tail -1)
+>>>>>>> lixnix/main
         find "$d/build_flatpak" -mindepth 1 -maxdepth 1 ! -name tests -exec rm -rf {} +
         # Strip debug info (the SDK builds with -g, only the app gets stripped);
         # the bounds checks are compiled in, so a stripped exe still catches them.
         find "$d/build_flatpak/tests" -type f -perm -u+x -exec strip --strip-unneeded {} + 2>/dev/null || true
         # At runtime the tests read tests/ (TEST_DATA_DIR), scripts/, and under
+<<<<<<< snaporca-int
         # resources/ the shipped profiles (PROFILES_DIR), the printers/ maps, and
         # the icon SVGs (NativeCommands icon names are checked against them).
         find "$d" -mindepth 1 -maxdepth 1 -type d \
           ! -name tests ! -name build_flatpak ! -name scripts ! -name resources -exec rm -rf {} +
         find "$d/resources" -mindepth 1 -maxdepth 1 ! -name profiles ! -name printers ! -name images -exec rm -rf {} +
+=======
+        # resources/ the shipped profiles (PROFILES_DIR), the printers/ maps, the
+        # icon SVGs (NativeCommands icon names are checked against them) and the
+        # macOS app icons Icon.icns and Assets.car.
+        find "$d" -mindepth 1 -maxdepth 1 -type d \
+          ! -name tests ! -name build_flatpak ! -name scripts ! -name resources ! -name src -exec rm -rf {} +
+        # Source checks read src/slic3r/GUI.
+        find "$d/src" -mindepth 1 -maxdepth 1 ! -name slic3r -exec rm -rf {} +
+        find "$d/src/slic3r" -mindepth 1 -maxdepth 1 ! -name GUI -exec rm -rf {} +
+        find "$d/resources" -mindepth 1 -maxdepth 1 ! -name profiles ! -name printers ! -name images \
+          ! -name Icon.icns ! -name Assets.car -exec rm -rf {} +
+>>>>>>> lixnix/main
         # Only the SVGs are read; the png/ico/icns/gif assets are ~35MB of dead weight.
         find "$d/resources/images" -mindepth 1 -maxdepth 1 ! -name '*.svg' -exec rm -rf {} + 2>/dev/null || true
         tar -cf flatpak-test-asset.tar flatpak_app "$d"

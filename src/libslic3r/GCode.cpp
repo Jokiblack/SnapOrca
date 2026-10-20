@@ -46,6 +46,7 @@
 #include "GCode/WipeTower.hpp"
 #include "GCode/WipeTower2.hpp"
 #include "ShortestPath.hpp"
+#include "MixedFilament.hpp"
 #include "GCode/OrderingStrategies.hpp"
 #include "Print.hpp"
 #include "Utils.hpp"
@@ -75,6 +76,7 @@
 #include <functional>
 #include <numeric>
 #include <iostream>
+#include <numeric>
 #include <iterator>
 #include <limits>
 #include <map>
@@ -405,6 +407,12 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
             gcode += '\n';
     }
 
+<<<<<<< snaporca-int
+=======
+    std::string OozePrevention::pre_toolchange(GCode& gcodegen)
+    {
+        std::string gcode;
+>>>>>>> lixnix/main
 
     // Return true if tch_prefix is found in custom_gcode
     static bool custom_gcode_changes_tool(const std::string& custom_gcode, const std::string& tch_prefix, unsigned next_extruder)
@@ -430,6 +438,7 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
             }
         NEXT:;
         }
+<<<<<<< snaporca-int
         return ok;
     }
 
@@ -465,14 +474,21 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
         std::string gcode = gcodegen.writer().set_temperature(temp, false, extruder_id);
         gcode.pop_back();
         gcode += " ;cooldown\n"; // this is a marker for GCodeProcessor, so it can supress the commands when needed
+=======
+
+>>>>>>> lixnix/main
         return gcode;
     }
 
     std::string OozePrevention::post_toolchange(GCode& gcodegen)
     {
         return (gcodegen.config().standby_temperature_delta.value != 0) ?
+<<<<<<< snaporca-int
             // Snapmaker: tool_change_temprature_wait decides whether the toolchanger waits for the temperature.
             gcodegen.writer().set_temperature(this->_get_temp(gcodegen), gcodegen.config().tool_change_temprature_wait.value, gcodegen.writer().filament()->id()) :
+=======
+            gcodegen.writer().set_temperature(this->_get_temp(gcodegen), gcodegen.config().tool_change_temprature_wait, gcodegen.writer().filament()->id()) :
+>>>>>>> lixnix/main
             std::string();
     }
 
@@ -602,7 +618,11 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
                     line.replace(line.find("G1 "), 3, oss.str());
                     old_pos = transformed_pos;
                 } else {
+<<<<<<< snaporca-int
                     // Snapmaker: drop the untransformed X/Y even if the position is unchanged.
+=======
+                    // Unchanged position: drop the untransformed X/Y and keep the rest of the move.
+>>>>>>> lixnix/main
                     line = line_out.str();
                 }
             }
@@ -731,17 +751,21 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
     // set volumetric speed of outer wall ,ignore per obejct & region ,just use default setting
     // filament_variant_idx selects the per-variant column of filament_max_volumetric_speed
     // (equals filament_id unless a per-layer nozzle grouping expanded the filament arrays).
-    static float get_outer_wall_volumetric_speed(const FullPrintConfig& config, const Print& print, int filament_id, int filament_variant_idx, int extruder_id) {
+    // process_slot selects the column of outer_wall_speed (the tool head, or its (tool head x volume
+    // type) slot on a printer that declares several types per head); extruder_id the nozzle.
+    static float get_outer_wall_volumetric_speed(const FullPrintConfig& config, const Print& print, int filament_id, int filament_variant_idx, int extruder_id, int process_slot) {
         float outer_wall_volumetric_speed = 0;
         float filament_max_volumetric_speed = config.filament_max_volumetric_speed.get_at(filament_variant_idx);
         const double filament_diameter = config.filament_diameter.get_at(filament_id);
-        float outer_wall_line_width = print.default_region_config().get_abs_value("outer_wall_line_width", filament_diameter);
+        // Snapmaker Orca: the widths are columns per tool head, read at the process slot; the ratio
+        // stays the filament diameter (the pre-existing quirk of this estimate).
+        float outer_wall_line_width = print.default_region_config().get_abs_value_at("outer_wall_line_width", size_t(process_slot), filament_diameter);
         if (outer_wall_line_width == 0.0) {
-            float default_line_width = print.default_object_config().get_abs_value("line_width", filament_diameter);
+            float default_line_width = print.default_object_config().get_abs_value_at("line_width", size_t(process_slot), filament_diameter);
             outer_wall_line_width = default_line_width == 0.0 ? filament_diameter : default_line_width;
         }
         Flow outer_wall_flow = Flow(outer_wall_line_width, config.layer_height, config.nozzle_diameter.get_at(extruder_id));
-        float outer_wall_speed = print.default_region_config().outer_wall_speed.get_at(extruder_id);
+        float outer_wall_speed = print.default_region_config().outer_wall_speed.get_at(process_slot);
         outer_wall_volumetric_speed = outer_wall_speed * outer_wall_flow.mm3_per_mm();
         if (outer_wall_volumetric_speed > filament_max_volumetric_speed)
             outer_wall_volumetric_speed = filament_max_volumetric_speed;
@@ -1110,7 +1134,7 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
             if (gcodegen.writer().filament() != nullptr && !filament_end_gcode.empty()) {
                 DynamicConfig config;
                 config.set_key_value("current_filament_id", new ConfigOptionInt((int) old_filament_id));
-                config.set_key_value("current_nozzle_id", new ConfigOptionInt(nozzle_id_for_gcode_placeholder(group_result, (int) old_filament_id, (int) gcodegen.writer().filament()->extruder_id(), m_layer_idx)));
+                config.set_key_value("current_nozzle_id", new ConfigOptionInt(nozzle_id_for_gcode_placeholder(group_result, (int) old_filament_id, (int) gcodegen.writer().filament()->extruder_id(), gcodegen.m_layer_index)));
                 config.set_key_value("nozzle_diameter_at_nozzle_id", new ConfigOptionFloats(get_nozzle_diameters_by_nozzle_id(group_result.get())));
                 config.set_key_value("nozzle_volume_types", new ConfigOptionStrings(get_nozzle_volume_types_by_nozzle_id(group_result.get())));
                 config.set_key_value("layer_num", new ConfigOptionInt(gcodegen.m_layer_index));
@@ -1187,16 +1211,22 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
             int old_filament_id = gcodegen.writer().filament() ? (int)gcodegen.writer().filament()->id() : -1;
             int old_extruder_id = gcodegen.writer().filament() ? (int)gcodegen.writer().filament()->extruder_id() : -1;
             // Logical nozzle ids for old/new filament (null-safe -> extruder id).
-            int old_nozzle_id  = nozzle_id_for_gcode_placeholder(group_result, old_filament_id, old_extruder_id, m_layer_idx);
-            int next_nozzle_id = nozzle_id_for_gcode_placeholder(group_result, new_filament_id, new_extruder_id, m_layer_idx);
+            int old_nozzle_id  = nozzle_id_for_gcode_placeholder(group_result, old_filament_id, old_extruder_id, gcodegen.m_layer_index);
+            int next_nozzle_id = nozzle_id_for_gcode_placeholder(group_result, new_filament_id, new_extruder_id, gcodegen.m_layer_index);
 
             config.set_key_value("previous_extruder", new ConfigOptionInt(old_filament_id));
             config.set_key_value("next_extruder", new ConfigOptionInt(new_filament_id));
             const bool is_bbl_printer = gcodegen.m_print->is_BBL_printer();
             config.set_key_value("current_hotend", new ConfigOptionInt(
+<<<<<<< snaporca-int
                 hotend_id_for_gcode_placeholder(group_result, is_bbl_printer, old_filament_id, old_extruder_id, m_layer_idx)));
             config.set_key_value("next_hotend", new ConfigOptionInt(
                 hotend_id_for_gcode_placeholder(group_result, is_bbl_printer, new_filament_id, (int) gcodegen.get_extruder_id(new_filament_id), m_layer_idx)));
+=======
+                hotend_id_for_gcode_placeholder(gcodegen.m_config, group_result, old_filament_id, old_extruder_id, gcodegen.m_layer_index)));
+            config.set_key_value("next_hotend", new ConfigOptionInt(
+                hotend_id_for_gcode_placeholder(gcodegen.m_config, group_result, new_filament_id, (int) gcodegen.get_extruder_id(new_filament_id), gcodegen.m_layer_index)));
+>>>>>>> lixnix/main
             config.set_key_value("current_nozzle_id", new ConfigOptionInt(old_nozzle_id));
             config.set_key_value("next_nozzle_id", new ConfigOptionInt(next_nozzle_id));
             config.set_key_value("current_filament_id", new ConfigOptionInt(old_filament_id));
@@ -1232,7 +1262,8 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
                 const size_t new_fi_flow = gcodegen.filament_flow_index(new_filament_id); // Snapmaker: flow-variant filament options
 
                 // set volumetric speed of outer wall ,ignore per obejct,just use default setting
-                float outer_wall_volumetric_speed = get_outer_wall_volumetric_speed(full_config, *gcodegen.m_print, new_filament_id, (int)new_fi, gcodegen.get_extruder_id(new_filament_id));
+                float outer_wall_volumetric_speed = get_outer_wall_volumetric_speed(full_config, *gcodegen.m_print, new_filament_id, (int)new_fi, gcodegen.get_extruder_id(new_filament_id),
+                                                                                    (int)gcodegen.process_slot_of(new_filament_id));
                 config.set_key_value("outer_wall_volumetric_speed", new ConfigOptionFloat(outer_wall_volumetric_speed));
 
                 float old_retract_length = (old_filament_id != -1) ? full_config.retraction_length.get_at(old_fi_flow) : 0;
@@ -1407,7 +1438,9 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
             // Orca: null-safe, layer-aware nozzle lookup — group_result may be null on
             // non-multi-nozzle paths (the helper falls back to the extruder id).
             toolchange_command = gcodegen.writer().toolchange(new_filament_id,
-                nozzle_id_for_gcode_placeholder(group_result, new_filament_id, new_extruder_id, m_layer_idx));
+                nozzle_id_for_gcode_placeholder(group_result, new_filament_id, new_extruder_id, gcodegen.m_layer_index));
+        if (new_filament_id >= 0 && !gcodegen.writer().need_toolchange(new_filament_id))
+            gcodegen.writer().set_process_slot(gcodegen.process_slot_of(new_filament_id));
         if (!custom_gcode_changes_tool(toolchange_gcode_str, gcodegen.writer().toolchange_prefix(), new_filament_id))
             toolchange_gcode_str += toolchange_command;
         else {
@@ -1481,9 +1514,13 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
         gcodegen.placeholder_parser().set("current_filament_id", new_filament_id);
         gcodegen.placeholder_parser().set("current_extruder_id", new_extruder_id);
         gcodegen.placeholder_parser().set("current_nozzle_id",
-            nozzle_id_for_gcode_placeholder(group_result, new_filament_id, new_extruder_id, m_layer_idx));
+            nozzle_id_for_gcode_placeholder(group_result, new_filament_id, new_extruder_id, gcodegen.m_layer_index));
         gcodegen.placeholder_parser().set("current_hotend",
+<<<<<<< snaporca-int
             hotend_id_for_gcode_placeholder(group_result, gcodegen.m_print->is_BBL_printer(), new_filament_id, new_extruder_id, m_layer_idx));
+=======
+            hotend_id_for_gcode_placeholder(gcodegen.m_config, group_result, new_filament_id, new_extruder_id, gcodegen.m_layer_index));
+>>>>>>> lixnix/main
         {
             size_t fi = gcodegen.get_filament_config_index(new_filament_id);
             gcodegen.placeholder_parser().set("retraction_distance_when_cut", gcodegen.m_config.retraction_distances_when_cut.get_at(fi));
@@ -1500,7 +1537,7 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
             DynamicConfig config;
             config.set_key_value("filament_extruder_id", new ConfigOptionInt(new_filament_id));
             config.set_key_value("current_filament_id", new ConfigOptionInt(new_filament_id));
-            config.set_key_value("current_nozzle_id", new ConfigOptionInt(nozzle_id_for_gcode_placeholder(group_result, new_filament_id, new_extruder_id, m_layer_idx)));
+            config.set_key_value("current_nozzle_id", new ConfigOptionInt(nozzle_id_for_gcode_placeholder(group_result, new_filament_id, new_extruder_id, gcodegen.m_layer_index)));
             config.set_key_value("nozzle_diameter_at_nozzle_id", new ConfigOptionFloats(get_nozzle_diameters_by_nozzle_id(group_result.get())));
             config.set_key_value("nozzle_volume_types", new ConfigOptionStrings(get_nozzle_volume_types_by_nozzle_id(group_result.get())));
             start_filament_gcode_str = gcodegen.placeholder_parser_process("filament_start_gcode", filament_start_gcode, new_filament_id, &config);
@@ -1562,10 +1599,13 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
         return gcode;
     }
 
+<<<<<<< snaporca-int
     // Snapmaker: tool change for the Type2 wipe tower (WipeTower2), as emitted for the Snapmaker U1
     // toolchanger and multi-nozzle printers: auto lift retraction, separate nozzle change (ramming)
     // block, tower detour (wipe_tower_wall_gap), in-place tool change and deretraction with the
     // optional tower interface pre-extrusion folded into change_filament_gcode.
+=======
+>>>>>>> lixnix/main
     std::string WipeTowerIntegration::append_tcr2(GCode                             &gcodegen,
                                                   const WipeTower::ToolChangeResult &tcr,
                                                   int                                new_extruder_id,
@@ -1597,18 +1637,68 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
         float wipe_tower_rotation = tcr.priming ? 0.f : alpha;
         Vec2f plate_origin_2d(m_plate_origin(0), m_plate_origin(1));
 
+<<<<<<< snaporca-int
+=======
+        // SM_Orca: For Snapmaker Artisan - expose the upcoming wipe tower entry position
+        // to custom G-code via the next_wipe_x / next_wipe_y placeholders.
+        {
+            auto sm_transformed_pos = Eigen::Rotation2Df(wipe_tower_rotation) * tcr.start_pos + wipe_tower_offset;
+            gcodegen.m_next_wipe_x = sm_transformed_pos(0);
+            gcodegen.m_next_wipe_y = sm_transformed_pos(1);
+        }
+
+
+>>>>>>> lixnix/main
         std::string tcr_rotated_gcode = post_process_wipe_tower_moves(tcr, wipe_tower_offset, wipe_tower_rotation);
 
         double current_z = gcodegen.writer().get_position().z();
         if (z == -1.) // in case no specific z was provided, print at current_z pos
             z = current_z;
 
+<<<<<<< snaporca-int
         const bool will_go_down = !is_approx(z, current_z);
+=======
+        const bool needs_toolchange = gcodegen.writer().need_toolchange(new_extruder_id);
+        const bool will_go_down     = !is_approx(z, current_z);
+        const bool is_ramming       = (gcodegen.config().single_extruder_multi_material) ||
+                                (!gcodegen.config().single_extruder_multi_material &&
+                                 gcodegen.config().filament_multitool_ramming.get_at(gcodegen.get_filament_config_index(tcr.initial_tool)));
+>>>>>>> lixnix/main
         // Orca: user-facing override (Printer Settings > Wipe tower > "Tool change on wipe tower").
         const bool tool_change_on_wipe_tower = gcodegen.config().tool_change_on_wipe_tower.value;
+<<<<<<< snaporca-int
         if (!tcr.priming && (tcr.is_finish_first || will_go_down || tool_change_on_wipe_tower)) {
             // Move over the wipe tower.
             gcode += gcodegen.retract();
+=======
+        const bool should_travel_to_tower = !tcr.priming && (tcr.force_travel     // wipe tower says so
+                                                             || !needs_toolchange // this is just finishing the tower with no toolchange
+                                                             || will_go_down // Make sure to move to prime tower before moving down
+                                                             || is_ramming
+                                                             || tool_change_on_wipe_tower);
+
+        const Point start_wipe_pos     = wipe_tower_point_to_object_point(gcodegen, start_pos + plate_origin_2d);
+        const bool travel_to_tower_now = should_travel_to_tower || gcodegen.m_need_change_layer_lift_z;
+        if (travel_to_tower_now) {
+            // FIXME: It would be better if the wipe tower set the force_travel flag for all toolchanges,
+            // then we could simplify the condition and make it more readable.
+
+            // Orca: pass the configured lift type, as append_tcr does above. lazy_lift() keeps
+            // the first type it is given, so the NormalLift default would pin this hop to a
+            // standing move. Slope and spiral both need a known head position.
+            LiftType lift_type = LiftType::NormalLift;
+            if (gcodegen.writer().filament() != nullptr && gcodegen.writer().is_current_position_clear()) {
+                ZHopType z_hop_type = ZHopType(gcodegen.config().z_hop_types.get_at(
+                    gcodegen.get_filament_config_index((int) gcodegen.writer().filament()->id())));
+                if (z_hop_type == ZHopType::zhtAuto)
+                    z_hop_type = ZHopType::zhtSpiral;
+                lift_type = gcodegen.to_lift_type(z_hop_type);
+            }
+            // SM_Orca: optionally skip the retract/z-hop before travelling to the prime tower.
+            if (gcodegen.writer().filament() == nullptr ||
+                gcodegen.m_config.z_hop_when_prime.get_at(gcodegen.writer().filament()->id()))
+                gcode += gcodegen.retract(false, false, lift_type);
+>>>>>>> lixnix/main
             gcodegen.m_avoid_crossing_perimeters.use_external_mp_once();
             Point move_pos = wipe_tower_point_to_object_point(gcodegen, start_pos + plate_origin_2d);
             gcode += gcodegen.travel_to(move_pos, erMixed, "Travel to a Wipe Tower");
@@ -1737,8 +1827,96 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
         }
         toolchange_gcode_str += deretraction_str;
 
+<<<<<<< snaporca-int
         DynamicConfig config;
         config.set_key_value("change_filament_gcode", new ConfigOptionString(toolchange_gcode_str));
+=======
+        if (toolchange_temp_override > 0) {
+            const std::string preheat_token = "preheat T" + std::to_string(new_extruder_id);
+            const int         preheat_temp  = interface_temp > 0 ? interface_temp : toolchange_temp_override;
+            std::string out;
+            out.reserve(tcr_rotated_gcode.size());
+            size_t pos = 0;
+            while (pos < tcr_rotated_gcode.size()) {
+                size_t line_end = tcr_rotated_gcode.find('\n', pos);
+                if (line_end == std::string::npos)
+                    line_end = tcr_rotated_gcode.size();
+                std::string line = tcr_rotated_gcode.substr(pos, line_end - pos);
+                std::string trimmed = line;
+                trimmed.erase(0, trimmed.find_first_not_of(" \t"));
+                const bool is_preheat_line = (trimmed.find(preheat_token) != std::string::npos);
+                if (is_preheat_line) {
+                    // Preserve early-preheat timing while forcing interface temp for contact toolchanges.
+                    size_t s_pos = trimmed.find('S');
+                    if (s_pos != std::string::npos) {
+                        size_t s_end = trimmed.find_first_not_of("0123456789", s_pos + 1);
+                        trimmed.replace(s_pos + 1,
+                                        (s_end == std::string::npos ? trimmed.size() : s_end) - (s_pos + 1),
+                                        std::to_string(preheat_temp));
+                        // Reapply left indentation from the original line.
+                        size_t line_prefix = line.find_first_not_of(" \t");
+                        if (line_prefix != std::string::npos)
+                            line = line.substr(0, line_prefix) + trimmed;
+                        else
+                            line = trimmed;
+                    }
+                }
+                out.append(line);
+                if (line_end < tcr_rotated_gcode.size())
+                    out.push_back('\n');
+                pos = line_end + 1;
+            }
+            tcr_rotated_gcode.swap(out);
+        }
+
+        if (toolchange_temp_override > 0 && interface_temp > 0) {
+            const std::string t_token = " T" + std::to_string(new_extruder_id);
+            std::string out;
+            out.reserve(tcr_rotated_gcode.size());
+            size_t pos = 0;
+            while (pos < tcr_rotated_gcode.size()) {
+                size_t line_end = tcr_rotated_gcode.find('\n', pos);
+                if (line_end == std::string::npos)
+                    line_end = tcr_rotated_gcode.size();
+                std::string line = tcr_rotated_gcode.substr(pos, line_end - pos);
+                std::string trimmed = line;
+                trimmed.erase(0, trimmed.find_first_not_of(" \t"));
+                bool skip_line = false;
+                if (boost::starts_with(trimmed, "M109") && trimmed.find(WipeTower2::wait_for_temp_tag()) == std::string::npos) {
+                    bool matches_extruder = true;
+                    if (trimmed.find('T') != std::string::npos)
+                        matches_extruder = trimmed.find(t_token) != std::string::npos;
+                    if (matches_extruder) {
+                        size_t s_pos = trimmed.find('S');
+                        if (s_pos != std::string::npos) {
+                            size_t s_end = trimmed.find_first_not_of("0123456789", s_pos + 1);
+                            const std::string s_val = trimmed.substr(s_pos + 1, s_end == std::string::npos ? std::string::npos : s_end - (s_pos + 1));
+                            if (!s_val.empty()) {
+                                try {
+                                    skip_line = std::stoi(s_val) == interface_temp;
+                                } catch (...) {
+                                    skip_line = false;
+                                }
+                            }
+                        }
+                    }
+                }
+                if (!skip_line) {
+                    out.append(line);
+                    if (line_end < tcr_rotated_gcode.size())
+                        out.push_back('\n');
+                }
+                pos = line_end + 1;
+            }
+            tcr_rotated_gcode.swap(out);
+        }
+
+        // Insert the toolchange and deretraction gcode into the generated gcode.
+
+        DynamicConfig config;
+        config.set_key_value("change_filament_gcode", new ConfigOptionString(toolchange_gcode_str));
+        config.set_key_value("deretraction_from_wipe_tower_generator", new ConfigOptionString(deretraction_str));
+>>>>>>> lixnix/main
         config.set_key_value("layer_num", new ConfigOptionInt(gcodegen.m_layer_index));
         config.set_key_value("layer_z", new ConfigOptionFloat(tcr.print_z));
         config.set_key_value("toolchange_z", new ConfigOptionFloat(z));
@@ -1760,12 +1938,21 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
             gcode += gcodegen.writer().retract();
             gcode += gcodegen.writer().travel_to_z(current_z, "Travel back up to the topmost object layer.");
             gcode += gcodegen.writer().unretract();
+<<<<<<< snaporca-int
         } else {
+=======
+        }
+
+        else {
+>>>>>>> lixnix/main
             // Prepare a future wipe.
             gcodegen.m_wipe.reset_path();
             for (const Vec2f& wipe_pt : tcr.wipe_path)
                 gcodegen.m_wipe.path.points.emplace_back(wipe_tower_point_to_object_point(gcodegen, transform_wt2_pt(wipe_pt) + plate_origin_2d));
+<<<<<<< snaporca-int
             gcode += gcodegen.retract(false, false);
+=======
+>>>>>>> lixnix/main
         }
 
         // Let the planner know we are traveling between objects.
@@ -1773,6 +1960,7 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
         return gcode;
     }
 
+<<<<<<< snaporca-int
     // Snapmaker: compute a detour path around the wipe tower bounding box.
     Polyline WipeTowerIntegration::detour_around_wipe_tower(
         const Point &start_pos, const Point &target_pos,
@@ -1869,6 +2057,8 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
         return result;
     }
 
+=======
+>>>>>>> lixnix/main
     // This function postprocesses gcode_original, rotates and moves all G1 extrusions and returns resulting gcode
     // Starting position has to be supplied explicitely (otherwise it would fail in case first G1 command only contained one coordinate)
     std::string WipeTowerIntegration::post_process_wipe_tower_moves(const WipeTower::ToolChangeResult& tcr, const Vec2f& translation, float angle) const
@@ -1951,11 +2141,24 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
         return gcode_out;
     }
 
+<<<<<<< snaporca-int
     // Snapmaker: extruder offset of a filament; out of range ids fall back to the first extruder.
     Vec2d WipeTowerIntegration::extruder_offset_at(size_t extruder_id) const
     {
         if (m_single_extruder_multi_material || extruder_id >= m_extruder_offsets.size())
             return m_extruder_offsets.empty() ? Vec2d::Zero() : m_extruder_offsets[0];
+=======
+    Vec2d WipeTowerIntegration::extruder_offset_at(size_t extruder_id) const
+    {
+        // SM_Orca: bounds-safe lookup of the per-filament extruder offset.
+        if (m_extruder_offsets.empty())
+            return Vec2d::Zero();
+        if (m_single_extruder_multi_material)
+            return m_extruder_offsets[0];
+        // If the extruder_id is out of range, return the offset of the first extruder.
+        if (extruder_id >= m_extruder_offsets.size())
+            return m_extruder_offsets[0];
+>>>>>>> lixnix/main
         return m_extruder_offsets[extruder_id];
     }
 
@@ -2235,6 +2438,274 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
         if (local_z_unplanned)
             return emit_local_z_unplanned_toolchange();
 
+        // SM_Orca: keep the nominal wipe tower toolchange sequence aligned with the requested
+        // extruder even when Local-Z sublayer emission consumed toolchanges out of order.
+        auto realign_nominal_toolchange_idx = [&](int requested_extruder_id) {
+            if (requested_extruder_id < 0 || m_layer_idx < 0 || m_layer_idx >= (int)m_tool_changes.size())
+                return;
+            auto &toolchanges = m_tool_changes[m_layer_idx];
+            if (toolchanges.empty())
+                return;
+            if (size_t(m_tool_change_idx) < toolchanges.size() &&
+                toolchanges[size_t(m_tool_change_idx)].new_tool == requested_extruder_id) {
+                return;
+            }
+
+            auto find_match_from = [&](size_t start_idx) {
+                return std::find_if(toolchanges.begin() + std::min(start_idx, toolchanges.size()), toolchanges.end(),
+                                    [requested_extruder_id](const WipeTower::ToolChangeResult &candidate) {
+                                        return candidate.new_tool == requested_extruder_id;
+                                    });
+            };
+
+            auto it_match = find_match_from(size_t(std::max(0, m_tool_change_idx)));
+            if (it_match == toolchanges.end())
+                it_match = find_match_from(0);
+            if (it_match == toolchanges.end())
+                return;
+
+            const int matched_idx = int(std::distance(toolchanges.begin(), it_match));
+            BOOST_LOG_TRIVIAL(warning) << "Wipe tower nominal toolchange state mismatch, realigning"
+                                       << " layer_idx=" << m_layer_idx
+                                       << " tool_change_idx=" << m_tool_change_idx
+                                       << " requested=" << requested_extruder_id
+                                       << " matched_idx=" << matched_idx
+                                       << " matched_new_tool=" << it_match->new_tool;
+            m_tool_change_idx = matched_idx;
+        };
+
+        // SM_Orca: Local-Z dithering emits mid-layer toolchanges that are not part of the nominal
+        // wipe tower plan. Consume the preplanned Local-Z toolchange sequence when available,
+        // otherwise purge on a reserved slot of the wipe tower (or fall back to a direct switch).
+        auto emit_local_z_unplanned_toolchange = [&]() -> std::string {
+            if (extruder_id < 0 || !gcodegen.writer().need_toolchange(extruder_id))
+                return "";
+            const double current_z          = gcodegen.writer().get_position().z();
+            const double tower_z            = local_z_nominal_layer_z >= 0. ? local_z_nominal_layer_z : current_z;
+            const double toolchange_print_z = tower_z - gcodegen.config().z_offset.value;
+
+            if (m_layer_idx >= 0 && size_t(m_layer_idx) < m_local_z_tool_changes.size() &&
+                size_t(m_layer_idx) < m_local_z_tool_change_idx.size()) {
+                size_t &local_z_tool_change_idx = m_local_z_tool_change_idx[size_t(m_layer_idx)];
+                const auto &layer_local_z_tool_changes = m_local_z_tool_changes[size_t(m_layer_idx)];
+                if (local_z_tool_change_idx < layer_local_z_tool_changes.size()) {
+                    const WipeTower::ToolChangeResult &local_z_tcr = layer_local_z_tool_changes[local_z_tool_change_idx];
+                    const int current_tool = gcodegen.writer().filament() != nullptr ? int(gcodegen.writer().filament()->id()) : -1;
+                    if (local_z_tcr.new_tool == extruder_id &&
+                        (current_tool < 0 || local_z_tcr.initial_tool == current_tool)) {
+                        ++local_z_tool_change_idx;
+                        BOOST_LOG_TRIVIAL(debug) << "Local-Z toolchange emitted from preplanned wipe tower sequence"
+                                                 << " layer_idx=" << m_layer_idx
+                                                 << " extruder_id=" << extruder_id
+                                                 << " local_z_tool_change_idx=" << (local_z_tool_change_idx - 1);
+                        return gcodegen.wipe_tower_type() == WipeTowerType::Type2 ?
+                                   append_tcr2(gcodegen, local_z_tcr, extruder_id, tower_z) :
+                                   append_tcr(gcodegen, local_z_tcr, extruder_id, tower_z);
+                    }
+
+                    BOOST_LOG_TRIVIAL(warning) << "Local-Z preplanned wipe tower sequence mismatch, falling back"
+                                               << " layer_idx=" << m_layer_idx
+                                               << " requested_extruder=" << extruder_id
+                                               << " current_tool=" << current_tool
+                                               << " planned_initial=" << local_z_tcr.initial_tool
+                                               << " planned_new=" << local_z_tcr.new_tool
+                                               << " local_z_tool_change_idx=" << local_z_tool_change_idx;
+                }
+            }
+
+            if (m_layer_idx < 0 || size_t(m_layer_idx) >= m_local_z_reserve_boxes.size() ||
+                size_t(m_layer_idx) >= m_local_z_reserve_slot_idx.size()) {
+                BOOST_LOG_TRIVIAL(debug) << "Local-Z unplanned toolchange using direct extruder switch"
+                                         << " layer_idx=" << m_layer_idx
+                                         << " extruder_id=" << extruder_id
+                                         << " tool_change_idx=" << m_tool_change_idx;
+                return gcodegen.set_extruder(unsigned(extruder_id), toolchange_print_z);
+            }
+
+            size_t &slot_idx = m_local_z_reserve_slot_idx[size_t(m_layer_idx)];
+            const auto &layer_slots = m_local_z_reserve_boxes[size_t(m_layer_idx)];
+            if (slot_idx >= layer_slots.size() || layer_slots.empty()) {
+                BOOST_LOG_TRIVIAL(warning) << "Local-Z toolchange reserve exhausted"
+                                           << " layer_idx=" << m_layer_idx
+                                           << " extruder_id=" << extruder_id
+                                           << " reserved_slots=" << layer_slots.size()
+                                           << " consumed_slots=" << slot_idx;
+                return gcodegen.set_extruder(unsigned(extruder_id), toolchange_print_z);
+            }
+
+            const WipeTower::box_coordinates &slot = layer_slots[slot_idx++];
+
+            if (m_layer_idx >= (int)m_tool_changes.size() || m_tool_changes[m_layer_idx].empty()) {
+                BOOST_LOG_TRIVIAL(debug) << "Local-Z reserve has no matching wipe-tower layer metadata, using direct extruder switch"
+                                         << " layer_idx=" << m_layer_idx
+                                         << " extruder_id=" << extruder_id;
+                return gcodegen.set_extruder(unsigned(extruder_id), toolchange_print_z);
+            }
+
+            const float layer_height = m_tool_changes[m_layer_idx].front().layer_height;
+            if (gcodegen.m_curr_print != nullptr && gcodegen.writer().filament() != nullptr) {
+                const Print&       print        = *gcodegen.m_curr_print;
+                const PrintConfig& print_config = print.config();
+                const size_t       current_tool = gcodegen.writer().filament()->id();
+                std::vector<std::vector<float>> wipe_volumes = WipeTower2::extract_wipe_volumes(print_config);
+
+                WipeTower2 local_z_wipe_tower(print_config,
+                                              print.default_region_config(),
+                                              print.get_plate_index(),
+                                              print.get_plate_origin(),
+                                              wipe_volumes,
+                                              current_tool);
+                for (size_t extruder_idx = 0; extruder_idx < print_config.nozzle_diameter.size(); ++extruder_idx)
+                    local_z_wipe_tower.set_extruder(extruder_idx, print_config);
+
+                local_z_wipe_tower.set_current_tool(current_tool);
+                local_z_wipe_tower.set_layer(float(toolchange_print_z), layer_height, 0, m_layer_idx == 0, false);
+
+                WipeTower::ToolChangeResult local_z_tcr =
+                    local_z_wipe_tower.local_z_tool_change(size_t(extruder_id), slot, float(print_config.prime_volume));
+                BOOST_LOG_TRIVIAL(debug) << "Local-Z toolchange emitted via wipe tower mini-toolchange"
+                                         << " layer_idx=" << m_layer_idx
+                                         << " extruder_id=" << extruder_id
+                                         << " reserve_slot=" << (slot_idx - 1);
+                return gcodegen.wipe_tower_type() == WipeTowerType::Type2 ?
+                           append_tcr2(gcodegen, local_z_tcr, extruder_id, tower_z) :
+                           append_tcr(gcodegen, local_z_tcr, extruder_id, tower_z);
+            }
+
+            const float nozzle_diameter = float(gcodegen.config().nozzle_diameter.get_at(gcodegen.get_nozzle_config_index(extruder_id)));
+            const float line_width = nozzle_diameter * 1.25f;
+            const float extra_flow = float(gcodegen.config().wipe_tower_extra_flow.value) / 100.f;
+            const float extra_spacing = float(gcodegen.config().wipe_tower_extra_spacing.value) / 100.f;
+            const float filament_area = float((M_PI / 4.f) * std::pow(gcodegen.config().filament_diameter.get_at(gcodegen.get_filament_config_index(extruder_id)), 2));
+            const float flow_per_mm =
+                filament_area > 0.f ?
+                    (layer_height * (line_width - layer_height * float(1.f - M_PI / 4.f)) / filament_area) * std::max(0.f, extra_flow) :
+                    0.f;
+            if (line_width <= 0.f || flow_per_mm <= 0.f)
+                return gcodegen.set_extruder(unsigned(extruder_id), toolchange_print_z);
+
+            const float inset_x = std::min(line_width, std::max(0.f, (slot.ru.x() - slot.ld.x()) * 0.25f));
+            const float inset_y = std::min(line_width * 0.5f, std::max(0.f, (slot.ru.y() - slot.rd.y()) * 0.25f));
+            const float x_min   = slot.ld.x() + inset_x;
+            const float x_max   = slot.rd.x() - inset_x;
+            const float y_min   = slot.ld.y() + inset_y;
+            const float y_max   = slot.lu.y() - inset_y;
+            if (x_max - x_min <= float(EPSILON) || y_max - y_min <= float(EPSILON))
+                return gcodegen.set_extruder(unsigned(extruder_id), toolchange_print_z);
+
+            std::vector<Vec2f> local_path;
+            local_path.reserve(16);
+            local_path.emplace_back(x_min, y_min);
+            local_path.emplace_back(x_max, y_min);
+
+            bool  moving_left = true;
+            float y           = y_min;
+            const float line_spacing = std::max(line_width, line_width * std::max(1.f, extra_spacing));
+            while (y + line_spacing < y_max - float(EPSILON)) {
+                y = std::min(y + line_spacing, y_max);
+                local_path.emplace_back(moving_left ? x_max : x_min, y);
+                local_path.emplace_back(moving_left ? x_min : x_max, y);
+                moving_left = !moving_left;
+            }
+
+            const float alpha = m_wipe_tower_rotation / 180.f * float(M_PI);
+            auto transform_wt_pt = [&alpha, this](const Vec2f& pt) -> Vec2f {
+                return Eigen::Rotation2Df(alpha) * pt + m_wipe_tower_pos;
+            };
+            const Vec2f plate_origin_2d(m_plate_origin(0), m_plate_origin(1));
+            const Vec2f start_pos = transform_wt_pt(local_path.front());
+            const Vec2f start_machine = start_pos + plate_origin_2d;
+
+            gcodegen.m_next_wipe_x = start_pos.x();
+            gcodegen.m_next_wipe_y = start_pos.y();
+
+            gcode += gcodegen.writer().unlift();
+
+            if (gcodegen.writer().filament() != nullptr) {
+                auto type = ZHopType(gcodegen.m_config.z_hop_types.get_at(
+                    gcodegen.get_filament_config_index((int)gcodegen.writer().filament()->id())));
+                if (type == ZHopType::zhtAuto)
+                    type = ZHopType::zhtSpiral;
+                if (gcodegen.m_config.z_hop_when_prime.get_at(gcodegen.writer().filament()->id()))
+                    gcode += gcodegen.retract(false, false, gcodegen.to_lift_type(type));
+            }
+
+            gcodegen.m_avoid_crossing_perimeters.use_external_mp_once();
+            gcode += gcodegen.travel_to(wipe_tower_point_to_object_point(gcodegen, start_machine), erMixed,
+                                        "Travel to Local-Z wipe tower reserve");
+            gcode += gcodegen.unretract();
+
+            if (!is_approx(tower_z, current_z)) {
+                gcode += gcodegen.writer().retract();
+                gcode += gcodegen.writer().travel_to_z(tower_z, "Travel to Local-Z tower layer");
+                gcode += gcodegen.writer().unretract();
+            }
+
+            gcode += gcodegen.set_extruder(unsigned(extruder_id), toolchange_print_z);
+            gcode += gcodegen.writer().travel_to_z(tower_z, "Force restore Local-Z tower Z", true);
+            {
+                Vec3d restored_position{gcodegen.writer().get_position()};
+                restored_position.z() = tower_z;
+                gcodegen.writer().set_position(restored_position);
+            }
+            gcode += gcodegen.unretract();
+            gcode += gcodegen.writer().travel_to_xy(start_machine.cast<double>(), "Return to Local-Z wipe tower reserve");
+
+            gcode += ";" + GCodeProcessor::reserved_tag(GCodeProcessor::ETags::Height) + float_to_string_decimal_point(layer_height, 3) + "\n";
+            gcode += ";" + GCodeProcessor::reserved_tag(GCodeProcessor::ETags::Role) + ExtrusionEntity::role_to_string(erWipeTower) + "\n";
+            gcode += ";" + GCodeProcessor::reserved_tag(GCodeProcessor::ETags::Width) + float_to_string_decimal_point(line_width, 3) + "\n";
+
+            double feedrate = std::max(1.0, double(gcodegen.config().wipe_tower_max_purge_speed.value)) * 60.0;
+            if (m_layer_idx == 0)
+                feedrate = std::min(feedrate, std::max(1.0, double(gcodegen.config().initial_layer_speed.get_at(
+                                                                gcodegen.get_nozzle_config_index(extruder_id)))) * 60.0);
+            gcode += gcodegen.writer().set_speed(feedrate, "Local-Z wipe tower reserve");
+
+            for (size_t point_idx = 1; point_idx < local_path.size(); ++point_idx) {
+                const Vec2f machine_pt = transform_wt_pt(local_path[point_idx]) + plate_origin_2d;
+                const double length = (local_path[point_idx] - local_path[point_idx - 1]).norm();
+                if (length <= EPSILON)
+                    continue;
+                gcode += gcodegen.writer().extrude_to_xy(machine_pt.cast<double>(), flow_per_mm * float(length),
+                                                         point_idx == 1 ? "Local-Z tower purge" : std::string());
+            }
+
+            const Vec2f end_machine = transform_wt_pt(local_path.back()) + plate_origin_2d;
+            gcodegen.set_last_pos(wipe_tower_point_to_object_point(gcodegen, end_machine));
+            gcodegen.m_wipe.reset_path();
+            for (size_t point_idx = local_path.size(); point_idx-- > 0;) {
+                const Vec2f machine_pt = transform_wt_pt(local_path[point_idx]) + plate_origin_2d;
+                gcodegen.m_wipe.path.points.emplace_back(wipe_tower_point_to_object_point(gcodegen, machine_pt));
+            }
+
+            if (!is_approx(tower_z, current_z)) {
+                const Extruder *active_filament = gcodegen.writer().filament();
+                const bool can_wipe = active_filament != nullptr &&
+                                      gcodegen.config().wipe.get_at(gcodegen.get_filament_config_index((int)active_filament->id())) &&
+                                      gcodegen.m_wipe.has_path() &&
+                                      scale_(gcodegen.config().wipe_distance.get_at(gcodegen.get_filament_config_index((int)active_filament->id()))) > SCALED_EPSILON;
+                if (can_wipe) {
+                    Wipe::RetractionValues wipe_retractions = gcodegen.m_wipe.calculateWipeRetractionLengths(gcodegen, false);
+                    gcode += gcodegen.writer().retract(true, wipe_retractions.retraction_length_before_wipe);
+                    gcode += gcodegen.m_wipe.wipe(gcodegen, wipe_retractions.retraction_length_during_wipe, false, false);
+                }
+                gcode += gcodegen.writer().retract();
+                gcodegen.m_wipe.reset_path();
+                gcode += gcodegen.writer().travel_to_z(current_z, "Travel back to Local-Z pass");
+                gcode += gcodegen.writer().unretract();
+            }
+
+            gcodegen.m_avoid_crossing_perimeters.use_external_mp_once();
+            BOOST_LOG_TRIVIAL(debug) << "Local-Z toolchange emitted on wipe tower reserve"
+                                     << " layer_idx=" << m_layer_idx
+                                     << " extruder_id=" << extruder_id
+                                     << " reserve_slot=" << (slot_idx - 1);
+            return gcode;
+        };
+
+        if (local_z_unplanned)
+            return emit_local_z_unplanned_toolchange();
+
         assert(m_layer_idx >= 0);
         if (m_layer_idx >= (int) m_tool_changes.size())
             return gcode;
@@ -2301,8 +2772,12 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
             return true;
 
         bool   ignore_sparse = wipe_tower_layer_is_combined_away(m_tool_changes[m_layer_idx]);
-        if (m_sparse_layers_skipped)
-            ignore_sparse = wipe_tower_layer_is_sparse(m_tool_changes[m_layer_idx]);
+        if (m_sparse_layers_skipped) {
+            // Mirror tool_change(): the Type2 tower never skips its first layer (brim + base
+            // slab), even when that layer carries no toolchange.
+            ignore_sparse = wipe_tower_layer_is_sparse(m_tool_changes[m_layer_idx]) &&
+                            (gcodegen.wipe_tower_type() != WipeTowerType::Type2 || m_layer_idx != 0);
+        }
 
         if ((m_enable_timelapse_print || m_enable_wrapping_detection) && m_is_first_print) {
             return false;
@@ -2332,8 +2807,12 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
 
         return gcode;
     }
+<<<<<<< snaporca-int
 
     const std::vector<std::string> ColorPrintColors::Colors = { "#C0392B", "#E67E22", "#F1C40F", "#27AE60", "#1ABC9C", "#2980B9", "#9B59B6" };
+=======
+const std::vector<std::string> ColorPrintColors::Colors = {"#C0392B", "#E67E22", "#F1C40F", "#27AE60", "#1ABC9C", "#2980B9", "#9B59B6"};
+>>>>>>> lixnix/main
 
 #define EXTRUDER_CONFIG(OPT) m_config.OPT.get_at(m_writer.filament()->extruder_id())
 #define FILAMENT_CONFIG(OPT) m_config.OPT.get_at(get_filament_config_index(m_writer.filament()->id()))
@@ -2544,6 +3023,7 @@ std::vector<GCode::LayerToPrint> GCode::collect_layers_to_print(const PrintObjec
             || (layer_to_print.support_layer && layer_to_print.support_layer->has_extrusions())
             || (layer_to_print.belt_brim_band && ! layer_to_print.belt_brim_band->fills.empty());
 
+<<<<<<< snaporca-int
         // Check that there are extrusions on the very first layer. The case with empty
         // first layer may result in skirt/brim in the air and maybe other issues.
         // Skip this check for belt printers.  The shear transform tilts the
@@ -2557,6 +3037,10 @@ std::vector<GCode::LayerToPrint> GCode::collect_layers_to_print(const PrintObjec
             if (!has_extrusions && !skip_empty_first_layer)
                 throw Slic3r::SlicingError(_(L("One object has an empty first layer and can't be printed. Please Cut the bottom or enable supports.")), object.id().id);
         }
+=======
+        // An empty first layer is not an error here: leading layers may be too narrow for an
+        // extrusion line (a cube standing on an edge), they are stripped after this loop.
+>>>>>>> lixnix/main
 
         // In case there are extrusions on this layer, check there is a layer to lay it on.
         if ((layer_to_print.object_layer && layer_to_print.object_layer->has_extrusions())
@@ -2580,9 +3064,20 @@ std::vector<GCode::LayerToPrint> GCode::collect_layers_to_print(const PrintObjec
                 }
                 extra_gap = std::max(extra_gap, object.config().raft_contact_distance.value);
             }
+<<<<<<< snaporca-int
             double maximal_print_z = (last_extrusion_layer ? last_extrusion_layer->print_z() : 0.)
                 + layer_to_print.layer()->height
                 + std::max(0., extra_gap);
+=======
+            double layer_span = layer_to_print.layer()->height;
+            // ORCA: the top layer of a combined group or walls-only run prints the whole group at
+            // once, so tolerate a gap of its height (equals the layer height when not combined).
+            if (layer_to_print.object_layer != nullptr)
+                for (const LayerRegion *layerm : layer_to_print.object_layer->regions())
+                    layer_span = std::max(layer_span, layerm->wall_combined_height());
+            double maximal_print_z = (last_extrusion_layer ? last_extrusion_layer->print_z() : 0.) + layer_span +
+                                     std::max(0., extra_gap);
+>>>>>>> lixnix/main
             // Negative support_contact_z is not taken into account, it can result in false positives in cases
 
             if (has_extrusions && layer_to_print.print_z() > maximal_print_z + 2. * EPSILON) {
@@ -2605,6 +3100,7 @@ std::vector<GCode::LayerToPrint> GCode::collect_layers_to_print(const PrintObjec
             last_extrusion_layer = &layers_to_print.back();
     }
 
+<<<<<<< snaporca-int
     // ORCA-Belt: objects print at their position along the belt, so the first
     // extrusions legitimately start far above Z=0. Drop the spurious
     // "empty layers from the bed" range while keeping genuine mid-print gaps.
@@ -2639,6 +3135,33 @@ std::vector<GCode::LayerToPrint> GCode::collect_layers_to_print(const PrintObjec
                           (ltp.belt_brim_band != nullptr && ! ltp.belt_brim_band->fills.empty()));
             }),
             layers_to_print.end());
+=======
+    // Strip leading layers whose slices are too narrow for an extrusion line (a cube standing on
+    // an edge). A first layer without any slice geometry is an object floating above the bed.
+    auto has_extrusions_to_print = [](const LayerToPrint &ltp) {
+        return (ltp.object_layer && ltp.object_layer->has_extrusions()) || (ltp.support_layer && ltp.support_layer->has_extrusions());
+    };
+    if (!layers_to_print.empty()) {
+        while (!layers_to_print.empty() && !has_extrusions_to_print(layers_to_print.front()) &&
+               layers_to_print.front().object_layer != nullptr && !layers_to_print.front().object_layer->lslices.empty())
+            layers_to_print.erase(layers_to_print.begin());
+        if (layers_to_print.empty() || !has_extrusions_to_print(layers_to_print.front()))
+            throw Slic3r::SlicingError(_(L("One object has an empty first layer and can't be printed. Please Cut the bottom or enable supports.")), object.id().id);
+    }
+
+    if (!warning_ranges.empty()) {
+        std::string warning;
+        size_t      i = 0;
+        for (i = 0; i < std::min(warning_ranges.size(), size_t(5)); ++i)
+            warning += Slic3r::format(_(L("The object has empty layers between %1% and %2% and can\u2019t be printed.")),
+                                      warning_ranges[i].first, warning_ranges[i].second) + "\n";
+        warning += Slic3r::format(_(L("Object: %1%")), object.model_object()->name) + "\n"
+            + _(L("Parts of the object at these heights may be too thin or the object may have a faulty mesh."));
+
+        const_cast<Print*>(object.print())
+            ->active_step_add_warning(PrintStateBase::WarningLevel::CRITICAL, warning, PrintStateBase::SlicingEmptyGcodeLayers);
+    }
+>>>>>>> lixnix/main
 
     return layers_to_print;
 }
@@ -2763,6 +3286,24 @@ namespace DoExport {
     // second: keyword
     // to be shown in the warning notification
     // The returned vector is empty if no keyword has been found
+    static std::vector<std::pair<std::string, std::string>> validate_custom_gcode(const Print& print) {
+        static const unsigned int MAX_TAGS_COUNT = 5;
+        std::vector<std::pair<std::string, std::string>> ret;
+
+    print_statistics.total_extruded_volume = total_extruded_volume;
+    print_statistics.total_used_filament   = total_used_filament;
+    print_statistics.total_weight          = total_weight;
+    print_statistics.total_cost            = total_cost;
+
+    print_statistics.filament_stats = result.print_statistics.model_volumes_per_extruder;
+}
+
+// if any reserved keyword is found, returns a std::vector containing the first MAX_COUNT keywords found
+// into pairs containing:
+// first: source
+// second: keyword
+// to be shown in the warning notification
+// The returned vector is empty if no keyword has been found
     static std::vector<std::pair<std::string, std::string>> validate_custom_gcode(const Print& print) {
         static const unsigned int MAX_TAGS_COUNT = 5;
         std::vector<std::pair<std::string, std::string>> ret;
@@ -3016,7 +3557,7 @@ void GCode::do_export(Print* print, const char* path, GCodeProcessorResult* resu
     if (print->is_step_done(psGCodeExport) && boost::filesystem::exists(boost::filesystem::path(path)))
         return;
 
-    BOOST_LOG_TRIVIAL(info) << boost::format("Will export G-code to %1% soon")%path;
+    BOOST_LOG_TRIVIAL(info) << boost::format("Will export G-code to %1% soon") % path;
 
     GCodeProcessor::s_IsBBLPrinter = print->is_BBL_printer();
     m_writer.set_is_bbl_machine(print->is_BBL_printer());
@@ -3164,7 +3705,7 @@ void GCode::do_export(Print* print, const char* path, GCodeProcessorResult* resu
         const ConfigOptionInts *bed_temp_opt = m_config.option<ConfigOptionInts>(get_bed_temp_1st_layer_key(m_config.curr_bed_type));
         std::vector<int> conflict_filament;
         for(auto extruder_id : m_initial_layer_extruders){
-            int cur_bed_temp = bed_temp_opt->get_at(extruder_id);
+            int cur_bed_temp = bed_temp_opt->get_at(get_filament_config_index(int(extruder_id)));
             if (cur_bed_temp == 0) {
                 conflict_filament.push_back(extruder_id);
             }
@@ -3334,10 +3875,10 @@ namespace DoExport {
 	}
 #endif
 
-    static void init_ooze_prevention(const Print &print, OozePrevention &ooze_prevention)
-	{
-	    ooze_prevention.enable = print.config().ooze_prevention.value && ! print.config().single_extruder_multi_material;
-	}
+static void init_ooze_prevention(const Print& print, OozePrevention& ooze_prevention)
+{
+    ooze_prevention.enable = print.config().ooze_prevention.value && !print.config().single_extruder_multi_material;
+}
 
     // Count tool/filament changes across the print from the tool ordering. Used as a fallback when no
     // wipe tower populated WipeTowerData::number_of_toolchanges (left at -1). Covers non-sequential
@@ -3427,7 +3968,11 @@ namespace DoExport {
         }
         return filament_stats_string_out;
     }
+<<<<<<< snaporca-int
 }
+=======
+} // namespace DoExport
+>>>>>>> lixnix/main
 
 #if 0
 // Sort the PrintObjects by their increasing Z, likely useful for avoiding colisions on Deltas during sequential prints.
@@ -3589,8 +4134,11 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
     m_fan_mover.reset();
     m_ordering_cache.clear();
 
+<<<<<<< snaporca-int
     // Belt printer: initialize belt-specific writer via virtual hook.
     this->init_belt_writer(print);
+=======
+>>>>>>> lixnix/main
     m_writer.set_is_bbl_machine(is_bbl_printers);
 
     // G-code axis remap. Only belt printers get one (see
@@ -3633,11 +4181,19 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
     // How many times will be change_layer() called?
     // change_layer() in turn increments the progress bar status.
     m_layer_count = 0;
+<<<<<<< snaporca-int
     // On a belt, collect_layers_to_print() drops the layers that print nothing (an
     // object's empty lead-in), so they must not be counted here either or the layer
     // count in the file disagrees with its layer changes.
     const bool belt = print.config().belt_printer.value;
     if (print.config().print_sequence == PrintSequence::ByObject) {
+=======
+    // A by-object print with a wipe tower is emitted by layer (see the sequential branch below),
+    // so it changes layer once per merged print Z like a by-layer print.
+    const bool count_layers_by_object = print.config().print_sequence == PrintSequence::ByObject &&
+                                        !(print.has_wipe_tower() && print.tool_ordering().has_wipe_tower());
+    if (count_layers_by_object) {
+>>>>>>> lixnix/main
         // Add each of the object's layers separately.
         for (auto object : print.objects()) {
             std::vector<coordf_t> zs;
@@ -3703,10 +4259,16 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
     if (print.config().spiral_mode.value)
         m_spiral_vase = make_unique<SpiralVase>(print.config());
 
+<<<<<<< snaporca-int
     // Snapmaker: max_volumetric_extrusion_rate_slope is a flow-variant vector.
     if (*std::max_element(print.config().max_volumetric_extrusion_rate_slope.values.begin(), print.config().max_volumetric_extrusion_rate_slope.values.end()) > 0){
     		m_pressure_equalizer = make_unique<PressureEqualizer>(print.config());
     		m_enable_extrusion_role_markers = (bool)m_pressure_equalizer;
+=======
+    if (print.config().max_volumetric_extrusion_rate_slope.value > 0) {
+        m_pressure_equalizer            = make_unique<PressureEqualizer>(print.config());
+        m_enable_extrusion_role_markers = (bool) m_pressure_equalizer;
+>>>>>>> lixnix/main
     } else
 	    m_enable_extrusion_role_markers = false;
 
@@ -3749,7 +4311,7 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
     if (print.config().print_sequence == PrintSequence::ByObject) {
         // Order object instances for sequential print.
         print_object_instances_ordering = sort_object_instances_by_model_order(print);
-//        print_object_instances_ordering = sort_object_instances_by_max_z(print);
+        //        print_object_instances_ordering = sort_object_instances_by_max_z(print);
         // Find the 1st printing object, find its tool ordering and the initial extruder ID.
         print_object_instance_sequential_active = print_object_instances_ordering.begin();
         first_has_extrude_print_object          = print_object_instance_sequential_active;
@@ -3782,7 +4344,28 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
         // Use the extruder IDs collected from Regions.
         this->set_extruders(print.extruders());
 
-        has_wipe_tower = print.has_wipe_tower() && tool_ordering.has_wipe_tower();
+        // With a wipe tower the layers are emitted by layer (see below) from the print-wide
+        // ordering the tower was planned on: the per-object ordering lacks layers that only
+        // other objects print (e.g. support-only layers), which would desynchronize the
+        // positional tower consumption, and the last object's own ordering may not even carry
+        // a tower although the print does. Everything the by-layer branch derives from its
+        // ordering (initial tool, extruder set, first filaments) has to come from that same
+        // ordering too, or the first layer may end on a tool the tower never planned a change
+        // to, or a filament only the print-wide ordering knows (custom per-layer change) has
+        // no extruder entry in the writer.
+        has_wipe_tower = print.has_wipe_tower() && print.tool_ordering().has_wipe_tower();
+        if (has_wipe_tower) {
+            tool_ordering = print.tool_ordering();
+            tool_ordering.assign_custom_gcodes(print);
+            initial_extruder_id = (wipe_tower_type == WipeTowerType::Type2 && !print.config().single_extruder_multi_material_priming) ?
+                tool_ordering.all_extruders().back() :
+                tool_ordering.first_extruder();
+            initial_non_support_extruder_id = (unsigned int) -1;
+            std::fill(first_non_support_filaments.begin(), first_non_support_filaments.end(), -1);
+            std::fill(first_filaments.begin(), first_filaments.end(), -1);
+            tool_ordering.cal_non_support_filaments(print.config(), initial_non_support_extruder_id, first_non_support_filaments, first_filaments);
+            this->set_extruders(tool_ordering.all_extruders());
+        }
     } else {
         // Find tool ordering for all the objects at once, and the initial extruder ID.
         // If the tool ordering has been pre-calculated by Print class for wipe tower already, reuse it.
@@ -3802,15 +4385,15 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
             // Don't skip the priming towers.
             tool_ordering.first_extruder();
 
-        //BBS: try to find the non-support filament extruder if is multi color and initial_extruder is support filament
+        // BBS: try to find the non-support filament extruder if is multi color and initial_extruder is support filament
         if (initial_extruder_id != static_cast<unsigned int>(-1)) {
             // BBS: try to find the non-support filament extruder if is multi color and initial_extruder is support filament
             // check if has non support filaments
             tool_ordering.cal_non_support_filaments(print.config(), initial_non_support_extruder_id, first_non_support_filaments, first_filaments);
         }
 
-        // In non-sequential print, the printing extruders may have been modified by the extruder switches stored in Model::custom_gcode_per_print_z.
-        // Therefore initialize the printing extruders from there.
+        // In non-sequential print, the printing extruders may have been modified by the extruder switches stored in
+        // Model::custom_gcode_per_print_z. Therefore initialize the printing extruders from there.
         this->set_extruders(tool_ordering.all_extruders());
         print_object_instances_ordering =
             // By default, order object instances using nearest-neighbor chaining plus
@@ -3827,9 +4410,9 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
 
 
     }
-    if (initial_extruder_id == (unsigned int)-1) {
+    if (initial_extruder_id == (unsigned int) -1) {
         // Nothing to print!
-        initial_extruder_id = 0;
+        initial_extruder_id             = 0;
         initial_non_support_extruder_id = 0;
     }
 
@@ -3927,6 +4510,17 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
     this->placeholder_parser().set("close_additional_fan_first_x_layers", new ConfigOptionInts(m_config.close_additional_fan_first_x_layers));
     this->placeholder_parser().set("additional_fan_full_speed_layer", new ConfigOptionInts(m_config.additional_fan_full_speed_layer));
 
+    // Layers with nothing to extrude are not emitted (process_layer() returns before its layer
+    // change), e.g. object grid layers a coarser per-extruder pitch prints at their run top.
+    // Count the emitted layers only, so the progress total matches the layer changes.
+    if (!count_layers_by_object) {
+        unsigned int emitted_layers = 0;
+        for (const LayerTools &lt : tool_ordering.layer_tools())
+            if (!lt.extruders.empty())
+                ++ emitted_layers;
+        if (emitted_layers > 0)
+            m_layer_count = emitted_layers;
+    }
     //Set variable for total layer count so it can be used in custom gcode.
     this->placeholder_parser().set("total_layer_count", m_layer_count);
     // Useful for sequential prints.
@@ -3960,7 +4554,7 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
     this->placeholder_parser().set("num_extruders", int(print.config().nozzle_diameter.values.size()));
     this->placeholder_parser().set("retract_length", new ConfigOptionFloats(print.config().retraction_length));
 
-    //Orca: support max MAXIMUM_EXTRUDER_NUMBER extruders/filaments
+    // Orca: support max MAXIMUM_EXTRUDER_NUMBER extruders/filaments
     std::vector<unsigned char> is_extruder_used(std::max(size_t(MAXIMUM_EXTRUDER_NUMBER), print.config().filament_diameter.size()), 0);
     for (unsigned int extruder : tool_ordering.all_extruders())
         is_extruder_used[extruder] = true;
@@ -4013,10 +4607,10 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
 
     {
         BoundingBoxf bbox_bed(print.config().printable_area.values);
-        Vec2f plate_offset = m_writer.get_xy_offset();
-        this->placeholder_parser().set("print_bed_min", new ConfigOptionFloats({ bbox_bed.min.x(), bbox_bed.min.y()}));
-        this->placeholder_parser().set("print_bed_max", new ConfigOptionFloats({ bbox_bed.max.x(), bbox_bed.max.y()}));
-        this->placeholder_parser().set("print_bed_size", new ConfigOptionFloats({ bbox_bed.size().x(), bbox_bed.size().y() }));
+        Vec2f        plate_offset = m_writer.get_xy_offset();
+        this->placeholder_parser().set("print_bed_min", new ConfigOptionFloats({bbox_bed.min.x(), bbox_bed.min.y()}));
+        this->placeholder_parser().set("print_bed_max", new ConfigOptionFloats({bbox_bed.max.x(), bbox_bed.max.y()}));
+        this->placeholder_parser().set("print_bed_size", new ConfigOptionFloats({bbox_bed.size().x(), bbox_bed.size().y()}));
 
         BoundingBoxf bbox;
         auto pts = std::make_unique<ConfigOptionPoints>();
@@ -4054,29 +4648,27 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
             // therefore it does NOT encompass the initial purge line.
             // It does NOT encompass MMU/MMU2 starting (wipe) areas.
             pts->values.reserve(print.first_layer_convex_hull().size());
-            for (const Point &pt : print.first_layer_convex_hull().points)
+            for (const Point& pt : print.first_layer_convex_hull().points)
                 pts->values.emplace_back(print.translate_to_print_space(pt));
             bbox = BoundingBoxf((pts->values));
         }
         this->placeholder_parser().set("first_layer_print_convex_hull", pts.release());
         this->placeholder_parser().set("first_layer_print_min", new ConfigOptionFloats({bbox.min.x(), bbox.min.y()}));
         this->placeholder_parser().set("first_layer_print_max", new ConfigOptionFloats({bbox.max.x(), bbox.max.y()}));
-        this->placeholder_parser().set("first_layer_print_size", new ConfigOptionFloats({ bbox.size().x(), bbox.size().y() }));
+        this->placeholder_parser().set("first_layer_print_size", new ConfigOptionFloats({bbox.size().x(), bbox.size().y()}));
 
-        {  
+        {
             // use first layer convex_hull union with each object's bbox to check whether in head detect zone
             Polygons object_projections;
             for (auto& obj : print.objects()) {
                 for (auto& instance : obj->instances()) {
                     const auto& bbox = instance.get_bounding_box();
-                    Point min_p{ coord_t(scale_(bbox.min.x())),coord_t(scale_(bbox.min.y())) };
-                    Point max_p{ coord_t(scale_(bbox.max.x())),coord_t(scale_(bbox.max.y())) };
-                    Polygon instance_projection = {
-                        {min_p.x(),min_p.y()},
-                        {max_p.x(),min_p.y()},
-                        {max_p.x(),max_p.y()},
-                        {min_p.x(),max_p.y()}
-                    };
+                    Point       min_p{coord_t(scale_(bbox.min.x())), coord_t(scale_(bbox.min.y()))};
+                    Point       max_p{coord_t(scale_(bbox.max.x())), coord_t(scale_(bbox.max.y()))};
+                    Polygon     instance_projection = {{min_p.x(), min_p.y()},
+                                                       {max_p.x(), min_p.y()},
+                                                       {max_p.x(), max_p.y()},
+                                                       {min_p.x(), max_p.y()}};
                     object_projections.emplace_back(std::move(instance_projection));
                 }
             }
@@ -4112,29 +4704,30 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
         auto bed_mesh_algo = "bicubic";
         if (probe_count_x * probe_count_y <= 6) { // lagrange needs up to a total of 6 mesh points
             bed_mesh_algo = "lagrange";
+        } else if (print.config().gcode_flavor == gcfKlipper) {
+            // bicubic needs 4 probe points per axis
+            probe_count_x = std::max(probe_count_x, 4);
+            probe_count_y = std::max(probe_count_y, 4);
         }
-        else
-            if(print.config().gcode_flavor == gcfKlipper){
-              // bicubic needs 4 probe points per axis
-              probe_count_x = std::max(probe_count_x,4);
-              probe_count_y = std::max(probe_count_y,4);
-            }
         this->placeholder_parser().set("bed_mesh_probe_count", new ConfigOptionInts({probe_count_x, probe_count_y}));
         this->placeholder_parser().set("bed_mesh_algo", bed_mesh_algo);
         // get center without wipe tower
         BoundingBoxf bbox_wo_wt; // bounding box without wipe tower
-        for (auto &objPtr : print.objects()) {
+        for (auto& objPtr : print.objects()) {
             BBoxData data;
             bbox_wo_wt.merge(unscaled(objPtr->get_first_layer_bbox(data.area, data.layer_height, data.name)));
         }
         auto center = bbox_wo_wt.center();
-        this->placeholder_parser().set("first_layer_center_no_wipe_tower", new ConfigOptionFloats{ {center.x(),center.y()}});
+        this->placeholder_parser().set("first_layer_center_no_wipe_tower", new ConfigOptionFloats{{center.x(), center.y()}});
     }
     bool activate_chamber_temp_control = false;
     auto max_chamber_temp              = 0;
-    for (const auto &extruder : m_writer.extruders()) {
-        activate_chamber_temp_control |= m_config.activate_chamber_temp_control.get_at(extruder.id());
-        max_chamber_temp = std::max(max_chamber_temp, m_config.chamber_temperature.get_at(extruder.id()));
+    // The chamber keys hold one value per filament variant column: each filament counts with the
+    // column of the extruder that prints it.
+    for (const auto& extruder : m_writer.extruders()) {
+        const size_t fi = get_filament_config_index((int)extruder.id());
+        activate_chamber_temp_control |= m_config.activate_chamber_temp_control.get_at(fi);
+        max_chamber_temp = std::max(max_chamber_temp, m_config.chamber_temperature.get_at(fi));
     }
     {
         BedType curr_bed_type = m_config.curr_bed_type;
@@ -4145,9 +4738,16 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
 
 
         std::string first_layer_bed_temp_str;
+<<<<<<< snaporca-int
         const BedType curr_bed = static_cast<BedType>(curr_bed_type);
         // Snapmaker: some bed types (for example btGESP) may not have dedicated temp options in old presets.
         // Fallback to PEI temps to avoid a null-dereference during the placeholder setup.
+=======
+        // SM_Orca: some bed types (for example newly added btGESP) may not have dedicated temp
+        // options in old presets. Fallback to PEI temps to avoid null-dereference during slicing
+        // placeholder setup.
+        const BedType curr_bed = static_cast<BedType>(curr_bed_type);
+>>>>>>> lixnix/main
         const std::string first_bed_temp_key = get_bed_temp_1st_layer_key(curr_bed).empty() ? get_bed_temp_1st_layer_key(btPEI) : get_bed_temp_1st_layer_key(curr_bed);
         const std::string bed_temp_key       = get_bed_temp_key(curr_bed).empty() ? get_bed_temp_key(btPEI) : get_bed_temp_key(curr_bed);
         const ConfigOptionInts* first_bed_temp_opt = m_config.option<ConfigOptionInts>(first_bed_temp_key);
@@ -4182,7 +4782,7 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
         // SoftFever: support variables `first_layer_temperature` and `first_layer_bed_temperature`
         this->placeholder_parser().set("first_layer_bed_temperature", new ConfigOptionInts(*first_bed_temp_opt));
         this->placeholder_parser().set("first_layer_temperature", new ConfigOptionInts(m_config.nozzle_temperature_initial_layer));
-        this->placeholder_parser().set("max_print_height",new ConfigOptionInt(m_config.printable_height));
+        this->placeholder_parser().set("max_print_height", new ConfigOptionInt(m_config.printable_height));
         this->placeholder_parser().set("z_offset", new ConfigOptionFloat(m_config.z_offset));
         this->placeholder_parser().set("model_name", new ConfigOptionString(print.get_model_name()));
         this->placeholder_parser().set("plate_number", new ConfigOptionString(print.get_plate_number_formatted()));
@@ -4204,7 +4804,8 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
         //BBS: calculate the volumetric speed of outer wall. Ignore pre-object setting and multi-filament, and just use the default setting
         float outer_wall_volumetric_speed = get_outer_wall_volumetric_speed(m_config, print, initial_non_support_extruder_id,
                                                                             (int) get_filament_config_index((int) initial_non_support_extruder_id),
-                                                                            get_extruder_id(initial_non_support_extruder_id));
+                                                                            get_extruder_id(initial_non_support_extruder_id),
+                                                                            (int) process_slot_of((int) initial_non_support_extruder_id));
         this->placeholder_parser().set("outer_wall_volumetric_speed", new ConfigOptionFloat(outer_wall_volumetric_speed));
 
         auto first_layer_filaments = print.get_slice_used_filaments(true);
@@ -4215,6 +4816,29 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
             this->placeholder_parser().set("scan_first_layer", new ConfigOptionBool(false));
         }
     }
+
+    // Compute chamber cooling mode based on all filaments used on this plate.
+    constexpr int kChamberCoolingKeepWarm  = 0;
+    constexpr int kChamberCoolingWeak      = 1;
+    constexpr int kChamberCoolingStrong    = 2;
+    constexpr int kVitrificationStrongCool = 50;  // <= 50: trigger strong cooling
+    constexpr int kVitrificationWeakCool   = 70;  // <= 70: trigger weak cooling (and > 50)
+    {
+        int chamber_cooling_mode = kChamberCoolingKeepWarm;
+        for (unsigned int extruder : tool_ordering.all_extruders()) {
+            if (!m_config.filament_is_high_temperature.get_at(extruder)) {
+                int vitrification = m_config.temperature_vitrification.get_at(extruder);
+                if (vitrification <= kVitrificationStrongCool) {
+                    chamber_cooling_mode = kChamberCoolingStrong;
+                    break;
+                } else if (vitrification <= kVitrificationWeakCool) {
+                    chamber_cooling_mode = kChamberCoolingWeak;
+                }
+            }
+        }
+        this->placeholder_parser().set("chamber_cooling_mode", new ConfigOptionInt(chamber_cooling_mode));
+    }
+
     {                                                                         // hold chamber temp for flat print: Flag
         double print_area_sum_threshold = 40000.0, pring_hight_threshold = 0.3; // thresholds in mm^2 and mm as units
 
@@ -4451,8 +5075,18 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
                 file.write(full_config);
 
             // SoftFever: write compatiple image
+<<<<<<< snaporca-int
             file.write_format("; first_layer_bed_temperature = %d\n", compat_first_layer_bed_temp);
             file.write_format("; first_layer_temperature = %d\n", compat_first_layer_nozzle_temp);
+=======
+            int first_layer_bed_temperature = m_config.bed_temperature_formula == BedTempFormula::btfHighestTemp ?
+                get_highest_bed_temperature(true, print) : get_bed_temperature(0, true, print.config().curr_bed_type);
+            file.write_format("; first_layer_bed_temperature = %d\n",
+                                first_layer_bed_temperature);
+            file.write_format(
+                "; first_layer_temperature = %d\n",
+                print.config().nozzle_temperature_initial_layer.get_at(0));
+>>>>>>> lixnix/main
             file.write("; CONFIG_BLOCK_END\n\n");
         } else if (thumbnail_cb != nullptr) {
             // generate the thumbnails
@@ -4470,10 +5104,13 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
         }
     }
 
+<<<<<<< snaporca-int
     // Belt printer: the tilt and transform settings the G-code viewer reads back. They
     // are comments outside the config block, so they go after the thumbnails that a
     // BTT TFT firmware needs first, and are written whether or not that header block is.
     this->write_belt_header(file, print);
+=======
+>>>>>>> lixnix/main
 
     // Write some terse information on the slicing parameters.
     const PrintObject *first_object         = print.objects().front();
@@ -4488,7 +5125,11 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
         file.write_format("; top infill extrusion width = %.2fmm\n",          region.flow(*first_object, frTopSolidInfill,    layer_height).width());
         if (print.has_support_material())
             file.write_format("; support material extrusion width = %.2fmm\n", support_material_flow(first_object).width());
+<<<<<<< snaporca-int
         if (print.config().initial_layer_line_width.value > 0)
+=======
+        if (Flow::width_at(print.config().initial_layer_line_width, 0).value > 0)
+>>>>>>> lixnix/main
             file.write_format("; first layer extrusion width = %.2fmm\n",   region.flow(*first_object, frPerimeter, initial_layer_print_height, true).width());
         file.write_format("\n");
     }
@@ -4574,6 +5215,7 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
 
     if (is_bbl_printers) {
         m_writer.init_extruder(initial_non_support_extruder_id);
+        m_writer.set_process_slot(process_slot_of((int)initial_non_support_extruder_id));
         // add the missing filament start gcode in machine start gcode
         {
             DynamicConfig config;
@@ -4889,8 +5531,13 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
             if (has_wipe_tower && ! layers_to_print.empty()) {
                 m_wipe_tower.reset(new WipeTowerIntegration(print.config(), print.get_plate_index(), print.get_plate_origin(), *print.wipe_tower_data().priming.get(),
                                                             print.wipe_tower_data().tool_changes,
+<<<<<<< snaporca-int
                                                             // Snapmaker: Local-Z
                                                             print.wipe_tower_data().local_z_tool_changes, print.wipe_tower_data().local_z_reserve_boxes,
+=======
+                                                            print.wipe_tower_data().local_z_tool_changes,
+                                                            print.wipe_tower_data().local_z_reserve_boxes,
+>>>>>>> lixnix/main
                                                             *print.wipe_tower_data().final_purge.get(), print.get_slice_used_filaments(false)));
                 m_wipe_tower->set_wipe_tower_depth(print.get_wipe_tower_depth());
                 m_wipe_tower->set_wipe_tower_bbx(print.get_wipe_tower_bbx());
@@ -5063,7 +5710,13 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
           file.write(full_config);
 
         // SoftFever: write compatiple info
+<<<<<<< snaporca-int
         file.write_format("; first_layer_bed_temperature = %d\n", compat_first_layer_bed_temp);
+=======
+        int first_layer_bed_temperature = m_config.bed_temperature_formula == BedTempFormula::btfHighestTemp ?
+            get_highest_bed_temperature(true, print) : get_bed_temperature(0, true, print.config().curr_bed_type);
+        file.write_format("; first_layer_bed_temperature = %d\n", first_layer_bed_temperature);
+>>>>>>> lixnix/main
         file.write_format("; bed_shape = %s\n", print.full_print_config().opt_serialize("printable_area").c_str());
         file.write_format("; first_layer_temperature = %d\n", compat_first_layer_nozzle_temp);
         file.write_format("; first_layer_height = %.3f\n", print.config().initial_layer_print_height.value);
@@ -5085,6 +5738,9 @@ void GCode::_do_export(Print& print, GCodeOutputStream &file, ThumbnailsGenerato
         print.tool_ordering()));
     print.m_print_statistics.initial_tool = initial_extruder_id;
     print.m_print_statistics.initial_no_support_tool = initial_non_support_extruder_id;
+    // The file name placeholder filament_type[initial_tool] resolves to the first extruder this plate uses.
+    BOOST_LOG_TRIVIAL(debug) << "File name initial_tool: first_extruder=" << initial_extruder_id
+                             << ", first_non_support_extruder=" << initial_non_support_extruder_id;
     if (!is_bbl_printers) {
         file.write_format("; total filament used [g] = %.2lf\n",
             print.m_print_statistics.total_weight);
@@ -5255,6 +5911,7 @@ size_t GCode::get_nozzle_config_index(int filament_id) const
     return get_extruder_id(filament_id);
 }
 
+<<<<<<< snaporca-int
 namespace {
 struct PrecomputedLayer
 {
@@ -5317,6 +5974,13 @@ static auto precomputed_layers_source(size_t &next_index, size_t layer_count, bo
 static bool overhang_fan_enabled(const PrintConfig &config, bool cooling_markers)
 {
     return cooling_markers && any_enabled(config.enable_overhang_bridge_fan);
+=======
+size_t GCode::process_slot_of(int filament_id) const
+{
+    if (m_print)
+        return m_print->process_slot_of_filament((unsigned int)filament_id, m_cur_layer_idx);
+    return get_extruder_id(filament_id);
+>>>>>>> lixnix/main
 }
 
 // Process all layers of all objects (non-sequential mode) with a parallel pipeline:
@@ -5603,7 +6267,11 @@ std::string GCode::placeholder_parser_process(const std::string &name, const std
     }
 #endif
 
+<<<<<<< snaporca-int
 PlaceholderParserIntegration &ppi = m_placeholder_parser_integration;
+=======
+    PlaceholderParserIntegration& ppi = m_placeholder_parser_integration;
+>>>>>>> lixnix/main
     try {
         ppi.update_from_gcodewriter(m_writer);
         // Snapmaker: resolve the flow-variant process vectors to scalars for this filament.
@@ -5753,7 +6421,8 @@ int GCode::get_bed_temperature(const int extruder_id, const bool is_first_layer,
     if (bed_temp_key.empty())
         bed_temp_key = is_first_layer ? get_bed_temp_1st_layer_key(btPEI) : get_bed_temp_key(btPEI);
     const ConfigOptionInts* bed_temp_opt = m_config.option<ConfigOptionInts>(bed_temp_key);
-    return bed_temp_opt->get_at(extruder_id);
+    // One value per filament variant column: the column of the extruder that prints the filament.
+    return bed_temp_opt->get_at(get_filament_config_index(extruder_id));
 }
 
 int GCode::get_highest_bed_temperature(const bool is_first_layer, const Print& print) const
@@ -5827,8 +6496,15 @@ void GCode::_print_first_layer_extruder_temperatures(GCodeOutputStream &file, Pr
             // tool that starts printing (Snapmaker U1 toolchanger). Without a wait the upstream order is kept.
             int target_temp = -1;
             for (unsigned int tool_id : print.extruders()) {
+<<<<<<< snaporca-int
                 int temp = print.config().nozzle_temperature_initial_layer.get_at(filament_flow_index((int)tool_id));
                 if (m_ooze_prevention.enable && tool_id != first_printing_extruder_id) {
+=======
+                is_active = true;
+                int temp = print.config().nozzle_temperature_initial_layer.get_at(get_filament_config_index((int)tool_id));
+                if (print.config().ooze_prevention.value && tool_id != first_printing_extruder_id) {
+                    is_active = false;
+>>>>>>> lixnix/main
                     if (print.config().idle_temperature.get_at(tool_id) == 0)
                         temp += print.config().standby_temperature_delta.value;
                     else
@@ -5878,9 +6554,13 @@ static inline void append_clipped_path(const ExtrusionPath& src_path,
                                        const double         flow_height_override,
                                        std::vector<ExtrusionPath>& dst)
 {
+<<<<<<< snaporca-int
     // ExtrusionPath::polyline is a Polyline3 (Z-aware) upstream; clip in 2D and restore the
     // source path's Z on the clipped fragments.
     const coord_t src_z = src_path.polyline.points.empty() ? 0 : src_path.polyline.points.front().z();
+=======
+    const coord_t src_z = src_path.polyline.points.empty() ? coord_t(0) : src_path.polyline.points.front().z();
+>>>>>>> lixnix/main
     Polylines segments{src_path.polyline.to_polyline()};
     if (include_masks != nullptr && !include_masks->empty())
         segments = intersection_pl(std::move(segments), *include_masks);
@@ -6465,8 +7145,13 @@ static bool split_extrusion_collection_for_pointillism_paths(
             dst = std::make_unique<ExtrusionEntityCollection>();
             dst->no_sort = source.no_sort;
         }
+<<<<<<< snaporca-int
         const coord_t src_z = src_path.polyline.points.empty() ? 0 : src_path.polyline.points.front().z();
         ExtrusionPath out_path(Polyline3(piece, src_z), src_path);
+=======
+        const coord_t piece_z = src_path.polyline.points.empty() ? coord_t(0) : src_path.polyline.points.front().z();
+        ExtrusionPath out_path(Polyline3(piece, piece_z), src_path);
+>>>>>>> lixnix/main
         out_path.inset_idx = k_pointillism_path_inset_marker;
         dst->append(std::move(out_path));
         ++out_stats.segment_count;
@@ -6782,6 +7467,29 @@ namespace Skirt {
             }
         }
         return skirt_loops_per_extruder_out;
+<<<<<<< snaporca-int
+=======
+    }
+
+static Point find_start_point(ExtrusionLoop& loop, float start_angle)
+{
+    coord_t min_x = std::numeric_limits<coord_t>::max();
+    coord_t max_x = std::numeric_limits<coord_t>::min();
+    coord_t min_y = min_x;
+    coord_t max_y = max_x;
+
+    Points pts;
+    loop.collect_points(pts);
+    for (Point pt : pts) {
+        if (pt.x() < min_x)
+            min_x = pt.x();
+        else if (pt.x() > max_x)
+            max_x = pt.x();
+        if (pt.y() < min_y)
+            min_y = pt.y();
+        else if (pt.y() > max_y)
+            max_y = pt.y();
+>>>>>>> lixnix/main
     }
 
     static Point find_start_point(ExtrusionLoop& loop, float start_angle) {
@@ -7510,8 +8218,10 @@ LayerResult GCode::process_layer(
     m_cur_layer_idx = layer.id();
     // A per-layer nozzle grouping can move the active filament to another variant column on a
     // layer boundary without a toolchange, so re-resolve the writer's config column here.
-    if (Extruder *cur_filament = m_writer.filament())
+    if (Extruder *cur_filament = m_writer.filament()) {
         cur_filament->set_config_index((int)get_filament_config_index((int)cur_filament->id()));
+        m_writer.set_process_slot(process_slot_of((int)cur_filament->id()));
+    }
     LayerResult   result { {}, layer.id(), false, last_layer };
     if (layer_tools.extruders.empty())
         // Nothing to extrude.
@@ -7914,6 +8624,7 @@ LayerResult GCode::process_layer(
         }
         return next_extruder;
     };
+<<<<<<< snaporca-int
     
     const bool overhang_fan   = overhang_fan_enabled(m_config, m_enable_cooling_markers);
     auto       overhang_speed = [this](const LayerRegion &region) {
@@ -7922,6 +8633,33 @@ LayerResult GCode::process_layer(
     for (const auto &layer_to_print : layers)
         if (layer_to_print.object_layer && prepares_overhang_estimator(*layer_to_print.object_layer, overhang_fan, overhang_speed))
             m_extrusion_quality_estimator.prepare_for_new_layer(layer_to_print.original_object, layer_to_print.object_layer);
+=======
+
+    for (const auto& layer_to_print : layers) {
+        if (layer_to_print.object_layer) {
+            const auto& regions = layer_to_print.object_layer->regions();
+            const bool has_extrusions = std::any_of(regions.begin(), regions.end(), [](const LayerRegion* r) {
+                return r->has_extrusions();
+            });
+            // Snapmaker Orca: any slot of a region with extrusions, not only the layer-start filament's, since
+            // tool heads may differ here (as in PrintObject::estimate_curled_extrusions). Preparing changes no value.
+            const bool enable_overhang_speed = std::any_of(regions.begin(), regions.end(), [](const LayerRegion* r) {
+                if (!r->has_extrusions())
+                    return false;
+                const auto &slots = r->region().config().enable_overhang_speed.values;
+                return std::any_of(slots.begin(), slots.end(), [](unsigned char on) { return on != 0; });
+            });
+            const bool enable_overhang_fan = m_enable_cooling_markers && has_extrusions &&
+                std::any_of(m_config.enable_overhang_bridge_fan.values.begin(),
+                            m_config.enable_overhang_bridge_fan.values.end(),
+                            [](unsigned char value) { return value != 0; });
+            if (enable_overhang_speed || enable_overhang_fan) {
+                m_extrusion_quality_estimator.prepare_for_new_layer(layer_to_print.original_object,
+                                                                    layer_to_print.object_layer);
+            }
+        }
+    }
+>>>>>>> lixnix/main
 
     // Group extrusions by an extruder, then by an object, an island and a region.
     std::map<unsigned int, std::vector<ObjectByExtruder>> by_extruder;
@@ -7956,6 +8694,7 @@ LayerResult GCode::process_layer(
             return layer_tools.extruder_override;
         const ExtrusionRole role = entities.entities.empty() ? erNone : entities.entities.front()->role();
         if (entity_type == GCode::ObjectByExtruder::Island::Region::INFILL) {
+<<<<<<< snaporca-int
             if (role == erTopSolidInfill || role == erIroning)
                 return unsigned(region.config().top_surface_filament_id.value);
             if (role == erBottomSurface)
@@ -7967,6 +8706,64 @@ LayerResult GCode::process_layer(
             return unsigned(region.config().sparse_infill_filament_id.value);
         }
         return role == erPerimeter ? unsigned(region.config().inner_wall_filament_id.value) : unsigned(region.config().outer_wall_filament_id.value);
+=======
+            if (layer_tools.extruder_override != 0)
+                return layer_tools.extruder_override;
+            // gap fill inherits the filament of the surface it fills; derive the role from the
+            // first non-gap-fill entity (must match ToolOrdering::collect_extruders()).
+            ExtrusionRole role = erNone;
+            for (const ExtrusionEntity *fill_entity : entities.entities)
+                if (fill_entity->role() != erGapFill) {
+                    role = fill_entity->role();
+                    break;
+                }
+            if (role == erNone && ! entities.entities.empty())
+                // perimeter-generated gap fill with no sibling surface prints with the outer wall filament.
+                return unsigned(region.config().outer_wall_filament_id.value);
+            if (role == erTopSolidInfill || role == erIroning)
+                return unsigned(region.config().top_surface_filament_id.value);
+            if (role == erBottomSurface || role == erBridgeInfill) // ORCA: external bridges print as bottom surfaces (internal bridges stay internal solid)
+                return unsigned(region.config().bottom_surface_filament_id.value);
+            if (is_solid_infill(role))
+                return unsigned(region.config().internal_solid_filament_id.value);
+            return unsigned(region.config().sparse_infill_filament_id.value);
+        }
+        if (layer_tools.extruder_override != 0)
+            return layer_tools.extruder_override;
+        bool any_outer = false, any_inner = false;
+        classify_wall_filaments(entities, any_outer, any_inner);
+        return any_inner && ! any_outer ? unsigned(region.config().inner_wall_filament_id.value)
+                                        : unsigned(region.config().outer_wall_filament_id.value);
+    };
+
+    auto configured_extruder_id = [&layer_tools](const GCode::ObjectByExtruder::Island::Region::Type entity_type,
+                                                 const ExtrusionEntityCollection&                    entities,
+                                                 const PrintRegion&                                  region) -> int {
+        if (entity_type == GCode::ObjectByExtruder::Island::Region::INFILL) {
+            // gap fill inherits the filament of the surface it fills; derive the role from the
+            // first non-gap-fill entity (must match ToolOrdering::collect_extruders()).
+            ExtrusionRole role = erNone;
+            for (const ExtrusionEntity *fill_entity : entities.entities)
+                if (fill_entity->role() != erGapFill) {
+                    role = fill_entity->role();
+                    break;
+                }
+            if (role == erNone && ! entities.entities.empty())
+                // perimeter-generated gap fill with no sibling surface prints with the outer wall filament.
+                return int(layer_tools.wall_extruder_id(region));
+            if (role == erTopSolidInfill || role == erIroning)
+                return int(layer_tools.top_surface_filament_id(region));
+            if (role == erBottomSurface || role == erBridgeInfill) // ORCA: external bridges print as bottom surfaces (internal bridges stay internal solid)
+                return int(layer_tools.bottom_surface_filament_id(region));
+            if (is_solid_infill(role))
+                return int(layer_tools.internal_solid_filament_id(region));
+            return int(layer_tools.sparse_infill_filament_id(region));
+        }
+        bool any_outer = false, any_inner = false;
+        classify_wall_filaments(entities, any_outer, any_inner);
+        return any_inner && ! any_outer ? int(layer_tools.inner_wall_extruder_id(region))
+                                        : int(layer_tools.wall_extruder_id(region));
+>>>>>>> lixnix/main
     };
 
     auto pointillism_sequence_for_filament = [&](unsigned int filament_id_1based) -> const std::vector<unsigned int>* {
@@ -8312,6 +9109,29 @@ LayerResult GCode::process_layer(
                     if (interface_dontcare)
                         interface_extruder = dontcare_extruder;
                 }
+                // ORCA: with support nozzle diameter / material restrictions, ("don't care") support/interface may only use a passing extruder; prefer one scheduled on this layer (as ToolOrdering did).
+                if (object.has_support_filament_restriction()) {
+                    auto restrict_to_support_filaments = [&print, &object, &layer_tools](unsigned int extruder_id, bool interface_role) -> unsigned int {
+                        if (object.support_filament_allowed(extruder_id + 1, interface_role))
+                            return extruder_id;
+                        unsigned int fallback   = extruder_id;
+                        bool have_fallback      = false;
+                        for (unsigned int candidate : layer_tools.extruders) // 0 based at this point
+                            if (object.support_filament_allowed(candidate + 1, interface_role)) {
+                                if (! print.config().filament_soluble.get_at(candidate))
+                                    return candidate;
+                                if (! have_fallback) {
+                                    fallback      = candidate;
+                                    have_fallback = true;
+                                }
+                            }
+                        return fallback;
+                    };
+                    if (support_dontcare)
+                        support_extruder = restrict_to_support_filaments(support_extruder, false);
+                    if (interface_dontcare)
+                        interface_extruder = restrict_to_support_filaments(interface_extruder, true);
+                }
                 // Both the support and the support interface are printed with the same extruder, therefore
                 // the interface may be interleaved with the support base.
                 bool single_extruder = ! has_support || support_extruder == interface_extruder;
@@ -8408,15 +9228,218 @@ LayerResult GCode::process_layer(
                         if (extrusions->entities.empty()) // This shouldn't happen but first_point() would fail.
                             continue;
 
+<<<<<<< snaporca-int
                         auto process_extrusions = [&](const ExtrusionEntityCollection *current_extrusions,
                                                        const ExtrusionEntityCollection *overrides_key,
                                                        bool                             use_overrides,
                                                        int                              forced_extruder_id = -1) {
                             // This extrusion is part of certain Region, which tells us which extruder should be used for it.
                             int correct_extruder_id = forced_extruder_id >= 0 ? forced_extruder_id : layer_tools.extruder(*current_extrusions, region);
+=======
+                        const ExtrusionEntityCollection* filtered_extrusions = extrusions;
+                        const bool local_z_entity_enabled =
+                            entity_type == ObjectByExtruder::Island::Region::PERIMETERS ||
+                            (local_z_infill_enabled && entity_type == ObjectByExtruder::Island::Region::INFILL);
+                        if (local_z_entity_enabled && local_z_ctx != nullptr && !local_z_ctx->mixed_masks_union.empty()) {
+                            for (LocalZPassBucket& pass_bucket : local_z_ctx->pass_buckets) {
+                                if (pass_bucket.plan == nullptr)
+                                    continue;
+                                for (size_t pass_extruder_id = 0; pass_extruder_id < pass_bucket.plan->painted_masks_by_extruder.size();
+                                     ++pass_extruder_id) {
+                                    const ExPolygons& pass_masks = pass_bucket.compensated_masks_by_extruder.empty()
+                                        ? pass_bucket.plan->painted_masks_by_extruder[pass_extruder_id]
+                                        : pass_bucket.compensated_masks_by_extruder[pass_extruder_id];
+                                    if (pass_masks.empty())
+                                        continue;
+                                    auto clipped_local = clip_extrusion_collection_for_local_z(*extrusions,
+                                                                                               &pass_masks,
+                                                                                               nullptr,
+                                                                                               pass_bucket.plan->flow_height,
+                                                                                               &local_z_loop_seam_placer);
+                                    if (!clipped_local)
+                                        continue;
+>>>>>>> lixnix/main
 
-                            const WipingExtrusions::ExtruderPerCopy *entity_overrides = nullptr;
-                            if (! layer_tools.has_extruder(correct_extruder_id)) {
+                                    const ExtrusionEntityCollection* clipped_ptr = clipped_local.get();
+                                    const LocalZPathHeightStats local_height_stats = collect_local_z_path_height_stats(*clipped_ptr);
+                                    ++local_z_ctx->local_clipped_collections;
+                                    if (local_height_stats.count > 0 &&
+                                        (std::abs(local_height_stats.min - pass_bucket.plan->flow_height) > 1e-3 ||
+                                         std::abs(local_height_stats.max - pass_bucket.plan->flow_height) > 1e-3)) {
+                                        BOOST_LOG_TRIVIAL(warning) << "Local-Z local pass height mismatch"
+                                                                   << " print_z=" << print_z
+                                                                   << " layer_to_print_idx=" << layer_to_print_idx
+                                                                   << " plan_layer_id=" << pass_bucket.plan->layer_id
+                                                                   << " pass_index=" << pass_bucket.plan->pass_index
+                                                                   << " expected_height=" << pass_bucket.plan->flow_height
+                                                                   << " observed_min=" << local_height_stats.min
+                                                                   << " observed_max=" << local_height_stats.max
+                                                                   << " path_count=" << local_height_stats.count;
+                                    }
+                                    local_z_clipped_collections.emplace_back(std::move(clipped_local));
+                                    std::vector<ObjectByExtruder::Island>& islands = object_islands_by_extruder(
+                                        pass_bucket.by_extruder, unsigned(pass_extruder_id), layer_to_print_idx, layers.size(), n_slices + 1);
+
+                                    for (size_t i = 0; i <= n_slices; ++i) {
+                                        const bool   last       = i == n_slices;
+                                        const size_t island_idx = last ? n_slices : slices_test_order[i];
+                                        if (last || entity_matches_surface(island_idx, *clipped_ptr)) {
+                                            if (islands[island_idx].by_region.empty())
+                                                islands[island_idx].by_region.assign(print.num_print_regions(), ObjectByExtruder::Island::Region());
+                                            islands[island_idx].by_region[region.print_region_id()].append(entity_type, clipped_ptr, nullptr);
+                                            break;
+                                        }
+                                    }
+                                }
+                            }
+
+                            const ExPolygons* base_exclude_masks =
+                                local_z_ctx->mixed_masks_union_for_base_exclude.empty() ? &local_z_ctx->mixed_masks_union
+                                                                                        : &local_z_ctx->mixed_masks_union_for_base_exclude;
+                            auto clipped_base = clip_extrusion_collection_for_local_z(*extrusions,
+                                                                                     nullptr,
+                                                                                     base_exclude_masks,
+                                                                                     0.,
+                                                                                     &local_z_loop_seam_placer);
+                            if (!clipped_base)
+                                continue;
+                            const LocalZPathHeightStats base_height_stats = collect_local_z_path_height_stats(*clipped_base);
+                            ++local_z_ctx->base_clipped_collections;
+                            const ExPolygons &mixed_leak_ref =
+                                !local_z_ctx->raw_mixed_masks_union.empty() ? local_z_ctx->raw_mixed_masks_union : local_z_ctx->mixed_masks_union;
+                            if (local_z_ctx->base_clip_leak_warnings < 3 && !mixed_leak_ref.empty()) {
+                                Polylines clipped_base_lines = collect_local_z_polylines(*clipped_base);
+                                if (!clipped_base_lines.empty()) {
+                                    Polylines leaked_segments = intersection_pl(std::move(clipped_base_lines), mixed_leak_ref);
+                                    if (!leaked_segments.empty()) {
+                                        ++local_z_ctx->base_clip_leak_warnings;
+                                        BOOST_LOG_TRIVIAL(warning) << "Local-Z base clip leak"
+                                                                   << " print_z=" << print_z
+                                                                   << " layer_to_print_idx=" << layer_to_print_idx
+                                                                   << " leaked_segment_count=" << leaked_segments.size()
+                                                                   << " warn_index=" << local_z_ctx->base_clip_leak_warnings;
+                                    }
+                                }
+                            }
+                            if (base_height_stats.count > 0 && local_z_ctx->base_clipped_collections <= 5) {
+                                BOOST_LOG_TRIVIAL(debug) << "Local-Z base clip heights"
+                                                         << " print_z=" << print_z
+                                                         << " layer_to_print_idx=" << layer_to_print_idx
+                                                         << " observed_min=" << base_height_stats.min
+                                                         << " observed_max=" << base_height_stats.max
+                                                         << " path_count=" << base_height_stats.count;
+                            }
+                            filtered_extrusions = clipped_base.get();
+                            local_z_clipped_collections.emplace_back(std::move(clipped_base));
+                        }
+
+                        auto process_extrusions = [&](const ExtrusionEntityCollection* current_extrusions,
+                                                      const ExtrusionEntityCollection* overrides_key,
+                                                      bool                             use_overrides) {
+                            const unsigned int configured_filament_id = configured_filament_id_1based(entity_type, *current_extrusions, region);
+                            const std::vector<unsigned int>* pointillism_sequence =
+                                is_anything_overridden ? nullptr : pointillism_sequence_for_filament(configured_filament_id);
+                            if (pointillism_sequence != nullptr) {
+                                std::vector<std::unique_ptr<ExtrusionEntityCollection>> split_by_extruder;
+                                PointillismPathSplitStats split_stats;
+                                const size_t sequence_phase = pointillism_sequence->empty() ?
+                                    0 : size_t(std::max(0, layer_tools.layer_index)) % pointillism_sequence->size();
+                                if (split_extrusion_collection_for_pointillism_paths(*current_extrusions,
+                                                                                      *pointillism_sequence,
+                                                                                      layer_tools.num_physical,
+                                                                                      pointillism_segment_len_scaled,
+                                                                                      pointillism_line_gap_scaled,
+                                                                                      sequence_phase,
+                                                                                      split_by_extruder,
+                                                                                      split_stats) &&
+                                    split_stats.bucket_count >= 2) {
+                                    ++pointillism_path_split_entities;
+                                    pointillism_path_split_segments += split_stats.segment_count;
+                                    for (size_t extruder_idx = 0; extruder_idx < split_by_extruder.size(); ++extruder_idx) {
+                                        std::unique_ptr<ExtrusionEntityCollection>& split_collection = split_by_extruder[extruder_idx];
+                                        if (!split_collection || split_collection->entities.empty())
+                                            continue;
+                                        const ExtrusionEntityCollection* split_ptr = split_collection.get();
+                                        local_z_clipped_collections.emplace_back(std::move(split_collection));
+                                        std::vector<ObjectByExtruder::Island>& islands =
+                                            object_islands_by_extruder(by_extruder, unsigned(extruder_idx), layer_to_print_idx, layers.size(), n_slices + 1);
+                                        for (size_t i = 0; i <= n_slices; ++i) {
+                                            const bool   last       = i == n_slices;
+                                            const size_t island_idx = last ? n_slices : slices_test_order[i];
+                                            if (last || entity_matches_surface(island_idx, *split_ptr)) {
+                                                if (islands[island_idx].by_region.empty())
+                                                    islands[island_idx].by_region.assign(print.num_print_regions(), ObjectByExtruder::Island::Region());
+                                                islands[island_idx].by_region[region.print_region_id()].append(entity_type, split_ptr, nullptr);
+                                                break;
+                                            }
+                                        }
+                                    }
+                                    return;
+                                }
+                                ++pointillism_path_split_fallbacks;
+                            }
+
+                            // This extrusion is part of certain Region, which tells us which extruder should be used for it:
+                            int correct_extruder_id = configured_extruder_id(entity_type, *current_extrusions, region);
+                            if (!is_anything_overridden &&
+                                entity_type == ObjectByExtruder::Island::Region::PERIMETERS &&
+                                layer_tools.mixed_mgr != nullptr &&
+                                layer_tools.num_physical > 0 &&
+                                correct_extruder_id >= 0) {
+                                const unsigned int mixed_filament_id =
+                                    grouped_manual_pattern_mixed_filament_id(entity_type, *current_extrusions, region);
+                                if (mixed_filament_id != 0) {
+                                    std::vector<std::unique_ptr<ExtrusionEntityCollection>> split_by_extruder;
+                                    size_t bucket_count = 0;
+                                    const PrintObject* current_object_for_gradient =
+                                        layer_to_print.original_object != nullptr ? layer_to_print.original_object : layer_to_print.object();
+                                    if (split_extrusion_collection_for_multi_perimeter_pattern(*current_extrusions,
+                                                                                               *layer_tools.mixed_mgr,
+                                                                                               mixed_filament_id,
+                                                                                               layer_tools.num_physical,
+                                                                                               layer_tools.layer_index,
+                                                                                               split_by_extruder,
+                                                                                               bucket_count,
+                                                                                               current_object_for_gradient)) {
+                                        if (bucket_count >= 2) {
+                                            for (size_t extruder_idx = 0; extruder_idx < split_by_extruder.size(); ++extruder_idx) {
+                                                std::unique_ptr<ExtrusionEntityCollection>& split_collection = split_by_extruder[extruder_idx];
+                                                if (!split_collection || split_collection->entities.empty())
+                                                    continue;
+                                                const ExtrusionEntityCollection* split_ptr = split_collection.get();
+                                                local_z_clipped_collections.emplace_back(std::move(split_collection));
+                                                std::vector<ObjectByExtruder::Island>& islands =
+                                                    object_islands_by_extruder(by_extruder, unsigned(extruder_idx), layer_to_print_idx, layers.size(), n_slices + 1);
+                                                for (size_t i = 0; i <= n_slices; ++i) {
+                                                    const bool   last       = i == n_slices;
+                                                    const size_t island_idx = last ? n_slices : slices_test_order[i];
+                                                    if (last || entity_matches_surface(island_idx, *split_ptr)) {
+                                                        if (islands[island_idx].by_region.empty())
+                                                            islands[island_idx].by_region.assign(print.num_print_regions(), ObjectByExtruder::Island::Region());
+                                                        islands[island_idx].by_region[region.print_region_id()].append(entity_type, split_ptr, nullptr);
+                                                        break;
+                                                    }
+                                                }
+                                            }
+                                            return;
+                                        }
+                                        if (bucket_count == 1) {
+                                            for (size_t extruder_idx = 0; extruder_idx < split_by_extruder.size(); ++extruder_idx) {
+                                                const std::unique_ptr<ExtrusionEntityCollection>& split_collection = split_by_extruder[extruder_idx];
+                                                if (split_collection && !split_collection->entities.empty()) {
+                                                    // by_extruder keys and LayerTools runtime extruder IDs are zero-based here.
+                                                    correct_extruder_id = int(extruder_idx);
+                                                    break;
+                                                }
+                                            }
+                                        }
+                                    }
+                                }
+                            }
+
+                            // Let's recover vector of extruder overrides:
+                            const WipingExtrusions::ExtruderPerCopy* entity_overrides = nullptr;
+                            if (!layer_tools.has_extruder(correct_extruder_id)) {
                                 // A mixed-color slot is absent from layer_tools.extruders by design:
                                 // resolve_mixed_filaments() replaced it with its physical components,
                                 // and the sublayer block emits its geometry separately. Reassigning it
@@ -8424,49 +9447,55 @@ LayerResult GCode::process_layer(
                                 // fall back for genuinely stale (dontcare) extruders.
                                 if (!layer_tools.is_mixed_slot(correct_extruder_id)) {
                                     // this entity is not overridden, but its extruder is not in layer_tools - we'll print it
-                                    // by last extruder on this layer (could happen e.g. when a wiping object is taller than others - dontcare extruders are eradicated from layer_tools)
+                                    // by last extruder on this layer (could happen e.g. when a wiping object is taller than
+                                    // others - dontcare extruders are eradicated from layer_tools)
                                     correct_extruder_id = layer_tools.extruders.back();
                                 }
                             }
                             printing_extruders.clear();
                             if (is_anything_overridden && use_overrides) {
-                                entity_overrides = const_cast<LayerTools&>(layer_tools).wiping_extrusions().get_extruder_overrides(overrides_key, layer_to_print.original_object, correct_extruder_id, layer_to_print.object()->instances().size());
+                                entity_overrides = const_cast<LayerTools&>(layer_tools)
+                                                       .wiping_extrusions()
+                                                       .get_extruder_overrides(overrides_key, layer_to_print.original_object, correct_extruder_id,
+                                                                               layer_to_print.object()->instances().size());
                                 if (entity_overrides == nullptr) {
                                     printing_extruders.emplace_back(correct_extruder_id);
                                 } else {
                                     printing_extruders.reserve(entity_overrides->size());
                                     for (int extruder : *entity_overrides)
                                         printing_extruders.emplace_back(extruder >= 0 ?
-                                            // at least one copy is overridden to use this extruder
-                                            extruder :
-                                            // at least one copy would normally be printed with this extruder (see get_extruder_overrides function for explanation)
-                                            static_cast<unsigned int>(- extruder - 1));
+                                                                            // at least one copy is overridden to use this extruder
+                                                                            extruder :
+                                                                            // at least one copy would normally be printed with this extruder
+                                                                            // (see get_extruder_overrides function for explanation)
+                                                                            static_cast<unsigned int>(-extruder - 1));
                                     Slic3r::sort_remove_duplicates(printing_extruders);
                                 }
-                            } else {
+                            } else
                                 printing_extruders.emplace_back(correct_extruder_id);
-                            }
 
-                            // Now we must add this extrusion into the by_extruder map, once for each extruder that will print it.
+                            // Now we must add this extrusion into the by_extruder map, once for each extruder that will print it:
                             for (unsigned int extruder : printing_extruders) {
-                                std::vector<ObjectByExtruder::Island> &islands = object_islands_by_extruder(
-                                    by_extruder,
-                                    extruder,
-                                    &layer_to_print - layers.data(),
-                                    layers.size(), n_slices + 1);
+                                std::vector<ObjectByExtruder::Island>& islands =
+                                    object_islands_by_extruder(by_extruder, extruder, layer_to_print_idx, layers.size(), n_slices + 1);
                                 for (size_t i = 0; i <= n_slices; ++i) {
                                     bool   last       = i == n_slices;
                                     size_t island_idx = last ? n_slices : slices_test_order[i];
-                                    if (last || point_inside_surface(island_idx, current_extrusions->first_point())) {
+                                    if ( // extrusions->first_point does not fit inside any slice
+                                        last ||
+                                        // extrusions->first_point fits inside ith slice
+                                        entity_matches_surface(island_idx, *current_extrusions)) {
                                         if (islands[island_idx].by_region.empty())
                                             islands[island_idx].by_region.assign(print.num_print_regions(), ObjectByExtruder::Island::Region());
-                                        islands[island_idx].by_region[region.print_region_id()].append(entity_type, current_extrusions, entity_overrides);
+                                        islands[island_idx].by_region[region.print_region_id()].append(entity_type, current_extrusions,
+                                                                                                       entity_overrides);
                                         break;
                                     }
                                 }
                             }
                         };
 
+<<<<<<< snaporca-int
                         // Snapmaker: Local-Z clipping (the painted mixed regions print in sub-layer passes,
                         // the rest stays in the nominal layer), then same-layer pointillisme split.
                         const ExtrusionEntityCollection* filtered_extrusions = extrusions;
@@ -8675,34 +9704,61 @@ LayerResult GCode::process_layer(
                             entity_type == ObjectByExtruder::Island::Region::PERIMETERS &&
                             region.config().outer_wall_filament_id.value != region.config().inner_wall_filament_id.value &&
                             extrusions->role() == erMixed;
+=======
+                        // ORCA: gate the split on the actual per-path classification: the collection
+                        // role() is erMixed only when the loops' FIRST paths differ, missing e.g. a
+                        // collection whose loops all start with an overhang path.
+                        bool any_outer_wall = false, any_inner_wall = false;
+                        if (entity_type == ObjectByExtruder::Island::Region::PERIMETERS &&
+                            region.config().outer_wall_filament_id.value != region.config().inner_wall_filament_id.value)
+                            classify_wall_filaments(*filtered_extrusions, any_outer_wall, any_inner_wall);
+                        const bool split_mixed_perimeters = any_outer_wall && any_inner_wall;
+>>>>>>> lixnix/main
 
                         if (split_mixed_perimeters) {
                             auto outer_perimeters = std::make_unique<ExtrusionEntityCollection>();
                             auto inner_perimeters = std::make_unique<ExtrusionEntityCollection>();
-                            for (const ExtrusionEntity *entity : extrusions->entities) {
-                                const ExtrusionRole role = entity->role();
-                                if (role == erExternalPerimeter || role == erOverhangPerimeter)
+                            for (const ExtrusionEntity* entity : filtered_extrusions->entities) {
+                                // Same classification as the wall filament dispatch (LayerTools::extruder()).
+                                if (perimeter_entity_uses_outer_wall_filament(*entity))
                                     outer_perimeters->append(*entity);
-                                else if (role == erPerimeter)
+                                else
                                     inner_perimeters->append(*entity);
                             }
 
+                            // Wiping-extrusion overrides were marked (and their purge volume
+                            // credited) against the ORIGINAL collection - look them up under that
+                            // key so a purge planned into these perimeters still happens.
                             if (!outer_perimeters->entities.empty()) {
                                 split_perimeter_storage.emplace_back(std::move(outer_perimeters));
-                                process_extrusions(split_perimeter_storage.back().get(), nullptr, false);
+                                process_extrusions(split_perimeter_storage.back().get(), filtered_extrusions, true);
                             }
                             if (!inner_perimeters->entities.empty()) {
                                 split_perimeter_storage.emplace_back(std::move(inner_perimeters));
-                                process_extrusions(split_perimeter_storage.back().get(), nullptr, false);
+                                process_extrusions(split_perimeter_storage.back().get(), filtered_extrusions, true);
                             }
                         } else {
-                            process_extrusions(extrusions, extrusions, true);
+                            process_extrusions(filtered_extrusions, filtered_extrusions, true);
                         }
                     }
                 }
             } // for regions
         }
     } // for objects
+
+    if (local_z_perimeter_phase_b_enabled) {
+        for (size_t layer_to_print_idx = 0; layer_to_print_idx < local_z_layer_contexts.size(); ++layer_to_print_idx) {
+            const LocalZLayerContext& ctx = local_z_layer_contexts[layer_to_print_idx];
+            if (!ctx.enabled)
+                continue;
+            BOOST_LOG_TRIVIAL(debug) << "Local-Z clipping summary"
+                                     << " print_z=" << print_z
+                                     << " layer_to_print_idx=" << layer_to_print_idx
+                                     << " local_collections=" << ctx.local_clipped_collections
+                                     << " base_collections=" << ctx.base_clipped_collections
+                                     << " pass_count=" << ctx.pass_buckets.size();
+        }
+    }
 
     // Farthest-point timelapse: once all this layer's extrusions are grouped, find the point
     // farthest from the camera. No-op when the subsystem is disabled.
@@ -8843,6 +9899,20 @@ LayerResult GCode::process_layer(
             }
             filament_plan.second = cache_entry.visits;
         }
+
+        // SM_Orca: Local-Z sublayer overrides can route extrusions to an extruder that is not in
+        // layer_tools.extruders; build a fallback whole-instance plan for those so their
+        // extrusions are still emitted by the per-extruder loop below.
+        for (auto &by_extruder_entry : by_extruder) {
+            const unsigned int extra_filament_id = by_extruder_entry.first;
+            if (std::find(layer_tools.extruders.begin(), layer_tools.extruders.end(), extra_filament_id) != layer_tools.extruders.end())
+                continue;
+            auto &filament_plan = filament_to_print_instances[extra_filament_id];
+            filament_plan.first = sort_print_object_instances(by_extruder_entry.second, layers, ordering, single_object_instance_idx);
+            filament_plan.second.reserve(filament_plan.first.size());
+            for (size_t i = 0; i < filament_plan.first.size(); ++i)
+                filament_plan.second.push_back({i, {}, true});
+        }
     }
 
     std::set<size_t> layer_object_label_ids;
@@ -8875,6 +9945,470 @@ LayerResult GCode::process_layer(
     if (m_wipe_tower)
         m_wipe_tower->set_is_first_print(true);
 
+    struct LocalZPassRef {
+        size_t            layer_to_print_idx { 0 };
+        LocalZPassBucket* bucket { nullptr };
+    };
+
+    auto same_local_z_pass_group = [](const LocalZPassRef& lhs, const LocalZPassRef& rhs) {
+        assert(lhs.bucket != nullptr && rhs.bucket != nullptr);
+        assert(lhs.bucket->plan != nullptr && rhs.bucket->plan != nullptr);
+        // Buckets that land on the same Local-Z print plane are independent even if
+        // they belong to different objects, so let phase-b order that whole plane
+        // together instead of restarting the grouping per object/layer context.
+        return std::abs(lhs.bucket->plan->print_z - rhs.bucket->plan->print_z) <= EPSILON;
+    };
+
+    auto local_z_bucket_extruders = [](const LocalZPassBucket& bucket) {
+        std::vector<unsigned int> extruders;
+        extruders.reserve(bucket.by_extruder.size());
+        for (const auto& by_extruder_entry : bucket.by_extruder) {
+            if (!by_extruder_entry.second.empty())
+                extruders.push_back(by_extruder_entry.first);
+        }
+        return extruders;
+    };
+
+    auto shared_local_z_extruder = [](const std::vector<unsigned int>& lhs, const std::vector<unsigned int>& rhs) -> int {
+        for (unsigned int extruder_id : lhs) {
+            if (std::find(rhs.begin(), rhs.end(), extruder_id) != rhs.end())
+                return static_cast<int>(extruder_id);
+        }
+        return -1;
+    };
+
+    std::vector<LocalZPassRef> local_z_pass_refs;
+    if (local_z_perimeter_phase_b_enabled) {
+        for (size_t layer_to_print_idx = 0; layer_to_print_idx < local_z_layer_contexts.size(); ++layer_to_print_idx) {
+            LocalZLayerContext& ctx = local_z_layer_contexts[layer_to_print_idx];
+            if (!ctx.enabled)
+                continue;
+            for (LocalZPassBucket& bucket : ctx.pass_buckets) {
+                if (bucket.plan != nullptr && !bucket.by_extruder.empty())
+                    local_z_pass_refs.push_back(LocalZPassRef{layer_to_print_idx, &bucket});
+            }
+        }
+        std::sort(local_z_pass_refs.begin(), local_z_pass_refs.end(), [](const LocalZPassRef& lhs, const LocalZPassRef& rhs) {
+            assert(lhs.bucket != nullptr && rhs.bucket != nullptr);
+            assert(lhs.bucket->plan != nullptr && rhs.bucket->plan != nullptr);
+            if (lhs.bucket->plan->print_z != rhs.bucket->plan->print_z)
+                return lhs.bucket->plan->print_z < rhs.bucket->plan->print_z;
+            if (lhs.layer_to_print_idx != rhs.layer_to_print_idx)
+                return lhs.layer_to_print_idx < rhs.layer_to_print_idx;
+            return lhs.bucket->plan->pass_index < rhs.bucket->plan->pass_index;
+        });
+    }
+
+    if (local_z_perimeter_phase_b_enabled) {
+        BOOST_LOG_TRIVIAL(info) << "Local-Z phase-b prepared"
+                                << " print_z=" << print_z
+                                << " path_passes=" << local_z_pass_refs.size();
+        if (local_z_pass_refs.empty()) {
+            BOOST_LOG_TRIVIAL(warning) << "Local-Z phase-b enabled but produced no path passes"
+                                       << " print_z=" << print_z;
+        }
+    }
+
+    std::vector<unsigned int> layer_extruders = layer_tools.extruders;
+    for (const auto& by_extruder_entry : by_extruder) {
+        // A mixed-color sublayer slot keys its geometry under the virtual slot id in by_extruder
+        // on purpose: the sublayer emitter below prints it at sub-Z with the component extruders.
+        // The slot is not a real tool (GCodeWriter registers no Extruder for it), so it must not
+        // enter the per-layer tool loop — set_extruder()/toolchange() would look up a filament
+        // that does not exist. Only genuine Local-Z extra buckets belong here.
+        if (layer_tools.is_mixed_slot(by_extruder_entry.first))
+            continue;
+        if (std::find(layer_extruders.begin(), layer_extruders.end(), by_extruder_entry.first) == layer_extruders.end())
+            layer_extruders.emplace_back(by_extruder_entry.first);
+    }
+
+    const double nominal_layer_z          = print_z + m_config.z_offset.value;
+    int          nominal_layer_start_extruder = (m_writer.filament() != nullptr) ? int(m_writer.filament()->id()) : -1;
+
+    if (!local_z_pass_refs.empty()) {
+        int  local_z_phase_b_active_extruder = (m_writer.filament() != nullptr) ? int(m_writer.filament()->id()) : -1;
+        BOOST_LOG_TRIVIAL(info) << "Local-Z phase-b emitting"
+                                << " print_z=" << print_z
+                                << " path_passes=" << local_z_pass_refs.size();
+        gcode += "; local-z phase-b path passes begin\n";
+        auto emit_local_z_toolchange = [&](unsigned int extruder_id, double toolchange_print_z) {
+            if (has_wipe_tower && m_wipe_tower) {
+                gcode += m_wipe_tower->tool_change(*this, int(extruder_id), false, true, print_z + m_config.z_offset.value);
+                // Local-Z phase-b uses the wipe tower outside the normal per-layer
+                // extruder loop, so mirror the usual toolchange bookkeeping here.
+                // This forces the next object path to refresh WIDTH/HEIGHT tags
+                // after prime tower G-code, keeping the preview in sync with the
+                // actual local-Z pass height.
+                m_last_processor_extrusion_role = erWipeTower;
+            } else {
+                gcode += this->set_extruder(extruder_id, toolchange_print_z);
+            }
+        };
+
+        auto emit_local_z_pass_for_extruder = [&](const LocalZPassRef& pass_ref, unsigned int local_extruder_id) {
+            assert(pass_ref.bucket != nullptr && pass_ref.bucket->plan != nullptr);
+            auto by_extruder_it = pass_ref.bucket->by_extruder.find(local_extruder_id);
+            if (by_extruder_it == pass_ref.bucket->by_extruder.end())
+                return;
+
+            std::vector<ObjectByExtruder>& objects_by_extruder = by_extruder_it->second;
+            if (objects_by_extruder.empty())
+                return;
+
+            const SubLayerPlan& pass_plan = *pass_ref.bucket->plan;
+            const double pass_z           = pass_plan.print_z + m_config.z_offset.value;
+            const double saved_nominal_z  = m_nominal_z;
+            const float  saved_last_layer_z = m_last_layer_z;
+            // Ensure all travel/lift logic inside this pass references the micro-pass Z,
+            // not the base layer nominal Z.
+            m_nominal_z  = pass_z;
+            m_last_layer_z = float(pass_z);
+            BOOST_LOG_TRIVIAL(debug) << "Local-Z pass emit"
+                                     << " print_z=" << print_z
+                                     << " layer_to_print_idx=" << pass_ref.layer_to_print_idx
+                                     << " layer_id=" << pass_plan.layer_id
+                                     << " pass_index=" << pass_plan.pass_index
+                                     << " dependency_group=" << pass_plan.dependency_group
+                                     << " dependency_order=" << pass_plan.dependency_order
+                                     << " pass_print_z=" << pass_plan.print_z
+                                     << " pass_flow_height=" << pass_plan.flow_height
+                                     << " extruder=" << local_extruder_id;
+            if (std::abs(m_writer.get_position().z() - pass_z) > EPSILON) {
+                gcode += this->retract(false, false, LiftType::NormalLift);
+                gcode += m_writer.travel_to_z(pass_z, "Local-Z path pass");
+            }
+            if (std::abs(m_writer.get_position().z() - pass_z) > EPSILON) {
+                BOOST_LOG_TRIVIAL(warning) << "Local-Z pass z restore"
+                                           << " print_z=" << print_z
+                                           << " layer_id=" << pass_plan.layer_id
+                                           << " pass_index=" << pass_plan.pass_index
+                                           << " dependency_group=" << pass_plan.dependency_group
+                                           << " dependency_order=" << pass_plan.dependency_order
+                                           << " extruder=" << local_extruder_id
+                                           << " expected_pass_z=" << pass_z
+                                           << " observed_z_after_toolchange=" << m_writer.get_position().z();
+                gcode += m_writer.travel_to_z(pass_z, "Local-Z pass z restore");
+            }
+            std::vector<InstanceToPrint> instances_to_print =
+                sort_print_object_instances(objects_by_extruder, layers, ordering, single_object_instance_idx);
+
+            for (InstanceToPrint& instance_to_print : instances_to_print) {
+                const LayerToPrint& layer_to_print = layers[instance_to_print.layer_id];
+                const bool object_layer_over_raft =
+                    layer_to_print.object_layer && layer_to_print.object_layer->id() > 0 &&
+                    instance_to_print.print_object.slicing_parameters().raft_layers() == layer_to_print.object_layer->id();
+
+                m_config.apply(instance_to_print.print_object.config(), true);
+                m_layer                  = layer_to_print.layer();
+                m_object_layer_over_raft = object_layer_over_raft;
+                const bool saved_reduce_crossing_wall = m_config.reduce_crossing_wall.value;
+                // Local-Z phase-b emits many short micro-passes. Avoid-crossing
+                // travel planning is expensive and fragile on these fragments, so
+                // keep travel simple here.
+                m_config.reduce_crossing_wall.value = false;
+                m_avoid_crossing_perimeters.disable_once();
+
+                const Point& offset = instance_to_print.print_object.instances()[instance_to_print.instance_id].shift;
+                std::pair<const PrintObject*, Point> this_object_copy(&instance_to_print.print_object, offset);
+                if (m_last_obj_copy != this_object_copy)
+                    m_avoid_crossing_perimeters.use_external_mp_once();
+                m_last_obj_copy = this_object_copy;
+                this->set_origin(unscale(offset));
+
+                for (ObjectByExtruder::Island& island : instance_to_print.object_by_extruder.islands) {
+                    gcode += this->extrude_perimeters(print, island.by_region, first_layer, false);
+                    gcode += this->extrude_infill(print, island.by_region, false);
+                    // Then the walls left hanging in mid air, now that the infill can anchor them
+                    gcode += this->extrude_perimeters(print, island.by_region, first_layer, false, true);
+                    gcode += this->extrude_perimeters(print, island.by_region, first_layer, true);
+                    gcode += this->extrude_infill(print, island.by_region, true);
+                }
+                m_config.reduce_crossing_wall.value = saved_reduce_crossing_wall;
+            }
+
+            m_nominal_z   = saved_nominal_z;
+            m_last_layer_z = saved_last_layer_z;
+        };
+
+        auto emit_local_z_legacy = [&](int active_extruder) {
+            size_t pass_ref_idx = 0;
+            while (pass_ref_idx < local_z_pass_refs.size()) {
+                size_t pass_group_end = pass_ref_idx + 1;
+                while (pass_group_end < local_z_pass_refs.size() &&
+                       same_local_z_pass_group(local_z_pass_refs[pass_ref_idx], local_z_pass_refs[pass_group_end])) {
+                    ++pass_group_end;
+                }
+
+                std::vector<unsigned int> pass_group_extruders;
+                struct LocalZPassTaskRef {
+                    const LocalZPassRef* pass_ref { nullptr };
+                    unsigned int         extruder_id { 0 };
+                };
+                std::vector<LocalZPassTaskRef> pass_group_tasks;
+                for (size_t group_idx = pass_ref_idx; group_idx < pass_group_end; ++group_idx) {
+                    const LocalZPassRef& pass_ref = local_z_pass_refs[group_idx];
+                    for (unsigned int extruder_id : local_z_bucket_extruders(*pass_ref.bucket)) {
+                        pass_group_tasks.push_back(LocalZPassTaskRef{ &pass_ref, extruder_id });
+                        if (std::find(pass_group_extruders.begin(), pass_group_extruders.end(), extruder_id) == pass_group_extruders.end())
+                            pass_group_extruders.push_back(extruder_id);
+                    }
+                }
+
+                std::vector<unsigned int> next_group_extruders;
+                if (pass_group_end < local_z_pass_refs.size()) {
+                    size_t next_group_end = pass_group_end + 1;
+                    while (next_group_end < local_z_pass_refs.size() &&
+                           same_local_z_pass_group(local_z_pass_refs[pass_group_end], local_z_pass_refs[next_group_end])) {
+                        ++next_group_end;
+                    }
+                    for (size_t group_idx = pass_group_end; group_idx < next_group_end; ++group_idx) {
+                        for (unsigned int extruder_id : local_z_bucket_extruders(*local_z_pass_refs[group_idx].bucket))
+                            if (std::find(next_group_extruders.begin(), next_group_extruders.end(), extruder_id) == next_group_extruders.end())
+                                next_group_extruders.push_back(extruder_id);
+                    }
+                }
+
+                const int preferred_last_extruder = shared_local_z_extruder(pass_group_extruders, next_group_extruders);
+                const std::vector<unsigned int> ordered_group_extruders =
+                    LocalZOrderOptimizer::order_bucket_extruders(pass_group_extruders,
+                                                                 active_extruder,
+                                                                 preferred_last_extruder);
+
+                for (unsigned int local_extruder_id : ordered_group_extruders) {
+                    emit_local_z_toolchange(local_extruder_id, local_z_pass_refs[pass_ref_idx].bucket->plan->print_z);
+                    for (const LocalZPassTaskRef& task_ref : pass_group_tasks) {
+                        if (task_ref.extruder_id != local_extruder_id || task_ref.pass_ref == nullptr)
+                            continue;
+                        emit_local_z_pass_for_extruder(*task_ref.pass_ref, local_extruder_id);
+                    }
+                    active_extruder = int(local_extruder_id);
+                }
+
+                pass_ref_idx = pass_group_end;
+            }
+
+            return active_extruder;
+        };
+
+        const bool dependency_chain_mode =
+            std::all_of(local_z_pass_refs.begin(), local_z_pass_refs.end(), [](const LocalZPassRef& pass_ref) {
+                return pass_ref.bucket != nullptr &&
+                       pass_ref.bucket->plan != nullptr &&
+                       pass_ref.bucket->plan->dependency_group != 0;
+            });
+
+        if (dependency_chain_mode) {
+            struct ChainKey {
+                size_t layer_to_print_idx { 0 };
+                size_t dependency_group { 0 };
+
+                bool operator<(const ChainKey& rhs) const
+                {
+                    if (layer_to_print_idx != rhs.layer_to_print_idx)
+                        return layer_to_print_idx < rhs.layer_to_print_idx;
+                    return dependency_group < rhs.dependency_group;
+                }
+            };
+            struct PassState {
+                const LocalZPassRef*    pass_ref { nullptr };
+                std::vector<unsigned int> remaining_extruders;
+                size_t                    chain_idx { 0 };
+                size_t                    chain_pos { 0 };
+                bool                      ready { false };
+                bool                      completed { false };
+            };
+
+            std::map<ChainKey, size_t> chain_index_by_key;
+            std::vector<std::vector<size_t>> chains;
+            std::vector<PassState>           pass_states;
+            pass_states.reserve(local_z_pass_refs.size());
+            for (const LocalZPassRef& pass_ref : local_z_pass_refs) {
+                ChainKey chain_key { pass_ref.layer_to_print_idx, pass_ref.bucket->plan->dependency_group };
+                auto [it_chain, inserted] = chain_index_by_key.emplace(chain_key, chains.size());
+                if (inserted)
+                    chains.emplace_back();
+
+                const size_t chain_idx = it_chain->second;
+                const size_t pass_state_idx = pass_states.size();
+                pass_states.push_back(PassState{ &pass_ref, local_z_bucket_extruders(*pass_ref.bucket), chain_idx, 0, false, false });
+                chains[chain_idx].push_back(pass_state_idx);
+            }
+
+            for (std::vector<size_t>& chain : chains) {
+                std::sort(chain.begin(), chain.end(), [&pass_states](size_t lhs_idx, size_t rhs_idx) {
+                    const SubLayerPlan& lhs = *pass_states[lhs_idx].pass_ref->bucket->plan;
+                    const SubLayerPlan& rhs = *pass_states[rhs_idx].pass_ref->bucket->plan;
+                    if (lhs.dependency_order != rhs.dependency_order)
+                        return lhs.dependency_order < rhs.dependency_order;
+                    if (std::abs(lhs.print_z - rhs.print_z) > EPSILON)
+                        return lhs.print_z < rhs.print_z;
+                    return lhs.pass_index < rhs.pass_index;
+                });
+                for (size_t chain_pos = 0; chain_pos < chain.size(); ++chain_pos)
+                    pass_states[chain[chain_pos]].chain_pos = chain_pos;
+                if (!chain.empty())
+                    pass_states[chain.front()].ready = true;
+            }
+
+            auto pass_contains_extruder = [](const PassState& pass_state, unsigned int extruder_id) {
+                return std::find(pass_state.remaining_extruders.begin(), pass_state.remaining_extruders.end(), extruder_id) !=
+                       pass_state.remaining_extruders.end();
+            };
+            auto choose_ready_extruder = [&](int active_extruder) -> int {
+                std::vector<unsigned int> ready_extruders;
+                for (const PassState& pass_state : pass_states) {
+                    if (!pass_state.ready || pass_state.completed)
+                        continue;
+                    for (unsigned int extruder_id : pass_state.remaining_extruders)
+                        if (std::find(ready_extruders.begin(), ready_extruders.end(), extruder_id) == ready_extruders.end())
+                            ready_extruders.push_back(extruder_id);
+                }
+                if (ready_extruders.empty())
+                    return -1;
+                if (active_extruder >= 0 &&
+                    std::find(ready_extruders.begin(), ready_extruders.end(), unsigned(active_extruder)) != ready_extruders.end()) {
+                    return active_extruder;
+                }
+
+                int    best_extruder = -1;
+                size_t best_ready_count = 0;
+                size_t best_future_count = 0;
+                for (unsigned int extruder_id : ready_extruders) {
+                    size_t ready_count = 0;
+                    size_t future_count = 0;
+                    for (const PassState& pass_state : pass_states) {
+                        if (pass_state.completed || !pass_contains_extruder(pass_state, extruder_id))
+                            continue;
+                        ++future_count;
+                        if (pass_state.ready)
+                            ++ready_count;
+                    }
+
+                    if (best_extruder < 0 ||
+                        ready_count > best_ready_count ||
+                        (ready_count == best_ready_count && future_count > best_future_count) ||
+                        (ready_count == best_ready_count && future_count == best_future_count && extruder_id < unsigned(best_extruder))) {
+                        best_extruder = int(extruder_id);
+                        best_ready_count = ready_count;
+                        best_future_count = future_count;
+                    }
+                }
+
+                return best_extruder;
+            };
+
+            struct ScheduledPhase {
+                unsigned int        extruder_id { 0 };
+                std::vector<size_t> pass_state_indices;
+            };
+
+            bool                        dependency_scheduler_ok = true;
+            size_t                      completed_passes = 0;
+            int                         simulated_active_extruder = local_z_phase_b_active_extruder;
+            std::vector<ScheduledPhase> scheduled_phases;
+            while (dependency_scheduler_ok && completed_passes < pass_states.size()) {
+                const int chosen_extruder = choose_ready_extruder(simulated_active_extruder);
+                if (chosen_extruder < 0) {
+                    dependency_scheduler_ok = false;
+                    BOOST_LOG_TRIVIAL(warning) << "Local-Z dependency scheduler deadlocked, falling back"
+                                               << " print_z=" << print_z
+                                               << " pass_count=" << local_z_pass_refs.size();
+                    break;
+                }
+
+                std::vector<size_t> ready_pass_indices;
+                for (size_t pass_state_idx = 0; pass_state_idx < pass_states.size(); ++pass_state_idx) {
+                    const PassState& pass_state = pass_states[pass_state_idx];
+                    if (!pass_state.ready || pass_state.completed || !pass_contains_extruder(pass_state, unsigned(chosen_extruder)))
+                        continue;
+                    ready_pass_indices.push_back(pass_state_idx);
+                }
+                if (ready_pass_indices.empty()) {
+                    dependency_scheduler_ok = false;
+                    BOOST_LOG_TRIVIAL(warning) << "Local-Z dependency scheduler made no progress, falling back"
+                                               << " print_z=" << print_z
+                                               << " chosen_extruder=" << chosen_extruder
+                                               << " pass_count=" << local_z_pass_refs.size();
+                    break;
+                }
+
+                std::sort(ready_pass_indices.begin(), ready_pass_indices.end(), [&pass_states](size_t lhs_idx, size_t rhs_idx) {
+                    const LocalZPassRef& lhs_ref = *pass_states[lhs_idx].pass_ref;
+                    const LocalZPassRef& rhs_ref = *pass_states[rhs_idx].pass_ref;
+                    const SubLayerPlan& lhs = *lhs_ref.bucket->plan;
+                    const SubLayerPlan& rhs = *rhs_ref.bucket->plan;
+                    if (std::abs(lhs.print_z - rhs.print_z) > EPSILON)
+                        return lhs.print_z < rhs.print_z;
+                    if (lhs_ref.layer_to_print_idx != rhs_ref.layer_to_print_idx)
+                        return lhs_ref.layer_to_print_idx < rhs_ref.layer_to_print_idx;
+                    return lhs.pass_index < rhs.pass_index;
+                });
+                scheduled_phases.push_back(ScheduledPhase{ unsigned(chosen_extruder), ready_pass_indices });
+
+                std::vector<size_t> newly_completed;
+                for (size_t pass_state_idx : ready_pass_indices) {
+                    PassState& pass_state = pass_states[pass_state_idx];
+                    auto it_extruder = std::find(pass_state.remaining_extruders.begin(),
+                                                 pass_state.remaining_extruders.end(),
+                                                 unsigned(chosen_extruder));
+                    if (it_extruder == pass_state.remaining_extruders.end())
+                        continue;
+                    pass_state.remaining_extruders.erase(it_extruder);
+                    if (pass_state.remaining_extruders.empty())
+                        newly_completed.push_back(pass_state_idx);
+                }
+
+                for (size_t pass_state_idx : newly_completed) {
+                    PassState& pass_state = pass_states[pass_state_idx];
+                    if (pass_state.completed)
+                        continue;
+                    pass_state.ready = false;
+                    pass_state.completed = true;
+                    ++completed_passes;
+
+                    const std::vector<size_t>& chain = chains[pass_state.chain_idx];
+                    const size_t next_chain_pos = pass_state.chain_pos + 1;
+                    if (next_chain_pos < chain.size())
+                        pass_states[chain[next_chain_pos]].ready = true;
+                }
+
+                simulated_active_extruder = chosen_extruder;
+            }
+
+            if (!dependency_scheduler_ok) {
+                local_z_phase_b_active_extruder = emit_local_z_legacy(local_z_phase_b_active_extruder);
+            } else {
+                for (const ScheduledPhase& scheduled_phase : scheduled_phases) {
+                    emit_local_z_toolchange(scheduled_phase.extruder_id,
+                                            pass_states[scheduled_phase.pass_state_indices.front()].pass_ref->bucket->plan->print_z);
+                    for (size_t pass_state_idx : scheduled_phase.pass_state_indices)
+                        emit_local_z_pass_for_extruder(*pass_states[pass_state_idx].pass_ref, scheduled_phase.extruder_id);
+                }
+                local_z_phase_b_active_extruder = simulated_active_extruder;
+                BOOST_LOG_TRIVIAL(info) << "Local-Z dependency scheduler"
+                                        << " print_z=" << print_z
+                                        << " pass_count=" << local_z_pass_refs.size()
+                                        << " chain_count=" << chains.size();
+            }
+        } else {
+            local_z_phase_b_active_extruder = emit_local_z_legacy(local_z_phase_b_active_extruder);
+        }
+
+        nominal_layer_start_extruder = local_z_phase_b_active_extruder;
+
+        if (std::abs(m_writer.get_position().z() - nominal_layer_z) > EPSILON) {
+            gcode += this->retract(false, false, LiftType::NormalLift);
+            gcode += m_writer.travel_to_z(nominal_layer_z, "Local-Z return to nominal layer");
+        }
+        gcode += "; local-z phase-b path passes end\n";
+    }
+
+    if (nominal_layer_start_extruder >= 0) {
+        auto it = std::find(layer_extruders.begin(), layer_extruders.end(), unsigned(nominal_layer_start_extruder));
+        if (it != layer_extruders.end())
+            std::rotate(layer_extruders.begin(), it, layer_extruders.end());
+    }
+
     auto insert_wrapping_detection_gcode = [this, &print, &print_z, &most_used_extruder]() -> std::string {
         std::string wrapping_gcode;
         if (print.config().enable_wrapping_detection && !print.config().wrapping_detection_gcode.value.empty()) {
@@ -8899,6 +10433,7 @@ LayerResult GCode::process_layer(
 
     bool has_insert_wrapping_detection_gcode = false;
 
+<<<<<<< snaporca-int
     // Snapmaker: Local-Z phase-b, the sub-layer passes of the painted mixed regions, printed before the nominal layer.
     struct LocalZPassRef {
         size_t            layer_to_print_idx { 0 };
@@ -9358,10 +10893,36 @@ LayerResult GCode::process_layer(
         auto it = std::find(layer_extruders.begin(), layer_extruders.end(), unsigned(nominal_layer_start_extruder));
         if (it != layer_extruders.end())
             std::rotate(layer_extruders.begin(), it, layer_extruders.end());
+=======
+    // Brims of instances that no extruder visits on this layer (a first layer printed entirely by
+    // Local-Z path passes or by a mixed-color slot) are emitted with the layer's first extruder.
+    std::vector<std::pair<const PrintObject*, size_t>> brims_without_visit;
+    if (first_layer && !m_objsWithBrim.empty()) {
+        std::set<ObjectInstanceID> visited;
+        for (unsigned int extruder_id : layer_extruders)
+            if (auto plan_it = filament_to_print_instances.find(extruder_id); plan_it != filament_to_print_instances.end())
+                for (const InstanceVisit &visit : plan_it->second.second) {
+                    const InstanceToPrint &instance = plan_it->second.first[visit.instance_idx];
+                    visited.insert(ObjectInstanceID{ instance.print_object.id(), instance.instance_id });
+                }
+        for (const LayerToPrint &layer_to_print : layers) {
+            const PrintObject *brim_object = layer_to_print.original_object;
+            if (brim_object == nullptr)
+                continue;
+            for (size_t brim_instance_id = 0; brim_instance_id < brim_object->instances().size(); ++brim_instance_id) {
+                if (single_object_instance_idx != size_t(-1) && brim_instance_id != single_object_instance_idx)
+                    continue;
+                const ObjectInstanceID object_instance_id{ brim_object->id(), brim_instance_id };
+                if (m_objsWithBrim.count(object_instance_id) != 0 && visited.count(object_instance_id) == 0)
+                    brims_without_visit.emplace_back(brim_object, brim_instance_id);
+            }
+        }
+>>>>>>> lixnix/main
     }
 
     // Extrude the skirt, brim, support, perimeters, infill ordered by the extruders.
     m_skirt_group_done.resize(print.skirt_brim_groups().size());
+<<<<<<< snaporca-int
 
     // Belt brim bookkeeping.  A coincident belt_brim_by_layer band must be emitted
     // exactly once, in its object's brim-filament pass; this records which have gone
@@ -9377,6 +10938,8 @@ LayerResult GCode::process_layer(
         return this->emit_belt_brim_bands(print, layers, single_object_instance_idx, extruder_id);
     };
 
+=======
+>>>>>>> lixnix/main
     for (unsigned int extruder_id : layer_extruders)
     {
         if (print.config().skirt_type == stCombined && !print.skirt_brim_groups().empty()) {
@@ -9391,7 +10954,8 @@ LayerResult GCode::process_layer(
             }
         }
 
-        if (print.config().print_sequence == PrintSequence::ByLayer && m_enable_exclude_object && print.config().support_object_skip_flush.value) {
+        // By-layer emission (including a sequential print that falls back to it for the wipe tower).
+        if (single_object_instance_idx == size_t(-1) && m_enable_exclude_object && print.config().support_object_skip_flush.value) {
             std::set<size_t> all_label_ids;
             for (InstanceToPrint &instance : filament_to_print_instances[extruder_id].first)
                 all_label_ids.insert(instance.label_object_id);
@@ -9493,6 +11057,7 @@ LayerResult GCode::process_layer(
         if (layer_tools.has_wipe_tower && m_wipe_tower)
             m_last_processor_extrusion_role = erWipeTower;
 
+<<<<<<< snaporca-int
         // Belt printers: now that this pass's tool is selected, lay down any ordinary-layer
         // apron band whose brim filament is this extruder, before the object extrusion at
         // this Z (brim goes down first, with the correct tool).  Restore the origin so the
@@ -9511,6 +11076,11 @@ LayerResult GCode::process_layer(
                     for (size_t brim_instance = 0; brim_instance < brim_object->instances().size(); ++brim_instance)
                         gcode += generate_object_brim(print, *brim_object, brim_instance, first_layer, brim_layer.object_layer);
         }
+=======
+        for (const auto &[brim_object, brim_instance_id] : brims_without_visit)
+            gcode += generate_object_brim(print, *brim_object, brim_instance_id, first_layer);
+        brims_without_visit.clear();
+>>>>>>> lixnix/main
 
         auto &filament_plan = filament_to_print_instances[extruder_id];
         std::vector<InstanceToPrint>     &instances_to_print = filament_plan.first;
@@ -9527,6 +11097,7 @@ LayerResult GCode::process_layer(
                 const auto& inst = instance_to_print.print_object.instances()[instance_to_print.instance_id];
                 const LayerToPrint &layer_to_print = layers[instance_to_print.layer_id];
                 if (visit.first_visit && print_wipe_extrusions == (is_anything_overridden ? 1 : 0)) {
+<<<<<<< snaporca-int
                     gcode += generate_object_skirt_group(print, instance_to_print.print_object, instance_to_print.instance_id, layer_tools, layer, extruder_id);
                     const PrintObject &vobj = instance_to_print.print_object;
                     if (vobj.has_belt_brim()) {
@@ -9542,6 +11113,14 @@ LayerResult GCode::process_layer(
                         gcode += generate_object_brim(print, vobj, instance_to_print.instance_id, first_layer,
                                                       layer_to_print.object_layer);
                     }
+=======
+                    // The object skirt goes with an extruder that prints this object on this layer.
+                    const bool extruder_prints_object = !instance_to_print.object_by_extruder.islands.empty() ||
+                        (instance_to_print.object_by_extruder.support != nullptr && !instance_to_print.object_by_extruder.support->empty());
+                    if (extruder_prints_object)
+                        gcode += generate_object_skirt_group(print, instance_to_print.print_object, instance_to_print.instance_id, layer_tools, layer, extruder_id);
+                    gcode += generate_object_brim(print, instance_to_print.print_object, instance_to_print.instance_id, first_layer);
+>>>>>>> lixnix/main
                 }
 
                 // To control print speed of the 1st object layer printed over raft interface.
@@ -10203,8 +11782,12 @@ void GCode::apply_print_config(const PrintConfig &print_config)
 #endif
 }
 
+<<<<<<< snaporca-int
 // Snapmaker: write the flow-variant filament options with the variant each filament prints with.
 static std::string serialize_gcode_config_option(const DynamicPrintConfig &config, const std::string &key)
+=======
+void GCode::append_full_config(const Print& print, std::string& str)
+>>>>>>> lixnix/main
 {
     if (key == "filament_flow_support" || key == "process_flow_support" || key == "printer_flow_support") {
         const auto *support = config.option<ConfigOptionStrings>(key);
@@ -10261,6 +11844,12 @@ static std::string serialize_gcode_config_option(const DynamicPrintConfig &confi
 void GCode::append_full_config(const Print &print, std::string &str)
 {
     DynamicPrintConfig cfg = print.full_print_config();
+    // Snapmaker Orca: the transient record of a process table composed per tool head
+    // (PerHeadProcess) stays out of the header, so neither the G-code nor "Import Configs" sees it.
+    cfg.erase("print_extruder_source_column");
+    cfg.erase("print_extruder_source_flow");
+    cfg.erase("print_extruder_flow_count");
+    cfg.erase("extruder_layer_height_planned");
     { // correct the flush_volumes_matrix with flush_multiplier values
         // Fast purge mode uses flush_multiplier_fast; Default is inert.
         std::vector<double> temp_cfg_flush_multiplier = (print.config().prime_volume_mode == PrimeVolumeMode::pvmFast)
@@ -10364,7 +11953,7 @@ void GCode::append_full_config(const Print &print, std::string &str)
             if(key == "extruder_colour")
                 ss << "; " << key << " = " << cfg.opt_serialize("filament_colour") << "\n";
             else
-                ss << "; " << key << " = " << serialize_gcode_config_option(cfg, key) << "\n";
+                ss << "; " << key << " = " << cfg.opt_serialize(key) << "\n";
         }
     }
     str += ss.str();
@@ -10518,8 +12107,10 @@ std::string GCode::extrude_loop(const ExtrusionLoop&                       loop_
     }
 
     if (enable_seam_slope && m_config.seam_slope_conditional.value && m_config.scarf_overhang_threshold.value > 0.0f) {
-        const auto _line_width = loop.role() == erExternalPerimeter ? m_config.outer_wall_line_width.get_abs_value(nozzle_diameter) :
-                                                                      m_config.inner_wall_line_width.get_abs_value(nozzle_diameter);
+        // Snapmaker Orca: the widths are columns per tool head, read at the slot of the tool.
+        const auto _line_width = loop.role() == erExternalPerimeter ?
+            Flow::width_at(m_config.outer_wall_line_width, m_writer.process_slot()).get_abs_value(nozzle_diameter) :
+            Flow::width_at(m_config.inner_wall_line_width, m_writer.process_slot()).get_abs_value(nozzle_diameter);
         enable_seam_slope      = seam_overhang < m_config.scarf_overhang_threshold.value * 0.01f * _line_width;
     }
 
@@ -10868,7 +12459,11 @@ std::string GCode::extrude_path(const ExtrusionPath& path, const std::string& de
 }
 
 // Extrude perimeters: Decide where to put seams (hide or align seams).
-std::string GCode::extrude_perimeters(const Print &print, const std::vector<ObjectByExtruder::Island::Region> &by_region, bool is_first_layer, bool is_infill_first, bool unsupported_loops_only)
+std::string GCode::extrude_perimeters(const Print&                                         print,
+                                      const std::vector<ObjectByExtruder::Island::Region>& by_region,
+                                      bool                                                 is_first_layer,
+                                      bool                                                 is_infill_first,
+                                      bool                                                 unsupported_loops_only)
 {
     std::string gcode;
     for (const ObjectByExtruder::Island::Region &region : by_region)
@@ -11339,6 +12934,9 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &path_d
         _mm3_per_mm *= m_config.internal_bridge_flow;
     } else if (path.role() == erBrim) {
         _mm3_per_mm *= m_config.brim_flow_ratio;
+    } else if (path.role() == erSupportTransition) {
+        // Support transition layers have their own flow ratio.
+        _mm3_per_mm *= m_config.support_transition_flow_ratio.get_abs_value(1.);
     } else if (sloped) {
         _mm3_per_mm *= m_config.scarf_joint_flow_ratio;
     }
@@ -11398,9 +12996,15 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &path_d
                 speed = std::min(speed, m_config.scarf_joint_speed.get_abs_value(speed));
             }
         } else if(path.role() == erInternalBridgeInfill) {
+<<<<<<< snaporca-int
             speed = m_config.internal_bridge_speed.get_at(nozzle).get_abs_value(m_config.bridge_speed.get_at(nozzle));
         } else if (path.role() == erSupportTransition) {
             // Snapmaker: independent speed for support transition layers (not bridge_speed)
+=======
+            speed = m_config.get_abs_value_at("internal_bridge_speed", get_nozzle_config_index(m_writer.filament()->id()));
+        } else if (path.role() == erSupportTransition) {
+            // Support transition layers have their own speed, independent of bridge_speed.
+>>>>>>> lixnix/main
             speed = NOZZLE_CONFIG(support_transition_speed);
         } else if (path.role() == erOverhangPerimeter || path.role() == erBridgeInfill) {
             speed = NOZZLE_CONFIG(bridge_speed);
@@ -11551,6 +13155,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &path_d
     bool path_overhang_fan_active = false;
     std::vector<ProcessedPoint> new_points {};
 
+
     const bool need_overhang_detection = NOZZLE_CONFIG(enable_overhang_speed) ||
         (FILAMENT_CONFIG(enable_overhang_bridge_fan) && m_enable_cooling_markers);
 
@@ -11639,7 +13244,11 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &path_d
     }
 
     double F = speed * 60;  // convert mm/sec to mm/min
+<<<<<<< snaporca-int
     
+=======
+
+>>>>>>> lixnix/main
     // Orca: Dynamic PA
     // If adaptive PA is enabled, by default evaluate PA on all extrusion moves
     // The PA settings and the PA_CHANGE tags use the filament config index of the filament's extruder variant
@@ -12726,6 +14335,31 @@ void GCode::update_placeholder_parser_with_variant_params()
     const auto nozzle_temperature_range_high = remap_by_filament(m_config.nozzle_temperature_range_high);
     this->placeholder_parser().set("nozzle_temperature_range_high",       new ConfigOptionInts(nozzle_temperature_range_high));
 
+    // Snapmaker: the per-variant bed and chamber temperatures, indexed by filament id in custom G-code.
+    for (const char *key : {"supertack_plate_temp", "supertack_plate_temp_initial_layer", "cool_plate_temp", "cool_plate_temp_initial_layer",
+                            "textured_cool_plate_temp", "textured_cool_plate_temp_initial_layer", "eng_plate_temp", "eng_plate_temp_initial_layer",
+                            "hot_plate_temp", "hot_plate_temp_initial_layer", "textured_plate_temp", "textured_plate_temp_initial_layer",
+                            "graphic_effect_plate_temp", "graphic_effect_plate_temp_initial_layer", "chamber_temperature", "chamber_minimal_temperature"})
+        if (const auto *temperatures = m_config.option<ConfigOptionInts>(key); temperatures != nullptr && !temperatures->values.empty())
+            this->placeholder_parser().set(key, new ConfigOptionInts(remap_by_filament(*temperatures)));
+    this->placeholder_parser().set("activate_chamber_temp_control",       new ConfigOptionBools(remap_by_filament(m_config.activate_chamber_temp_control)));
+    // The aliases of the current plate's bed temperatures, as _do_export sets them.
+    {
+        const BedType bed_type = get_bed_temp_key(m_config.curr_bed_type).empty() ? btPEI : BedType(m_config.curr_bed_type.value);
+        if (const auto *first = m_config.option<ConfigOptionInts>(get_bed_temp_1st_layer_key(bed_type)); first != nullptr && !first->values.empty()) {
+            const std::vector<int> first_layer = remap_by_filament(*first);
+            this->placeholder_parser().set("bed_temperature_initial_layer", new ConfigOptionInts(first_layer));
+            this->placeholder_parser().set("first_layer_bed_temperature", new ConfigOptionInts(first_layer));
+        }
+        if (const auto *other = m_config.option<ConfigOptionInts>(get_bed_temp_key(bed_type)); other != nullptr && !other->values.empty())
+            this->placeholder_parser().set("bed_temperature", new ConfigOptionInts(remap_by_filament(*other)));
+    }
+
+    // Snapmaker: the per-variant fan values, which custom G-code indexes by filament id.
+    this->placeholder_parser().set("fan_min_speed",                       new ConfigOptionFloats(remap_by_filament(m_config.fan_min_speed)));
+    this->placeholder_parser().set("fan_max_speed",                       new ConfigOptionFloats(remap_by_filament(m_config.fan_max_speed)));
+    this->placeholder_parser().set("additional_cooling_fan_speed",        new ConfigOptionInts(remap_by_filament(m_config.additional_cooling_fan_speed)));
+
     // --- printer_options_with_variant_1: in m_config these are already merged as filament-indexed ---
     this->placeholder_parser().set("retraction_distances_when_cut",       new ConfigOptionFloats(remap_by_filament(m_config.retraction_distances_when_cut)));
     // hotend_cooling_rate / hotend_heating_rate: gcode uses [filament_map[x]-1] (extruder_id), no remap needed
@@ -12802,6 +14436,7 @@ std::string GCode::set_extruder(unsigned int new_filament_id, double print_z, bo
         gcode += set_filament_pressure_advance(new_filament_id,
             imex_pem_tool_for((int) new_filament_id, m_imex_parallel_mode, m_config.physical_extruder_map));
 
+<<<<<<< snaporca-int
         // Same suppression as the long multi-extruder path: at print-start in IMEX
         // parallel modes the user's mode_gcode + machine_start_gcode is responsible
         // for tool selection, so the slicer's bare T<n> would be a duplicate. Mid-
@@ -12811,6 +14446,10 @@ std::string GCode::set_extruder(unsigned int new_filament_id, double print_z, bo
         const std::string toolchange_command = m_writer.toolchange(new_filament_id, new_extruder_id);
         if (!imex_suppresses_bare_toolchange(m_imex_parallel_mode, m_toolchange_count))
             gcode += toolchange_command;
+=======
+        gcode += m_writer.toolchange(new_filament_id, new_extruder_id);
+        m_writer.set_process_slot(process_slot_of((int)new_filament_id));
+>>>>>>> lixnix/main
         if (Extruder *fil = m_writer.filament())
             fil->set_config_index((int)get_filament_config_index((int)fil->id()));
         return gcode;
@@ -12972,7 +14611,8 @@ std::string GCode::set_extruder(unsigned int new_filament_id, double print_z, bo
     new_filament_e_feedrate = new_filament_e_feedrate == 0 ? 100 : new_filament_e_feedrate;
 
     // set volumetric speed of outer wall ,ignore per obejct,just use default setting
-    float outer_wall_volumetric_speed = get_outer_wall_volumetric_speed(m_config, *m_print, new_filament_id, (int)new_fi, get_extruder_id(new_filament_id));
+    float outer_wall_volumetric_speed = get_outer_wall_volumetric_speed(m_config, *m_print, new_filament_id, (int)new_fi, get_extruder_id(new_filament_id),
+                                                                        (int)process_slot_of((int)new_filament_id));
     float         wipe_avoid_pos_x            = 110.f;
     // Logical nozzle grouping (null on paths that don't populate it) + null-safe nozzle ids.
     auto group_result   = m_print->get_layered_nozzle_group_result();
@@ -13106,6 +14746,11 @@ std::string GCode::set_extruder(unsigned int new_filament_id, double print_z, bo
         dyn_config.set_key_value(key_value, new ConfigOptionFloat(0.f));
     }
 
+    // Wipe tower entry of the upcoming toolchange, read by the Snapmaker Artisan (A400)
+    // change_filament_gcode as next_wipe_x / next_wipe_y.
+    dyn_config.set_key_value("next_wipe_x", new ConfigOptionFloat(m_next_wipe_x));
+    dyn_config.set_key_value("next_wipe_y", new ConfigOptionFloat(m_next_wipe_y));
+
     // Process the custom change_filament_gcode.
     std::string change_filament_gcode = m_config.change_filament_gcode.value;
 
@@ -13147,6 +14792,7 @@ std::string GCode::set_extruder(unsigned int new_filament_id, double print_z, bo
     //BBS: don't add T[next extruder] if there is no T cmd on filament change
      //We inform the writer about what is happening, but we may not use the resulting gcode.
     std::string toolchange_command = m_writer.toolchange(new_filament_id, next_nozzle_id);
+    m_writer.set_process_slot(process_slot_of((int)new_filament_id));
     if (Extruder *fil = m_writer.filament())
         fil->set_config_index((int)get_filament_config_index((int)fil->id()));
     // See imex_suppresses_bare_toolchange() — only suppress the print-start initial
@@ -13259,7 +14905,8 @@ std::string GCode::set_filament_pressure_advance(unsigned int filament_id, int t
     return m_writer.set_pressure_advance(m_config.pressure_advance.get_at(fi_flow), tool);
 }
 
-inline std::string polygon_to_string(const Polygon &polygon, Print *print, bool is_print_space = false) {
+inline std::string polygon_to_string(const Polygon& polygon, Print* print, bool is_print_space = false)
+{
     std::ostringstream gcode;
     gcode << "[";
     for (const Point &p : polygon.points) {

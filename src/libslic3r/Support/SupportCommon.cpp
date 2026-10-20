@@ -88,13 +88,19 @@ std::pair<SupportGeneratorLayersPtr, SupportGeneratorLayersPtr> generate_interfa
         // Contacts printed separately consume one requested interface layer. Organic
         // bottom contacts are projection seeds and are not printed separately.
         const bool organic_tree = support_params.support_style == smsTreeOrganic;
-        const size_t num_top_interface_layers         = support_params.has_top_contacts ?
+        const bool istree       = is_tree(config.support_type);
+        // Tree supports print their top base interface layers within the requested interface layers; normal support
+        // prints them as transition layers below the requested interface layers.
+        const size_t num_top_interface_layers_cfg     = support_params.has_top_contacts ?
                                                         support_params.num_top_interface_layers - 1 : 0;
         const size_t num_bottom_interface_layers      = support_params.has_bottom_contacts ?
                                                         support_params.num_bottom_interface_layers - (organic_tree ? 0 : 1) : 0;
-        const size_t num_top_base_interface_layers    = std::min(support_params.num_top_base_interface_layers,    num_top_interface_layers);
+        const size_t num_top_base_interface_layers    = istree ?
+                                                        std::min(support_params.num_top_base_interface_layers, num_top_interface_layers_cfg) :
+                                                        support_params.num_top_base_interface_layers;
         const size_t num_bottom_base_interface_layers = std::min(support_params.num_bottom_base_interface_layers, num_bottom_interface_layers);
-        const size_t num_top_interface_layers_only    = num_top_interface_layers    - num_top_base_interface_layers;
+        const size_t num_top_interface_layers_only    = istree ? num_top_interface_layers_cfg - num_top_base_interface_layers : num_top_interface_layers_cfg;
+        const size_t num_top_interface_layers         = num_top_interface_layers_only + num_top_base_interface_layers;
         const size_t num_bottom_interface_layers_only = num_bottom_interface_layers - num_bottom_base_interface_layers;
 
         interface_layers.assign(intermediate_layers.size(), nullptr);
@@ -153,7 +159,6 @@ std::pair<SupportGeneratorLayersPtr, SupportGeneratorLayersPtr> generate_interfa
             }
             return nullptr;
         };
-        const bool istree = is_tree(config.support_type);
         tbb::parallel_for(tbb::blocked_range<int>(0, int(intermediate_layers.size())),
             [&bottom_contacts, &top_contacts, &top_interface_layers, &top_base_interface_layers, &intermediate_layers, &insert_layer, &support_params,
              num_top_interface_layers, num_bottom_interface_layers, num_top_base_interface_layers, num_bottom_base_interface_layers,
@@ -271,17 +276,19 @@ std::pair<SupportGeneratorLayersPtr, SupportGeneratorLayersPtr> generate_interfa
                 }
             });
 
-        if (support_params.num_top_base_interface_layers > 1 && !istree)
-            tbb::parallel_for(tbb::blocked_range<int>(1, int(base_interface_layers.size())),
-                              [&base_interface_layers, &top_contacts, &support_params, &intermediate_layers](const tbb::blocked_range<int> &range) {
+        // With two transition layers below the interface of normal support, the upper one is marked, so that each
+        // transition layer runs perpendicular to its neighbour: the interface above or the base below.
+        if (num_top_base_interface_layers > 1 && !istree && !base_interface_layers.empty())
+            tbb::parallel_for(tbb::blocked_range<int>(0, int(base_interface_layers.size())),
+                              [&base_interface_layers, &top_contacts, &intermediate_layers, num_top_interface_layers_only](const tbb::blocked_range<int> &range) {
                                   for (int layer_id = range.begin(); layer_id < range.end(); ++layer_id) {
-                                      auto &base_interface_layer = base_interface_layers[layer_id];
-                                      if (!base_interface_layer) return;
-
-                                      for (const auto &contact : top_contacts) {
-                                          if (is_approx(contact->bottom_z,
-                                                        intermediate_layers[std::min(layer_id - 1 + support_params.num_top_interface_layers, intermediate_layers.size() - 1)]
-                                                            ->print_z, 0.01) &&
+                                      SupportGeneratorLayer *base_interface_layer = base_interface_layers[layer_id];
+                                      if (base_interface_layer == nullptr)
+                                          continue;
+                                      const coordf_t contact_bottom_z =
+                                          intermediate_layers[std::min(size_t(layer_id) + num_top_interface_layers_only, intermediate_layers.size() - 1)]->print_z;
+                                      for (const SupportGeneratorLayer *contact : top_contacts) {
+                                          if (is_approx(contact->bottom_z, contact_bottom_z, 0.01) &&
                                               overlaps(base_interface_layer->polygons, contact->polygons)) {
                                               base_interface_layer->up = true;
                                               break;
@@ -365,6 +372,7 @@ SupportGeneratorLayersPtr generate_raft_base(
 
     // How much to inflate the support columns to be stable. This also applies to the 1st layer, if no raft layers are to be printed.
     const float inflate_factor_fine      = float(scale_((slicing_params.raft_layers() > 1) ? 0.5 : EPSILON));
+<<<<<<< snaporca-int
     // On a belt the first support layer is the leading tip of the support, a sliver
     // where the belt crosses the layer, not a flange on a flat bed: inflating it
     // puts lines in the air ahead of the belt crossing (and into the belt behind
@@ -376,6 +384,11 @@ SupportGeneratorLayersPtr generate_raft_base(
         initial_inflation = 2.f;
     const float inflate_factor_1st_layer = belt_floor_active ? 0.f :
         std::max(0.f, float(scale_(initial_inflation)) - inflate_factor_fine);
+=======
+    // raft_first_layer_expansion -1 (auto) expands by 2 mm.
+    const float first_layer_expansion    = object.config().raft_first_layer_expansion.value < 0. ? 2.f : float(object.config().raft_first_layer_expansion.value);
+    const float inflate_factor_1st_layer = std::max(0.f, float(scale_(first_layer_expansion)) - inflate_factor_fine);
+>>>>>>> lixnix/main
     SupportGeneratorLayer       *contacts         = top_contacts         .empty() ? nullptr : top_contacts         .front();
     SupportGeneratorLayer       *interfaces       = interface_layers     .empty() ? nullptr : interface_layers     .front();
     SupportGeneratorLayer       *base_interfaces  = base_interface_layers.empty() ? nullptr : base_interface_layers.front();
@@ -1486,11 +1499,6 @@ void generate_support_toolpaths(
     if (config.support_base_pattern == smpRectilinearGrid)
         angles.push_back(support_params.interface_angle);
 
-    std::vector<float> interface_angles;
-    if (config.support_interface_pattern == smipRectilinearInterlaced || config.support_interface_pattern == smipAuto)
-        interface_angles.push_back(support_params.base_angle);
-    interface_angles.push_back(support_params.interface_angle);
-
     BoundingBox bbox_object(Point(-scale_(1.), -scale_(1.0)), Point(scale_(1.), scale_(1.)));
 
 //    const coordf_t link_max_length_factor = 3.;
@@ -1612,7 +1620,7 @@ void generate_support_toolpaths(
 
     tbb::parallel_for(tbb::blocked_range<size_t>(n_raft_layers, support_layers.size()),
         [&config, &slicing_params, &support_params, &support_layers, &bottom_contacts, &top_contacts, &intermediate_layers, &interface_layers, &base_interface_layers, &layer_caches, &loop_interface_processor,
-            &bbox_object, &angles, &interface_angles, n_raft_layers, link_max_length_factor]
+            &bbox_object, &angles, n_raft_layers, link_max_length_factor]
             (const tbb::blocked_range<size_t>& range) {
         // Indices of the 1st layer in their respective container at the support layer height.
         size_t idx_layer_bottom_contact   = size_t(-1);
@@ -1679,6 +1687,7 @@ void generate_support_toolpaths(
                 base_interface_layer.layer = base_interface_layers[idx_layer_base_interface];
             if (idx_layer_intermediate < intermediate_layers.size() && intermediate_layers[idx_layer_intermediate]->print_z < support_layer.print_z + EPSILON)
                 base_layer.layer = intermediate_layers[idx_layer_intermediate];
+
             // This layer is a raft contact layer. Any contact polygons at this layer are raft contacts.
             bool raft_layer = slicing_params.interface_raft_layers && top_contact_layer.layer && is_approx(top_contact_layer.layer->print_z, slicing_params.raft_contact_top_z);
             // ORCA: Organic tree uses projected contacts to build the interface stack; avoid extra bottom-contact extrusion.
@@ -1702,7 +1711,6 @@ void generate_support_toolpaths(
                 }
 
                 loop_interface_processor.generate(top_contact_layer, support_params.support_material_interface_flow);
-
                 // If no loops are allowed, we treat the contact layer exactly as a generic interface layer.
                 // Merge interface_layer into top_contact_layer, as the top_contact_layer is not synchronized and therefore it will be used
                 // to trim other layers.
@@ -1806,22 +1814,14 @@ void generate_support_toolpaths(
                     filler->link_max_length = coord_t(scale_(filler->spacing * link_max_length_factor / density));
                     ExPolygons interface_areas = union_safety_offset_ex(layer_ex.polygons_to_extrude());
 
-                    // Snapmaker: Generate perimeter loop before interface infill for better surface connection.
-                    // Applies to true interface layers (not InterfaceAsBase or raft contact).
+                    // Interface layers (not printed as base, not raft contacts) get a perimeter before their infill, which
+                    // connects the interface surface better. Closed paths, not loops: the overlap modulation splits paths only.
                     if (!interface_as_base && !raft_contact && config.support_transition_perimeter.value) {
                         ExPolygons perimeter_area = offset_ex(interface_areas, -0.5f * float(interface_flow.scaled_spacing()), jtSquare);
-                        Polygons   perimeter_loops;
                         for (const ExPolygon &expoly : perimeter_area)
-                            polygons_append(perimeter_loops, to_polygons(expoly));
-                        if (!perimeter_loops.empty()) {
-                            extrusion_entities_append_loops(
-                                layer_ex.extrusions,
-                                std::move(perimeter_loops),
-                                ExtrusionRole::erSupportMaterialInterface,
-                                float(interface_flow.mm3_per_mm()),
-                                float(interface_flow.width()),
-                                float(interface_flow.height()));
-                        }
+                            extrusion_entities_append_paths(layer_ex.extrusions, draw_perimeters(expoly, 0.),
+                                                            ExtrusionRole::erSupportMaterialInterface, interface_flow.mm3_per_mm(),
+                                                            interface_flow.width(), interface_flow.height());
                         // Inset the fill area by one line width to leave room for the perimeter.
                         interface_areas = offset_ex(interface_areas, -float(interface_flow.scaled_width()), jtSquare);
                     }
@@ -1846,15 +1846,17 @@ void generate_support_toolpaths(
             const bool interface_layer_enabled = !interface_layer.empty() &&
                 (interface_layer.layer->layer_type == SupporLayerType::BottomInterface ? bottom_interfaces : top_interfaces);
             extrude_interface(interface_layer,      interface_layer_enabled ? InterfaceLayerType::Interface : InterfaceLayerType::InterfaceAsBase);
-            // Base interface layers under soluble interfaces
+            // Base interface layers are transition layers printed with the support body filament between the interface and the
+            // base; the upper of two runs perpendicular to the interface above, the others to the base below.
             if ( ! base_interface_layer.empty() && ! base_interface_layer.polygons_to_extrude().empty()) {
                 Fill *filler = filler_base_interface.get();
                 //FIXME Bottom interfaces are extruded with the briding flow. Some bridging layers have its height slightly reduced, therefore
                 // the bridging flow does not quite apply. Reduce the flow to area of an ellipse? (A = pi * a * b)
                 assert(! base_interface_layer.layer->bridging);
                 Flow interface_flow = support_params.support_material_flow.with_height(float(base_interface_layer.layer->height));
-                filler->angle           = base_interface_layer.layer->up ? interface_angles[(support_layer_id + 1) % interface_angles.size()] + M_PI_2 :
-                                                                           (angles[support_layer_id == 0 ? 0 : (support_layer_id - 1) % angles.size()] + M_PI_2);
+                filler->angle   = base_interface_layer.layer->up ?
+                    support_params.support_interface_angle(support_layer.interface_id() + 1) + float(M_PI_2) :
+                    angles[support_layer_id == 0 ? 0 : (support_layer_id - 1) % angles.size()] + float(M_PI_2);
                 filler->spacing = support_params.support_material_interface_flow.spacing();
                 filler->link_max_length = coord_t(scale_(filler->spacing * link_max_length_factor / base_interface_density));
                 fill_expolygons_generate_paths(
@@ -1926,11 +1928,7 @@ void generate_support_toolpaths(
                         support_params, sheath, no_sort);
             }
 
-            // Merge base_interface_layers to base_layers to avoid unneccessary retractions
-            if (! base_layer.empty() && ! base_interface_layer.empty() && ! base_layer.polygons_to_extrude().empty() && ! base_interface_layer.polygons_to_extrude().empty() &&
-                base_layer.could_merge(base_interface_layer))
-                base_layer.merge(std::move(base_interface_layer));
-
+            // Base interface layers stay separate from the base: the overlap modulation gives all paths of a layer one role.
             layer_cache.add_nonempty_and_sort();
 
             // Collect the support areas with this print_z into islands, as there is no need

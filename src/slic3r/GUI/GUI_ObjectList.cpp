@@ -3,6 +3,8 @@
 #include "libslic3r/LifecycleEvents.hpp"
 #include "GUI_ObjectList.hpp"
 #include "GUI_Factories.hpp"
+#include "HighFlowNotices.hpp"
+#include "libslic3r/PerHeadProcess.hpp"
 //#include "GUI_ObjectLayers.hpp"
 #include "GUI_App.hpp"
 #include "Shortcuts.hpp"
@@ -28,6 +30,7 @@
 #include "StepMeshDialog.hpp"
 
 
+<<<<<<< snaporca-int
 #include "slic3r/GUI/Event.hpp"
 #include "libslic3r/Config.hpp"
 #include <string>
@@ -61,6 +64,9 @@
 #include "slic3r/GUI/GUI_ObjectSettings.hpp"
 #include <cmath>
 #include "slic3r/GUI/GUI_Utils.hpp"
+=======
+#include <algorithm>
+>>>>>>> lixnix/main
 #include <vector>
 #include <unordered_map>
 #include <functional>
@@ -99,9 +105,6 @@
 #include "wx/uiaction.h"
 #include <wx/renderer.h>
 #endif /* __WXMSW__ */
-#ifdef __WXGTK__
-#include <gtk/gtk.h>
-#endif /* __WXGTK__ */
 #include "Gizmos/GLGizmoScale.hpp"
 
 #include "libslic3r/TriangleMeshDeal.hpp"
@@ -211,7 +214,7 @@ ObjectList::ObjectList(wxWindow* parent) :
 
 #ifdef __linux__
     // Temporary fix for incorrect dark mode application regarding list item's text color.
-    // See: https://github.com/OrcaSlicer/OrcaSlicer/issues/2086
+    // See: https://github.com/SoftFever/Snapmaker_Orca/issues/2086
     this->SetForegroundColour(*wxBLACK);
 #endif
 
@@ -411,47 +414,6 @@ void ObjectList::update_min_height()
 }
 
 
-#ifdef __WXGTK__
-// Fix for the "Fit in all view" (Z) shortcut doing nothing while the object
-// list has keyboard focus on Linux/wxGTK.
-//
-// Root cause: wxGTK's wxDataViewCtrl never assigns m_wxwindow to its internal
-// GtkTreeView, so the wx key handler that dispatches wxEVT_CHAR_HOOK (the only
-// entry point of the Z shortcut, bound in MainFrame) is connected to the outer
-// GtkScrolledWindow only. GTK delivers key events to the focused GtkTreeView,
-// whose default handling consumes plain printable keys (type-ahead search)
-// before they could bubble up to the scrolled window, so MainFrame never sees
-// the key press.
-//
-// Workaround: forward unmodified z/Z presses from the tree view as a
-// wxEVT_CHAR_HOOK to the main frame, reusing its full guard chain
-// (ShouldSkipFitCameraShortcut / can_change_view). Inline renaming is
-// unaffected: while a cell editor is open, keys are consumed by the embedded
-// GtkEntry and never reach this handler. The long-term fix belongs in
-// Orca-deps-wxWidgets (connect the wx key handlers to the tree view as well).
-static gboolean objlist_treeview_key_press(GtkWidget* /*widget*/, GdkEventKey* event, ObjectList* /*self*/)
-{
-    // Lock modifiers (MOD2 = NumLock, MOD3 = ScrollLock on X11) must stay OUT of
-    // the mask: they must not suppress the shortcut, matching wx's own
-    // HasAnyModifiers(), which ignores them. MOD5 is AltGr on many layouts —
-    // wxGTK maps it to Ctrl+Alt elsewhere, so it must not pass as "plain".
-    static const guint modifier_mask = GDK_SHIFT_MASK | GDK_CONTROL_MASK | GDK_MOD1_MASK | GDK_MOD5_MASK | GDK_META_MASK | GDK_SUPER_MASK;
-    if (event->type == GDK_KEY_PRESS &&
-        (event->keyval == GDK_KEY_z || event->keyval == GDK_KEY_Z) &&
-        (event->state & modifier_mask) == 0 &&
-        wxGetApp().mainframe != nullptr)
-    {
-        // Same forwarding pattern as the "get_web_shortcut" handler in GUI_App.
-        wxKeyEvent key_event(wxEVT_CHAR_HOOK);
-        key_event.m_keyCode = 'Z';
-        key_event.SetEventObject(wxGetApp().mainframe);
-        wxPostEvent(wxGetApp().mainframe, key_event);
-        return TRUE; // consume the key, also suppressing the tree view type-ahead popup
-    }
-    return FALSE;     // let the tree view keep its normal key behavior
-}
-#endif // __WXGTK__
-
 void ObjectList::create_objects_ctrl()
 {
     // BBS
@@ -523,10 +485,19 @@ void ObjectList::create_objects_ctrl()
         return m_objects_model->GetDefaultExtruderIdx(item);
     });
     bmp_choice_renderer->set_has_default_extruder([this]() {
+<<<<<<< snaporca-int
         // SM_FEATURE: every item can be reset to the default filament
         return true;
         //return m_objects_model->GetVolumeType(GetSelection()) == ModelVolumeType::PARAMETER_MODIFIER ||
         //       m_objects_model->GetItemType(GetSelection()) == itLayer;
+=======
+        // Snapmaker: every filament-selectable item exposes the "default" (0 == inherit / global)
+        // entry - the mixed-filament work relies on objects being able to stay unset.
+        return true;
+        //const wxDataViewItem item = get_filament_context_item();
+        //return m_objects_model->GetVolumeType(item) == ModelVolumeType::PARAMETER_MODIFIER ||
+        //       m_objects_model->GetItemType(item) == itLayer;
+>>>>>>> lixnix/main
     });
     AppendColumn(new wxDataViewColumn(_L("Fila."), bmp_choice_renderer,
         colFilament, m_columns_width[colFilament] * em, wxALIGN_CENTER_HORIZONTAL, 0));
@@ -825,6 +796,12 @@ ModelConfig& ObjectList::get_item_config(const wxDataViewItem& item) const
                             (*m_objects)[obj_idx]->config;
 }
 
+// ORCA: per-object/per-part support and feature filament selectors. They must track filament
+// count changes alongside the "extruder" selector, or a stale id lands on the wrong filament.
+static const char *filament_selector_keys[] = {"outer_wall_filament_id", "inner_wall_filament_id", "sparse_infill_filament_id",
+                                               "internal_solid_filament_id", "top_surface_filament_id", "bottom_surface_filament_id",
+                                               "support_filament", "support_interface_filament"};
+
 void ObjectList::update_filament_values_for_items(const size_t filaments_count)
 {
     for (size_t i = 0; i < m_objects->size(); ++i)
@@ -843,10 +820,14 @@ void ObjectList::update_filament_values_for_items(const size_t filaments_count)
         }
         m_objects_model->SetExtruder(extruder, item);
 
+<<<<<<< snaporca-int
         static const char *keys[] = {"outer_wall_filament_id", "inner_wall_filament_id", "sparse_infill_filament_id",
                                      "internal_solid_filament_id", "top_surface_filament_id", "bottom_surface_filament_id",
                                      "support_filament", "support_interface_filament"};
         for (auto key : keys)
+=======
+        for (auto key : filament_selector_keys)
+>>>>>>> lixnix/main
             if (object->config.has(key) && object->config.opt_int(key) > filaments_count)
                 object->config.erase(key);
 
@@ -868,7 +849,7 @@ void ObjectList::update_filament_values_for_items(const size_t filaments_count)
 
                 m_objects_model->SetExtruder(extruder, item);
 
-                for (auto key : keys)
+                for (auto key : filament_selector_keys)
                     if (object->volumes[id]->config.has(key) && object->volumes[id]->config.opt_int(key) > filaments_count)
                         object->volumes[id]->config.erase(key);
             }
@@ -879,6 +860,12 @@ void ObjectList::update_filament_values_for_items(const size_t filaments_count)
     wxGetApp().plater()->update();
 }
 
+<<<<<<< snaporca-int
+=======
+// NOTE: the "when delete filament" remapping helpers live further down in this file
+// (the Snapmaker variants that also remap the per-feature *_filament_id selectors and the
+// height-range configs); the duplicate Orca copy that used to sit here was dropped.
+>>>>>>> lixnix/main
 
 void ObjectList::update_plate_values_for_items()
 {
@@ -1045,10 +1032,14 @@ void ObjectList::update_filament_values_for_items_when_delete_filament(const siz
         }
         m_objects_model->SetExtruder(extruder, item);
 
+<<<<<<< snaporca-int
         static const char* keys[] = {"outer_wall_filament_id", "inner_wall_filament_id", "sparse_infill_filament_id",
                                      "internal_solid_filament_id", "top_surface_filament_id", "bottom_surface_filament_id",
                                      "support_filament", "support_interface_filament"};
         for (auto key : keys) {
+=======
+        for (auto key : filament_selector_keys) {
+>>>>>>> lixnix/main
             if (object->config.has(key)) {
                 if (object->config.opt_int(key) == filament_id + 1)
                     object->config.erase(key);
@@ -1066,7 +1057,7 @@ void ObjectList::update_filament_values_for_items_when_delete_filament(const siz
             if (!item)
                 continue;
 
-            for (auto key : keys) {
+            for (auto key : filament_selector_keys) {
                 if (object->volumes[id]->config.has(key)) {
                     if (object->volumes[id]->config.opt_int(key) == filament_id + 1)
                         object->volumes[id]->config.erase(key);
@@ -1123,6 +1114,16 @@ void ObjectList::update_filament_values_for_items_when_delete_filament(const siz
                         int new_extruder      = layer_filament_id > filament_id ? layer_filament_id - 1 : layer_filament_id;
                         extruder              = wxString::Format("%d", new_extruder);
                         layer_range_item.second.set("extruder", new_extruder);
+                    }
+                    // Height ranges carry the per-feature selectors too (the engine reads them from
+                    // layer_config_ranges); remap them like the object / volume configs above.
+                    for (auto key : filament_selector_keys) {
+                        if (layer_range_item.second.has(key)) {
+                            if (layer_range_item.second.option(key)->getInt() == int(filament_id) + 1)
+                                layer_range_item.second.erase(key);
+                            else if (layer_range_item.second.option(key)->getInt() > int(filament_id))
+                                layer_range_item.second.set(key, layer_range_item.second.option(key)->getInt() - 1);
+                        }
                     }
                     m_objects_model->SetExtruder(extruder, layer_item);
                 }
@@ -2260,6 +2261,57 @@ void ObjectList::OnDrop(wxDataViewEvent &event)
     wxGetApp().plater()->set_current_canvas_as_dirty();
 }
 
+// Snapmaker Orca: seed of a line width added to an object, part or layer range: the one value the
+// item prints now (PerHeadProcess::override_seed); `differing_heads` gets heads printing another.
+// nullptr for a non-width key, no object or a missing key: the caller clones the preset's option.
+static ConfigOption *width_override_seed(const ModelObject *object, const ModelConfig &item_config, const std::string &opt_key, std::vector<size_t> &differing_heads)
+{
+    differing_heads.clear();
+    if (object == nullptr || PerHeadProcess::flow_independent_keys().count(opt_key) == 0)
+        return nullptr;
+    const PresetBundle &bundle = *wxGetApp().preset_bundle;
+    const auto int_of = [](const ModelConfig &config, const std::string &key) {
+        const auto *option = dynamic_cast<const ConfigOptionInt *>(config.option(key));
+        return option == nullptr ? 0 : option->value;
+    };
+    std::vector<int> filaments;
+    int extruder = int_of(item_config, "extruder");
+    if (extruder <= 0)
+        extruder = int_of(object->config, "extruder");
+    filaments.emplace_back(extruder > 0 ? extruder : 1);
+    for (const char *key : filament_selector_keys) {
+        int filament = int_of(item_config, key);
+        if (filament <= 0)
+            filament = int_of(object->config, key);
+        if (filament > 0)
+            filaments.emplace_back(filament);
+    }
+    if (object->is_mm_painted())
+        for (size_t filament = 1; filament <= bundle.filament_presets.size(); ++filament)
+            filaments.emplace_back(int(filament));
+    const std::string seed = PerHeadProcess::override_seed(bundle, opt_key, filaments, &differing_heads);
+    if (seed.empty())
+        return nullptr;
+    auto *option = new ConfigOptionFloatsOrPercentsNullable();
+    if (!option->deserialize(seed)) {
+        delete option;
+        return nullptr;
+    }
+    return option;
+}
+
+// The notice of width_override_seed, once per add: the tool heads collected over every key, each once.
+static void notify_width_override_heads(std::vector<size_t> differing_heads)
+{
+    if (differing_heads.empty())
+        return;
+    std::sort(differing_heads.begin(), differing_heads.end());
+    differing_heads.erase(std::unique(differing_heads.begin(), differing_heads.end()), differing_heads.end());
+    wxGetApp().plater()->get_notification_manager()->push_notification(NotificationType::CustomNotification,
+                                                                       NotificationManager::NotificationLevel::RegularNotificationLevel,
+                                                                       into_u8(HighFlowNotices::object_width_notice(differing_heads)));
+}
+
 void ObjectList::add_category_to_settings_from_selection(const std::vector< std::pair<std::string, bool> >& category_options, wxDataViewItem item)
 {
     if (category_options.empty())
@@ -2272,6 +2324,9 @@ void ObjectList::add_category_to_settings_from_selection(const std::vector< std:
 
     assert(m_config);
     auto opt_keys = m_config->keys();
+    const int          obj_idx = m_objects_model->GetObjectIdByItem(item);
+    const ModelObject *object  = obj_idx >= 0 && size_t(obj_idx) < m_objects->size() ? (*m_objects)[size_t(obj_idx)] : nullptr;
+    std::vector<size_t> differing_heads, heads_of_key;
 
     const std::string snapshot_text =  item_type & itLayer   ? _u8L("Layer setting added") :
                                     item_type & itVolume  ? _u8L("Part setting added") :
@@ -2294,9 +2349,12 @@ void ObjectList::add_category_to_settings_from_selection(const std::vector< std:
                 // get it from default config values
                 option = DynamicPrintConfig::new_from_defaults_keys({ opt_key })->option(opt_key);
             }
-            m_config->set_key_value(opt_key, option->clone());
+            ConfigOption *seed = printer_technology() == ptFFF ? width_override_seed(object, *m_config, opt_key, heads_of_key) : nullptr;
+            differing_heads.insert(differing_heads.end(), heads_of_key.begin(), heads_of_key.end());
+            m_config->set_key_value(opt_key, seed != nullptr ? seed : option->clone());
         }
     }
+    notify_width_override_heads(differing_heads);
 
     // Add settings item for object/sub-object and show them
     if (!(item_type & (itPlate | itObject | itVolume | itLayer)))
@@ -2320,6 +2378,9 @@ void ObjectList::add_category_to_settings_from_frequent(const std::vector<std::s
     take_snapshot(snapshot_text);
 
     const DynamicPrintConfig& from_config = wxGetApp().preset_bundle->prints.get_edited_preset().config;
+    const int          obj_idx = m_objects_model->GetObjectIdByItem(item);
+    const ModelObject *object  = obj_idx >= 0 && size_t(obj_idx) < m_objects->size() ? (*m_objects)[size_t(obj_idx)] : nullptr;
+    std::vector<size_t> differing_heads, heads_of_key;
     for (auto& opt_key : options)
     {
         if (find(opt_keys.begin(), opt_keys.end(), opt_key) == opt_keys.end()) {
@@ -2329,9 +2390,12 @@ void ObjectList::add_category_to_settings_from_frequent(const std::vector<std::s
                 // get it from default config values
                 option = DynamicPrintConfig::new_from_defaults_keys({ opt_key })->option(opt_key);
             }
-            m_config->set_key_value(opt_key, option->clone());
+            ConfigOption *seed = printer_technology() == ptFFF ? width_override_seed(object, *m_config, opt_key, heads_of_key) : nullptr;
+            differing_heads.insert(differing_heads.end(), heads_of_key.begin(), heads_of_key.end());
+            m_config->set_key_value(opt_key, seed != nullptr ? seed : option->clone());
         }
     }
+    notify_width_override_heads(differing_heads);
 
     // Add settings item for object/sub-object and show them
     if (!(item_type & (itPlate | itObject | itVolume | itLayer)))
@@ -3324,6 +3388,8 @@ void ObjectList::merge(bool to_multipart_object)
                     auto opt = object->config.option("extruder");
                     if (opt) { new_volume->config.set_key_value("extruder", new ConfigOptionInt(opt->getInt())); }
                 }
+                // ORCA: mmu_segmentation_facets are already carried over by add_volume(*volume)
+                // above; the extra std::move-assign used to strip them off the source volume.
             }
             new_object->sort_volumes(true);
 
@@ -6998,8 +7064,16 @@ void ObjectList::set_extruder_for_selected_items(const int extruder)
                 config.set("extruder", new_extruder);
             else
                 config.set_key_value("extruder", new ConfigOptionInt(new_extruder));
+
+            // config.set("sparse_infill_filament_id", new_extruder);
+            // config.set("internal_solid_filament_id", new_extruder);
+            // config.set("outer_wall_filament_id", new_extruder);
         }
 
+<<<<<<< snaporca-int
+=======
+        // Snapmaker: refresh the selection so the filament column repaints with the new value.
+>>>>>>> lixnix/main
         wxGetApp().obj_list()->update_selections();
 
         // for object, clear all its part volume's extruder config

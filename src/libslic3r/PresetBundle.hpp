@@ -6,15 +6,25 @@
 #include "PresetCacheFormat.hpp"
 #include "AppConfig.hpp"
 #include "FilamentColorLibrary.hpp"
+<<<<<<< snaporca-int
 #include "PrintConfig.hpp"
+=======
+>>>>>>> lixnix/main
 #include "PublishSettings.hpp"
 #include "Semver.hpp"
 #include "enum_bitmask.hpp"
 #include "MixedFilament.hpp"
+#include "NozzleFilamentPresets.hpp"
+#include "PerHeadProcess.hpp"
+#include "SnapmakerFlowCompat.hpp"
 
+<<<<<<< snaporca-int
 #include <climits>
 #include <functional>
 #include <cstddef>
+=======
+#include <functional>
+>>>>>>> lixnix/main
 #include <memory>
 #include <map>
 #include <set>
@@ -54,6 +64,9 @@ struct ConnectMachineInfo
     std::string filament_info {""};
     std::string filament_type {""};
     std::string nozzle_info {""};
+    // Flow type the printer reports for the nozzle of this slot, in the wire spelling of
+    // SSWCPProtocol ("standard" / "high_flow"); empty when the printer reports none.
+    // Upstream #794 784cfd18b1.
     std::string nozzle_volume_type {""};
     std::string color_info{""};
     std::vector<std::string> multiColors;
@@ -446,6 +459,7 @@ public:
     // Export selections (current print, current filaments, current printer) into config.ini
     void            export_selections(AppConfig &config);
 
+<<<<<<< snaporca-int
     // While one lives, export_selections() writes nothing, so a selection only shown for a while (the
     // settings of a G-code being previewed) is not remembered as the user's. It also covers the
     // exports the GUI makes on its own while refreshing.
@@ -461,13 +475,22 @@ public:
         PresetBundle &m_bundle;
     };
 
+=======
+    // BBS
+>>>>>>> lixnix/main
     // n is the total slot count, and growth appends at the raw tail - which is where the mixed
     // slots live. A caller adding physical filaments has to add num_mixed_filaments() on top and
     // then move the new slots ahead of the mixed tail, as Sidebar::add_custom_filament does.
     void            set_num_filaments(unsigned int n, std::string new_col = "");
+<<<<<<< snaporca-int
     // Snapmaker: new slots take the listed colours.
     void            set_num_filaments(unsigned int n, std::vector<std::string> new_colors);
     void         update_num_filaments(unsigned int to_del_flament_id);
+=======
+    void            set_num_filaments(unsigned int n, std::vector<std::string> new_colors);
+    void            update_num_filaments(unsigned int to_del_filament_id);
+    unsigned int sync_ams_list(unsigned int & unknowns);
+>>>>>>> lixnix/main
 
     void get_ams_cobox_infos(AMSComboInfo &combox_info);
     unsigned int sync_ams_list(std::vector<std::pair<DynamicPrintConfig *,std::string>> &unknowns, bool use_map, std::map<int, AMSMapInfo> &maps, bool enable_append, MergeFilamentInfo &merge_info, bool color_only = false);
@@ -517,7 +540,11 @@ public:
                                                                                                NozzleVolumeType   nozzle_volume_type);
     Preset *                    get_similar_printer_preset(std::string printer_model, std::string printer_variant);
 
+<<<<<<< snaporca-int
     
+=======
+
+>>>>>>> lixnix/main
     PresetCollection            prints;
     PresetCollection            sla_prints;
     PresetCollection            filaments;
@@ -529,6 +556,44 @@ public:
     // Filament preset names for a multi-extruder or multi-material print.
     // extruders.size() should be the same as printers.get_edited_preset().config.nozzle_diameter.size()
     std::vector<std::string>    filament_presets;
+    // Snapmaker Orca: the filament presets follow the nozzle size of the tool head that prints them
+    // (libslic3r/NozzleFilamentPresets.hpp). Off unless the application turns it on from the
+    // preference "filament_follows_nozzle"; the command line and the tests leave or set it.
+    bool                        nozzle_filament_enabled { false };
+    // Snapmaker Orca: preference "process_follows_nozzle" (PerHeadProcess.hpp), off unless the application
+    // sets it. A preset chosen for a head applies either way (gate: PerHeadProcess::active).
+    bool                        process_follows_nozzle { false };
+    // Session memory of the rule, never stored: (family, machine preset name) -> the user preset
+    // a slot left because of its size (NozzleFilament::remember_user_preset()). target_for_slot()
+    // prefers it over the system version while it exists, is installed and fits.
+    std::map<std::pair<std::string, std::string>, std::string> nozzle_filament_memory;
+    // Per slot compatibility: Preset::is_compatible, unless State::mixed and the slot has a tool
+    // head; then "fits" rates against that head's machine preset and "selectable" also admits user
+    // presets and system presets without a version for its size. A State lasts until slots change.
+    bool                        filament_slot_fits(const Preset &preset, size_t slot) const;
+    bool                        filament_slot_fits(const NozzleFilament::State &state, const Preset &preset, size_t slot) const;
+    bool                        filament_slot_selectable(const Preset &preset, size_t slot) const;
+    bool                        filament_slot_selectable(const NozzleFilament::State &state, const Preset &preset, size_t slot) const;
+    // The first visible preset that fits the slot, the best by `preference` (the match quality
+    // PresetCollection::first_compatible_idx takes; none: the first). When no visible preset fits
+    // the tool head, the first compatible one as mainline picks it.
+    const Preset&               first_slot_fit(size_t slot, const std::function<int(const Preset&)> &preference = {}) const;
+    // What the slots should hold, one entry per slot whose tool head is among `heads` (empty: every
+    // slot, those without a tool head included). Changes nothing. Empty when the rule is off.
+    std::vector<NozzleFilament::SlotTarget> nozzle_filament_targets(const std::vector<size_t> &heads = {}) const;
+    // Writes the targets into the slots that still hold `from`; returns the number of changed slots.
+    // A hidden target becomes visible and, with `app_config`, is entered in its filament section.
+    size_t                      apply_nozzle_filament_targets(const std::vector<NozzleFilament::SlotTarget> &targets, AppConfig *app_config = nullptr);
+    // The per slot form of the loop that ends update_selections() and load_selections(); false when
+    // tool heads of different nozzle sizes are not in use and mainline's loop has to run.
+    bool                        repair_filament_slots_per_head();
+    // The preset a broken filament slot takes when all extruders share one nozzle size: the edited
+    // filament (update_compatible()'s pick) if installed and compatible, else the first compatible one.
+    std::string                 filament_slot_fallback_name() const;
+    // Rank of a filament as default material of the edited Snapmaker printer: in the model's
+    // "default_materials" -> 3, Generic PLA -> 2, Snapmaker PLA -> 1, else 0 (0 for other vendors).
+    // Last tie-breaker of update_compatible(), first_slot_fit() and filament_slot_fallback_name().
+    int                         default_material_rank(const Preset &filament) const;
     // BBS: ams
     std::map<int, DynamicPrintConfig> filament_ams_list;
     std::vector<std::vector<std::string>> ams_multi_color_filment;
@@ -541,6 +606,10 @@ public:
     std::vector<ConnectMachineInfo>                    m_connect_machine_info_list;
 
     std::vector<std::map<int, int>> extruder_ams_counts;
+    // What reading the last project changed about the flow types of its tool heads and filaments
+    // (a project of Snapmaker Orca 2.4, see normalize_snapmaker_flow_config()). Empty for every
+    // other project. Filled by load_config_file_config().
+    FlowImportReport last_flow_import_report;
 
     // Calibrate
     Preset const * calibrate_printer = nullptr;
@@ -581,6 +650,12 @@ public:
     DynamicPrintConfig          full_config(bool apply_extruder = true, std::optional<std::vector<int>>filament_maps = std::nullopt, std::optional<std::vector<int>> filament_volume_maps = std::nullopt) const;
     // full_config() with the some "useless" config removed.
     DynamicPrintConfig          full_config_secure(std::optional<std::vector<int>>filament_maps = std::nullopt) const;
+    // Snapmaker Orca: the config every GUI Print::apply site uses; equals full_config(apply_extruder, maps...)
+    // unless PerHeadProcess::active and a head prints with another process preset, then the process columns
+    // are composed per head on the unexpanded config. `sources` receives what each head prints with.
+    DynamicPrintConfig          full_config_for_print(bool apply_extruder = true, std::optional<std::vector<int>> filament_maps = std::nullopt,
+                                                      std::optional<std::vector<int>> filament_volume_maps = std::nullopt,
+                                                      std::vector<PerHeadProcess::Source> *sources = nullptr) const;
 
     // Default per-filament nozzle-volume types: each filament inherits the volume type of the
     // extruder it maps to (1-based f_maps), Standard when unknown.
@@ -673,6 +748,7 @@ public:
     // update size and content of filament_presets.
     void                        update_multi_material_filament_presets(size_t to_delete_filament_id = size_t(-1),
                                                                        size_t old_num_filaments = size_t(-1));
+<<<<<<< snaporca-int
     // Rebuild old->new virtual filament mapping after mixed-row enable/delete
     // changes when the physical filament count itself did not change.
     void                        update_mixed_filament_id_remap(const std::vector<MixedFilament> &old_mixed,
@@ -782,6 +858,9 @@ public:
         return out;
     }
     // Upstream mixed-color filament slots (filament_is_mixed): virtual slots realized from 2-3 physical filaments.
+=======
+    // Mixed-color filament slots: virtual slots realized from 2-3 physical filaments.
+>>>>>>> lixnix/main
     bool                        is_mixed_filament(size_t idx) const;
     std::vector<size_t>         physical_filament_config_indices() const;
     // How many slots are mixed. They sit at the tail of the filament list and have no nozzle of
@@ -791,6 +870,115 @@ public:
     size_t                      num_physical_filaments() const;
 
     void                        on_extruders_count_changed(int extruder_count);
+
+    // Rebuild old->new virtual filament mapping after mixed-row enable/delete
+    // changes when the physical filament count itself did not change.
+    void                        update_mixed_filament_id_remap(const std::vector<MixedFilament> &old_mixed,
+                                                               size_t old_num_filaments,
+                                                               size_t new_num_filaments,
+                                                               size_t deleted_mixed_idx = size_t(-1),
+                                                               const std::vector<unsigned int> &kept_physical_ids = {});
+    // Mapping generated during the latest filament count change.
+    // Index is old 1-based filament ID, value is new 1-based filament ID (0 = removed).
+    const std::vector<unsigned int>& last_filament_id_remap() const { return m_last_filament_id_remap; }
+    
+    // Build custom remap for mixed filament merge operations
+    // This is used when merging a mixed filament into another filament (physical or mixed)
+    void build_merge_filament_remap(size_t from_id, size_t to_id, size_t total_filaments)
+    {
+        m_last_filament_id_remap.assign(total_filaments + 1, 0);
+        for (size_t i = 0; i <= total_filaments; ++i) {
+            if (i == from_id + 1) {
+                // When from_id < to_id, the target also shifts down by 1 after
+                // source removal, so its new 1-based ID is `to_id` (not to_id+1).
+                if (from_id < to_id)
+                    m_last_filament_id_remap[i] = (unsigned int)(to_id);
+                else
+                    m_last_filament_id_remap[i] = (unsigned int)(to_id + 1);
+            } else if (i > from_id + 1) {
+                m_last_filament_id_remap[i] = (unsigned int)(i - 1);  // Shift down IDs after deleted one
+            } else {
+                m_last_filament_id_remap[i] = (unsigned int)i;  // Keep unchanged
+            }
+        }
+    }
+    
+    // Build custom remap for physical to mixed filament merge operations
+    // This accounts for virtual ID changes when a physical filament is deleted
+    // AND accounts for mixed filaments that depend on the physical filament being deleted
+    // num_physical: number of physical filaments before deletion
+    void build_merge_filament_remap(size_t from_id, size_t to_id, size_t total_filaments, size_t num_physical)
+    {
+        m_last_filament_id_remap.assign(total_filaments + 1, 0);
+        
+        // First, identify which mixed filaments will be deleted (those that depend on from_id)
+        std::set<size_t> deleted_mixed_indices;
+        unsigned int from_1based = (unsigned int)(from_id + 1);
+
+        std::vector<size_t> dependent = mixed_filaments.mixed_filaments_using_physical(from_1based);
+        size_t visible = 0;
+        const auto& mfs_ref = mixed_filaments.mixed_filaments();
+        for (size_t k = 0; k < mfs_ref.size(); ++k) {
+            if (!mfs_ref[k].enabled || mfs_ref[k].deleted) continue;
+            if (std::find(dependent.begin(), dependent.end(), k) != dependent.end())
+                deleted_mixed_indices.insert(num_physical + visible);
+            ++visible;
+        }
+        
+        for (size_t i = 0; i <= total_filaments; ++i) {
+            if (i == from_id + 1) {
+                // Source physical filament maps to target mixed filament
+                // The target's new virtual ID after deletion: new_num_physical + adjusted_mixed_idx
+                size_t target_old_virtual_id = to_id;  // 0-based
+                size_t target_old_mixed_idx = target_old_virtual_id - num_physical;
+                size_t new_num_physical = num_physical - 1;
+                // Subtract deleted mixed filaments that appear before the target
+                size_t deleted_before_target = 0;
+                for (size_t vid : deleted_mixed_indices)
+                    if (vid < target_old_virtual_id) ++deleted_before_target;
+                size_t target_new_virtual_id = new_num_physical + target_old_mixed_idx - deleted_before_target;
+                m_last_filament_id_remap[i] = (unsigned int)(target_new_virtual_id + 1);  // Convert to 1-based
+            } else if (i > from_id + 1 && i <= num_physical) {
+                // Subsequent physical filaments shift down by 1
+                m_last_filament_id_remap[i] = (unsigned int)(i - 1);
+            } else if (i > num_physical) {
+                // Mixed filament indices will change (because num_physical decreases)
+                size_t old_virtual_id = i - 1;
+                size_t old_mixed_idx = old_virtual_id - num_physical;
+                
+                // Check if this mixed filament will be deleted
+                if (deleted_mixed_indices.find(old_virtual_id) != deleted_mixed_indices.end()) {
+                    // This mixed filament will be deleted, map to 0 (invalid)
+                    m_last_filament_id_remap[i] = 0;
+                } else {
+                    // This mixed filament will be kept, calculate its new virtual ID.
+                    // Subtract deleted mixed filaments that appear before this one.
+                    size_t new_num_physical = num_physical - 1;
+                    size_t deleted_before = 0;
+                    for (size_t vid : deleted_mixed_indices)
+                        if (vid < old_virtual_id) ++deleted_before;
+                    size_t new_virtual_id = new_num_physical + old_mixed_idx - deleted_before;
+                    m_last_filament_id_remap[i] = (unsigned int)(new_virtual_id + 1);  // Convert to 1-based
+                }
+            } else {
+                // Physical filaments before source remain unchanged
+                m_last_filament_id_remap[i] = (unsigned int)i;
+            }
+        }
+    }
+    
+    // Set custom remap table directly
+    void set_filament_id_remap(const std::vector<unsigned int>& remap)
+    {
+        m_last_filament_id_remap = remap;
+    }
+    
+    std::vector<unsigned int> consume_last_filament_id_remap()
+    {
+        std::vector<unsigned int> out = std::move(m_last_filament_id_remap);
+        m_last_filament_id_remap.clear();
+        return out;
+    }
 
     // Update the is_compatible flag of all print and filament presets depending on whether they are marked
     // as compatible with the currently selected printer (and print in case of filament presets).
@@ -838,7 +1026,14 @@ public:
     static const char *ORCA_DEFAULT_PRINTER_VARIANT;
     static const char *ORCA_DEFAULT_FILAMENT;
     static const char *ORCA_FILAMENT_LIBRARY;
+    static const char *ORCA_DEFAULT_BUNDLE;
     static const char *ORCA_DEFAULT_FILAMENT_PLACEHOLDER;
+
+    // Snapmaker Orca: the variant the setup wizard activates among the ticked nozzle sizes. SM_BUNDLE:
+    // SM_DEFAULT_PRINTER_VARIANT if ticked; else the first ticked variant in model order (null `model`:
+    // the default size if ticked, else the first ticked name). Empty when nothing is ticked.
+    static std::string wizard_printer_variant(const std::string &bundle_name, const VendorProfile::PrinterModel *model,
+                                              const std::set<std::string> &ticked);
 
 
     static std::array<Preset::Type, 3>  types_list(PrinterTechnology pt) {
@@ -1063,9 +1258,20 @@ private:
 
     //std::pair<PresetsConfigSubstitutions, std::string> load_system_presets(ForwardCompatibilitySubstitutionRule compatibility_rule);
     //BBS: add json related logic
+<<<<<<< snaporca-int
     // Reads each vendor from its preset cache where one covers the profile, as every load does.
     // write_caches = false keeps a read-only load from writing caches into the data directory.
     std::pair<PresetsConfigSubstitutions, std::string> load_system_presets_from_json(ForwardCompatibilitySubstitutionRule compatibility_rule, bool write_caches = true);
+=======
+    std::pair<PresetsConfigSubstitutions, std::string> load_system_presets_from_json(ForwardCompatibilitySubstitutionRule compatibility_rule, bool allow_cache = true);
+    void                        build_filament_id_remap(const std::vector<MixedFilament> &old_mixed,
+                                                        size_t old_num_filaments,
+                                                        size_t new_num_filaments,
+                                                        bool deleting_filament,
+                                                        unsigned int deleted_1based,
+                                                        size_t deleted_mixed_idx = size_t(-1),
+                                                        const std::vector<unsigned int> &kept_physical_ids = {});
+>>>>>>> lixnix/main
     // Update the multicolor information for filaments.
     void update_filament_multi_color();
     void                        build_filament_id_remap(const std::vector<MixedFilament> &old_mixed,
