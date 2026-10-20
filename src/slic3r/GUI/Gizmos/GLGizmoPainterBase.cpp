@@ -1334,6 +1334,10 @@ void TriangleSelectorGUI::update_render_data()
             continue;
 
         int tr_state = int(tr.get_state());
+        // Supports / seam / fuzzy skin deserialize with the default ExtruderMax limit, so a crafted 3MF can
+        // carry a paint state far above the three seed fill buckets. Clamp before indexing.
+        if (tr_state < 0 || tr_state >= int(iva_seed_fills_data.size()) || tr_state >= int(seed_fill_cnt.size()))
+            tr_state = 0;
         GLModel::Geometry &iva = tr.is_selected_by_seed_fill()                   ? iva_seed_fills_data[tr_state] :
                                  tr.get_state() == EnforcerBlockerType::ENFORCER ? iva_enforcers_data :
                                                                                    iva_blockers_data;
