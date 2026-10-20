@@ -534,8 +534,9 @@ TEST_CASE("Acceleration and velocity limit commands print their values in genera
 
     DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
     config.set_key_value("gcode_flavor", new ConfigOptionEnum<GCodeFlavor>(c.flavor));
-    config.set_key_value("accel_to_decel_enable", new ConfigOptionBool(true));
-    config.set_key_value("accel_to_decel_factor", new ConfigOptionPercent(50));
+    // Snapmaker: accel_to_decel_* are per-variant vectors.
+    config.set_key_value("accel_to_decel_enable", new ConfigOptionBools({true}));
+    config.set_key_value("accel_to_decel_factor", new ConfigOptionPercents({50}));
     for (const char *limit : {"machine_max_acceleration_extruding", "machine_max_acceleration_travel", "machine_max_acceleration_x",
                               "machine_max_acceleration_y", "machine_max_jerk_x", "machine_max_jerk_y"}) {
         std::vector<double> &values = config.option<ConfigOptionFloats>(limit)->values;
