@@ -5707,6 +5707,10 @@ void TabFilament::toggle_options()
             "filament_tower_interface_print_temp" }) {
             toggle_line(el, is_snapmaker_u1);
         }
+        // Snapmaker: only the classic Type2 tower read the interface purge volume; the Snapmaker
+        // WipeTower2 that replaces it never does, so the field would have no effect there.
+        const bool uses_wipe_tower_2 = !is_BBL_printer && printer_cfg.opt_enum<WipeTowerType>("wipe_tower_type") == WipeTowerType::Type2;
+        toggle_line("filament_tower_interface_purge_volume", !uses_wipe_tower_2);
 
         if (Line* hot_plate_line = get_line("hot_plate_temp_initial_layer")) {
             hot_plate_line->label = is_snapmaker_u1

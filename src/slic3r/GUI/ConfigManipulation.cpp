@@ -1253,8 +1253,11 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
         && preset_bundle->printers.get_edited_preset().config.has("enable_belt_purge_tower")
         && preset_bundle->printers.get_edited_preset().config.opt_bool("enable_belt_purge_tower");
     toggle_line("belt_purge_tower_width", have_belt_purge_tower);
-    for (auto el : {"prime_tower_width", "prime_tower_brim_width", "prime_tower_skip_points", "wipe_tower_wall_type", "prime_tower_infill_gap","prime_tower_enable_framework", "enable_tower_interface_features"})
+    for (auto el : {"prime_tower_width", "prime_tower_brim_width", "wipe_tower_wall_type", "prime_tower_infill_gap","prime_tower_enable_framework", "enable_tower_interface_features"})
         toggle_line(el, have_prime_tower && !is_belt_printer);
+    // Snapmaker: the Type1 tower cuts its wall openings from prime_tower_skip_points, the Type2
+    // tower (Snapmaker WipeTower2) from wipe_tower_wall_gap. Show only the one the tower reads.
+    toggle_line("prime_tower_skip_points", have_prime_tower && !is_belt_printer && !supports_wipe_tower_2);
 
     toggle_line("enable_tower_interface_cooldown_during_tower",
                 have_prime_tower && !is_belt_printer && config->opt_bool("enable_tower_interface_features"));
@@ -1293,7 +1296,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
     toggle_field("prime_tower_width", have_prime_tower && !have_rib_wall && !is_belt_printer);
 
     // Snapmaker: wipe tower wall gap and brim chamfer options
-    toggle_line("wipe_tower_wall_gap", have_prime_tower && !is_belt_printer);
+    toggle_line("wipe_tower_wall_gap", have_prime_tower && !is_belt_printer && supports_wipe_tower_2);
     toggle_line("prime_tower_brim_chamfer_max_width", have_prime_tower && !is_belt_printer);
     toggle_line("prime_tower_brim_chamfer", have_prime_tower && !is_belt_printer);
 
