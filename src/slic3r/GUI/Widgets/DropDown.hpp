@@ -141,7 +141,6 @@ protected:
     bool ProcessLeftDown(wxMouseEvent& event) override;
     void Dismiss() override;
 
-    bool ProcessLeftDown(wxMouseEvent& event) override;
     void OnDismiss() override;
 
     bool ShouldDismissOnTopWindowDeactivate() override;
