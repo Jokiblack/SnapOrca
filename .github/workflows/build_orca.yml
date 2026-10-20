@@ -500,6 +500,8 @@ jobs:
           # -l compiles with Visual Studio's clang-cl and -x builds with Ninja; --msvc --msbuild is cl under the Visual Studio generator.
           $flags = if ("${{ inputs.compiler }}" -eq "clang") { "-l", "-x" } else { "--msvc", "--msbuild" }
           if ("${{ vars.BUILD_TESTS }}" -eq "true") { $flags += "--tests" }
+          # SnapOrca: report every compile error in one run instead of stopping at the first one.
+          $env:SNAPORCA_KEEP_GOING = "1"
           .\build_win.bat -s -i --arch ${{ inputs.arch }} --build-dir $env:BUILD_DIR --deps-dir $deps @flags
           if ($LASTEXITCODE -ne 0) { exit $LASTEXITCODE }
         shell: pwsh

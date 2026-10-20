@@ -745,7 +745,10 @@ if "%build_slicer%" == "ON" (
         %error_check%
     )
 
-    call :print_and_run cmake --build "%build_dir%" --config %build_type% %SLICER_TARGET_FLAG% %JOBS_FLAG% %VERBOSE_FLAG%
+    REM SnapOrca: with SNAPORCA_KEEP_GOING set, Ninja keeps compiling after a failure so one CI run reports every error.
+    set "KEEP_GOING_FLAG="
+    if "%use_ninja%" == "ON" if defined SNAPORCA_KEEP_GOING set "KEEP_GOING_FLAG=-- -k 0"
+    call :print_and_run cmake --build "%build_dir%" --config %build_type% %SLICER_TARGET_FLAG% %JOBS_FLAG% %VERBOSE_FLAG% !KEEP_GOING_FLAG!
     %error_check%
 
     if "%run_tests%" == "ON" (
