@@ -6273,13 +6273,22 @@ int Print::get_config_index(int filament_id, int layer_id, const std::vector<std
 
     ExtruderType     extruder_type      = ExtruderType(m_config.extruder_type.get_at(nozzle_info->extruder_id));
     NozzleVolumeType nozzle_volume_type = nozzle_info->volume_type;
+    // Snapmaker Orca: get_config_index_base answers column 0 for a filament that owns no column at
+    // all (a self index shorter than the filament list, the filament vectors unexpanded); such a
+    // filament keeps its own id as column instead of reading the first filament's values.
+    auto own_column = [&]() {
+        int index = get_config_index_base(nozzle_volume_type, extruder_type, filament_id + 1, variant_list, self_index_list);
+        if (index < 0 || size_t(index) >= self_index_list.size() || self_index_list[size_t(index)] != filament_id + 1)
+            index = std::max(filament_id, 0);
+        return index;
+    };
     if (!index_map)
-        return get_config_index_base(nozzle_volume_type, extruder_type, filament_id + 1, variant_list, self_index_list);
+        return own_column();
 
     FilamentIndexKey key{filament_id, extruder_type, nozzle_volume_type};
     auto             iter = index_map->find(key);
     if (iter == index_map->end()) {
-        int index = get_config_index_base(nozzle_volume_type, extruder_type, filament_id + 1, variant_list, self_index_list);
+        const int index = own_column();
         (*index_map)[key] = index;
         return index;
     } else {
