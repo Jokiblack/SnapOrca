@@ -6705,8 +6705,6 @@ int PartPlateList::select_plate(int index)
 	}
 	const int previous_index = m_current_plate;
 
-        const int old_plate_index = m_current_plate;
-
 	// BBS: erase unnecessary snapshot
 	if (get_curr_plate_index() != index && m_intialized) {
 		if (m_plater)
@@ -6720,7 +6718,7 @@ int PartPlateList::select_plate(int index)
 
 	m_current_plate = index;
 	m_plate_list[m_current_plate]->set_selected();
-        if (old_plate_index != m_current_plate && wxGetApp().plater())
+        if (previous_index != m_current_plate && wxGetApp().plater())
             wxGetApp().plater()->notify_filament_usage_changed();
 
 	//BBS
