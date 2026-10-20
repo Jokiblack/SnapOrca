@@ -258,7 +258,14 @@ jobs:
           test -n "$APPIMAGE" || { echo "no x86_64 AppImage in the run's artifacts"; ls -R appimage; exit 1; }
           chmod +x "$APPIMAGE"
           (cd appimage && "../$APPIMAGE" --appimage-extract > /dev/null)
-          appimage/squashfs-root/AppRun --help | head -1
+      - name: Install OpenGL runtime
+        # The CLI opens no window, but the binary links the host's libOpenGL.so.0 and
+        # libEGL.so.1, which the runner image does not ship.
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq libopengl0 libegl1 libgl1
+          R=appimage/squashfs-root
+          LD_LIBRARY_PATH=$R/lib/orca-runtime:$R/lib $R/bin/snapmaker-orca --help | head -1
       - name: Slice and compare
         id: regression
         timeout-minutes: 90

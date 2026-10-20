@@ -308,10 +308,13 @@ def build_cases():
     """Cada caso: nombre -> dict(model, filaments, settings{clave: valor}, mixed)."""
     cases = {}
 
-    def add(name, model, filaments, settings=None, mixed=False, colours=False):
+    def add(name, model, filaments, settings=None, mixed=False):
         s = dict(settings or {})
-        if colours:
-            s["filament_colour"] = COLOURS
+        if filaments > 1:
+            # Siempre un color distinto por filamento: con filamentos iguales (mismo color) la CLI los
+            # mapea todos a uno (disable_wipe_tower_after_mapping) y, con un objeto en el extrusor 2,
+            # el binario cae (segfault o std::bad_alloc en "Generating skirt & brim"; ver README).
+            s["filament_colour"] = ";".join(COLOURS.split(";")[:filaments])
         cases[name] = dict(model=model, filaments=filaments, settings=s, mixed=mixed)
 
     for mixed, suffix in ((False, ""), (True, "_mixed")):
@@ -321,14 +324,14 @@ def build_cases():
             add("cube_1f", "cube20.3mf", 1)
         else:
             add("cube_1f_mixed", "cube20_e2.3mf", 2, mixed=True)
-        add("cubes_4f_tower" + suffix, "cubes4.3mf", 4, {"enable_prime_tower": "1"}, mixed, colours=True)
-        add("cubes_4f_notower" + suffix, "cubes4.3mf", 4, {"enable_prime_tower": "0"}, mixed, colours=True)
+        add("cubes_4f_tower" + suffix, "cubes4.3mf", 4, {"enable_prime_tower": "1"}, mixed)
+        add("cubes_4f_notower" + suffix, "cubes4.3mf", 4, {"enable_prime_tower": "0"}, mixed)
         ov = "overhang_e1.3mf" if not mixed else "overhang_e2.3mf"
         nf = 1 if not mixed else 2
         add("support_normal" + suffix, ov, nf, support("normal"), mixed)
         add("support_tree" + suffix, ov, nf, support("tree"), mixed)
         add("support_organic" + suffix, ov, nf, support("organic"), mixed)
-        add("painted_4f" + suffix, "cube20_painted.3mf", 4, {"enable_prime_tower": "1"}, mixed, colours=True)
+        add("painted_4f" + suffix, "cube20_painted.3mf", 4, {"enable_prime_tower": "1"}, mixed)
     return cases
 
 
@@ -338,9 +341,15 @@ CASES = build_cases()
 # ----------------------------------------------------------------------------- laminado
 
 def find_slicer(arg, work):
-    """Devuelve el ejecutable a lanzar (AppRun si existe: fija LD_LIBRARY_PATH a las bibliotecas
-    empaquetadas) a partir de un .AppImage, un directorio extraído o un binario."""
+    """Devuelve (ejecutable, entorno) a partir de un .AppImage, un directorio extraído o un binario.
+
+    Con un AppImage o un squashfs-root se lanza `bin/snapmaker-orca` directamente con
+    LD_LIBRARY_PATH=<raíz>/lib/orca-runtime:<raíz>/lib (lo que hace AppRun), sin pasar por AppRun:
+    este comprueba antes de arrancar las bibliotecas OpenGL del sistema y aborta si falta alguna,
+    aunque la CLI no abra ninguna ventana. El binario sigue enlazando libOpenGL.so.0 / libEGL.so.1
+    del sistema (paquetes libopengl0, libegl1 y libgl1 en Ubuntu)."""
     arg = os.path.abspath(arg)
+    env = dict(os.environ)
     if os.path.isdir(arg):
         root = arg
     elif arg.lower().endswith(".appimage"):
@@ -350,14 +359,16 @@ def find_slicer(arg, work):
             subprocess.run([arg, "--appimage-extract"], cwd=work, check=True,
                            stdout=subprocess.DEVNULL, stderr=subprocess.STDOUT)
     else:
-        root = os.path.dirname(os.path.dirname(arg))
-        if os.path.basename(os.path.dirname(arg)) != "bin":
-            return arg
-    for cand in ("AppRun", os.path.join("bin", "snapmaker-orca"), "snapmaker-orca"):
+        return arg, env
+    for cand in (os.path.join("bin", "snapmaker-orca"), "snapmaker-orca"):
         p = os.path.join(root, cand)
         if os.path.isfile(p) and os.access(p, os.X_OK):
-            return p
-    raise SystemExit("no encuentro AppRun ni bin/snapmaker-orca en %s" % root)
+            libs = [os.path.join(root, "lib", "orca-runtime"), os.path.join(root, "lib")]
+            if env.get("LD_LIBRARY_PATH"):
+                libs.append(env["LD_LIBRARY_PATH"])
+            env["LD_LIBRARY_PATH"] = ":".join(libs)
+            return p, env
+    raise SystemExit("no encuentro bin/snapmaker-orca en %s" % root)
 
 
 def mixed_profiles(profiles, out):
@@ -403,7 +414,7 @@ def profile_paths(profiles):
     return paths
 
 
-def slice_case(name, case, slicer, profiles, models, out, datadir, debug, timeout):
+def slice_case(name, case, slicer, env, profiles, models, out, datadir, debug, timeout):
     rundir = os.path.join(out, "run", name)
     shutil.rmtree(rundir, ignore_errors=True)
     os.makedirs(rundir)
@@ -420,13 +431,16 @@ def slice_case(name, case, slicer, profiles, models, out, datadir, debug, timeou
     t0 = time.time()
     with open(os.path.join(out, "run", name + ".log"), "w") as log:
         try:
-            rc = subprocess.run(cmd, cwd=rundir, stdout=log, stderr=subprocess.STDOUT, timeout=timeout).returncode
+            rc = subprocess.run(cmd, cwd=rundir, env=env, stdout=log, stderr=subprocess.STDOUT,
+                                timeout=timeout).returncode
         except subprocess.TimeoutExpired:
             rc = "timeout"
     gcode = os.path.join(rundir, "plate_1.gcode")
     dt = time.time() - t0
-    if not os.path.isfile(gcode):
-        print("  [%s] FALLO (rc=%s, %.0fs): no hay plate_1.gcode; ver run/%s.log" % (name, rc, dt, name))
+    if rc != 0 or not os.path.isfile(gcode):
+        # Un código de salida distinto de 0 es un fallo aunque haya G-code (p. ej. un segfault al salir).
+        print("  [%s] FALLO (rc=%s, %.0fs)%s; ver run/%s.log"
+              % (name, rc, dt, "" if os.path.isfile(gcode) else ": no hay plate_1.gcode", name))
         result = os.path.join(rundir, "result.json")
         if os.path.isfile(result):
             with open(result, encoding="utf-8", errors="replace") as f:
@@ -526,7 +540,7 @@ def main(argv=None):
     if not args.slicer:
         ap.error("falta --slicer")
 
-    slicer = find_slicer(args.slicer, out)
+    slicer, env = find_slicer(args.slicer, out)
     profiles = profile_paths(os.path.abspath(args.profiles))
     profiles_mixed = None
     if any(CASES[n]["mixed"] for n in names):
@@ -547,7 +561,7 @@ def main(argv=None):
 
     failed_slice, failed_cmp = [], []
     for n in names:
-        gcode = slice_case(n, CASES[n], slicer, profiles_mixed if CASES[n]["mixed"] else profiles, models, out,
+        gcode = slice_case(n, CASES[n], slicer, env, profiles_mixed if CASES[n]["mixed"] else profiles, models, out,
                            datadir, args.debug, args.timeout)
         if gcode is None:
             failed_slice.append(n)
