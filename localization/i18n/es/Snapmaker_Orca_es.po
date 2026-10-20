@@ -39158,6 +39158,54 @@ msgstr ""
 "¿Sabía que, al imprimir materiales propensos a deformarse como el ABS, aumentar adecuadamente la temperatura de la cama puede reducir la probabilidad de deformación?"
 
 # AI Translated
+msgid "Ghost lines"
+msgstr "Líneas fantasma"
+
+# AI Translated
+msgid "Treat ghost lines"
+msgstr "Tratar las líneas fantasma"
+
+# AI Translated
+msgid "A floor, ceiling, rib or partition joined to the back of the outer wall pulls on it when it shrinks while cooling, and leaves a line on the outer surface along the joint: a ghost line. This enables the treatments below on the layers where such an internal feature joins the outer wall. The layers are found from the shape of the model: see the scope and the feature depth."
+msgstr "Un suelo, techo, nervio o tabique unido por detrás a la pared exterior tira de ella al contraerse mientras se enfría y deja una línea en la superficie exterior a lo largo de la unión: una línea fantasma. Esto activa los tratamientos de abajo en las capas en las que un elemento interno de ese tipo se une a la pared exterior. Las capas se detectan a partir de la forma del modelo: vea el ámbito y la profundidad del elemento."
+
+# AI Translated
+msgid "Scope"
+msgstr "Ámbito"
+
+# AI Translated
+msgid "Where the ghost line treatments are applied.\nInternal features: only on the layers where a floor, ceiling, rib or partition joins the outer wall from behind, and, for the air gap, only along the part of the outer wall it joins. Solid parts of the model are left alone.\nEverywhere: on every layer, along the whole outer wall. For the air gap, combine it with the bond interval to keep the outer wall attached."
+msgstr "Dónde se aplican los tratamientos de las líneas fantasma.\nElementos internos: solo en las capas en las que un suelo, techo, nervio o tabique se une por detrás a la pared exterior y, para la cámara de aire, solo a lo largo de la parte de la pared exterior a la que se une. Las partes macizas del modelo se dejan como están.\nEn todas partes: en todas las capas, a lo largo de toda la pared exterior. Para la cámara de aire, combínelo con el intervalo de unión para que la pared exterior siga sujeta."
+
+# AI Translated
+msgid "Internal features"
+msgstr "Elementos internos"
+
+# AI Translated
+msgid "Internal feature depth"
+msgstr "Profundidad del elemento interno"
+
+# AI Translated
+msgid "Material that reaches deeper than this distance from the outer surface counts as an internal feature joined to the outer wall. Set it a little larger than the wall thickness of the model, so that plain walls are not taken for internal features. It also sets how far above and below a floor or ceiling the layers are compared to find where it starts and ends."
+msgstr "El material que llega más adentro de esta distancia desde la superficie exterior cuenta como un elemento interno unido a la pared exterior. Póngalo un poco mayor que el grosor de pared del modelo, para que las paredes normales no se tomen por elementos internos. También fija a qué distancia por encima y por debajo de un suelo o techo se comparan las capas para encontrar dónde empieza y dónde acaba."
+
+# AI Translated
+msgid "Air gap behind the outer wall"
+msgstr "Cámara de aire tras la pared exterior"
+
+# AI Translated
+msgid "Leave an air gap of this width between the outer wall and the inner walls and infill behind it, so that the internal feature does not pull on the outer wall when it shrinks. This is what is done in CAD to hide ghost lines, without changing the model. The outer wall stays joined to the rest of the part on the layers without the gap. The gap is never left on the first or the last layer, where it would be exposed by a top or bottom surface, or in spiral vase mode. Classic wall generator only. Set to 0 to disable."
+msgstr "Deja una cámara de aire de este ancho entre la pared exterior y los perímetros interiores y el relleno que hay detrás, para que el elemento interno no tire de la pared exterior al contraerse. Es lo que se hace en CAD para ocultar las líneas fantasma, sin cambiar el modelo. La pared exterior sigue unida al resto de la pieza en las capas sin cámara. La cámara nunca se deja en la primera ni en la última capa, donde la dejaría al descubierto una superficie superior o inferior, ni en modo jarrón. Solo con el generador de perímetros clásico. Ponga 0 para desactivarla."
+
+# AI Translated
+msgid "Air gap bond interval"
+msgstr "Intervalo de unión de la cámara de aire"
+
+# AI Translated
+msgid "Print every Nth layer without the air gap, so that the outer wall stays bonded to the inside of the part at regular heights. Set to 0 to leave the gap on every treated layer."
+msgstr "Imprime una de cada N capas sin cámara de aire, para que la pared exterior quede unida al interior de la pieza a alturas regulares. Ponga 0 para dejar la cámara en todas las capas tratadas."
+
+# AI Translated
 #~ msgid "Note: Inconsistent nozzle diameters. Current version does not support mixed diameter printing. Please select one nozzle for this print."
 #~ msgstr "Nota: los diámetros de boquilla no coinciden. La versión actual no admite imprimir con diámetros mezclados. Seleccione una sola boquilla para esta impresión."
 

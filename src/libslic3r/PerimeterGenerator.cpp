@@ -1720,6 +1720,26 @@ void PerimeterGenerator::process_classic()
                             ClipperUtils::clip_clipper_polygons_with_subject_bbox(reach, get_extents(hole.polygon).inflated(SCALED_EPSILON))).empty();
                 }
 
+                // SnapOrca: ghost lines air gap. Pull the region the inner walls and infill are built from away
+                // from the outer wall, so that their edge is ghost_lines_air_gap from the outer wall's inner edge,
+                // where the layers above and below cover the gap: it never opens a hole in a top or bottom surface.
+                if (i == 0 && this->ghost_lines_region != nullptr && ! this->ghost_lines_region->empty() &&
+                    this->upper_slices != nullptr && this->lower_slices != nullptr && ! m_spiral_vase) {
+                    // last is the outer wall's centerline, the next loop goes ext_perimeter_spacing2 inside it.
+                    const coord_t shrink = scaled<coord_t>(this->config->ghost_lines_air_gap.value) +
+                                           (ext_perimeter_width + perimeter_width) / 2 - ext_perimeter_spacing2;
+                    Polygons contours;
+                    contours.reserve(last.size());
+                    for (const ExPolygon &ex : last)
+                        contours.emplace_back(ex.contour);
+                    const ExPolygons gap = intersection_ex(intersection_ex(intersection_ex(diff_ex(contours, offset(contours, -float(shrink))),
+                                                                                           *this->ghost_lines_region),
+                                                                           *this->upper_slices),
+                                                           *this->lower_slices);
+                    if (! gap.empty())
+                        last = diff_ex(last, gap);
+                }
+
                 //BBS: refer to superslicer
                 //store surface for top infill if only_one_wall_top
                 if (i == 0 && i!=loop_number && only_one_wall_top && !surface.is_bridge() && this->upper_slices != NULL) {

@@ -1409,6 +1409,15 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
         toggle_line(el, have_arachne);
     toggle_field("detect_thin_wall", !have_arachne);
 
+    // SnapOrca: ghost lines. The air gap is cut by the classic wall generator only, and never in spiral vase mode.
+    const bool ghost_lines = have_perimeters && config->opt_bool("ghost_lines_enable");
+    toggle_field("ghost_lines_enable", have_perimeters);
+    toggle_line("ghost_lines_scope", ghost_lines);
+    toggle_line("ghost_lines_feature_depth", ghost_lines && config->opt_enum<GhostLinesScope>("ghost_lines_scope") == GhostLinesScope::InternalFeatures);
+    toggle_line("ghost_lines_air_gap", ghost_lines);
+    toggle_field("ghost_lines_air_gap", ghost_lines && !have_arachne && !config->opt_bool("spiral_mode"));
+    toggle_line("ghost_lines_bond_layers", ghost_lines && config->opt_float("ghost_lines_air_gap") > 0.);
+
     // Orca
     auto is_role_based_wipe_speed = config->opt_bool("role_based_wipe_speed");
     toggle_field("wipe_speed",!is_role_based_wipe_speed);

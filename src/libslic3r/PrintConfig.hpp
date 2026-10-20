@@ -249,6 +249,14 @@ enum class WallSequence {
     Count,
 };
 
+// SnapOrca: where the ghost line treatments apply, see GhostLines.hpp.
+enum class GhostLinesScope
+{
+    InternalFeatures,
+    Everywhere,
+    Count,
+};
+
 // Orca
 enum class WallDirection
 {
@@ -875,6 +883,7 @@ extern std::vector<std::string> save_extruder_nozzle_stats_to_string(const std::
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(PrinterTechnology)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(WallSplitFilament)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(WallSplitDirection)
+CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(GhostLinesScope)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(GCodeFlavor)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(FuzzySkinType)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(FuzzySkinMode)
@@ -1693,6 +1702,12 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloatsNullable, internal_solid_infill_speed))
     // Detect thin walls.
     ((ConfigOptionBool, detect_thin_wall))
+    // SnapOrca: ghost lines, see GhostLines.hpp.
+    ((ConfigOptionBool, ghost_lines_enable))
+    ((ConfigOptionEnum<GhostLinesScope>, ghost_lines_scope))
+    ((ConfigOptionFloat, ghost_lines_feature_depth))
+    ((ConfigOptionFloat, ghost_lines_air_gap))
+    ((ConfigOptionInt, ghost_lines_bond_layers))
     ((ConfigOptionFloatsOrPercentsNullable, top_surface_line_width))
     ((ConfigOptionInt, top_shell_layers))
     ((ConfigOptionFloat, top_shell_thickness))

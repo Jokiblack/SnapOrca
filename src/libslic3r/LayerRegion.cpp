@@ -9,6 +9,7 @@
 #include "Exception.hpp"
 #include "Geometry.hpp"
 #include "Line.hpp"
+#include "GhostLines.hpp"
 #include "PerimeterGenerator.hpp"
 #include "Point.hpp"
 #include "Polygon.hpp"
@@ -333,6 +334,19 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, const LayerRe
         g.sparse_infill_flow    = this->flow(frInfill, height);
         // Gap fill dispatches to the outer wall filament (LayerTools::extruder()); resolve its width against its nozzle.
         g.gap_fill_flow         = this->flow(frSolidInfill, height, (unsigned int)std::max(0, perimeter_config.outer_wall_filament_id.value));
+
+        // SnapOrca: ghost lines, see GhostLines.hpp. Declared after g so it outlives the process_*() calls below.
+        ExPolygons ghost_lines;
+        if (perimeter_config.ghost_lines_enable.value) {
+            ghost_lines = ghost_lines_area(*this->layer(), perimeter_config,
+                g.ext_perimeter_flow.scaled_width() + g.perimeter_flow.scaled_width() + scaled<coord_t>(perimeter_config.ghost_lines_air_gap.value));
+            if (! ghost_lines.empty()) {
+                this->layer()->ghost_lines = true;
+                if (ghost_lines_air_gap_on_layer(*this->layer(), perimeter_config) && ! print_config.spiral_mode &&
+                    this->layer()->object()->config().wall_generator.value == PerimeterGeneratorType::Classic)
+                    g.ghost_lines_region = &ghost_lines;
+            }
+        }
 
         // Cumulative sum of polygons over all the regions, less what the lower layer could not print.
         // ORCA: the overhang reference is the layer below the whole combined group or wall run

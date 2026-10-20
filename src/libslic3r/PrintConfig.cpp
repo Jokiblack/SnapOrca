@@ -355,6 +355,13 @@ static t_config_enum_values s_keys_map_WallSequence {
 };
 CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(WallSequence)
 
+// SnapOrca
+static t_config_enum_values s_keys_map_GhostLinesScope{
+    { "internal_features", int(GhostLinesScope::InternalFeatures) },
+    { "everywhere",        int(GhostLinesScope::Everywhere) },
+};
+CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(GhostLinesScope)
+
 //Orca
 static t_config_enum_values s_keys_map_WallDirection{
     { "ccw",  int(WallDirection::CounterClockwise) },
@@ -8847,6 +8854,73 @@ void PrintConfigDef::init_fff_params()
     def->label = "Head wrap detect zone"; //do not need translation
     def->mode = comDevelop;
     def->set_default_value(new ConfigOptionPoints{});
+
+    // SnapOrca: ghost lines, see GhostLines.hpp.
+    def = this->add("ghost_lines_enable", coBool);
+    def->label = L("Treat ghost lines");
+    def->category = L("Quality");
+    def->tooltip = L("A floor, ceiling, rib or partition joined to the back of the outer wall pulls on it when it shrinks "
+                     "while cooling, and leaves a line on the outer surface along the joint: a ghost line. This enables "
+                     "the treatments below on the layers where such an internal feature joins the outer wall. The "
+                     "layers are found from the shape of the model: see the scope and the feature depth.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("ghost_lines_scope", coEnum);
+    def->label = L("Scope");
+    def->category = L("Quality");
+    def->tooltip = L("Where the ghost line treatments are applied.\n"
+                     "Internal features: only on the layers where a floor, ceiling, rib or partition joins the outer "
+                     "wall from behind, and, for the air gap, only along the part of the outer wall it joins. Solid "
+                     "parts of the model are left alone.\n"
+                     "Everywhere: on every layer, along the whole outer wall. For the air gap, combine it with the "
+                     "bond interval to keep the outer wall attached.");
+    def->enum_keys_map = &ConfigOptionEnum<GhostLinesScope>::get_enum_values();
+    def->enum_values.push_back("internal_features");
+    def->enum_values.push_back("everywhere");
+    def->enum_labels.push_back(L("Internal features"));
+    def->enum_labels.push_back(L("Everywhere"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionEnum<GhostLinesScope>(GhostLinesScope::InternalFeatures));
+
+    def = this->add("ghost_lines_feature_depth", coFloat);
+    def->label = L("Internal feature depth");
+    def->category = L("Quality");
+    def->tooltip = L("Material that reaches deeper than this distance from the outer surface counts as an internal feature "
+                     "joined to the outer wall. Set it a little larger than the wall thickness of the model, so that plain "
+                     "walls are not taken for internal features. It also sets how far above and below a floor or ceiling "
+                     "the layers are compared to find where it starts and ends.");
+    def->sidetext = L("mm");
+    def->min = 0.5;
+    def->max = 50;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(3));
+
+    def = this->add("ghost_lines_air_gap", coFloat);
+    def->label = L("Air gap behind the outer wall");
+    def->category = L("Quality");
+    def->tooltip = L("Leave an air gap of this width between the outer wall and the inner walls and infill behind it, so "
+                     "that the internal feature does not pull on the outer wall when it shrinks. This is what is done in "
+                     "CAD to hide ghost lines, without changing the model. The outer wall stays joined to the rest of the "
+                     "part on the layers without the gap. The gap is never left on the first or the last layer, where it "
+                     "would be exposed by a top or bottom surface, or in spiral vase mode. Classic wall generator only. "
+                     "Set to 0 to disable.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->max = 2;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0));
+
+    def = this->add("ghost_lines_bond_layers", coInt);
+    def->label = L("Air gap bond interval");
+    def->category = L("Quality");
+    def->tooltip = L("Print every Nth layer without the air gap, so that the outer wall stays bonded to the inside of the "
+                     "part at regular heights. Set to 0 to leave the gap on every treated layer.");
+    def->sidetext = L("layers");
+    def->min = 0;
+    def->max = 1000;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionInt(0));
 
     def = this->add("detect_thin_wall", coBool);
     def->label = L("Detect thin walls");

@@ -1858,6 +1858,11 @@ bool PrintObject::invalidate_state_by_config_options(
             || opt_key == "wall_direction"
             || opt_key == "enable_overhang_speed"
             || opt_key == "detect_thin_wall"
+            || opt_key == "ghost_lines_enable"
+            || opt_key == "ghost_lines_scope"
+            || opt_key == "ghost_lines_feature_depth"
+            || opt_key == "ghost_lines_air_gap"
+            || opt_key == "ghost_lines_bond_layers"
             || opt_key == "precise_outer_wall") {
             steps.emplace_back(posPerimeters);
             steps.emplace_back(posSupportMaterial);
