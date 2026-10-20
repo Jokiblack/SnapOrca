@@ -176,15 +176,12 @@ public:
     unsigned int inner_wall_extruder_id(const PrintRegion &region) const;
     unsigned int sparse_infill_filament_id(const PrintRegion &region) const;
     unsigned int internal_solid_filament_id(const PrintRegion &region) const;
-<<<<<<< snaporca-int
+    unsigned int top_surface_filament_id(const PrintRegion &region) const;
+    unsigned int bottom_surface_filament_id(const PrintRegion &region) const;
     // Snapmaker: mixed-filament aware aliases kept for the Snapmaker G-code paths.
     unsigned int wall_filament(const PrintRegion &region) const { return this->wall_extruder_id(region); }
     unsigned int sparse_infill_filament(const PrintRegion &region) const { return this->sparse_infill_filament_id(region); }
     unsigned int solid_infill_filament(const PrintRegion &region) const { return this->internal_solid_filament_id(region); }
-=======
-    unsigned int top_surface_filament_id(const PrintRegion &region) const;
-    unsigned int bottom_surface_filament_id(const PrintRegion &region) const;
->>>>>>> lixnix/main
 	// Returns a zero based extruder this eec should be printed with, according to PrintRegion config or extruder_override if overriden.
 	unsigned int extruder(const ExtrusionEntityCollection &extrusions, const PrintRegion &region) const;
 
@@ -492,10 +489,6 @@ private:
     MultiNozzleUtils::NozzleStatusRecorder     m_nozzle_status;
 
     int                        most_used_extruder;
-<<<<<<< snaporca-int
-=======
-
->>>>>>> lixnix/main
     // Mixed filament support: pointer to manager (owned by Print) and
     // number of physical extruders.
     const MixedFilamentManager* m_mixed_mgr    = nullptr;

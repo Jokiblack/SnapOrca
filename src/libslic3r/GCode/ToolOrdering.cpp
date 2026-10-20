@@ -46,7 +46,6 @@
 #include <cstdio>
 #include <limits>
 #include <algorithm>
-#include <cmath>
 #include <map>
 #include <numeric>
 #include <queue>
@@ -56,80 +55,12 @@
 #include <libslic3r.h>
 #include "libslic3r/ExPolygon.hpp"
 #include "libslic3r/ExtrusionEntityCollection.hpp"
+#include "libslic3r/Flow.hpp"
 #include "libslic3r/Model.hpp"
 #include "libslic3r/Polygon.hpp"
 #include "libslic3r/SurfaceCollection.hpp"
 
 namespace Slic3r {
-
-namespace {
-
-unsigned int resolve_mixed_with_layer_heights(const MixedFilamentManager *mixed_mgr,
-                                              size_t                      num_physical,
-                                              unsigned int                filament_id_1based,
-                                              int                         layer_index,
-                                              float                       layer_print_z,
-                                              float                       layer_height,
-                                              float                       layer_height_a,
-                                              float                       layer_height_b,
-                                              float                       base_layer_height,
-                                              const PrintObject*          current_object = nullptr)
-{
-    if (!(mixed_mgr && mixed_mgr->is_mixed(filament_id_1based, num_physical)))
-        return filament_id_1based;
-
-    const MixedFilament *mixed_row = mixed_mgr->mixed_filament_from_id(filament_id_1based, num_physical);
-
-    // Z-direction gradient short-circuits the legacy A/B layer cycle below: the
-    // gradient path needs the per-(object, layer) run lookup performed inside
-    // MixedFilamentManager::resolve.
-    const bool gradient_active = 
-        (mixed_row != nullptr && current_object != nullptr) &&
-        (mixed_row->gradient_enabled && mixed_row->component_a != mixed_row->component_b) &&
-        (layer_index > 0);
-
-    if (mixed_row != nullptr && !mixed_row->custom && !gradient_active && (layer_height_a > 0.f || layer_height_b > 0.f)) {
-        const float safe_base = std::max<float>(0.01f, base_layer_height);
-        const int ratio_a = std::max(1, int(std::lround((layer_height_a > 0.f ? layer_height_a : safe_base) / safe_base)));
-        const int ratio_b = std::max(1, int(std::lround((layer_height_b > 0.f ? layer_height_b : safe_base) / safe_base)));
-        const int cycle   = ratio_a + ratio_b;
-
-        if (cycle > 0) {
-            if (mixed_row != nullptr) {
-                const int pos = ((layer_index % cycle) + cycle) % cycle;
-                return pos < ratio_a ? mixed_row->component_a : mixed_row->component_b;
-            }
-        }
-    }
-
-    return mixed_mgr->resolve(filament_id_1based, num_physical, layer_index, layer_print_z, layer_height, false, current_object);
-}
-
-bool has_grouped_manual_pattern(const MixedFilamentManager *mixed_mgr,
-                                size_t                      num_physical,
-                                unsigned int                filament_id_1based)
-{
-    if (!(mixed_mgr && mixed_mgr->is_mixed(filament_id_1based, num_physical)))
-        return false;
-    const MixedFilament *mixed_row = mixed_mgr->mixed_filament_from_id(filament_id_1based, num_physical);
-    if (mixed_row == nullptr)
-        return false;
-    const std::string normalized = MixedFilamentManager::normalize_manual_pattern(mixed_row->manual_pattern);
-    return normalized.find(',') != std::string::npos;
-}
-
-void append_unique_preserve_order(std::vector<unsigned int> &dst, unsigned int value)
-{
-    if (std::find(dst.begin(), dst.end(), value) == dst.end())
-        dst.emplace_back(value);
-}
-
-unsigned int sparse_infill_filament_id_1based(const PrintRegion &region)
-{
-    return region.config().sparse_infill_filament_id.value;
-}
-
-} // anonymous namespace
 
 bool perimeter_entity_uses_outer_wall_filament(const ExtrusionEntity &entity)
 {
@@ -163,62 +94,6 @@ void classify_wall_filaments(const ExtrusionEntityCollection &collection, bool &
     for (const ExtrusionEntity *entity : collection.entities)
         (perimeter_entity_uses_outer_wall_filament(*entity) ? any_outer : any_inner) = true;
 }
-
-namespace {
-
-// The internal solid filament owns internal solid infill at every density - including the solid
-// interior at 100% sparse density (matches mainline Orca and PrintRegion::extruder(); this fork
-// used to hand the 100% interior to the sparse filament, hiding the internal solid selector).
-unsigned int infill_filament_id_1based(const LayerTools &layer_tools, const PrintRegion &region, ExtrusionRole role)
-{
-    if (role == erTopSolidInfill || role == erIroning)
-        return region.config().top_surface_filament_id.value;
-    if (role == erBottomSurface || role == erBridgeInfill) // ORCA: external bridges print as bottom surfaces (internal bridges stay internal solid)
-        return region.config().bottom_surface_filament_id.value;
-    return is_solid_infill(role) ? region.config().internal_solid_filament_id.value : sparse_infill_filament_id_1based(region);
-}
-
-unsigned int grouped_manual_pattern_mixed_filament_id_for_layer(const LayerTools& layer_tools,
-                                                                unsigned int      configured_filament_id_1based)
-{
-    if (layer_tools.mixed_mgr == nullptr || layer_tools.num_physical == 0)
-        return 0;
-
-    if (has_grouped_manual_pattern(layer_tools.mixed_mgr, layer_tools.num_physical, configured_filament_id_1based))
-        return configured_filament_id_1based;
-    return 0;
-}
-
-unsigned int grouped_manual_pattern_infill_filament_1based(const LayerTools&  layer_tools,
-                                                           const PrintRegion& region,
-                                                           unsigned int       configured_filament_id_1based)
-{
-    const unsigned int grouped_id =
-        grouped_manual_pattern_mixed_filament_id_for_layer(layer_tools, configured_filament_id_1based);
-    if (grouped_id == 0)
-        return 0;
-
-    const int innermost_perimeter_index = std::max(0, region.config().wall_loops.value - 1);
-    return layer_tools.mixed_mgr->resolve_perimeter(grouped_id,
-                                                    layer_tools.num_physical,
-                                                    layer_tools.layer_index,
-                                                    innermost_perimeter_index,
-                                                    float(layer_tools.print_z),
-                                                    float(layer_tools.layer_height),
-                                                    false,
-                                                    layer_tools.current_object);
-}
-
-void remove_duplicates_preserve_order(std::vector<unsigned int> &values)
-{
-    std::vector<unsigned int> ordered;
-    ordered.reserve(values.size());
-    for (unsigned int value : values)
-        append_unique_preserve_order(ordered, value);
-    values = std::move(ordered);
-}
-
-} // namespace
 
     //! macro used to mark string used at localization,
     //! return same string
@@ -425,9 +300,7 @@ unsigned int LayerTools::wall_extruder_id(const PrintRegion &region) const
 {
 	assert(region.config().outer_wall_filament_id.value > 0);
 	unsigned int id = (this->extruder_override == 0) ? region.config().outer_wall_filament_id.value : this->extruder_override;
-<<<<<<< snaporca-int
 	// Snapmaker mixed filament first (virtual id -> physical), then the Orca mixed-colour slot resolution.
-=======
 	return resolve_mixed(resolve_mixed_1based(id) - 1);
 }
 
@@ -435,7 +308,6 @@ unsigned int LayerTools::inner_wall_extruder_id(const PrintRegion &region) const
 {
 	assert(region.config().inner_wall_filament_id.value > 0);
 	unsigned int id = (this->extruder_override == 0) ? region.config().inner_wall_filament_id.value : this->extruder_override;
->>>>>>> lixnix/main
 	return resolve_mixed(resolve_mixed_1based(id) - 1);
 }
 
@@ -444,11 +316,7 @@ unsigned int LayerTools::sparse_infill_filament_id(const PrintRegion &region) co
 	assert(region.config().sparse_infill_filament_id.value > 0);
 	unsigned int id = (this->extruder_override == 0) ? sparse_infill_filament_id_1based(region) : this->extruder_override;
     const unsigned int grouped = grouped_manual_pattern_infill_filament_1based(*this, region, id);
-<<<<<<< snaporca-int
 	return resolve_mixed(((grouped != 0) ? grouped : resolve_mixed_1based(id)) - 1);
-=======
-	return resolve_mixed((((grouped != 0) ? grouped : resolve_mixed_1based(id)) - 1));
->>>>>>> lixnix/main
 }
 
 unsigned int LayerTools::internal_solid_filament_id(const PrintRegion &region) const
@@ -456,10 +324,7 @@ unsigned int LayerTools::internal_solid_filament_id(const PrintRegion &region) c
 	assert(region.config().internal_solid_filament_id.value > 0);
 	unsigned int id = (this->extruder_override == 0) ? region.config().internal_solid_filament_id.value : this->extruder_override;
     const unsigned int grouped = grouped_manual_pattern_infill_filament_1based(*this, region, id);
-<<<<<<< snaporca-int
 	return resolve_mixed(((grouped != 0) ? grouped : resolve_mixed_1based(id)) - 1);
-=======
-	return resolve_mixed((((grouped != 0) ? grouped : resolve_mixed_1based(id)) - 1));
 }
 
 unsigned int LayerTools::top_surface_filament_id(const PrintRegion &region) const
@@ -476,7 +341,6 @@ unsigned int LayerTools::bottom_surface_filament_id(const PrintRegion &region) c
 	unsigned int id = (this->extruder_override == 0) ? region.config().bottom_surface_filament_id.value : this->extruder_override;
     const unsigned int grouped = grouped_manual_pattern_infill_filament_1based(*this, region, id);
 	return resolve_mixed((((grouped != 0) ? grouped : resolve_mixed_1based(id)) - 1));
->>>>>>> lixnix/main
 }
 
 // Returns a zero based extruder this eec should be printed with, according to PrintRegion config or extruder_override if overriden.
@@ -488,72 +352,42 @@ unsigned int LayerTools::extruder(const ExtrusionEntityCollection &extrusions, c
 	assert(region.config().internal_solid_filament_id.value > 0);
 	assert(region.config().top_surface_filament_id.value > 0);
 	assert(region.config().bottom_surface_filament_id.value > 0);
-<<<<<<< snaporca-int
     if (this->extruder_override != 0)
         return resolve_mixed(resolve_mixed_1based(this->extruder_override) - 1);
 
-	// 1 based extruder ID.
-    unsigned int extruder = 1;
     if (extrusions.has_infill()) {
-        if (extrusions.has_solid_infill()) {
-            ExtrusionRole role = extrusions.role();
-            if (role == erTopSolidInfill || role == erIroning)
-                extruder = region.config().top_surface_filament_id;
-            else if (role == erBottomSurface)
-                extruder = region.config().bottom_surface_filament_id;
-            else {
-                // Snapmaker: internal solid infill at 100% sparse density prints with the sparse infill filament.
-                const ExtrusionRole first_role = extrusions.entities.empty() ? erNone : extrusions.entities.front()->role();
-                return internal_solid_infill_uses_sparse_filament(region, first_role) ? this->sparse_infill_filament_id(region)
-                                                                                       : this->internal_solid_filament_id(region);
-            }
-        } else {
-            return this->sparse_infill_filament_id(region);
-        }
-    } else {
-        const ExtrusionRole role = extrusions.role();
-        if (role == erPerimeter)
-            extruder = region.config().inner_wall_filament_id.value;
-        else
-            return this->wall_extruder_id(region);
-    }
-
-    return (extruder == 0) ? resolve_mixed(0) : resolve_mixed(resolve_mixed_1based(extruder) - 1);
-=======
-    if (extrusions.has_infill()) {
-        ExtrusionRole role = extrusions.entities.empty() ? erNone : extrusions.entities.front()->role();
         // Gap fill inherits the filament of the surface it fills; derive the role from
         // the first non-gap-fill entity (must match ToolOrdering::collect_extruders()).
+        ExtrusionRole role = extrusions.entities.empty() ? erNone : extrusions.entities.front()->role();
         if (role == erGapFill)
             for (const ExtrusionEntity *ee : extrusions.entities)
                 if (ee->role() != erGapFill) {
                     role = ee->role();
                     break;
                 }
+        if (role == erGapFill)
+            // Perimeter-generated gap fill with no sibling surface prints with the outer wall filament
+            // (ToolOrdering::collect_extruders() has_pure_gap_fill).
+            return this->wall_extruder_id(region);
         if (extrusions.has_solid_infill()) {
             ExtrusionRole solid_role = extrusions.role();
-            // Gap fill inherits the filament of the surface it fills; derive the role from
-            // the first non-gap-fill entity (must match ToolOrdering::collect_extruders()).
-            if (solid_role == erMixed)
-                for (const ExtrusionEntity *ee : extrusions.entities)
-                    if (ee->role() != erGapFill) {
-                        solid_role = ee->role();
-                        break;
-                    }
+            if (solid_role == erMixed && role != erGapFill)
+                solid_role = role;
             if (solid_role == erTopSolidInfill || solid_role == erIroning)
-                return top_surface_filament_id(region);
+                return this->top_surface_filament_id(region);
             if (solid_role == erBottomSurface || solid_role == erBridgeInfill) // ORCA: external bridges print as bottom surfaces (internal bridges stay internal solid)
-                return bottom_surface_filament_id(region);
-            return internal_solid_filament_id(region);
+                return this->bottom_surface_filament_id(region);
+            // Snapmaker: internal solid infill at 100% sparse density prints with the sparse infill filament.
+            return internal_solid_infill_uses_sparse_filament(region, role) ? this->sparse_infill_filament_id(region)
+                                                                            : this->internal_solid_filament_id(region);
         }
-        return sparse_infill_filament_id(region);
+        return this->sparse_infill_filament_id(region);
     }
     // Classify like the mixed-perimeter split: role() only reflects the first path of the first
     // loop, which may be an overhang path of an inner loop.
     bool any_outer = false, any_inner = false;
     classify_wall_filaments(extrusions, any_outer, any_inner);
-    return any_inner && ! any_outer ? inner_wall_extruder_id(region) : wall_extruder_id(region);
->>>>>>> lixnix/main
+    return any_inner && ! any_outer ? this->inner_wall_extruder_id(region) : this->wall_extruder_id(region);
 }
 
 // ORCA: per-extruder layer height. The heads (0-based, one per nozzle_diameter entry) some layer prints
@@ -662,30 +496,27 @@ void ToolOrdering::handle_dontcare_extruder(const std::vector<unsigned int>& too
     // Reorder the extruders of first layer
     {
         LayerTools& lt = m_layer_tools[0];
-        // Mixed filament layers depend on their collected extruder order, reordering would destroy it.
-        if (!lt.preserve_extruder_order) {
-            std::vector<unsigned int> layer0_extruders = lt.extruders;
-            lt.extruders.clear();
-            for (unsigned int extruder_id : tool_order_layer0) {
-                auto iter = std::find(layer0_extruders.begin(), layer0_extruders.end(), extruder_id);
-                if (iter != layer0_extruders.end()) {
-                    lt.extruders.push_back(extruder_id);
-                    *iter = (unsigned int)-1;
-                }
+        std::vector<unsigned int> layer0_extruders = lt.extruders;
+        lt.extruders.clear();
+        for (unsigned int extruder_id : tool_order_layer0) {
+            auto iter = std::find(layer0_extruders.begin(), layer0_extruders.end(), extruder_id);
+            if (iter != layer0_extruders.end()) {
+                lt.extruders.push_back(extruder_id);
+                *iter = (unsigned int)-1;
             }
+        }
 
-            for (unsigned int extruder_id : layer0_extruders) {
-                if (extruder_id == 0)
-                    continue;
+        for (unsigned int extruder_id : layer0_extruders) {
+            if (extruder_id == 0)
+                continue;
 
-                if (extruder_id != (unsigned int)-1)
-                    lt.extruders.push_back(extruder_id);
-            }
+            if (extruder_id != (unsigned int)-1)
+                lt.extruders.push_back(extruder_id);
+        }
 
-            // all extruders are zero
-            if (lt.extruders.empty()) {
-                lt.extruders.push_back(tool_order_layer0[0]);
-            }
+        // all extruders are zero
+        if (lt.extruders.empty()) {
+            lt.extruders.push_back(tool_order_layer0[0]);
         }
     }
 
@@ -704,10 +535,8 @@ void ToolOrdering::handle_dontcare_extruder(const std::vector<unsigned int>& too
                 // Pop the "don't care" extruder, the "don't care" region will be merged with the next one.
                 lt.extruders.erase(lt.extruders.begin());
 
-            // Mixed filament layers depend on their collected extruder order, rotating would destroy it.
-            if (!lt.preserve_extruder_order &&
-                (print_config == nullptr
-                 || print_config->toolchange_ordering == ToolChangeOrderingType::Default))
+            if (print_config == nullptr
+                || print_config->toolchange_ordering == ToolChangeOrderingType::Default)
             {
                 // Reorder the extruders to start with the last one.
                 for (size_t i = 1; i < lt.extruders.size(); ++i) {
@@ -774,12 +603,6 @@ void ToolOrdering::handle_dontcare_extruder(unsigned int last_extruder_id)
             if (lt.extruders.front() == 0)
                 // Pop the "don't care" extruder, the "don't care" region will be merged with the next one.
                 lt.extruders.erase(lt.extruders.begin());
-
-            // Mixed filament layers depend on their collected extruder order, reordering would destroy it.
-            if (lt.preserve_extruder_order) {
-                last_extruder_id = lt.extruders.back();
-                continue;
-            }
 
             if (print_config == nullptr
                 || print_config->toolchange_ordering == ToolChangeOrderingType::Default)
@@ -936,10 +759,6 @@ ToolOrdering::ToolOrdering(const PrintObject &object, unsigned int first_extrude
     m_num_physical = object.print()->config().filament_diameter.size();
     update_mixed_layer_height_settings();
     m_print = const_cast<Print*>(object.print());
-    // Mixed filament support.
-    m_mixed_mgr   = &object.print()->mixed_filament_manager();
-    m_num_physical = object.print()->config().filament_diameter.size();
-    update_mixed_layer_height_settings();
     if (object.layers().empty())
         return;
 
@@ -962,10 +781,7 @@ ToolOrdering::ToolOrdering(const PrintObject &object, unsigned int first_extrude
             this->tools_for_layer(layer->print_z).on_object_grid = true;
     }
 
-<<<<<<< snaporca-int
-=======
     // Mark this object's Local-Z layers before considering any purge overrides.
->>>>>>> lixnix/main
     this->collect_local_z_layers(object);
 
     // Collect extruders reuqired to print the layers. Add dontcare extruders
@@ -991,10 +807,7 @@ ToolOrdering::ToolOrdering(const PrintObject &object, unsigned int first_extrude
     this->mark_skirt_layers(object.print()->config(), max_layer_height);
 }
 
-<<<<<<< snaporca-int
 
-=======
->>>>>>> lixnix/main
 // For the use case when all objects are printed at once.
 // (print->config().print_sequence == PrintSequence::ByObject is false).
 ToolOrdering::ToolOrdering(const Print &print, unsigned int first_extruder, bool prime_multi_material)
@@ -1064,10 +877,7 @@ ToolOrdering::ToolOrdering(const Print &print, unsigned int first_extruder, bool
     else
         this->handle_dontcare_extruder(first_extruder);
 
-<<<<<<< snaporca-int
     // The wipe tower filament is inserted in sort_and_build_data() (insert_wipe_tower_extruder).
-=======
->>>>>>> lixnix/main
     this->collect_extruder_statistics(prime_multi_material);
 
     // The extruders of the layers are known now: the cap follows the heads in use.
@@ -1132,9 +942,9 @@ std::vector<unsigned int> ToolOrdering::generate_first_layer_tool_order(const Pr
         for(auto layer : object->layers()){
             for(auto layerm : layer->regions()){
                 for(auto& expoly : layerm->raw_slices){
-                    // Snapmaker Orca: the width is a column per tool head; the first column's number,
-                    // as the scalar read (a percent read as a number, the pre-existing quirk).
-                    if (!offset_ex(expoly, -0.2 * scale_(Flow::width_at(print.config().initial_layer_line_width, 0).value)).empty()) {
+                    // SnapOrca: initial_layer_line_width may be a % of the nozzle (the U1 profiles use one);
+                    // it is a column per tool head, the first column is read.
+                    if (!offset_ex(expoly, -0.2 * scale_(print.config().get_abs_value_at("initial_layer_line_width", 0, print.config().nozzle_diameter.get_at(0)))).empty()) {
                         target_layer = layer;
                         break;
                     }
@@ -1381,42 +1191,6 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
                 }
 
                 if (something_nonoverriddable){
-<<<<<<< snaporca-int
-                    const unsigned int configured_wall = (extruder_override == 0) ? region.config().outer_wall_filament_id.value : extruder_override;
-                    unsigned int       wall_ext        = resolve_mixed(configured_wall, layerCount, float(layer->print_z), float(layer->height), &object);
-                    const unsigned int grouped_id =
-                        grouped_manual_pattern_mixed_filament_id_for_layer(layer_tools, configured_wall);
-                    if (grouped_id != 0) {
-                        const std::vector<unsigned int> ordered =
-                            m_mixed_mgr->ordered_perimeter_extruders(grouped_id,
-                                                                     m_num_physical,
-                                                                     layerCount,
-                                                                     float(layer->print_z),
-                                                                     float(layer->height));
-                        if (!ordered.empty()) {
-                            if (ordered.size() >= 2)
-                                layer_tools.preserve_extruder_order = true;
-                            for (unsigned int extruder_id : ordered) {
-                                layer_tools.extruders.emplace_back(extruder_id);
-                                if (layerCount == 0 &&
-                                    std::find(firstLayerExtruders.begin(), firstLayerExtruders.end(), int(extruder_id)) == firstLayerExtruders.end())
-                                    firstLayerExtruders.emplace_back(int(extruder_id));
-                            }
-                        } else {
-                            layer_tools.extruders.emplace_back(wall_ext);
-                            if (layerCount == 0)
-                                firstLayerExtruders.emplace_back(wall_ext);
-                        }
-                    } else {
-                        layer_tools.extruders.emplace_back(wall_ext);
-                        if (layerCount == 0)
-                            firstLayerExtruders.emplace_back(wall_ext);
-                    }
-                    // Orca: the inner walls may print with their own filament.
-                    if (extruder_override == 0 && region.config().wall_loops.value > 1)
-                        layer_tools.extruders.emplace_back(resolve_mixed(region.config().inner_wall_filament_id.value, layerCount,
-                                                                         float(layer->print_z), float(layer->height), &object));
-=======
                     // Emplace a wall filament, expanding a grouped manual-pattern mixed filament
                     // into its per-layer ordered physical extruders (both walls need this so the
                     // wipe tower planner sees every extruder the grouped split will emit).
@@ -1461,34 +1235,21 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
                          (region.config().alternate_extra_wall.value && layer->id() % 2 == 1 &&
                           region.config().sparse_infill_density.value > 0 && !spiral_vase_layer)))
                         emplace_wall_filament(region.config().inner_wall_filament_id.value, false);
->>>>>>> lixnix/main
                 }
 
                 layer_tools.has_object = true;
             }
 
-<<<<<<< snaporca-int
-            bool has_sparse_infill      = false;
-            bool has_internal_solid     = false;
-            bool has_top_solid_surface  = false;
-            bool has_bottom_surface     = false;
-=======
             bool has_sparse_infill     = false;
             bool has_internal_solid    = false;
             bool has_top_solid_surface = false;
             bool has_bottom_surface    = false;
             bool has_pure_gap_fill     = false;
->>>>>>> lixnix/main
             bool something_nonoverriddable = false;
             for (const ExtrusionEntity *ee : layerm->fills.entities) {
                 // fill represents infill extrusions of a single island.
                 const auto *fill = dynamic_cast<const ExtrusionEntityCollection*>(ee);
                 ExtrusionRole role = fill->entities.empty() ? erNone : fill->entities.front()->role();
-<<<<<<< snaporca-int
-                if (internal_solid_infill_uses_sparse_filament(region, role))
-                    has_sparse_infill = true;
-                else if (role == erTopSolidInfill || role == erIroning)
-=======
                 // gap fill inherits its surface's filament; classify by the first non-gap-fill entity (must match LayerTools::extruder()).
                 if (role == erGapFill)
                     for (const ExtrusionEntity *fill_entity : fill->entities)
@@ -1496,8 +1257,9 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
                             role = fill_entity->role();
                             break;
                         }
-                if (role == erTopSolidInfill || role == erIroning)
->>>>>>> lixnix/main
+                if (internal_solid_infill_uses_sparse_filament(region, role))
+                    has_sparse_infill = true;
+                else if (role == erTopSolidInfill || role == erIroning)
                     has_top_solid_surface = true;
                 else if (role == erBottomSurface || role == erBridgeInfill) // ORCA: external bridges print as bottom surfaces
                     has_bottom_surface = true;
@@ -1517,24 +1279,6 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
 
             if (something_nonoverriddable || !m_print_config_ptr) {
             	if (extruder_override == 0) {
-<<<<<<< snaporca-int
-                    if (has_internal_solid)
-                        layer_tools.extruders.emplace_back(layer_tools.internal_solid_filament_id(region) + 1);
-                    if (has_top_solid_surface)
-                        layer_tools.extruders.emplace_back(resolve_mixed(region.config().top_surface_filament_id.value, layerCount,
-                                                                         float(layer->print_z), float(layer->height), &object));
-                    if (has_bottom_surface)
-                        layer_tools.extruders.emplace_back(resolve_mixed(region.config().bottom_surface_filament_id.value, layerCount,
-                                                                         float(layer->print_z), float(layer->height), &object));
-	                if (has_sparse_infill)
-	                    layer_tools.extruders.emplace_back(layer_tools.sparse_infill_filament_id(region) + 1);
-                } else if (has_internal_solid || has_top_solid_surface || has_bottom_surface || has_sparse_infill) {
-            		layer_tools.extruders.emplace_back(resolve_mixed(extruder_override, layerCount,
-                                                                      float(layer->print_z), float(layer->height), &object));
-                }
-            }
-            if (has_internal_solid || has_top_solid_surface || has_bottom_surface || has_sparse_infill)
-=======
 	                if (has_internal_solid) {
 		                    layer_tools.extruders.emplace_back(layer_tools.internal_solid_filament_id(region) + 1);
 	                }
@@ -1560,7 +1304,6 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
             	}
             }
             if (has_internal_solid || has_top_solid_surface || has_bottom_surface || has_sparse_infill || has_pure_gap_fill)
->>>>>>> lixnix/main
                 layer_tools.has_object = true;
         }
 
@@ -1620,12 +1363,8 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
     // Collect the support extruders.
     for (auto support_layer : object.support_layers()) {
         LayerTools   &layer_tools   = this->tools_for_layer(support_layer->print_z);
-<<<<<<< snaporca-int
-        layer_tools.layer_height    = support_layer->height;
-=======
         if (!layer_tools.has_object) // a shared Z keeps the object layer height
             layer_tools.layer_height = support_layer->height;
->>>>>>> lixnix/main
         ExtrusionRole role          = support_layer->support_fills.role();
         bool          has_support   = false;
         bool          has_interface = false;
@@ -1635,24 +1374,12 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
             if (er == erSupportMaterialInterface) has_interface = true;
             if (has_support && has_interface) break;
         }
-<<<<<<< snaporca-int
         // Snapmaker: support filaments may be mixed filaments.
         unsigned int extruder_support   = resolve_mixed(object.config().support_filament.value,
             layer_tools.layer_index, float(support_layer->print_z), float(support_layer->height), &object);
         unsigned int extruder_interface = resolve_mixed(object.config().support_interface_filament.value,
             layer_tools.layer_index, float(support_layer->print_z), float(support_layer->height), &object);
-=======
-        unsigned int extruder_support   = resolve_mixed(object.config().support_filament.value,
-                                                        layer_tools.layer_index,
-                                                        float(support_layer->print_z),
-                                                        float(support_layer->height),
-                                                        &object);
-        unsigned int extruder_interface = resolve_mixed(object.config().support_interface_filament.value,
-                                                        layer_tools.layer_index,
-                                                        float(support_layer->print_z),
-                                                        float(support_layer->height),
-                                                        &object);
-        // support nozzle diameter / material restrictions, resolve a "default" (0) support filament to a passing one here,
+        // ORCA: with support nozzle diameter / material restrictions, resolve a "default" (0) support filament to a passing one here,
         // preferring a filament this layer already prints with to save toolchanges. GCode::process_layer() re-prefers
         // layer-scheduled extruders for "don't care" support when the G-code is emitted.
         if (object.has_support_filament_restriction()) {
@@ -1671,27 +1398,8 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
             extruder_interface = restrict_default_filament(extruder_interface, true);
         }
         const bool interface_not_for_body = object.config().support_interface_not_for_body;
-        // A layer extruder the "don't care" support base can take over: printing, non-soluble and,
-        // with support_interface_not_for_body, other than the interface filament.
-        auto has_reusable_layer_extruder = [&]() -> bool {
-            const ConfigOptionBools &soluble = object.print()->config().filament_soluble;
-            for (unsigned int extruder_id : layer_tools.extruders) { // 1 based at this point
-                if (extruder_id == 0)
-                    continue;
-                if (interface_not_for_body && extruder_id == extruder_interface)
-                    continue;
-                if (extruder_id - 1 < soluble.values.size() && soluble.get_at(extruder_id - 1))
-                    continue;
-                return true;
-            }
-            return false;
-        };
-        // Pick a concrete base filament when "don't care" could only resolve to the interface or a
-        // soluble filament: on interface layers, and on base-only layers when the interface must not
-        // print the base.
-        const bool pick_base_filament = has_support && extruder_support == 0 && extruder_interface != 0 &&
-                                        (has_interface || interface_not_for_body) && !has_reusable_layer_extruder();
->>>>>>> lixnix/main
+        // A "don't care" support base gets a concrete filament on support-only interface layers.
+        const bool pick_base_filament = !(extruder_support > 0 || !has_interface || extruder_interface == 0 || layer_tools.has_object);
         if (has_support) {
             if (!pick_base_filament)
                 layer_tools.extruders.push_back(extruder_support);
@@ -1890,17 +1598,12 @@ void ToolOrdering::fill_wipe_tower_partitions(const PrintConfig &config, coordf_
     // the negative-Z wipe tower, so the broad belt_printer gate is correct.
     const bool belt_no_raft_gap = config.belt_printer.value;
     for (LayerTools &lt : m_layer_tools)
-<<<<<<< snaporca-int
-        lt.has_wipe_tower |= ((lt.has_object || lt.has_support) && (config.timelapse_type == TimelapseType::tlSmooth || lt.wipe_tower_partitions > 0))
-            || (! belt_no_raft_gap && lt.print_z < object_bottom_z + EPSILON);
-=======
         lt.has_wipe_tower |= ((lt.has_object || lt.has_support) && !support_only_off_grid(lt) &&
                               (config.timelapse_type == TimelapseType::tlSmooth || lt.wipe_tower_partitions > 0))
             // Below the object bottom the tower needs its base: on every raft layer, and on the
             // object-grid layers under a floating part. Fractional support-only layers there are
             // left slab-less like anywhere else, so the slabs stay whole grid steps.
-            || (lt.print_z < object_bottom_z + EPSILON && (lt.print_z < raft_top_z + EPSILON || !tower_skippable(lt)));
->>>>>>> lixnix/main
+            || (! belt_no_raft_gap && lt.print_z < object_bottom_z + EPSILON && (lt.print_z < raft_top_z + EPSILON || !tower_skippable(lt)));
 
     // Test for a raft, insert additional wipe tower layer to fill in the raft separation gap.
     // Skipped on belt printers for the same reason as the clause above: layers
@@ -2214,23 +1917,10 @@ float ToolOrdering::cal_max_additional_fan(const PrintConfig &config)
     const std::vector<int> &self_index = config.filament_self_index.values;
     const size_t columns = std::max(config.additional_cooling_fan_speed.size(), size_t(*used_filaments.rbegin()) + 1);
     float max_fan = 0;
-<<<<<<< snaporca-int
     for (size_t column = 0; column < columns; ++column) {
         const unsigned int filament_id = self_index.size() == columns ? self_index[column] - 1 : column;
         if (used_filaments.count(filament_id) && max_fan < config.additional_cooling_fan_speed.get_at(column))
             max_fan = config.additional_cooling_fan_speed.get_at(column);
-=======
-    for (LayerTools &layer_tools : m_layer_tools) {
-        std::vector<unsigned int> filaments = layer_tools.extruders;
-        std::set<int>             layer_extruder_count;
-        // count once only
-        // The fan speed holds one value per filament variant column.
-        for (unsigned int &filament : filaments) {
-            const float fan = float(config.additional_cooling_fan_speed.get_at(first_filament_variant_column(config.filament_self_index.values, filament)));
-            if (max_fan < fan)
-                max_fan = fan;
-        }
->>>>>>> lixnix/main
     }
     return max_fan;
 }
@@ -3885,21 +3575,12 @@ void ToolOrdering::reorder_extruders_for_minimum_flush_volume(bool reorder_first
 
     // other_layers_seq: the layer_idx and extruder_idx are base on 1
     auto get_custom_seq = [this, &other_layers_seqs, &reorder_first_layer, &first_layer_filaments, &layer_filaments, use_cyclic_ordering, cyclic_first_layer, &apply_cyclic_order](int layer_idx, std::vector<int>& out_seq) -> bool {
-<<<<<<< snaporca-int
         // Snapmaker: a grouped manual mixed-filament pattern fixes the order of the layer's extruders.
         if (layer_idx >= 0 && size_t(layer_idx) < m_layer_tools.size() && size_t(layer_idx) < layer_filaments.size()
             && m_layer_tools[size_t(layer_idx)].preserve_extruder_order) {
             const std::vector<unsigned int> &ordered = layer_filaments[size_t(layer_idx)];
             out_seq.resize(ordered.size());
             std::transform(ordered.begin(), ordered.end(), out_seq.begin(), [](auto item) { return int(item) + 1; });
-=======
-        // Mixed filament layers with a grouped manual pattern depend on their collected extruder
-        // order; pin the layer's sequence so the flush reorder cannot destroy it.
-        if (layer_idx >= 0 && size_t(layer_idx) < m_layer_tools.size() && m_layer_tools[layer_idx].preserve_extruder_order) {
-            const std::vector<unsigned int> &seq = m_layer_tools[layer_idx].extruders;
-            out_seq.resize(seq.size());
-            std::transform(seq.begin(), seq.end(), out_seq.begin(), [](auto item) { return int(item) + 1; });
->>>>>>> lixnix/main
             return true;
         }
         if (!reorder_first_layer && layer_idx == 0) {
