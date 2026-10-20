@@ -579,6 +579,13 @@ if ((NOT MSVC OR IS_CLANG_CL) AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR 
         set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall" )
     endif ()
 
+    # SnapOrca: no error limit on Clang, so one CI run reports every error of a file.
+    if (IS_CLANG_CL)
+        add_compile_options(/clang:-ferror-limit=0)
+    elseif (CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        add_compile_options(-ferror-limit=0)
+    endif ()
+
     # Every warning is an error unless it appears in one of the two lists below.
     #   disabled - never wanted. Off everywhere, so it never warns or errors.
     #   demoted  - wanted, not cleared yet. Still warns, does not error.
