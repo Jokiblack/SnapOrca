@@ -10270,7 +10270,10 @@ static std::string serialize_gcode_config_option(const DynamicPrintConfig &confi
         filament_count = volume_types->values.size();
     else if (step_sizes != nullptr)
         filament_count = step_sizes->values.size();
-    if (filament_count == 0)
+    // The flow-variant metadata must describe every filament; a config whose metadata is shorter
+    // (left at its one-element default) holds plain per-filament values, so dump them unchanged.
+    const auto *colours = config.option<ConfigOptionStrings>("filament_colour");
+    if (filament_count == 0 || (colours != nullptr && filament_count < colours->values.size()))
         return config.opt_serialize(key);
 
     const auto *source_vector = static_cast<const ConfigOptionVectorBase *>(source);
