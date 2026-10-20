@@ -275,7 +275,11 @@ bool OpenGLManager::init_gl(bool popup_error)
             BOOST_LOG_TRIVIAL(error) << "Unable to init GLAD OpenGL loader";
             return false;
         }
-        BOOST_LOG_TRIVIAL(info) << "GLAD loaded OpenGL " << GLAD_VERSION_MAJOR(version) << "." << GLAD_VERSION_MINOR(version);
+        // Warning level on purpose: release logs default to warnings, and a crash right after
+        // the first GL use needs the driver in the log.
+        BOOST_LOG_TRIVIAL(warning) << "GLAD loaded OpenGL " << GLAD_VERSION_MAJOR(version) << "." << GLAD_VERSION_MINOR(version)
+                                   << ", context " << s_gl_info.get_version() << ", renderer " << s_gl_info.get_renderer()
+                                   << " (" << s_gl_info.get_vendor() << ")";
         m_gl_initialized = true;
         if (GLAD_GL_EXT_texture_compression_s3tc)
             s_compressed_textures_supported = true;
