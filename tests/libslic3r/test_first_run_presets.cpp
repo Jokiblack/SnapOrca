@@ -81,16 +81,6 @@ VendorProfile::PrinterModel u1_model()
     return {};
 }
 
-// The default materials of the U1 model, as the wizard marks them when the model is ticked
-// (GuideFrame::OnScriptMessage, "save_userguide_models").
-std::map<std::string, std::string> default_materials()
-{
-    std::map<std::string, std::string> out;
-    for (const std::string &name : u1_model().default_materials)
-        out[name] = "true";
-    return out;
-}
-
 // The variant the wizard selects among ticked U1 variants (PresetBundle::wizard_printer_variant).
 std::string wizard_variant(const std::set<std::string> &ticked)
 {
@@ -248,8 +238,10 @@ TEST_CASE("After the setup wizard the U1 has four filament slots of one PLA and 
         run.finish(every_filament(), variant);
         run.check_first_run_state();
     }
-    SECTION("the default materials of the model ticked, the variant the wizard selects") {
-        run.finish(default_materials(), variant);
+    // The U1 model of SnapOrca's (Snapmaker's) profiles lists no default_materials, so the wizard ticks
+    // nothing for it and asks for at least one filament; the one ticked here is the rule's fallback.
+    SECTION("only Generic PLA ticked, the variant the wizard selects") {
+        run.finish({ { "Generic PLA", "true" } }, variant);
         run.check_first_run_state();
     }
     SECTION("every filament ticked, the 0.4 mm variant") {
@@ -369,14 +361,14 @@ TEST_CASE("The default material rule ranks the filaments of a Snapmaker printer"
 {
     // PresetBundle::default_material_rank: the model's default_materials first, then a Generic
     // PLA, then a Snapmaker PLA, then nothing; the searches of update_compatible take it in place
-    // of the alphabetical order of the list.
+    // of the alphabetical order of the list. The U1 model of SnapOrca's (Snapmaker's) profiles lists
+    // no default_materials, so Generic PLA is the U1's default material, as in Snapmaker Orca 2.4.
     auto bundle = std::make_unique<PresetBundle>();
     bundle->load_vendor_configs_from_json(PROFILES_DIR, SNAPMAKER, PresetBundle::LoadSystem,
                                           ForwardCompatibilitySubstitutionRule::EnableSilent, nullptr, /*allow_cache=*/false);
     REQUIRE(bundle->printers.select_preset_by_name("Snapmaker U1 (0.4 nozzle)", true));
     bundle->update_compatible(PresetSelectCompatibleType::Always);
-    const VendorProfile::PrinterModel model = u1_model();
-    REQUIRE_FALSE(model.default_materials.empty());
+    REQUIRE(u1_model().default_materials.empty());
 
     auto preset = [&bundle](const char *name) -> const Preset& {
         const Preset *found = bundle->filaments.find_preset(name, false);
@@ -385,9 +377,7 @@ TEST_CASE("The default material rule ranks the filaments of a Snapmaker printer"
     };
 
     SECTION("the ranks") {
-        const std::string default_material = "Snapmaker PLA SnapSpeed @U1";
-        REQUIRE(std::find(model.default_materials.begin(), model.default_materials.end(), default_material) != model.default_materials.end());
-        CHECK(bundle->default_material_rank(preset(default_material.c_str())) == 3);
+        CHECK(bundle->default_material_rank(preset("Snapmaker PLA SnapSpeed @U1")) == 1);
         CHECK(bundle->default_material_rank(preset("Generic PLA")) == 2);
         CHECK(bundle->default_material_rank(preset("Generic PLA Silk")) == 2);
         CHECK(bundle->default_material_rank(preset("Snapmaker PLA Basic @U1")) == 1);
@@ -403,15 +393,15 @@ TEST_CASE("The default material rule ranks the filaments of a Snapmaker printer"
         REQUIRE_FALSE(bundle->filaments.get_selected_preset().is_compatible);
         // The replacement of a placeholder slot (load_selections / update_selections) and of a
         // new slot without a tool head of another size.
-        CHECK(bundle->filament_slot_fallback_name() == "Snapmaker PLA SnapSpeed @U1");
-        CHECK(bundle->first_slot_fit(0).name == "Snapmaker PLA SnapSpeed @U1");
+        CHECK(bundle->filament_slot_fallback_name() == "Generic PLA");
+        CHECK(bundle->first_slot_fit(0).name == "Generic PLA");
         // The editor's filament and the slots whose preset is gone.
         bundle->filament_presets.assign(4, "no such filament");
         bundle->update_compatible(PresetSelectCompatibleType::Always);
         INFO("slots: " << joined(bundle->filament_presets));
-        CHECK(bundle->filaments.get_edited_preset().name == "Snapmaker PLA SnapSpeed @U1");
+        CHECK(bundle->filaments.get_edited_preset().name == "Generic PLA");
         for (const std::string &slot : bundle->filament_presets)
-            CHECK(slot == "Snapmaker PLA SnapSpeed @U1");
+            CHECK(slot == "Generic PLA");
     }
 
     SECTION("a chosen material is kept, the rule only breaks ties") {

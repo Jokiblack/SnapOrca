@@ -4239,8 +4239,16 @@ void PresetBundle::update_selections(AppConfig &config)
     if (config.has_printer_setting(initial_printer_profile_name, "filament_multi_colors")) {
         boost::algorithm::split(multi_filament_colors, config.get_printer_setting(initial_printer_profile_name, "filament_multi_colors"), boost::algorithm::is_any_of(","));
     }
-    if (multi_filament_colors.size() == 0) project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = filament_colors;
-    else project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = multi_filament_colors;
+    if (multi_filament_colors.size() == 0) {
+        project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = filament_colors;
+    } else {
+        // export_selections stores the app config key "filament_multi_colors" as '|'-joined
+        // colour packs; "filament_multi_colour" is the space-separated pack that
+        // read_color_pack() and the AMS sync paths parse.
+        for (std::string &pack : multi_filament_colors)
+            std::replace(pack.begin(), pack.end(), '|', ' ');
+        project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = multi_filament_colors;
+    }
 
     std::vector<std::string> filament_color_types;
     if (config.has_printer_setting(initial_printer_profile_name, "filament_color_types")) {
@@ -4444,8 +4452,16 @@ void PresetBundle::load_selections(AppConfig &config, const PresetPreferences& p
     if (config.has_printer_setting(initial_printer_profile_name, "filament_multi_colors")) {
         boost::algorithm::split(multi_filament_colors, config.get_printer_setting(initial_printer_profile_name, "filament_multi_colors"), boost::algorithm::is_any_of(","));
     }
-    if (multi_filament_colors.size() == 0) project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = filament_colors;
-    else project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = multi_filament_colors;
+    if (multi_filament_colors.size() == 0) {
+        project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = filament_colors;
+    } else {
+        // export_selections stores the app config key "filament_multi_colors" as '|'-joined
+        // colour packs; "filament_multi_colour" is the space-separated pack that
+        // read_color_pack() and the AMS sync paths parse.
+        for (std::string &pack : multi_filament_colors)
+            std::replace(pack.begin(), pack.end(), '|', ' ');
+        project_config.option<ConfigOptionStrings>("filament_multi_colour")->values = multi_filament_colors;
+    }
 
     std::vector<std::string> filament_color_types;
     if (config.has_printer_setting(initial_printer_profile_name, "filament_color_types")) {
@@ -4604,12 +4620,30 @@ void PresetBundle::export_selections(AppConfig &config)
     }
     // Load project config data into app config
     CNumericLocalesSetter locales_setter;
-    std::string           filament_colors = boost::algorithm::join(project_config.option<ConfigOptionStrings>("filament_colour")->values, ",");
-    config.set_printer_setting(printer_name, "filament_colors", filament_colors);
-
-    // Load filament multi color data into app config
-    std::string           filament_multi_colors = boost::algorithm::join(project_config.option<ConfigOptionStrings>("filament_multi_colour")->values, ",");
-    config.set_printer_setting(printer_name, "filament_multi_colors", filament_multi_colors);
+    // Snapmaker: the app config key "filament_multi_colors" holds the '|'-joined colour packs of the
+    // multi-colour (gradient/segment) slots, which LoadFilamentColors() reads back; load_selections()
+    // derives the space-separated "filament_multi_colour" packs from it.
+    {
+        std::vector<std::string>       projectMultiColors;
+        std::vector<FilamentColorMode> projectModes;
+        if (ConfigOptionStrings *multiColors = project_config.option<ConfigOptionStrings>("filament_multi_colors"))
+            projectMultiColors = multiColors->values;
+        if (ConfigOptionInts *modes = project_config.option<ConfigOptionInts>("filament_colour_mode"))
+            for (const int modeValue : modes->values)
+                projectModes.emplace_back(FilamentColorModeFromConfig(modeValue));
+        std::vector<std::string> filamentColorValues;
+        std::vector<std::string> filamentMultiColorValues;
+        std::vector<std::string> filamentColourModeStrings;
+        for (const SMFilamentColor &color : BuildFilamentColors(project_config.option<ConfigOptionStrings>("filament_colour")->values,
+                                                                projectMultiColors, projectModes, filament_presets.size())) {
+            filamentColorValues.emplace_back(color.PrimaryColor("#26A69A"));
+            filamentMultiColorValues.emplace_back(color.ToMultiColorsString());
+            filamentColourModeStrings.emplace_back(std::to_string(FilamentColorModeToConfig(color.NormalizedMode())));
+        }
+        config.set_printer_setting(printer_name, "filament_colors", boost::algorithm::join(filamentColorValues, ","));
+        config.set_printer_setting(printer_name, "filament_multi_colors", boost::algorithm::join(filamentMultiColorValues, ","));
+        config.set_printer_setting(printer_name, "filament_colour_mode", boost::algorithm::join(filamentColourModeStrings, ","));
+    }
 
     // Load filament color type data into app config
     std::string           filament_color_types = boost::algorithm::join(project_config.option<ConfigOptionStrings>("filament_colour_type")->values, ",");
@@ -4618,15 +4652,6 @@ void PresetBundle::export_selections(AppConfig &config)
     // Load ams counts data into app config
     std::string           extruder_ams_count_str = boost::algorithm::join(save_extruder_ams_count_to_string(this->extruder_ams_counts), ",");
     config.set_printer_setting(printer_name, "extruder_ams_count", extruder_ams_count_str);
-
-    // Snapmaker: persist the multi-colour colour mode next to the colours.
-    {
-        std::vector<std::string> filamentColourModeStrings;
-        if (ConfigOptionInts *modes = project_config.option<ConfigOptionInts>("filament_colour_mode"))
-            for (const int modeValue : modes->values)
-                filamentColourModeStrings.emplace_back(std::to_string(FilamentColorModeToConfig(FilamentColorModeFromConfig(modeValue))));
-        config.set_printer_setting(printer_name, "filament_colour_mode", boost::algorithm::join(filamentColourModeStrings, ","));
-    }
 
     std::string flush_volumes_matrix = boost::algorithm::join(project_config.option<ConfigOptionFloats>("flush_volumes_matrix")->values |
                                                              boost::adaptors::transformed(static_cast<std::string (*)(double)>(std::to_string)),
