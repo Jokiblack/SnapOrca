@@ -140,9 +140,6 @@ namespace GUI {
             unsigned int ibo_id{ 0 };
             size_t vertices_count{ 0 };
             size_t indices_count{ 0 };
-            bool texCoordBoundsValid{ false };
-            Vec2f texCoordMin{ 0.0f, 0.0f };
-            Vec2f texCoordMax{ 0.0f, 0.0f };
         };
     private:
         RenderData m_render_data;
@@ -173,7 +170,6 @@ namespace GUI {
         size_t indices_size_bytes() const { return indices_count() * Geometry::index_stride_bytes(m_render_data.geometry); }
 
         const Geometry& get_geometry() const { return m_render_data.geometry; }
-        bool GetTexCoordBounds(Vec2f& minCoord, Vec2f& maxCoord) const;
 
         void init_from(Geometry&& data);
         void init_from(const TriangleMesh& mesh);
@@ -218,7 +214,6 @@ namespace GUI {
 
     private:
         bool send_to_gpu();
-        void UpdateTexCoordBounds();
         bool InitVao();
         void DeleteVao();
         void RenderLegacy(const std::pair<size_t, size_t>& range, GLShaderProgram* shader);
