@@ -85,15 +85,11 @@
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/AppConfig.hpp"
 #include "3DScene.hpp"
-#include "MeshLodCache.hpp"
 #include "BackgroundSlicingProcess.hpp"
 #include "CameraUtils.hpp"
 #include "GLModel.hpp"
 #include "GLShader.hpp"
-<<<<<<< snaporca-int
 #include "libslic3r/ConnectedBodies.hpp"
-=======
->>>>>>> lixnix/main
 #include "GUI.hpp"
 #include "Tab.hpp"
 #include "GUI_Preview.hpp"
@@ -252,47 +248,6 @@ float RetinaHelper::get_scale_factor() { return float(m_window->GetContentScaleF
 #undef Convex
 #endif
 
-// Snapmaker: map the fork's named-thumbnail-viewpoint enum onto Orca's Camera::ViewAngleType.
-// The two enums carry the same eight viewpoints in the same order, but keep this explicit so a
-// reorder on either side is a compile error rather than a silently wrong camera.
-static Camera::ViewAngleType thumbnail_view_to_camera_view_angle_type(ThumbnailView view)
-{
-    switch (view) {
-    case ThumbnailView::Iso:      return Camera::ViewAngleType::Iso;
-    case ThumbnailView::TopFront: return Camera::ViewAngleType::Top_Front;
-    case ThumbnailView::Left:     return Camera::ViewAngleType::Left;
-    case ThumbnailView::Right:    return Camera::ViewAngleType::Right;
-    case ThumbnailView::Top:      return Camera::ViewAngleType::Top;
-    case ThumbnailView::Bottom:   return Camera::ViewAngleType::Bottom;
-    case ThumbnailView::Front:    return Camera::ViewAngleType::Front;
-    case ThumbnailView::Rear:     return Camera::ViewAngleType::Rear;
-    }
-    return Camera::ViewAngleType::Iso;
-}
-
-static std::vector<unsigned int> get_ui_ordered_filament_ids(Plater *plater, size_t total_filaments)
-{
-    std::vector<unsigned int> ordered_ids;
-    if (plater != nullptr)
-        ordered_ids = plater->sidebar().get_ui_ordered_filament_ids();
-
-    std::vector<unsigned int> sanitized_ids;
-    sanitized_ids.reserve(total_filaments);
-    std::vector<bool> used(total_filaments + 1, false);
-    for (const unsigned int filament_id : ordered_ids) {
-        if (filament_id == 0 || filament_id > total_filaments || used[filament_id])
-            continue;
-        used[filament_id] = true;
-        sanitized_ids.emplace_back(filament_id);
-    }
-
-    for (unsigned int filament_id = 1; filament_id <= total_filaments; ++filament_id) {
-        if (!used[filament_id])
-            sanitized_ids.emplace_back(filament_id);
-    }
-
-    return sanitized_ids;
-}
 
 std::string& get_object_limited_text() {
     static std::string object_limited_text = _u8L("An object is placed in the left/right nozzle-only area or exceeds the printable height of the left nozzle.\n"
@@ -1758,9 +1713,7 @@ GLCanvas3D::~GLCanvas3D()
     if (m_section_view->owner == this)
         m_section_view->owner = nullptr;
 
-    // Snapmaker: during canvas destruction the sidebar/selection is already being torn down,
-    // so reset_volumes() must not notify it (crash fix #492).
-    reset_volumes(ResetVolumesMode::CanvasDestruction);
+    reset_volumes();
 
     m_sel_plate_toolbar.del_all_item();
     m_sel_plate_toolbar.del_stats_item();
@@ -1896,21 +1849,7 @@ const float GLCanvas3D::get_scale() const
 #endif
 }
 
-float GLCanvas3D::get_lod_pixel_scale() const
-{
-#if ENABLE_RETINA_GL
-    // macOS and GTK3: the viewport is the window size times this factor, see get_canvas_size().
-    return get_scale();
-#else
-    // Windows: the viewport is in device pixels and get_scale() is 1. The content scale factor is
-    // what the ImGui overlays of the canvas are scaled by there (imgui->set_scaling() in _resize()),
-    // so an object changes its level at the same apparent size on a 100 % and on a 200 % display.
-    const double factor = m_canvas != nullptr ? m_canvas->GetContentScaleFactor() : 1.;
-    return factor > 0. ? float(factor) : 1.f;
-#endif
-}
-
-void GLCanvas3D::reset_volumes(ResetVolumesMode mode)
+void GLCanvas3D::reset_volumes()
 {
     if (!m_initialized)
         return;
@@ -2404,7 +2343,6 @@ void GLCanvas3D::enable_select_plate_toolbar(bool enable)
     m_sel_plate_toolbar.set_enabled(enable);
 }
 
-<<<<<<< snaporca-int
 void GLCanvas3D::invalidate_select_plate_toolbar()
 {
     // The plate toolbar is rebuilt every frame from the plates' thumbnails, so there is no
@@ -2412,8 +2350,6 @@ void GLCanvas3D::invalidate_select_plate_toolbar()
     m_dirty = true;
 }
 
-=======
->>>>>>> lixnix/main
 void GLCanvas3D::enable_assemble_view_toolbar(bool enable)
 {
     m_assemble_view_toolbar.set_enabled(enable);
@@ -2639,7 +2575,7 @@ void GLCanvas3D::_render_frame(bool scene_dirty, bool only_init)
 
     // If a scene reload was postponed while the canvas was hidden, consume it on first visible render.
     if (m_reload_delayed) {
-        reload_scene(true, m_reload_delayed_full);
+        reload_scene(true);
         if (m_reload_delayed)
             return;
     }
@@ -2728,24 +2664,7 @@ void GLCanvas3D::_render_frame(bool scene_dirty, bool only_init)
         m_frame_profiler.begin_frame();
     Slic3r::ScopeGuard profiler_guard([this]() { m_frame_profiler.end_frame(); });
     if (!reuse_scene) {
-        // Snapmaker Orca: the duration of every scene pass at log level debug, the figure the render LOD
-        // is judged by. While the FPS overlay is on the pass is waited for with glFinish(), so the time
-        // covers the work of the GPU; otherwise it is the time to submit the pass and nothing stalls.
-        const bool time_scene_pass = get_logging_level() >= 4;
-        const auto scene_pass_start = time_scene_pass ? std::chrono::steady_clock::now() : std::chrono::steady_clock::time_point();
         _render_scene(camera, cnv_size);
-        if (time_scene_pass) {
-            const bool gpu_finished = _is_fps_overlay_enabled();
-            if (gpu_finished)
-                glsafe(::glFinish());
-            const double ms = std::chrono::duration<double, std::milli>(std::chrono::steady_clock::now() - scene_pass_start).count();
-            const std::array<unsigned, 3>& lod = _lod_stats();
-            const char* canvas_name = m_canvas_type == ECanvasType::CanvasView3D ? "3D view" :
-                                      m_canvas_type == ECanvasType::CanvasPreview ? "preview" : "assemble view";
-            BOOST_LOG_TRIVIAL(debug) << "scene pass: " << ms << " ms (" << (gpu_finished ? "GPU finished" : "submitted only")
-                                     << "), " << canvas_name << ", " << m_volumes.volumes.size()
-                                     << " volume(s), LOD full / middle / small: " << lod[0] << " / " << lod[1] << " / " << lod[2];
-        }
         if (!overlay_tick)
             m_render_stats.increment_scene_fps_counter();
     }
@@ -2761,14 +2680,9 @@ void GLCanvas3D::_render_frame(bool scene_dirty, bool only_init)
     m_frame_profiler.mark("ui");
 
     const int current_fps = m_render_stats.get_fps_and_reset_if_needed();
-<<<<<<< snaporca-int
     if (_is_fps_overlay_enabled() || _is_render_timings_enabled())
         _render_fps_overlay(current_fps);
     if (_is_fps_overlay_enabled()) {
-=======
-    if (_is_fps_overlay_enabled()) {
-        _render_fps_overlay(current_fps, reuse_scene);
->>>>>>> lixnix/main
         // The timer requests an overlay-only frame a second from now. A frame it requested
         // re-arms it only while a count is above zero.
         if (!overlay_tick || current_fps > 0 || m_render_stats.get_scene_fps() > 0)
@@ -2919,67 +2833,8 @@ void GLCanvas3D::_render_frame(bool scene_dirty, bool only_init)
 
 // Everything drawn into the 3D scene, from the clear to the post processing passes, ending in the
 // capture an overlay-only frame reuses.
-void GLCanvas3D::set_type(ECanvasType type)
-{
-    m_canvas_type = type;
-    // Snapmaker Orca: the plater and the assemble view draw reduced models. The volumes of the
-    // preview canvas carry a z range (GLVolume::set_range()), which the render LOD never draws.
-    m_volumes.set_lod_enabled(type != ECanvasType::CanvasPreview);
-}
-
-bool GLCanvas3D::_is_lod_allowed() const
-{
-    const MeshLodCache* cache = MeshLodCache::instance();
-    if (cache == nullptr || !cache->enabled())
-        return false;
-    // The wireframe overlay draws the triangles themselves.
-    if (wxGetApp().plater() != nullptr && wxGetApp().plater()->is_show_wireframe())
-        return false;
-    // Layer height editing draws the object through GLVolume::render() with its own shader.
-    if (is_layers_editing_enabled())
-        return false;
-    // A section view shows the inside of the mesh; the cut is computed from the full mesh.
-    if (m_use_clipping_planes || m_gizmos.get_clipping_plane().is_active())
-        return false;
-    if (m_canvas_type == ECanvasType::CanvasAssembleView && m_gizmos.get_assemble_view_clipping_plane().is_active())
-        return false;
-    // These gizmos draw surface features, cross sections or previews computed from the full mesh
-    // for volumes that are not necessarily selected. The target of every other gizmo is selected
-    // and therefore at full detail, the rest of the plate keeps its level.
-    switch (m_gizmos.get_current_type()) {
-    case GLGizmosManager::Simplify:
-    case GLGizmosManager::Cut:
-    case GLGizmosManager::MeshBoolean:
-    case GLGizmosManager::Measure:
-    case GLGizmosManager::Assembly:
-        return false;
-    default:
-        break;
-    }
-#ifdef SLIC3R_CAD
-    // Design tab: the sketch is drawn on faces of the full mesh.
-    if (m_design_sketch_tool != nullptr && m_design_sketch_tool->has_display())
-        return false;
-#endif
-    return true;
-}
-
-double GLCanvas3D::_lod_pin_above_z() const
-{
-    // The option _render_objects() hands to the shader, which darkens what reaches above the
-    // height per fragment from the world position; with one value or none the shader flag is off.
-    const auto* heights = wxGetApp().preset_bundle->printers.get_edited_preset().config.option<ConfigOptionFloatsNullable>("extruder_printable_height");
-    // Nil entries of the nullable option are skipped; all nil means no pin.
-    return heights != nullptr ? lod_pin_height(heights->values) : DBL_MAX;
-}
-
 void GLCanvas3D::_render_scene(const Camera& camera, const Size& cnv_size)
 {
-    // Snapmaker Orca: render LOD, the levels of this scene pass, decided before the shadow pass
-    // and the colour passes draw anything so that both use the same model of every volume.
-    if (m_canvas_type == ECanvasType::CanvasView3D || m_canvas_type == ECanvasType::CanvasAssembleView)
-        m_volumes.update_lod(camera, _is_lod_allowed(), get_lod_pixel_scale(), _lod_pin_above_z());
-
     // Recorded by PartPlate::render_icons() below, when it runs.
     wxGetApp().plater()->get_partplate_list().clear_hover_tooltip();
     glsafe(::glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
@@ -3182,61 +3037,6 @@ void GLCanvas3D::render_thumbnail(ThumbnailData &           thumbnail_data,
     }
 }
 
-// Snapmaker: overload taking an explicit extruder-colour vector. Used by the mixed-filament
-// preview dialogs, which render the scene with substituted (matched/original) colours instead
-// of the project palette. Identical to the overload above apart from the colour source.
-void GLCanvas3D::render_thumbnail(ThumbnailData& thumbnail_data, unsigned int w, unsigned int h, const ThumbnailsParams& thumbnail_params,
-                                  const GLVolumeCollection &volumes,
-                                  std::vector<ColorRGBA>&   extruder_colors,
-                                  Camera::EType             camera_type,
-                                  Camera::ViewAngleType     camera_view_angle_type,
-                                  bool                      for_picking,
-                                  bool                      ban_light)
-{
-    GLShaderProgram* shader = nullptr;
-    if (for_picking)
-        shader = wxGetApp().get_shader("flat");
-    else
-        shader = wxGetApp().get_shader("thumbnail");
-    ModelObjectPtrs& model_objects = GUI::wxGetApp().model().objects;
-    switch (OpenGLManager::get_framebuffers_type())
-    {
-    case OpenGLManager::EFramebufferType::Arb:
-        { render_thumbnail_framebuffer(thumbnail_data, w, h, thumbnail_params, wxGetApp().plater()->get_partplate_list(), model_objects, volumes, extruder_colors, shader, camera_type,
-                                     camera_view_angle_type, for_picking, ban_light);
-        break;
-    }
-    case OpenGLManager::EFramebufferType::Ext:
-        { render_thumbnail_framebuffer_ext(thumbnail_data, w, h, thumbnail_params, wxGetApp().plater()->get_partplate_list(), model_objects, volumes, extruder_colors, shader, camera_type,
-                                         camera_view_angle_type, for_picking, ban_light);
-        break;
-    }
-    default:{
-        render_thumbnail_legacy(thumbnail_data, w, h, thumbnail_params, wxGetApp().plater()->get_partplate_list(), model_objects, volumes, extruder_colors, shader, camera_type,
-                                camera_view_angle_type, for_picking, ban_light);
-        break;
-    }
-    }
-}
-
-// Snapmaker named-viewpoint overload. ThumbnailView maps 1:1 onto Orca's
-// Camera::ViewAngleType (see thumbnail_view_to_camera_view_angle_type): both enums carry the
-// same eight named viewpoints in the same order. ThumbnailView::Top deliberately maps to
-// Camera::ViewAngleType::Top (unified named-view framing: select_view + zoom_to_box on the
-// volumes bbox) and NOT to Top_Plate, which is the legacy plate-centred top view still used
-// by Plater's top_thumbnail_data for 3MF export.
-void GLCanvas3D::render_thumbnail(ThumbnailData& thumbnail_data, unsigned int w, unsigned int h, const ThumbnailsParams& thumbnail_params,
-                                  const GLVolumeCollection &volumes,
-                                  std::vector<ColorRGBA>&   extruder_colors,
-                                  Camera::EType             camera_type,
-                                  ThumbnailView             view,
-                                  bool                      for_picking,
-                                  bool                      ban_light)
-{
-    render_thumbnail(thumbnail_data, w, h, thumbnail_params, volumes, extruder_colors, camera_type,
-                     thumbnail_view_to_camera_view_angle_type(view), for_picking, ban_light);
-}
-
 void GLCanvas3D::render_thumbnail(ThumbnailData &                    thumbnail_data,
                                   std::vector<ColorRGBA> &           extruder_colors,
                                   unsigned int                       w,
@@ -3406,29 +3206,15 @@ void GLCanvas3D::mirror_selection(Axis axis)
 // 3) SLA support meshes for their respective ModelObjects / ModelInstances
 // 4) Wipe tower preview
 // 5) Out of bed collision status & message overlay (texture)
-// Used filaments of the plate the PLA/PETG check last read, shared by the canvases (the preview has
-// no scene reload); any reload_scene marks them stale.
-static std::vector<int> s_pla_petg_used_filaments;
-static int              s_pla_petg_used_plate = -1;
-
 void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_refresh)
 {
-    s_pla_petg_used_plate = -1;
     if (m_canvas == nullptr || m_config == nullptr || m_model == nullptr)
         return;
 
     if (!m_initialized || !_set_current()) {
         m_reload_delayed = true;
-        // Snapmaker Orca: a postponed full refresh stays a full one. The render LOD toggle relies on it:
-        // a canvas that cannot be made current while hidden would otherwise recycle its volumes later.
-        m_reload_delayed_full |= force_full_scene_refresh;
         set_as_dirty();
         return;
-    }
-    // A plain reload that gets through first must not downgrade the full refresh that is still owed.
-    if (m_reload_delayed_full) {
-        force_full_scene_refresh = true;
-        m_reload_delayed_full = false;
     }
 
     m_hover_volume_idxs.clear();
@@ -3592,10 +3378,6 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
                 // BBS
                 if (volume->is_wipe_tower)
                     deleted_wipe_towers.emplace_back(volume, volume_id);
-<<<<<<< snaporca-int
-=======
-                // LOD: GLVolume::m_lod is a shared_ptr; upstream's release_volume() (#737/#844) is deliberately not ported.
->>>>>>> lixnix/main
                 delete volume;
             }
         }
@@ -3973,19 +3755,15 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
             //if (printer_technology != ptSLA || !contained_min_one)
             //    _set_warning_notification(EWarning::SlaSupportsOutside, false);
 
-            // Spiral lift boundary warning: checked while any volume is on the bed, even if others are outside.
-            if (contained_min_one) {
-                _set_warning_notification(EWarning::SpiralLiftNearBoundary, _is_any_volume_near_boundary_for_spiral_lift());
-            } else {
-                _set_warning_notification(EWarning::SpiralLiftNearBoundary, false);
-            }
-
             auto full_config_temp = wxGetApp().preset_bundle->full_config();
             bool tpu_valid = cur_plate->check_tpu_printable_status(full_config_temp, wxGetApp().preset_bundle->get_used_tpu_filaments(cur_plate->get_extruders(true)));
             _set_warning_notification(EWarning::TPUPrintableError, !tpu_valid);
 
             bool filament_printable = cur_plate->check_filament_printable(full_config_temp, filament_printable_error_msg);
             _set_warning_notification(EWarning::FilamentPrintableError, !filament_printable);
+
+            bool mix_pla_and_petg = cur_plate->check_mixture_of_pla_and_petg(full_config_temp);
+            _set_warning_notification(EWarning::MixUsePLAAndPETG, !mix_pla_and_petg);
 
             bool single_extruder_mixed_risk = cur_plate->check_single_extruder_mixed_filament_risk(full_config_temp, get_single_extruder_mixed_filament_warning_text());
             _set_warning_notification(EWarning::SingleExtruderMixedFilament, single_extruder_mixed_risk);
@@ -4080,20 +3858,12 @@ void GLCanvas3D::load_shells(const Print& print, bool force_previewing)
     }
 }
 
-void GLCanvas3D::on_render_lod_changed()
-{
-    // Buffers can only be freed under a current context; without one the shells keep theirs until
-    // the next load_shells() clears them.
-    m_gcode_viewer.on_render_lod_changed(m_initialized && _set_current());
-    set_as_dirty();
-}
-
 void GLCanvas3D::set_shell_transparence(float alpha){
     m_gcode_viewer.set_shell_transparency(alpha);
 
 }
 //BBS: add only gcode mode
-void GLCanvas3D::load_gcode_preview(const GCodeProcessorResult& gcode_result, const std::vector<std::string>& str_tool_colors, const std::vector<std::string>& str_color_print_colors, bool only_gcode, bool skip_toolpaths)
+void GLCanvas3D::load_gcode_preview(const GCodeProcessorResult& gcode_result, const std::vector<std::string>& str_tool_colors, const std::vector<std::string>& str_color_print_colors, bool only_gcode)
 {
     PartPlateList& partplate_list = wxGetApp().plater()->get_partplate_list();
     PartPlate* plate = partplate_list.get_curr_plate();
@@ -4106,10 +3876,9 @@ void GLCanvas3D::load_gcode_preview(const GCodeProcessorResult& gcode_result, co
     m_gcode_viewer.init(wxGetApp().get_mode(), wxGetApp().preset_bundle);
     m_gcode_viewer.enable_legend(true);
 
-    // Snapmaker: skip_toolpaths forces the Z-scan path (no GPU vertex buffers); used by the
-    // memory-warning dialog when the user chooses to continue without the toolpath preview.
+
     m_gcode_viewer.load_as_gcode(gcode_result, *this->fff_print(), str_tool_colors, str_color_print_colors, wxGetApp().plater()->build_volume(), exclude_bounding_box,
-        wxGetApp().get_mode(), only_gcode, skip_toolpaths);
+        wxGetApp().get_mode(), only_gcode);
     m_gcode_layers_times_cache = m_gcode_viewer.get_layers_times();
 
     m_gcode_viewer.get_moves_slider()->SetHigherValue(m_gcode_viewer.get_moves_slider()->GetMaxValue());
@@ -4354,17 +4123,8 @@ void GLCanvas3D::on_char(wxKeyEvent& evt)
             if (keyCode < '7')  keyCode += 10;
             m_timer_set_color.Stop();
         }
-        if (m_gizmos.get_current_type() != GLGizmosManager::MmSegmentation) {
-            // Snapmaker Orca: the digit names the filament in the order the sidebar shows.
-            const int display_filament_id = keyCode - '0';
-            const size_t total_filaments = wxGetApp().plater()->get_extruder_colors_from_plater_config().size();
-            const std::vector<unsigned int> ordered_filament_ids =
-                get_ui_ordered_filament_ids(wxGetApp().plater(), total_filaments);
-            if (display_filament_id >= 1 && size_t(display_filament_id) <= ordered_filament_ids.size())
-                obj_list->set_extruder_for_selected_items(int(ordered_filament_ids[size_t(display_filament_id - 1)]));
-            else
-                obj_list->set_extruder_for_selected_items(display_filament_id);
-        }
+        if (m_gizmos.get_current_type() != GLGizmosManager::MmSegmentation)
+            obj_list->set_extruder_for_selected_items(keyCode - '0');
         break;
     }
     default:  { evt.Skip(); break; }
@@ -7105,63 +6865,6 @@ void GLCanvas3D::_render_3d_navigator()
     }
 
     m_navigator_dragging = result.dragging;
-
-    const float fitButtonSize = ImGui::GetFontSize() * 2.5f;
-    const float fitButtonGap = 8.0f * sc;
-    const float fitButtonLeft = viewManipulateLeft + size + fitButtonGap;
-    const float fitButtonTop = viewManipulateTop - fitButtonSize - 20.0f * sc;
-    RenderFitCameraButton(fitButtonLeft, fitButtonTop, fitButtonSize);
-}
-
-void GLCanvas3D::RenderFitCameraButton(float left, float top, float buttonSize)
-{
-    if (buttonSize <= 0.0f)
-    {
-        return;
-    }
-
-    const GLGizmosManager::MENU_ICON_NAME normalIcon = m_is_dark ?
-        GLGizmosManager::IC_FIT_CAMERA_DARK : GLGizmosManager::IC_FIT_CAMERA;
-    const GLGizmosManager::MENU_ICON_NAME hoverIcon = m_is_dark ?
-        GLGizmosManager::IC_FIT_CAMERA_DARK_HOVER : GLGizmosManager::IC_FIT_CAMERA_HOVER;
-
-    if (!m_gizmos.init_icon_textures())
-    {
-        return;
-    }
-
-    const ImTextureID normalId = m_gizmos.get_icon_texture_id(normalIcon);
-    const ImTextureID hoverId = m_gizmos.get_icon_texture_id(hoverIcon);
-    if (normalId == nullptr || hoverId == nullptr)
-    {
-        return;
-    }
-
-    ImGuiWrapper& imgui = *wxGetApp().imgui();
-    imgui.set_next_window_pos(left, top, ImGuiCond_Always, 0.0f, 0.0f);
-    imgui.set_next_window_size(buttonSize, buttonSize, ImGuiCond_Always);
-
-    ImGui::PushStyleVar(ImGuiStyleVar_WindowPadding, ImVec2(0.0f, 0.0f));
-    imgui.begin(std::string("FitCameraButtonWindow"), ImGuiWindowFlags_NoResize | ImGuiWindowFlags_NoBackground |
-                                                      ImGuiWindowFlags_NoScrollbar | ImGuiWindowFlags_NoMove |
-                                                      ImGuiWindowFlags_NoTitleBar | ImGuiWindowFlags_NoCollapse |
-                                                      ImGuiWindowFlags_NoSavedSettings);
-
-    ImGui::PushStyleVar(ImGuiStyleVar_FrameBorderSize, 0.0f);
-    ImGui::PushStyleVar(ImGuiStyleVar_FramePadding, ImVec2(0.0f, 0.0f));
-    if (ImGui::ImageButton3(normalId, hoverId, ImVec2(buttonSize, buttonSize)))
-    {
-        ZoomToFit();
-    }
-
-    if (ImGui::IsItemHovered())
-    {
-        imgui.tooltip(_L("Fit in all view"), ImGui::GetFontSize() * 20.0f);
-    }
-
-    ImGui::PopStyleVar(2);
-    imgui.end();
-    ImGui::PopStyleVar();
 }
 
 #define ENABLE_THUMBNAIL_GENERATOR_DEBUG_OUTPUT 0
@@ -7292,15 +6995,8 @@ void GLCanvas3D::render_thumbnail_internal(ThumbnailData& thumbnail_data, const 
         //camera.select_view("top");
     }
     else {
-        // Named viewpoints (Iso/Top_Front/Left/Right/Top/Bottom/Front/Rear). Camera::select_view
-        // sets the orientation, zoom_to_box then recenters on the volumes bbox (set_target on the
-        // box centre) and computes the ortho zoom. This subsumes the fork's ThumbnailView branch:
-        // ThumbnailView is mapped onto Camera::ViewAngleType by the render_thumbnail overload.
-        // set_type re-locks the caller's projection (Ortho): select_view would otherwise try to
-        // flip to Perspective via auto_type.
         camera.select_view(camera_view_angle_type);
         camera.zoom_to_box(volumes_box);
-        camera.set_type(camera_type);
     }
 
     const Transform3d &view_matrix = camera.get_view_matrix();
@@ -7604,7 +7300,8 @@ void GLCanvas3D::render_thumbnail_framebuffer_ext(ThumbnailData& thumbnail_data,
 
     if (::glCheckFramebufferStatusEXT(GL_FRAMEBUFFER_EXT) == GL_FRAMEBUFFER_COMPLETE_EXT) {
         render_thumbnail_internal(thumbnail_data, thumbnail_params, partplate_list, model_objects, volumes, extruder_colors, shader, camera_type, camera_view_angle_type,
-                                  for_picking, ban_light);
+                                  for_picking,
+                                  ban_light);
 
         if (multisample) {
             GLuint resolve_fbo;
@@ -7703,20 +7400,8 @@ void GLCanvas3D::_switch_toolbars_icon_filename()
     background_data.bottom = 16;
     m_main_toolbar.init(background_data);
     m_assemble_view_toolbar.init(background_data);
-<<<<<<< snaporca-int
     m_separator_toolbar.init(background_data);
     collapse_toolbar().init(background_data);
-=======
-    wxGetApp().plater()->get_collapse_toolbar().init(background_data);
-
-    // The separator toolbar keeps the borderless metadata that _init_separator_toolbar() sets.
-    BackgroundTexture::Metadata separator_background_data = background_data;
-    separator_background_data.left = 0;
-    separator_background_data.top = 0;
-    separator_background_data.right = 0;
-    separator_background_data.bottom = 0;
-    m_separator_toolbar.init(separator_background_data);
->>>>>>> lixnix/main
 
     // main toolbar
     {
@@ -8010,6 +7695,7 @@ bool GLCanvas3D::_update_imgui_select_plate_toolbar()
         p_plater->update_all_plate_thumbnails(true);
     }
 
+    make_current_for_postinit();
     _update_select_plate_toolbar_stats_item();
 
     m_sel_plate_toolbar.del_all_item();
@@ -8137,7 +7823,6 @@ bool GLCanvas3D::_init_view_toolbar()
 
 bool GLCanvas3D::_init_collapse_toolbar()
 {
-<<<<<<< snaporca-int
     if (m_collapse_toolbar == nullptr)
         return wxGetApp().plater()->init_collapse_toolbar();
 
@@ -8149,9 +7834,6 @@ bool GLCanvas3D::_init_collapse_toolbar()
     background_data.right = 16;
     background_data.bottom = 16;
     return m_collapse_toolbar->init(background_data);
-=======
-    return wxGetApp().plater()->init_collapse_toolbar();
->>>>>>> lixnix/main
 }
 
 bool GLCanvas3D::_set_current()
@@ -8916,13 +8598,7 @@ bool GLCanvas3D::_is_frame_skipping_enabled() const
     return wxGetApp().app_config != nullptr && wxGetApp().app_config->get_bool(SETTING_OPENGL_SKIP_IDENTICAL_FRAMES);
 }
 
-const std::array<unsigned, 3>& GLCanvas3D::_lod_stats() const
-{
-    // The preview draws reduced models for its shells only, its own volumes never opt in.
-    return m_canvas_type == ECanvasType::CanvasPreview ? m_gcode_viewer.shells_lod_stats() : m_volumes.lod_stats();
-}
-
-void GLCanvas3D::_render_fps_overlay(int fps, bool scene_reused) const
+void GLCanvas3D::_render_fps_overlay(int fps) const
 {
     const bool show_fps = _is_fps_overlay_enabled() && fps >= 0;
     const std::vector<FrameProfiler::Section>& sections = m_frame_profiler.sections();
@@ -8956,7 +8632,6 @@ void GLCanvas3D::_render_fps_overlay(int fps, bool scene_reused) const
         ImGuiWindowFlags_NoMove |
         ImGuiWindowFlags_NoSavedSettings |
         ImGuiWindowFlags_NoInputs);
-<<<<<<< snaporca-int
     if (show_fps) {
         imgui.text(std::string("FPS: ") + std::to_string(fps));
         ImGui::SameLine();
@@ -8987,16 +8662,6 @@ void GLCanvas3D::_render_fps_overlay(int fps, bool scene_reused) const
         row("total", cpu_ms, gpu_ms);
         ImGui::EndTable();
     }
-=======
-    imgui.text(std::string("FPS: ") + std::to_string(fps));
-    // The subset of those frames that redrew the scene rather than reusing the cached one.
-    imgui.text(std::string("3D: ") + std::to_string(m_render_stats.get_scene_fps()));
-    // Snapmaker Orca: render LOD, the volumes at full / middle / small detail in the last scene pass.
-    // A frame that replays the cached scene ran no such pass, the counts are those of the pass it replays.
-    const std::array<unsigned, 3>& lod = _lod_stats();
-    imgui.text(std::string("LOD ") + std::to_string(lod[0]) + "/" + std::to_string(lod[1]) + "/" + std::to_string(lod[2]) +
-               (scene_reused ? " (cached)" : ""));
->>>>>>> lixnix/main
     imgui.end();
     ImGui::PopStyleVar();
 }
@@ -9114,12 +8779,6 @@ SceneCache::Key GLCanvas3D::_scene_cache_key(const Camera& camera) const
     key.size = { { (unsigned int)viewport[2], (unsigned int)viewport[3] } };
     key.view_matrix = camera.get_view_matrix();
     key.projection_matrix = camera.get_projection_matrix();
-    // Snapmaker Orca: the render LOD. The update_lod() arguments can change without setting the
-    // scene dirty, and a replay skips update_lod(), so they are part of the key. LOD readiness is
-    // not: a finished job wakes the canvas once (MeshLodCache::request_canvas_wake()).
-    key.lod_allowed = _is_lod_allowed();
-    key.lod_pixel_scale = get_lod_pixel_scale();
-    key.lod_pin_above_z = _lod_pin_above_z();
     // Hover reaches the scene only through the sinking contour a hovered volume draws over
     // itself (GLVolumeCollection::render()), the plate icons (PartPlate::render_icons()) and the
     // open gizmo's grabbers.
@@ -9127,10 +8786,6 @@ SceneCache::Key GLCanvas3D::_scene_cache_key(const Camera& camera) const
         const GLVolume& volume = *m_volumes.volumes[i];
         if (volume.hover != GLVolume::HS_None && volume.is_sinking() && !volume.is_below_printbed())
             key.sinking_hover_volume_idxs.emplace_back((int)i);
-        // A gizmo move forces the contour on top for the moved volumes and the next mouse event
-        // clears the flag again, neither of which schedules a frame of its own.
-        if (volume.force_sinking_contours && volume.is_sinking() && !volume.is_below_printbed())
-            key.forced_sinking_volume_idxs.emplace_back((int)i);
     }
     for (int id : m_hover_plate_idxs) {
         if (id % PartPlate::GRABBER_COUNT != 0)
@@ -9597,7 +9252,6 @@ void GLCanvas3D::_render_shadows(const Transform3d& view_matrix, const Transform
         if (m_shadow_map_fbo == 0)
             glsafe(::glGenFramebuffers(1, &m_shadow_map_fbo));
 
-<<<<<<< snaporca-int
         // A static light keeps the map until its frustum or the casters change.
         size_t cache_key = 0;
         if (mode == EShadowMode::Static) {
@@ -9606,69 +9260,6 @@ void GLCanvas3D::_render_shadows(const Transform3d& view_matrix, const Transform
                 boost::hash_combine(cache_key, m_shadow_light_vp.matrix().data()[i]);
         }
         if (cache_key != 0 && cache_key == m_shadow_map_key)
-=======
-        // Save OpenGL state that we will modify
-        GLint prev_viewport[4] = { 0, 0, 0, 0 };
-        glsafe(::glGetIntegerv(GL_VIEWPORT, prev_viewport));
-        GLint prev_fbo = 0;
-        glsafe(::glGetIntegerv(GL_FRAMEBUFFER_BINDING, &prev_fbo));
-        GLboolean prev_color_mask[4] = { GL_TRUE, GL_TRUE, GL_TRUE, GL_TRUE };
-        glsafe(::glGetBooleanv(GL_COLOR_WRITEMASK, prev_color_mask));
-        const GLboolean prev_cull = ::glIsEnabled(GL_CULL_FACE);
-        GLint prev_depth_func = GL_LESS;
-        glsafe(::glGetIntegerv(GL_DEPTH_FUNC, &prev_depth_func));
-        GLboolean prev_depth_mask = GL_TRUE;
-        glsafe(::glGetBooleanv(GL_DEPTH_WRITEMASK, &prev_depth_mask));
-        glsafe(::glBindFramebuffer(GL_FRAMEBUFFER, m_shadow_map_fbo));
-        glsafe(::glFramebufferTexture2D(GL_FRAMEBUFFER, GL_DEPTH_ATTACHMENT, GL_TEXTURE_2D, m_shadow_map_texture_id, 0));
-        glsafe(::glDrawBuffer(GL_NONE));
-        glsafe(::glReadBuffer(GL_NONE));
-
-        if (::glCheckFramebufferStatus(GL_FRAMEBUFFER) != GL_FRAMEBUFFER_COMPLETE) {
-            glsafe(::glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prev_fbo)));
-            m_shadow_map_valid = false;
-        } else {
-            glsafe(::glViewport(0, 0, size, size));
-            glsafe(::glColorMask(GL_FALSE, GL_FALSE, GL_FALSE, GL_FALSE));
-            glsafe(::glEnable(GL_DEPTH_TEST));
-            glsafe(::glDepthMask(GL_TRUE));
-            glsafe(::glDepthFunc(GL_LESS));
-            glsafe(::glClear(GL_DEPTH_BUFFER_BIT));
-            glsafe(::glEnable(GL_POLYGON_OFFSET_FILL));
-            glsafe(::glPolygonOffset(4.0f, 4.0f));
-            glsafe(::glDisable(GL_CULL_FACE));
-
-            if (toolpath_casters)
-                m_gcode_viewer.render_shadow_casters(Transform3d(light_view), Transform3d(light_proj), eye);
-            // Only this branch draws through "flat"; the toolpaths bring their own program.
-            else if (GLShaderProgram* shader = wxGetApp().get_shader("flat"); shader != nullptr) {
-                shader->start_using();
-                shader->set_uniform("projection_matrix", Transform3d(light_proj));
-                for (GLVolume* volume : m_volumes.volumes) {
-                    if (volume == nullptr || !volume->is_active || !volume->printable || volume->is_modifier || volume->is_wipe_tower)
-                        continue;
-                    const Transform3d view_model = Transform3d(light_view) * volume->world_matrix();
-                    shader->set_uniform("view_model_matrix", view_model);
-                    // Snapmaker Orca: the model the colour pass draws (GLVolume::m_lod_level), or the
-                    // self shadows would show the difference between the two meshes as acne.
-                    volume->shadow_model().render(shader);
-                }
-                shader->stop_using();
-            }
-
-            // Restore state
-            glsafe(::glDisable(GL_POLYGON_OFFSET_FILL));
-            glsafe(::glColorMask(prev_color_mask[0], prev_color_mask[1], prev_color_mask[2], prev_color_mask[3]));
-            if (prev_cull)
-                glsafe(::glEnable(GL_CULL_FACE));
-            else
-                glsafe(::glDisable(GL_CULL_FACE));
-            glsafe(::glDepthFunc(prev_depth_func));
-            glsafe(::glDepthMask(prev_depth_mask));
-            glsafe(::glBindFramebuffer(GL_FRAMEBUFFER, static_cast<GLuint>(prev_fbo)));
-            glsafe(::glViewport(prev_viewport[0], prev_viewport[1], prev_viewport[2], prev_viewport[3]));
-
->>>>>>> lixnix/main
             m_shadow_map_valid = true;
         else {
             m_shadow_map_key = 0;
@@ -9991,11 +9582,7 @@ void GLCanvas3D::_render_objects(GLVolumeCollection::ERenderType type, bool with
                 if (m_picking_enabled && m_layers_editing.is_enabled() && (m_layers_editing.last_object_id != -1) && (m_layers_editing.object_max_z() > 0.0f)) {
                     int object_id = m_layers_editing.last_object_id;
                 const Camera& camera = wxGetApp().plater()->get_camera();
-<<<<<<< snaporca-int
                 m_volumes.render(type, false, camera.get_view_matrix(), camera.get_projection_matrix(), cvn_size, [object_id](const GLVolume& volume) {
-=======
-                m_volumes.render(type, false, camera, cvn_size, [object_id](const GLVolume& volume) {
->>>>>>> lixnix/main
                     // Which volume to paint without the layer height profile shader?
                     return volume.is_active && (volume.is_modifier || volume.composite_id.object_id != object_id);
                     });
@@ -10011,11 +9598,7 @@ void GLCanvas3D::_render_objects(GLVolumeCollection::ERenderType type, bool with
                     //BBS:add assemble view related logic
                     // do not cull backfaces to show broken geometry, if any
                 const Camera& camera = wxGetApp().plater()->get_camera();
-<<<<<<< snaporca-int
                     m_volumes.render(type, m_picking_enabled, camera.get_view_matrix(), camera.get_projection_matrix(), cvn_size, [this, canvas_type](const GLVolume& volume) {
-=======
-                    m_volumes.render(type, m_picking_enabled, camera, cvn_size, [this, canvas_type](const GLVolume& volume) {
->>>>>>> lixnix/main
                         if (canvas_type == ECanvasType::CanvasAssembleView) {
                             return !volume.is_modifier && !volume.is_wipe_tower;
                         }
@@ -10051,11 +9634,7 @@ void GLCanvas3D::_render_objects(GLVolumeCollection::ERenderType type, bool with
             }*/
             const Camera& camera = wxGetApp().plater()->get_camera();
             //BBS:add assemble view related logic
-<<<<<<< snaporca-int
             m_volumes.render(type, false, camera.get_view_matrix(), camera.get_projection_matrix(), cvn_size, [canvas_type](const GLVolume& volume) {
-=======
-            m_volumes.render(type, false, camera, cvn_size, [canvas_type](const GLVolume& volume) {
->>>>>>> lixnix/main
                 if (canvas_type == ECanvasType::CanvasAssembleView) {
                     return !volume.is_modifier;
                 }
@@ -10754,16 +10333,9 @@ void GLCanvas3D::_render_imgui_select_plate_toolbar()
                     m_sel_plate_toolbar.m_items[i]->slice_state = IMToolbarItem::SliceState::SLICE_FAILED;
             }
             else {
-                // Snapmaker: Plater::is_plate_sliceable() folds plate->can_slice() together with
-                // the GUI-layer blockers (temp mixing / cold plate / zero flow ratio), so the
-                // toolbar state cannot drift from the Slice button state.
-                // A plate using a mixed filament whose components are broken cannot be sliced
-                // either. That blocker is not folded into is_plate_sliceable() yet -- MainFrame::
-                // get_enable_slice_status() tests it as a separate step too -- so mirror it here
-                // to keep the two in sync. It self-gates on the plate's own objects, so a plate
-                // that does not use a broken slot is unaffected.
-                if ((!is_empty && !can_slice)
-                    || (plate_list.get_plate(i)->has_printable_instances() && !wxGetApp().plater()->is_plate_sliceable(i))
+                // A plate using a mixed filament whose components are broken cannot be sliced,
+                // so surface that on the plate toolbar the same way an unsliceable plate is.
+                if ((!is_empty && !can_slice) || (plate_list.get_plate(i)->has_printable_instances() && !plate_list.get_plate(i)->can_slice())
                     || wxGetApp().plater()->sidebar().has_broken_mixed_filament(plate_list.get_plate(i)))
                     m_sel_plate_toolbar.m_items[i]->slice_state = IMToolbarItem::SliceState::SLICE_FAILED;
                 else {
@@ -11505,13 +11077,13 @@ void GLCanvas3D::_render_canvas_toolbar()
         create_menu_item( _utf8(L("Overhangs")),
             m_canvas_type == ECanvasType::CanvasView3D, // work only on prepare
             p->is_view3D_overhang_shown(),
-            [this, p]{p->show_view3D_overhang(!p->is_view3D_overhang_shown()); m_dirty = true;}
+            [p]{p->show_view3D_overhang(!p->is_view3D_overhang_shown());}
         );
 
         create_menu_item( _utf8(L("Outline")),
             m_canvas_type != ECanvasType::CanvasPreview, // not work on preview
             wxGetApp().show_outline(),
-            [this]{wxGetApp().toggle_show_outline(); m_dirty = true;}
+            []{wxGetApp().toggle_show_outline();}
         );
 
         create_menu_item( _utf8(L("Wireframe")),
@@ -11530,10 +11102,9 @@ void GLCanvas3D::_render_canvas_toolbar()
         create_menu_item( _utf8(L("Realistic View")),
             true, // work on all
             cfg->get_bool(SETTING_OPENGL_REALISTIC_MODE),
-            [this, &cfg]{
+            [&cfg]{
                 cfg->set_bool(SETTING_OPENGL_REALISTIC_MODE, !cfg->get_bool(SETTING_OPENGL_REALISTIC_MODE));
                 cfg->save();
-                m_dirty = true;
             }
         );
 
@@ -11559,7 +11130,7 @@ void GLCanvas3D::_render_canvas_toolbar()
         create_menu_item( _utf8(L("Gridlines")),
             m_canvas_type != ECanvasType::CanvasAssembleView, // not work on assembly
             wxGetApp().show_plate_gridlines(),
-            [this]{wxGetApp().toggle_show_plate_gridlines(); m_dirty = true;}
+            []{wxGetApp().toggle_show_plate_gridlines();}
         );
 
         create_menu_item( _utf8(L("Focus mode")),
@@ -12644,68 +12215,6 @@ void GLCanvas3D::_set_warning_notification_if_needed(EWarning warning)
     _set_warning_notification(warning, show);
 }
 
-<<<<<<< snaporca-int
-=======
-// Per-frame PLA/PETG mix check. Reads filament types from the slot presets
-// directly -- full_config() is expensive per-frame and can crash on a
-// half-updated preset state while a printer switch is in flight.
-// Slot semantics mirror PresetBundle::full_fff_config().
-void GLCanvas3D::_update_pla_petg_mix_warning()
-{
-    bool has_pla = false;
-    bool has_petg = false;
-    if (wxGetApp().is_editor() && wxGetApp().plater() != nullptr && wxGetApp().preset_bundle != nullptr) {
-        const PresetBundle &bundle = *wxGetApp().preset_bundle;
-        if (bundle.printers.get_edited_preset().printer_technology() == ptFFF) {
-            std::vector<std::string> filament_types;
-            const size_t num_filaments = bundle.filament_presets.size();
-            if (num_filaments <= 1) {
-                const DynamicPrintConfig &filament_cfg = bundle.filaments.get_edited_preset().config;
-                const ConfigOptionStrings *ft_opt = filament_cfg.option<ConfigOptionStrings>("filament_type");
-                if (ft_opt != nullptr)
-                    filament_types = ft_opt->values;
-            } else {
-                filament_types.reserve(num_filaments);
-                for (size_t i = 0; i < num_filaments; ++i) {
-                    const Preset *preset = bundle.filaments.find_preset(bundle.filament_presets[i], true);
-                    const ConfigOptionStrings *ft_opt = nullptr;
-                    if (preset != nullptr) {
-                        const DynamicPrintConfig &slot_cfg = preset->config;
-                        ft_opt = slot_cfg.option<ConfigOptionStrings>("filament_type");
-                    }
-                    // Slots with no value keep the FullPrintConfig default ("PLA"),
-                    // same as the defaults-backed vector in full_fff_config().
-                    bool has_type = (ft_opt != nullptr && !ft_opt->values.empty());
-                    filament_types.push_back(has_type ? ft_opt->values.front() : std::string("PLA"));
-                }
-            }
-            // The plate is asked only when both types are loaded, and once per scene reload or plate switch:
-            // get_extruders can build a full config for objects with restricted support filaments.
-            const bool both_loaded = std::count(filament_types.begin(), filament_types.end(), "PLA") > 0 &&
-                                     std::count(filament_types.begin(), filament_types.end(), "PETG") > 0;
-            PartPlate *cur_plate = wxGetApp().plater()->get_partplate_list().get_curr_plate();
-            if (both_loaded && cur_plate != nullptr) {
-                if (s_pla_petg_used_plate != cur_plate->get_index()) {
-                    s_pla_petg_used_filaments = cur_plate->get_extruders(true);
-                    s_pla_petg_used_plate     = cur_plate->get_index();
-                }
-                for (int filament_idx : s_pla_petg_used_filaments) {
-                    int filament_id = filament_idx - 1;
-                    if (filament_id >= 0 && filament_id < static_cast<int>(filament_types.size())) {
-                        const std::string &filament_type = filament_types[filament_id];
-                        if (filament_type == "PLA")
-                            has_pla = true;
-                        else if (filament_type == "PETG")
-                            has_petg = true;
-                    }
-                }
-            }
-        }
-    }
-    _set_warning_notification(EWarning::MixUsePLAAndPETG, has_pla && has_petg);
-}
-
->>>>>>> lixnix/main
 void GLCanvas3D::_set_warning_notification(EWarning warning, bool state)
 {
     // Skip on shutdown: Plater's pImpl is already freed, so get_notification_manager() would use-after-free.
@@ -12877,11 +12386,6 @@ void GLCanvas3D::_set_warning_notification(EWarning warning, bool state)
     case EWarning::ObjectClashed:
         error = ErrorType::PLATER_ERROR;
         break;
-    // Model too close to the bed boundary for spiral lift.
-    case EWarning::SpiralLiftNearBoundary:
-        text = _u8L("Model too close to bed boundary. Disable spiral lifting or keep at least 3.5mm gap to avoid collision.");
-        error = ErrorType::SLICING_SERIOUS_WARNING;
-        break;
     case EWarning::ObjectLimited:
         text = get_object_limited_text();
         break;
@@ -12904,8 +12408,7 @@ void GLCanvas3D::_set_warning_notification(EWarning warning, bool state)
         error = ErrorType::SLICING_SERIOUS_WARNING;
         break;
     case EWarning::MixUsePLAAndPETG:
-        text = _u8L("PLA and PETG filaments detected on the same plate. When used as mutual support materials, parameter adjustment is recommended.");
-        error = ErrorType::PLATER_WARNING;
+        text = _u8L("PLA and PETG filaments detected in the mixture. Adjust parameters according to the Wiki to ensure print quality.");
         break;
     case EWarning::SingleExtruderMixedFilament:
         text = get_single_extruder_mixed_filament_warning_text();
@@ -12941,13 +12444,21 @@ void GLCanvas3D::_set_warning_notification(EWarning warning, bool state)
     switch (error)
     {
     case PLATER_WARNING:
-        // The PLA/PETG mix warning is a SlicingWarning: it stays visible in Preview and
-        // does not block slicing.
         if (warning == EWarning::MixUsePLAAndPETG) {
-            if (state)
-                notification_manager.push_pla_petg_mix_warning(text);
+            if (state) {
+                notification_manager.push_slicing_customize_error_notification(NotificationType::BBLMixUsePLAAndPETG, NotificationLevel::WarningNotificationLevel, text, _u8L("Click Wiki for help."),
+                    [](wxEvtHandler*) {
+                        std::string language = wxGetApp().app_config->get("language");
+                        wxString    region = L"en";
+                        if (language.find("zh") == 0)
+                        	region = L"zh";
+                        // Although this link looks like it's only for the H2D, its guidance is generic.
+                        wxGetApp().open_browser_with_warning_dialog(wxString::Format(L"https://wiki.bambulab.com/%s/filament-acc/filament/h2d-pla-and-petg-mutual-support", region));
+                        return false;
+                    });
+            }
             else
-                notification_manager.close_pla_petg_mix_warning(text);
+                notification_manager.close_slicing_customize_error_notification(NotificationType::BBLMixUsePLAAndPETG, NotificationLevel::WarningNotificationLevel);
         }
         else if (warning == EWarning::NozzleFilamentIncompatible){
             if(state){
@@ -13104,7 +12615,7 @@ bool GLCanvas3D::_is_any_volume_outside() const
     return false;
 }
 
-// Whether any volume is close enough to the bed boundary to risk a spiral-lift collision.
+// Snapmaker: 检查是否有任何 volume 靠近边界（螺旋抬升风险）
 bool GLCanvas3D::_is_any_volume_near_boundary_for_spiral_lift() const
 {
     return m_volumes.is_any_volume_near_boundary_for_spiral_lift();
