@@ -217,8 +217,10 @@ public:
     CurledLines         curled_lines;
 
     // SnapOrca: an internal feature joins the outer wall on this layer and the ghost line treatments apply, see
-    // GhostLines.hpp. Set by LayerRegion::make_perimeters().
+    // GhostLines.hpp. Set by LayerRegion::make_perimeters(); ghost_lines_area is the part of the band behind the
+    // outer wall it joins, over all regions.
     bool                ghost_lines = false;
+    ExPolygons          ghost_lines_area;
 
     // BBS
     mutable ExPolygons          sharp_tails;

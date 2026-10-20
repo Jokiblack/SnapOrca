@@ -1419,7 +1419,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
     for (auto el : { "ghost_lines_gap_after_wall", "ghost_lines_bond_layers" })
         toggle_line(el, ghost_lines && config->opt_float("ghost_lines_air_gap") > 0.);
     for (auto el : { "ghost_lines_extra_wall", "ghost_lines_outer_wall_first", "ghost_lines_outer_wall_flow",
-                     "ghost_lines_outer_wall_speed", "ghost_lines_fan" })
+                     "ghost_lines_outer_wall_speed", "ghost_lines_fan", "ghost_lines_concentric_solid_infill" })
         toggle_line(el, ghost_lines);
 
     // Orca

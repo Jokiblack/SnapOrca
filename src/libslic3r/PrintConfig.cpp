@@ -8988,6 +8988,15 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(0));
 
+    def = this->add("ghost_lines_concentric_solid_infill", coBool);
+    def->label = L("Concentric solid infill behind the outer wall");
+    def->category = L("Quality");
+    def->tooltip = L("On the treated layers, fill the solid infill next to the outer wall with concentric lines, parallel "
+                     "to the wall, instead of the solid infill pattern of the profile, so that it shrinks along the wall "
+                     "rather than towards it. The band is as wide as the internal feature depth.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("detect_thin_wall", coBool);
     def->label = L("Detect thin walls");
     def->category = L("Strength");

@@ -297,6 +297,7 @@ void Layer::make_perimeters()
 
     // SnapOrca: set again by the regions below.
     this->ghost_lines = false;
+    this->ghost_lines_area.clear();
 
     // keep track of regions whose perimeters we have already generated
     std::vector<unsigned char> done(m_regions.size(), false);

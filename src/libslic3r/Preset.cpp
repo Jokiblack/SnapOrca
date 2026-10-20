@@ -1373,6 +1373,7 @@ static std::vector<std::string> s_Preset_print_options{
     "ghost_lines_outer_wall_flow",
     "ghost_lines_outer_wall_speed",
     "ghost_lines_fan",
+    "ghost_lines_concentric_solid_infill",
     "detect_overhang_wall",
     "unsupported_wall_last",
     "overhang_reverse",

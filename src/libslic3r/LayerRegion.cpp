@@ -345,6 +345,7 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, const LayerRe
             ExPolygons    area       = ghost_lines_area(*this->layer(), perimeter_config, band_depth);
             if (! area.empty()) {
                 this->layer()->ghost_lines = true;
+                append(this->layer()->ghost_lines_area, area);
                 g.ghost_lines_layer = true;
             }
             if (gap > 0 && ghost_lines_air_gap_on_layer(*this->layer(), perimeter_config) && ! print_config.spiral_mode &&
