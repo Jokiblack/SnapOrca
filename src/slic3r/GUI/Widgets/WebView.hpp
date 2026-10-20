@@ -15,6 +15,8 @@ class WebView
 {
 public:
     static wxWebView *CreateWebView(wxWindow *parent, wxString const &url);
+    // A wxWebView not yet created (call Create() on it), using the same browser data folder as CreateWebView().
+    static wxWebView *New();
 #if wxUSE_WEBVIEW_EDGE
     static bool CheckWebViewRuntime();
     static bool DownloadAndInstallWebViewRuntime();

@@ -44,6 +44,7 @@
 #include <nlohmann/json.hpp>
 #include "slic3r/GUI/Jobs/SendJob.hpp"
 #include "slic3r/GUI/Widgets/WebViewHostDialog.hpp"
+#include "slic3r/GUI/Widgets/WebView.hpp"
 #include <boost/filesystem.hpp>
 
 using json = nlohmann::json;
@@ -490,12 +491,8 @@ WipingDialog::WipingDialog(wxWindow* parent, const int max_flush_volume) :
     // Ensure a reasonable minimum size so the dialog is usable even when clamped
     applied_size.x = std::max(applied_size.x, FromDIP(350));
     applied_size.y = std::max(applied_size.y, FromDIP(450));
-    m_webview = wxWebView::New(this, wxID_ANY,
-        wxEmptyString,
-        wxDefaultPosition,
-        applied_size,
-        wxWebViewBackendDefault,
-        wxNO_BORDER);
+    m_webview = WebView::New();
+    m_webview->Create(this, wxID_ANY, wxEmptyString, wxDefaultPosition, applied_size, wxNO_BORDER);
 
     m_webview->AddScriptMessageHandler("wipingDialog");
     // The page's strings (resources/web/flush/WipingDialog.html), keyed by their T() ids.
