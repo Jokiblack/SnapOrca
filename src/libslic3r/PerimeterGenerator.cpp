@@ -13,6 +13,7 @@
 #include "Point.hpp"
 #include "Flow.hpp"
 #include "PrintConfig.hpp"
+#include "Print.hpp"
 #include "ShortestPath.hpp"
 #include "Surface.hpp"
 #include "VariableWidth.hpp"
