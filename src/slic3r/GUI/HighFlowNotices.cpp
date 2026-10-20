@@ -79,6 +79,15 @@ std::vector<int> declared_volume_types(const DynamicPrintConfig &printer_config,
     }
     if (declared.empty())
         declared.push_back(int(nvtStandard));
+    // SnapOrca keeps Snapmaker's flow model: a machine preset declares High Flow for all of its tool
+    // heads in "printer_flow_support" (the U1 0.4 mm preset) instead of variant columns per head.
+    const auto *flow_support = printer_config.option<ConfigOptionStrings>("printer_flow_support");
+    const auto *diameters    = printer_config.option<ConfigOptionFloats>("nozzle_diameter");
+    if (flow_support != nullptr && diameters != nullptr && head < diameters->values.size() && !contains_high_flow(declared) &&
+        std::find(flow_support->values.begin(), flow_support->values.end(), FLOW_MODE_HIGH_FLOW) != flow_support->values.end()) {
+        declared.push_back(int(nvtHighFlow));
+        std::sort(declared.begin(), declared.end());
+    }
     return declared;
 }
 
