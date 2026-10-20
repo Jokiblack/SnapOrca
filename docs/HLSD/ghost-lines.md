@@ -47,19 +47,26 @@ the walls.
 
 All act only on the treated layers, and each is off by default:
 
-- **Air gap** (`ghost_lines_air_gap`): the classic perimeter generator takes the
-  band (less the gap) out of the region the inner walls and infill are built
-  from after the outer wall is placed, so their edge ends `gap` short of the
-  outer wall's inner edge. The cut is clipped to the slices of the layers above
-  and below, so it never opens a hole in a top or bottom surface, and is skipped
-  in spiral vase mode. Arachne builds the outer and inner walls together from
-  one region and is not supported. `ghost_lines_bond_layers` prints every Nth
-  layer without the gap, and `ghost_lines_gap_taper_layers` opens the gap
-  gradually over N layers before the first and after the last treated layer
-  (those layers take the nearest treated layer's area, at a fraction of the
-  gap).
+- **Air gap** (`ghost_lines_air_gap`): the classic perimeter generator, after
+  placing wall N from the outside (`ghost_lines_gap_after_wall`, 1 = the outer
+  wall; at least one wall always stays behind the gap, so with a single wall
+  there is none), takes a strip as wide as the gap out of the region the
+  following walls and the infill are built from, inside the treated band. The
+  walls behind the gap keep their number and move inwards: the gap takes the
+  place of infill or gap fill, never of a wall. Where a hole of the island
+  (a compartment) is too close behind the strip to fit the walls left on this
+  side and the hole's own walls, the strip is dropped across its whole depth,
+  so a plain wall next to a partition of the same thickness is left as it is.
+  The strip is clipped to the slices of the layers above and below, so it never
+  opens a hole in a top or bottom surface, and is skipped in spiral vase mode.
+  Arachne builds the outer and inner walls together from one region and is not
+  supported. `ghost_lines_bond_layers` prints every Nth layer without the gap,
+  and `ghost_lines_gap_taper_layers` opens it gradually over N layers before
+  the first and after the last treated layer (those layers take the nearest
+  treated layers' areas, at a fraction of the gap that falls with the
+  distance; where areas overlap the widest gap wins).
 - **Extra wall** (`ghost_lines_extra_wall`): one more wall loop, both
-  generators.
+  generators. With the gap after wall N, the extra wall goes behind the gap.
 - **Outer wall first** (`ghost_lines_outer_wall_first`): the layer's walls are
   ordered outer-to-inner as if `wall_sequence` were outer/inner, both
   generators; the other layers keep the profile's order.
