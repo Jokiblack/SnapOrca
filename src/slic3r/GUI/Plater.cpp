@@ -1828,10 +1828,6 @@ struct Sidebar::priv
     int editing_filament = -1;
     wxBoxSizer *sizer_filaments = nullptr;
 
-    // test
-    wxStaticBitmap * image_printer = nullptr;
-    StaticBox*      panel_printer_preset = nullptr;
-    
 
     //BBS Sidebar widgets
     wxPanel* m_panel_print_title;
@@ -29462,6 +29458,10 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
     // if physical_printer is selected, send gcode for this printer
     // DynamicPrintConfig* physical_printer_config = wxGetApp().preset_bundle->physical_printers.get_selected_printer_config();
 
+    // Orca: the use_3mf printer option makes us send a .gcode.3mf to the printer
+    const auto* use_3mf_opt = wxGetApp().preset_bundle->printers.get_edited_preset().config.option<ConfigOptionBool>("use_3mf");
+    const bool  use_3mf     = use_3mf_opt != nullptr && use_3mf_opt->value;
+
     auto prepare_upload_filename_for_dialog = [this, use_3mf](fs::path output_file) {
         output_file = fs::path(Slic3r::fold_utf8_to_ascii(output_file.string()));
         if (use_3mf) {
@@ -29611,10 +29611,6 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
 
     if (upload_job.empty())
         return;
-
-    // Orca: the use_3mf printer option makes us send a .gcode.3mf to the printer
-    const auto* use_3mf_opt = physical_printer_config->option<ConfigOptionBool>("use_3mf");
-    const bool  use_3mf     = use_3mf_opt != nullptr && use_3mf_opt->value;
 
     upload_job.upload_data.use_3mf = use_3mf;
     // Orca: the concrete plate to export/send (PLATE_CURRENT_IDX resolves to the current plate).
@@ -31213,6 +31209,16 @@ void Plater::on_config_change(const DynamicPrintConfig &config)
             p->partplate_list.refresh_imex_icons();
     }
 
+    // Gate on the diff so unrelated option edits never resurrect the yellow
+    // by-object warning once the slice guard has retired it.
+    if (print_sequence_changed)
+        sync_print_seq_warning_notification();
+
+    notify_filament_usage_changed();
+
+    // Any config change resets the user's dismissal of PLA/PETG mix warning
+    // so the per-frame detection re-evaluates and re-shows if still applicable.
+    get_notification_manager()->reset_pla_petg_mix_warning();
 
     if (update_scheduled)
         update();
@@ -31264,17 +31270,6 @@ void Plater::update_flush_volume_matrix(size_t old_nozzle_size, size_t new_nozzl
         set_flush_volumes_matrix(project_config->option<ConfigOptionFloats>("flush_volumes_matrix")->values, new_flush_volume_mtx, -1, new_nozzle_size);
         project_config->option<ConfigOptionFloats>("flush_multiplier")->values = flush_multipliers;
     }
-
-    // Gate on the diff so unrelated option edits never resurrect the yellow
-    // by-object warning once the slice guard has retired it.
-    if (print_sequence_changed)
-        sync_print_seq_warning_notification();
-
-    notify_filament_usage_changed();
-
-    // Any config change resets the user's dismissal of PLA/PETG mix warning
-    // so the per-frame detection re-evaluates and re-shows if still applicable.
-    get_notification_manager()->reset_pla_petg_mix_warning();
 }
 
 void Plater::set_bed_shape() const
