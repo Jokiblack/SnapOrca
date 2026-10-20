@@ -13,6 +13,15 @@
 
 namespace Slic3r {
 
+namespace {
+
+bool internal_solid_infill_uses_sparse_filament(const PrintRegionConfig &config, FlowRole role)
+{
+    return role == frSolidInfill && std::abs(config.sparse_infill_density.value - 100.) < EPSILON;
+}
+
+} // namespace
+
 // 1-based extruder identifier for this region and role.
 unsigned int PrintRegion::extruder(FlowRole role) const
 {
@@ -24,15 +33,8 @@ unsigned int PrintRegion::extruder(FlowRole role) const
     else if (role == frInfill)
         extruder = m_config.sparse_infill_filament_id;
     else if (role == frSolidInfill)
-<<<<<<< snaporca-int
         // Snapmaker: 100% sparse infill is printed with the sparse infill filament.
         extruder = internal_solid_infill_uses_sparse_filament(m_config, role) ? m_config.sparse_infill_filament_id : m_config.internal_solid_filament_id;
-=======
-        // The internal solid filament owns internal solid infill at every density, including the
-        // solid interior at 100% sparse density (matches mainline Orca; this fork used to hand
-        // the 100% interior to the sparse filament, hiding the internal solid selector entirely).
-        extruder = m_config.internal_solid_filament_id;
->>>>>>> lixnix/main
     else if (role == frTopSolidInfill)
         extruder = m_config.top_surface_filament_id;
     else
@@ -73,15 +75,9 @@ Flow PrintRegion::flow(const PrintObject &object, FlowRole role, double layer_he
     if (config_width.value == 0)
         config_width = Flow::width_at(object.config().line_width, column);
     
-<<<<<<< snaporca-int
-    // Get the configured nozzle_diameter for the extruder associated to the flow role requested.
-    // Here this->extruder(role) - 1 may underflow to MAX_INT, but then the get_at() will follback to zero'th element, so everything is all right.
-    auto nozzle_diameter = float(nozzle_diameter_for_filament(print_config, this->extruder(role), object.print()->is_BBL_printer()));
-=======
     // Get the configured nozzle_diameter for the extruder associated to the flow role requested,
     // or for the explicitly given filament when it differs from the role's default mapping (top / bottom surface fills).
-    auto nozzle_diameter = float(print_config.nozzle_diameter.get_at(filament - 1));
->>>>>>> lixnix/main
+    auto nozzle_diameter = float(nozzle_diameter_for_filament(print_config, int(filament), object.print()->is_BBL_printer()));
     return Flow::new_from_config_width(role, config_width, nozzle_diameter, float(layer_height));
 }
 

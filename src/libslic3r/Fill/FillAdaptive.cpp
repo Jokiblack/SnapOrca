@@ -311,7 +311,6 @@ std::vector<double> adaptive_fill_line_spacing(const PrintObject &print_object)
     // the largest nozzle, whose column is read with it.
     const size_t               max_nozzle_head                = size_t(max_nozzle - nozzle_diameters.begin());
     double                     default_infill_extrusion_width = Flow::auto_extrusion_width(FlowRole::frInfill, float(max_nozzle_diameter));
-<<<<<<< snaporca-int
     for (size_t region_id = 0; region_id < line_spacing.size(); ++ region_id) {
         const PrintRegionConfig &config = print_object.printing_region(region_id).config();
         if (config.sparse_infill_density <= 0 || ! is_octree_infill_pattern(config.sparse_infill_pattern) ||
@@ -319,25 +318,10 @@ std::vector<double> adaptive_fill_line_spacing(const PrintObject &print_object)
                 return region_id < layer->regions().size() && ! layer->regions()[region_id]->fill_surfaces.empty();
             }))
             continue;
-        double extrusion_width = config.sparse_infill_line_width.get_abs_value(max_nozzle_diameter);
+        double extrusion_width = Flow::width_at(config.sparse_infill_line_width, max_nozzle_head).get_abs_value(max_nozzle_diameter);
         if (extrusion_width == 0.)
             extrusion_width = default_infill_extrusion_width;
         line_spacing[region_id] = extrusion_width / ((config.sparse_infill_density / 100.0f) * 0.333333333f) * config.fill_multiline.value;
-=======
-    for (size_t region_id = 0; region_id < print_object.num_printing_regions(); ++ region_id) {
-        const PrintRegionConfig &config                 = print_object.printing_region(region_id).config();
-        bool                     nonempty               = config.sparse_infill_density > 0;
-        bool                     has_adaptive_infill    = nonempty && config.sparse_infill_pattern == ipAdaptiveCubic;
-        bool                     has_support_infill     = nonempty && config.sparse_infill_pattern == ipSupportCubic;
-        double                   sparse_infill_line_width = Flow::width_at(config.sparse_infill_line_width, max_nozzle_head).get_abs_value(max_nozzle_diameter);
-        region_fill_data.push_back(RegionFillData({
-            has_adaptive_infill ? Tristate::Maybe : Tristate::No,
-            has_support_infill ? Tristate::Maybe : Tristate::No,
-            config.sparse_infill_density,
-            sparse_infill_line_width != 0. ? sparse_infill_line_width : default_infill_extrusion_width
-        }));
-        build_octree |= has_adaptive_infill || has_support_infill;
->>>>>>> lixnix/main
     }
     return line_spacing;
 }

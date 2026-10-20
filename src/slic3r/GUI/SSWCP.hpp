@@ -13,11 +13,11 @@
 #include <boost/asio.hpp>
 #include <boost/asio/ip/tcp.hpp>
 #include "nlohmann/json.hpp"
-#include "libslic3r/SSWCPProtocol.hpp"
 #include "slic3r/Utils/Bonjour.hpp"
 #include "slic3r/Utils/TimeoutMap.hpp"
 #include "slic3r/Utils/PrintHost.hpp"
 #include "slic3r/Utils/MQTT.hpp"
+#include "libslic3r/SSWCPProtocol.hpp"
 #include "WebSocketDebugServer.hpp"
 
 
@@ -462,7 +462,8 @@ private:
     void sw_GetFileFilamentMapping();
     void sw_SetFilamentMappingComplete();
     void sw_FinishFilamentMapping();
-    // params.event == 1 of sw_FinishFilamentMapping, run after the preprint webview closed.
+    // sw_FinishFilamentMapping post-close handlers, one per FinishFilamentMappingEvent.
+    // Add a new handler here when a new event value is introduced.
     void on_finish_filament_mapping_custom_flow_regroup();
 
     // new
@@ -715,13 +716,14 @@ public:
     static void shutdown();
 
     // query the info of the machine
-    // A wrapper around resolve_machine_info() for callers that need the model, the nozzle sizes
-    // and the device name only. False when the printer did not identify itself in time.
-    static bool query_machine_info(std::shared_ptr<PrintHost>& host, std::string& out_model, std::vector<std::string>& out_nozzle_diameters, std::string& device_name, int timeout_second = 5);
+    static bool query_machine_info(std::shared_ptr<PrintHost>& host, MachineInfo& out, int timeout_second = 5);
 
-    // Resolves machine identity and nozzle info (sizes, flow types) from system_info and
-    // printer.objects.query in parallel, merged by SSWCPProtocol::merge_machine_info(). Once system_info
-    // is in, the extruder objects get a short wait only, so firmware without them skips the full timeout.
+    // Resolve machine info via parallel system_info + objects.query, then merge by field priority.
+    // model/device_name from system_info (real-time, authoritative), normalized.
+    // nozzle from objects.query (real-time, preferred) or system_info fallback.
+    // Status: NoResponse / GotIdentity / Complete.
+    // Must be called from a thread that is NOT the UI thread if timeout_second is large,
+    // or from UI thread if cache hit is expected to short-circuit quickly.
     static SSWCPProtocol::ResolveResult resolve_machine_info(std::shared_ptr<PrintHost>& host, int timeout_second = 8);
 
     // update the active file name
@@ -739,11 +741,7 @@ public:
     static long long m_active_file_size;
 
 
-<<<<<<< snaporca-int
     static std::unordered_map<std::string, std::string> m_tab_map; // JS tab name -> MainFrame TAB_ID_*
-=======
-    static std::unordered_map<std::string, wxString> m_tab_map; // for switching tab (TAB_ID_* names)
->>>>>>> lixnix/main
 
     // WebSocket Debug Server methods
     static void enable_debug_mode(bool enable = true, unsigned short port = 8766);
@@ -781,22 +779,17 @@ public:
 
     void add_instance(const std::string& ip, const std::string& machine_type)
     {
-        m_map_mtx.lock();
+        std::lock_guard<std::mutex> lock(m_map_mtx);
         m_ip_type_map[ip] = machine_type;
-        m_map_mtx.unlock();
     }
 
     bool get_machine_type(const std::string& ip, std::string& output)
     {
-        bool res = true;
-        m_map_mtx.lock();
-        if (m_ip_type_map.count(ip)) {
-            output = m_ip_type_map[ip];
-        } else {
-            res = false;
-        }
-        m_map_mtx.unlock();
-        return res;
+        std::lock_guard<std::mutex> lock(m_map_mtx);
+        auto it = m_ip_type_map.find(ip);
+        if (it == m_ip_type_map.end()) return false;
+        output = it->second;
+        return true;
     }
 
 private:

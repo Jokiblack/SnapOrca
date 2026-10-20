@@ -151,7 +151,6 @@ std::map<std::string, std::vector<SimpleSettingData>>  SettingsFactory::OBJECT_C
                     {"make_overhang_printable_angle","", 8},{"make_overhang_printable_hole_size","",9}, {"wall_sequence","",10},
                     {"precise_z_height", "",10}
                     }},
-<<<<<<< snaporca-int
     { L("Support"), {{"brim_type", "",1},{"brim_width", "",2},{"leading_brim_length", "",3},{"extra_brim_width", "",4},{"brim_object_gap", "",5},{"brim_flow_ratio", "",6},{"brim_use_efc_outline", "",7},
                     {"enable_support", "",8},{"support_type", "",9},{"support_threshold_angle", "",10}, {"support_threshold_overlap", "",11}, {"support_on_build_plate_only", "",12},
                     {"support_filament", "",13},{"support_interface_filament", "",14},{"support_expansion", "",15},{"support_style", "",16},
@@ -160,16 +159,6 @@ std::map<std::string, std::vector<SimpleSettingData>>  SettingsFactory::OBJECT_C
                     {"support_interface_top_layers", "",26},{"support_interface_bottom_layers", "",27},{"support_interface_spacing", "",28},{"support_interface_min_area", "",28},{"support_bottom_interface_spacing", "",29},
                     {"support_object_xy_distance", "",30}, {"bridge_no_support", "",31},{"max_bridge_length", "",32},{"support_critical_regions_only", "",33},{"support_remove_small_overhang","",34},
                     {"support_object_first_layer_gap","",35}
-=======
-    { L("Support"), {{"brim_type", "",1},{"brim_width", "",2},{"brim_object_gap", "",3},{"brim_flow_ratio", "",4},{"brim_use_efc_outline", "",5},
-                    {"enable_support", "",6},{"support_type", "",7},{"support_threshold_angle", "",8}, {"support_threshold_overlap", "",9}, {"support_on_build_plate_only", "",10},
-                    {"support_filament", "",11},{"support_interface_filament", "",12},{"support_expansion", "",13},{"support_style", "",14},
-                    {"tree_support_brim_width", "",15}, {"tree_support_branch_angle", "",16},{"tree_support_branch_angle_organic","",17}, {"tree_support_wall_count", "",18},{"tree_support_branch_diameter_angle", "",19},//tree support
-                    {"support_bottom_z_distance", "",20},{"support_top_z_distance", "",21},{"support_base_pattern", "",22},{"support_base_pattern_spacing", "",23},
-                    {"support_interface_top_layers", "",24},{"support_interface_bottom_layers", "",25},{"support_interface_spacing", "",26},{"support_interface_min_area", "",26},{"support_bottom_interface_spacing", "",27},
-                    {"support_object_xy_distance", "",28}, {"bridge_no_support", "",29},{"max_bridge_length", "",30},{"support_critical_regions_only", "",31},{"support_remove_small_overhang","",32},
-                    {"support_object_first_layer_gap","",33}
->>>>>>> lixnix/main
                     }},
     { L("Speed"), {{"support_speed", "",12}, {"support_interface_speed", "",13}
                   }}
@@ -194,29 +183,18 @@ std::map<std::string, std::vector<SimpleSettingData>> SettingsFactory::PART_CATE
        {"top_shell_layers", L("Top solid layers"), 1},
        {"top_shell_thickness", L("Top minimum shell thickness"), 1},
        {"top_surface_density", L("Top Surface Density"), 1},
-<<<<<<< snaporca-int
        {"top_color_penetration_layers", L("Top Paint Penetration Layers"), 1},
        {"bottom_shell_layers", L("Bottom solid layers"), 1},
        {"bottom_shell_thickness", L("Bottom minimum shell thickness"), 1},
        {"bottom_surface_density", L("Bottom Surface Density"), 1},
        {"bottom_color_penetration_layers", L("Bottom Paint Penetration Layers"), 1},
-=======
-       {"top_color_penetration_layers", L("Top paint penetration layers"), 1},
-       {"bottom_shell_layers", L("Bottom solid layers"), 1},
-       {"bottom_shell_thickness", L("Bottom minimum shell thickness"), 1},
-       {"bottom_surface_density", L("Bottom Surface Density"), 1},
-       {"bottom_color_penetration_layers", L("Bottom paint penetration layers"), 1},
->>>>>>> lixnix/main
        {"sparse_infill_density", "", 1},
        {"fill_multiline", "", 1},
        {"sparse_infill_pattern", "", 1},
        {"sparse_infill_filament_id", "", 1},
-<<<<<<< snaporca-int
        {"tpms_adaptive", "", 1},
        {"tpms_interior_density", "", 1},
        {"tpms_adaptive_gradient", "", 1},
-=======
->>>>>>> lixnix/main
        {"sparse_infill_smooth_factor", "", 1},
        {"lateral_lattice_angle_1", "", 1},
        {"lateral_lattice_angle_2", "", 1},
@@ -714,7 +692,6 @@ void MenuFactory::load_handy_model(std::size_t index)
     Plater* pl = plater();
     if (!pl)
         return;
-<<<<<<< snaporca-int
     const std::vector<size_t> loadedObjectIndexes = pl->load_files(input_files, LoadStrategy::LoadModel);
     // SM_FEATURE: initialize assembly positions of the loaded handy model objects
     Model& loaded_model = pl->model();
@@ -724,20 +701,6 @@ void MenuFactory::load_handy_model(std::size_t index)
         if (objectIndex < loaded_model.objects.size())
             loadedObjects.push_back(loaded_model.objects[objectIndex]);
     loaded_model.InitializeAssemblyPositions(loadedObjects);
-=======
-    const std::vector<size_t> loaded_object_indexes = pl->load_files(input_files, LoadStrategy::LoadModel);
-
-    // Snapmaker: seed the assembly positions of the freshly loaded objects.
-    Model&          plater_model = pl->model();
-    ModelObjectPtrs loaded_objects;
-    loaded_objects.reserve(loaded_object_indexes.size());
-    for (const size_t object_index : loaded_object_indexes) {
-        if (object_index < plater_model.objects.size())
-            loaded_objects.push_back(plater_model.objects[object_index]);
-    }
-    plater_model.InitializeAssemblyPositions(loaded_objects);
-
->>>>>>> lixnix/main
     if (model.arrange_after_import) {
         pl->set_prepare_state(Job::PREPARE_STATE_MENU);
         pl->arrange();
@@ -1945,7 +1908,6 @@ void MenuFactory::create_filament_action_menu(bool init, int active_filament_men
             plater()->sidebar().edit_filament(); }, "", nullptr,
         []() { return true; }, m_parent);
 
-<<<<<<< snaporca-int
     if (wxGetApp().preset_bundle == nullptr)
         return;
 
@@ -1955,16 +1917,6 @@ void MenuFactory::create_filament_action_menu(bool init, int active_filament_men
     // SM_FEATURE: Snapmaker toolchangers (U1) are not SEMM, so merge targets are not gated by
     // Sidebar::should_show_SEMM_buttons() as upstream does.
     int                            filaments_cnt    = std::max(wxGetApp().filaments_cnt(), 0);
-=======
-    // Snapmaker: the menu can be requested before the preset bundle exists (crash fix).
-    if (wxGetApp().preset_bundle == nullptr)
-        return;
-
-    wxMenu *                        sub_menu         = new wxMenu();
-    std::vector<wxBitmap *>         icons            = get_extruder_color_icons(true);
-    const std::vector<std::string> &filament_presets = wxGetApp().preset_bundle->filament_presets;
-    int                             filaments_cnt    = std::max(wxGetApp().filaments_cnt(), 0);
->>>>>>> lixnix/main
     filaments_cnt = std::min(filaments_cnt, static_cast<int>(icons.size()));
     filaments_cnt = std::min(filaments_cnt, static_cast<int>(filament_presets.size()));
 
@@ -1980,82 +1932,6 @@ void MenuFactory::create_filament_action_menu(bool init, int active_filament_men
             sub_menu, wxID_ANY, item_name, "", [i](wxCommandEvent&) { plater()->sidebar().change_filament(-2, i); }, *icons[i], menu,
             []() { return true; }, m_parent);
     }
-<<<<<<< snaporca-int
-=======
-
-    // Add mixed filaments as merge targets
-    auto& mixed_mgr = wxGetApp().preset_bundle->mixed_filaments;
-    const auto& mfs = mixed_mgr.mixed_filaments();
-    const size_t num_physical = filament_presets.size();
-
-    // Get icon dimensions
-    const double em = Slic3r::GUI::wxGetApp().em_unit();
-    const int icon_width = lround(2 * em);
-    const int icon_height = lround(2 * em);
-
-    // Determine the source physical filament ID (if active_filament_menu_id is a physical filament)
-    unsigned int source_physical_1based = 0;
-    if (active_filament_menu_id >= 0 && active_filament_menu_id < (int)num_physical) {
-        source_physical_1based = (unsigned int)(active_filament_menu_id + 1);
-    }
-
-    // Get indices of mixed filaments that depend on the source physical filament
-    std::vector<size_t> dependent_mixed_indices;
-    if (source_physical_1based > 0) {
-        dependent_mixed_indices = mixed_mgr.mixed_filaments_using_physical(source_physical_1based);
-    }
-
-    size_t visible_idx = 0;
-    size_t running_idx = 0;  // counts all non-deleted entries for virtual ID calculation
-    for (size_t j = 0; j < mfs.size(); ++j) {
-        if (mfs[j].deleted || !mfs[j].enabled) continue;
-
-        // Calculate virtual ID for this mixed filament based on all non-deleted entries
-        size_t mixed_virtual_id = num_physical + running_idx;
-        running_idx++;
-
-        // Skip active mixed filament (consistent with physical filaments)
-        if (mixed_virtual_id == (size_t)active_filament_menu_id) {
-            continue;
-        }
-
-        // Skip mixed filaments that depend on the source physical filament
-        // This prevents merging a physical filament into a mixed filament that uses it as a component
-        if (std::find(dependent_mixed_indices.begin(), dependent_mixed_indices.end(), j) != dependent_mixed_indices.end()) {
-            continue;
-        }
-
-        const int virtual_id = static_cast<int>(mixed_virtual_id) + 1;
-        wxString item_name = wxString::Format(_L("Mixed Filament %d"), virtual_id);
-
-        // Create a colored bitmap for the mixed filament - gradient filaments get a gradient icon
-        MixedFilamentDisplayContext menu_ctx;
-        {
-            auto* co2 = wxGetApp().preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour");
-            menu_ctx.physical_colors = co2 ? co2->values : std::vector<std::string>{};
-            menu_ctx.num_physical = num_physical;
-        }
-        wxBitmap* mixed_bmp = create_mixed_filament_menu_bitmap(
-            mfs[j], menu_ctx, icon_width, icon_height,
-            wxString::Format("%d", virtual_id));
-
-        size_t captured_target = mixed_virtual_id;
-        append_menu_item(
-            sub_menu, wxID_ANY, item_name, "", [captured_target](wxCommandEvent&) {
-                plater()->sidebar().change_filament(-2, captured_target);
-            }, *mixed_bmp, menu,
-            []() { return true; }, m_parent);
-
-        visible_idx++;
-    }
-
-    // Show merge menu if there are any targets available
-    size_t total_targets = filaments_cnt + visible_idx;
-    append_submenu(
-        menu, sub_menu, wxID_ANY, _L("Merge with"), "", "", [total_targets, active_filament_menu_id]() {
-            return total_targets > 1 || (total_targets == 1 && active_filament_menu_id < 0);
-        }, m_parent);
->>>>>>> lixnix/main
 
     // Add mixed filaments as merge targets
     auto& mixed_mgr = wxGetApp().preset_bundle->mixed_filaments;
@@ -2143,12 +2019,7 @@ void MenuFactory::create_filament_action_menu(bool init, int active_filament_men
         menu, wxID_ANY, _L("Delete"), _L("Delete this filament"), [](wxCommandEvent&) {
             plater()->sidebar().delete_filament(-2); }, "", nullptr,
         []() {
-<<<<<<< snaporca-int
             // SM_FEATURE: allow deleting on Snapmaker toolchangers too (not only SEMM)
-=======
-            // Snapmaker: the filament action menu is also reachable on non-SEMM Snapmaker printers
-            // (mixed filament / multi-nozzle), so deletion is not gated on should_show_SEMM_buttons().
->>>>>>> lixnix/main
             return plater()->sidebar().combos_filament().size() > 1;
         }, m_parent);
 }
@@ -2490,6 +2361,12 @@ void MenuFactory::append_menu_items_instance_manipulation(wxMenu* menu)
         [](wxCommandEvent&) { plater()->fill_bed_with_instances();    }, "", nullptr, 
         []() { return plater()->can_increase_instances(); }, m_parent);
 }
+
+wxMenu *MenuFactory::filament_action_menu(int active_filament_menu_id) {
+    create_filament_action_menu(false, active_filament_menu_id);
+    return &m_filament_action_menu;
+}
+
 
 //BBS: add partplate related logic
 wxMenu* MenuFactory::plate_menu()

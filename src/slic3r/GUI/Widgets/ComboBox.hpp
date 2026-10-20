@@ -100,14 +100,10 @@ public:
     bool     is_drop_down(){return drop_down;}
     void     DeleteOneItem(unsigned int pos) { DoDeleteOneItem(pos); }
 
-<<<<<<< snaporca-int
-    void ForceDropdownOpen();
-    void CloseDropdown();
-=======
     // Opens the list; `focus` keeps the keyboard focus while it is open (default: the list itself),
     // e.g. the text control of an editable combo, so typing goes on.
     void ForceDropdownOpen(wxWindow *focus = nullptr);
->>>>>>> lixnix/main
+    void CloseDropdown();
 
 protected:
     virtual int  DoInsertItems(const wxArrayStringsAdapter &items,

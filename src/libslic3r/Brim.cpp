@@ -663,10 +663,7 @@ static ExPolygons outer_inner_brim_area(const Print& print,
         expolygons_append(no_brim_area, expolyFromLines);
     }
 
-<<<<<<< snaporca-int
-=======
     // Snapmaker: connect scattered small areas to prevent generating very small brims
->>>>>>> lixnix/main
     const float scaled_flow_width = print.brim_flow().scaled_spacing();
     no_brim_area = offset2_ex(no_brim_area, scaled_flow_width, -scaled_flow_width);
 

@@ -72,15 +72,8 @@
 #include "FileHelp.hpp"
 #include "Tab.hpp"
 #include "MainFrame.hpp"
-<<<<<<< snaporca-int
 #include "common_func/common_func.hpp"
 #include "libslic3r_version.h"
-=======
-// Snapmaker: common_func.hpp is the fork's replacement for libslic3r_version.h
-// (it defines SLIC3R_APP_NAME / SLIC3R_VERSION / SLIC3R_BUILD_ID / ... itself).
-// Do not include both here - the macros would be redefined.
-#include "common_func/common_func.hpp"
->>>>>>> lixnix/main
 #include "Widgets/HyperLink.hpp" // ORCA
 
 #define NAME_OPTION_COMBOBOX_SIZE wxSize(FromDIP(200), FromDIP(24))
@@ -3536,9 +3529,7 @@ CreatePresetSuccessfulDialog::CreatePresetSuccessfulDialog(wxWindow *parent, con
     wxBoxSizer *success_text_sizer = new wxBoxSizer(wxVERTICAL);
     wxStaticText *success_text = nullptr;
     wxStaticText *next_step_text = nullptr;
-    // Snapmaker Orca: preset sync runs through the Snapmaker account, never prompt
-    // for the Orca-cloud sync flow here.
-    bool          sync_user_preset_need_enabled = false;
+    bool          sync_user_preset_need_enabled = wxGetApp().getAgent() && wxGetApp().app_config->get("sync_user_preset") == "false";
     switch (create_success_type) {
     case PRINTER:
         success_text = new wxStaticText(this, wxID_ANY, _L("Printer Created"));

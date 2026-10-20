@@ -176,16 +176,12 @@ enum class NotificationType
 	BBLPreviewOnlyMode,
     BBLPrinterConfigUpdateAvailable,
 	BBLUserPresetExceedLimit,
-<<<<<<< snaporca-int
         FilamentIncompatibleMixed,
-=======
-    // Snapmaker: a mixed (virtual) filament references components that cannot be combined.
-    FilamentIncompatibleMixed,
->>>>>>> lixnix/main
     BBLFilamentPrintableError,
     BBLSliceLimitError,
     BBLSliceMultiExtruderHeightOutside,
 	BBLBedFilamentIncompatible,
+    BBLMixUsePLAAndPETG,
 	BBLNozzleFilamentIncompatible,
     // A mixed-color filament is printed on a single-nozzle printer (frequent changes and purging).
     BBLSingleExtruderMixedFilamentRisk,
@@ -214,6 +210,7 @@ enum class NotificationType
     // several texts at once (m_multiple_types).
     SMPlateFilamentAdvice,
     NotificationTypeCount
+
 };
 
 class NotificationManager
@@ -309,11 +306,7 @@ public:
 	// GCode exceeds the printing range of the extruder
     void push_slicing_customize_error_notification(NotificationType type, NotificationLevel level, const std::string &text, const std::string &hypertext = "", std::function<bool(wxEvtHandler*)> callback = std::function<bool(wxEvtHandler*)>());
     void close_slicing_customize_error_notification(NotificationType type, NotificationLevel level);
-	// PLA/PETG mix warning: uses SlicingWarning type to stay visible
-	// in Preview mode without blocking slicing.
-	void push_pla_petg_mix_warning(const std::string& text);
-	void close_pla_petg_mix_warning(const std::string& text);
-	void reset_pla_petg_mix_warning();
+
 	// Object warning with ObjectID, closes when object is deleted. ID used is of object not print like in slicing warning.
 	void push_simplify_suggestion_notification(const std::string& text, ObjectID object_id, const std::string& hypertext = "",
 		std::function<bool(wxEvtHandler*)> callback = std::function<bool(wxEvtHandler*)>());
@@ -720,9 +713,12 @@ private:
 		void         show()            { m_state = EState::Unknown; }
 	};
 
-	// PLA/PETG mutual-support mix warning. Closing it with X only hides it, so the per-frame check
-	// does not recreate it; real_close() removes it once the combination is gone or the config
-	// changes. A SlicingWarning, it stays visible in Preview.
+	// Snapmaker: PLA/PETG mutual-support mix warning.
+	// Mirrors PlaterWarningNotification's Hidden semantics: closing with X hides it (remembered)
+	// instead of erasing it, so the per-frame detection can no longer immediately recreate it.
+	// It is truly removed (real_close) only when the underlying data changes (PLA/PETG combo
+	// removed), so the warning re-appears only on a real data change. Uses SlicingWarning type
+	// (not PlaterWarning) so it is unaffected by set_in_preview() tab switching.
 	class PlaPetgMixNotification : public PopNotification
 	{
 	public:

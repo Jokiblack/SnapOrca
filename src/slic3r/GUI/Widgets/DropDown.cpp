@@ -1,7 +1,6 @@
 #include "DropDown.hpp"
 #include "Label.hpp"
 
-<<<<<<< snaporca-int
 #include <cassert>
 #include <algorithm>
 #include <boost/date_time/posix_time/posix_time_types.hpp>
@@ -12,11 +11,6 @@
 #include <iterator>
 #include <wx/dc.h>
 #include <wx/dcclient.h>
-=======
-#include <algorithm>
-#include <cstdio>
-
->>>>>>> lixnix/main
 #include <wx/display.h>
 #include <wx/dcbuffer.h>
 #include <wx/dcgraph.h>
@@ -641,12 +635,8 @@ void DropDown::messureSize()
     wxWindow::SetSize(szContent);
 #ifdef __WXGTK__
     // Gtk has a wrapper window for popup widget
-    // Fix for GNOME Platform 48 X11 backend: ensure size is valid before calling gtk_window_resize
-    int gtk_width  = szContent.x;
-    int gtk_height = szContent.y;
-    if (gtk_width <= 0) gtk_width = 100;
-    if (gtk_height <= 0) gtk_height = 100;
-    gtk_window_resize(GTK_WINDOW(m_widget), gtk_width, gtk_height);
+    if (szContent.x > 0 && szContent.y > 0)
+        gtk_window_resize (GTK_WINDOW (m_widget), szContent.x, szContent.y);
 #endif
     if (!groups.empty() && subDropDown == nullptr) {
         subDropDown = new DropDown(items);
@@ -973,7 +963,6 @@ void DropDown::sendDropDownEvent()
     GetEventHandler()->ProcessEvent(event);
 }
 
-<<<<<<< snaporca-int
 void DropDown::sendDropDownActionEvent(int index)
 {
     if (index < 0 || index >= int(items.size()) || (items[index].style & DD_ITEM_STYLE_DISABLED))
@@ -983,7 +972,8 @@ void DropDown::sendDropDownActionEvent(int index)
     event.SetInt(index);
     event.SetString(items[index].text);
     GetEventHandler()->ProcessEvent(event);
-=======
+}
+
 void DropDown::MoveHighlight(int step)
 {
     messureSize();
@@ -1031,7 +1021,6 @@ void DropDown::CommitHighlighted()
 void DropDown::Cancel()
 {
     DismissAndNotify();
->>>>>>> lixnix/main
 }
 
 void DropDown::Dismiss()

@@ -990,14 +990,12 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
                         params.extrusion_role = erSolidInfill;
                     }
                 }
-                // ORCA: per-feature filaments. Top and internal solid fills are already resolved
-                // by layerm.extruder(extrusion_role) above; bottom surfaces print with the bottom
-                // surface filament, routed through the same mixed-filament remapping as top surfaces.
-                // External bridges are bottom surfaces, so they print with the bottom surface filament
-                // too (internal bridges keep their pre-seeded filament).
-                if (params.extrusion_role == erBottomSurface || params.extrusion_role == erBridgeInfill)
-                    params.extruder = effective_layer_filament_id(layer,
-                        (unsigned int)std::max(0, region_config.bottom_surface_filament_id.value));
+                if (params.extrusion_role == erTopSolidInfill)
+                    params.extruder = region_config.top_surface_filament_id;
+                else if (params.extrusion_role == erBottomSurface)
+                    params.extruder = region_config.bottom_surface_filament_id;
+                else if (params.extrusion_role == erSolidInfill)
+                    params.extruder = region_config.internal_solid_filament_id;
                 // Orca: forced fill order applies only to top/bottom surfaces filled with a
                 // center-based pattern; everything else stays at Default to keep batching together.
                 if (params.pattern == ipConcentric || params.pattern == ipSpiralInset || params.pattern == ipArchimedeanChords || params.pattern == ipOctagramSpiral) {
@@ -1075,7 +1073,6 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
 				// the slot of the tool head that prints the infill.
 				const size_t infill_head = layer.get_extruder_id(params.extruder > 0 ? params.extruder - 1 : 0);
 				params.role_speed = 0;
-<<<<<<< snaporca-int
                 {
                     // Snapmaker: process speed vectors may be laid out per flow variant (standard / high flow);
                     // fall back to the upstream per-extruder column otherwise.
@@ -1086,7 +1083,7 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
                     const auto         *flow_support  = print_config.option<ConfigOptionStrings>("process_flow_support");
                     const size_t        speed_idx     = (flow_support != nullptr && flow_support->values.size() > 1) ?
                         get_config_idx(print_config, ConfigFlowDomain::Process, filament_id) :
-                        layer.get_extruder_id(params.extruder);
+                        infill_head;
                     if (params.extrusion_role == erBridgeInfill)
                         params.role_speed = region_config.bridge_speed.get_at(speed_idx);
                     else if (params.extrusion_role == erInternalBridgeInfill)
@@ -1098,18 +1095,6 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
                     else if (params.extrusion_role == erSolidInfill)
                         params.role_speed = region_config.internal_solid_infill_speed.get_at(speed_idx);
                 }
-=======
-                if (params.extrusion_role == erBridgeInfill)
-                    params.role_speed = region_config.bridge_speed.get_at(infill_head);
-                else if (params.extrusion_role == erInternalBridgeInfill)
-                    params.role_speed = region_config.get_abs_value_at("internal_bridge_speed", infill_head);
-                else if (params.extrusion_role == erInternalInfill)
-                    params.role_speed = region_config.sparse_infill_speed.get_at(infill_head);
-                else if (params.extrusion_role == erTopSolidInfill)
-                    params.role_speed = region_config.top_surface_speed.get_at(infill_head);
-                else if (params.extrusion_role == erSolidInfill)
-                    params.role_speed = region_config.internal_solid_infill_speed.get_at(infill_head);
->>>>>>> lixnix/main
 				// Calculate flow spacing for infill pattern generation.
 		        if (surface.is_solid() || is_bridge) {
 		            params.spacing = params.flow.spacing();
@@ -1447,8 +1432,10 @@ void Layer::make_fills(const FillAdaptive::RegionOctrees* fill_octrees, FillLigh
         // would centre a single bead on such an island's contour, half a bead beyond it - through
         // a wall band thinner than that (a painted skin of a fine nozzle) out of the part. Drop
         // such islands and appendages; they lie inside the walls and stay invisible.
+        // Only on a plate whose nozzles differ: with one nozzle size the infill is laid as before.
         if (using_internal_flow && surface_fill.params.extruder != layerm->extruder(frExternalPerimeter) &&
-            surface_fill.params.extruder != layerm->extruder(frPerimeter)) {
+            surface_fill.params.extruder != layerm->extruder(frPerimeter) &&
+            std::abs(surface_fill.params.flow.nozzle_diameter() - layerm->flow(frPerimeter).nozzle_diameter()) > EPSILON) {
             surface_fill.expolygons = opening_ex(surface_fill.expolygons, float(scale_(0.5 * surface_fill.params.spacing)));
             if (surface_fill.expolygons.empty())
                 continue;

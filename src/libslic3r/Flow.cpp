@@ -281,7 +281,7 @@ float support_material_nozzle_diameter(const PrintObject *object, int configured
     if (configured_filament == 0 && object->config().support_nozzle_diameter.value > 0.)
         return float(object->config().support_nozzle_diameter.value);
     // for configured_filament == 0 (use the current extruder), get_at returns the 0th component.
-    return float(object->print()->config().nozzle_diameter.get_at(configured_filament - 1));
+    return float(nozzle_diameter_for_filament(object->print()->config(), configured_filament, object->print()->is_BBL_printer()));
 }
 
 size_t support_head(const PrintObject *object, int configured, bool interface_role, float *nozzle)
@@ -298,7 +298,7 @@ size_t support_head(const PrintObject *object, int configured, bool interface_ro
     // nozzle; otherwise head 1 with support_material_nozzle_diameter.
     if (const unsigned int resolved = object->resolved_default_support_filament(interface_role); resolved > 0) {
         if (nozzle != nullptr)
-            *nozzle = float(print.config().nozzle_diameter.get_at(resolved - 1));
+            *nozzle = float(nozzle_diameter_for_filament(print.config(), int(resolved), print.is_BBL_printer()));
         return print.width_slot(resolved);
     }
     if (nozzle != nullptr)
@@ -320,25 +320,15 @@ Flow support_material_flow(const PrintObject *object, float layer_height)
     return Flow::new_from_config_width(
         frSupportMaterial,
         // The width parameter accepted by new_from_config_width is of type ConfigOptionFloatOrPercent, the Flow class takes care of the percent to value substitution.
-<<<<<<< snaporca-int
-        (object->config().support_line_width.value > 0) ? object->config().support_line_width : object->config().line_width,
-        // if object->config().support_filament == 0 (which means to not trigger tool change, but use the current extruder instead), get_at will return the 0th component.
-        float(nozzle_diameter_for_filament(object->print()->config(), object->config().support_filament, object->print()->is_BBL_printer())),
-=======
         support_width(object, head),
         nozzle,
->>>>>>> lixnix/main
         (layer_height > 0.f) ? layer_height : float(object->config().layer_height.value));
 }
 //BBS
 Flow support_transition_flow(const PrintObject* object)
 {
     //BBS: support transition of tree support is bridge flow
-<<<<<<< snaporca-int
-    float dmr = float(nozzle_diameter_for_filament(object->print()->config(), object->config().support_filament, object->print()->is_BBL_printer()));
-=======
     float dmr = support_material_nozzle_diameter(object, object->config().support_filament);
->>>>>>> lixnix/main
     return Flow::bridging_flow(dmr, dmr);
 }
 
@@ -351,13 +341,8 @@ Flow support_material_1st_layer_flow(const PrintObject *object, float layer_heig
     return Flow::new_from_config_width(
         frSupportMaterial,
         // The width parameter accepted by new_from_config_width is of type ConfigOptionFloatOrPercent, the Flow class takes care of the percent to value substitution.
-<<<<<<< snaporca-int
-        (width.value > 0) ? width : object->config().line_width,
-        float(nozzle_diameter_for_filament(print_config, object->config().support_filament, object->print()->is_BBL_printer())),
-=======
         (initial_layer.value > 0) ? initial_layer : support_width(object, head),
         nozzle,
->>>>>>> lixnix/main
         (layer_height > 0.f) ? layer_height : float(print_config.initial_layer_print_height.value));
 }
 
@@ -368,14 +353,8 @@ Flow support_material_interface_flow(const PrintObject *object, float layer_heig
     return Flow::new_from_config_width(
         frSupportMaterialInterface,
         // The width parameter accepted by new_from_config_width is of type ConfigOptionFloatOrPercent, the Flow class takes care of the percent to value substitution.
-<<<<<<< snaporca-int
-        (object->config().support_line_width > 0) ? object->config().support_line_width : object->config().line_width,
-        // if object->config().support_interface_filament == 0 (which means to not trigger tool change, but use the current extruder instead), get_at will return the 0th component.
-        float(nozzle_diameter_for_filament(object->print()->config(), object->config().support_interface_filament, object->print()->is_BBL_printer())),
-=======
         support_width(object, head),
         nozzle,
->>>>>>> lixnix/main
         (layer_height > 0.f) ? layer_height : float(object->config().layer_height.value));
 }
 

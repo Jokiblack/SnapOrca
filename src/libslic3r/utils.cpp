@@ -2044,10 +2044,7 @@ bool calc_file_sha256(const std::string& filename, std::array<unsigned char, 32>
 }
 
 // SoftFever: copy directory recursively
-<<<<<<< snaporca-int
 // Snapmaker: returns false on failure (used by atomic_replace_directory); upstream adds merge_mode.
-=======
->>>>>>> lixnix/main
 bool copy_directory_recursively(const boost::filesystem::path &source, const boost::filesystem::path &target,
                                 std::function<bool(const std::string)> filter, bool merge_mode)
 {
@@ -2349,18 +2346,9 @@ bool install_vendor_bundles_from_resources(
                            boost::iends_with(name, ".3mf");
                 };
 
-<<<<<<< snaporca-int
                 if (!copy_directory_recursively(dir_in_rsrc, dir_in_vendors, file_filter))
                     throw Slic3r::CriticalException(Slic3r::format(
                         _u8L("Copying directory %1% to %2% failed"), dir_in_rsrc, dir_in_vendors));
-=======
-                // SM Orca: copy_directory_recursively() now reports failure by returning false
-                // instead of throwing, so check it explicitly here.
-                if (!copy_directory_recursively(dir_in_rsrc, dir_in_vendors, file_filter)) {
-                    BOOST_LOG_TRIVIAL(error) << "Failed to copy vendor directory for bundle: " << bundle;
-                    return false;
-                }
->>>>>>> lixnix/main
             }
 
             BOOST_LOG_TRIVIAL(info) << "Successfully installed bundle: " << bundle;

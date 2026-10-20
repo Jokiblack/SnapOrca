@@ -49,12 +49,10 @@
 #include "CalibUtils.hpp"
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/PerHeadProcess.hpp"
-#include "libslic3r/FilamentFlowColumns.hpp"
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/Color.hpp"
 #include "format.hpp"
 #include "ConfigValueFormatter.hpp"
-#include "HighFlowNotices.hpp"
 #include "GUI_App.hpp"
 #include "Plater.hpp"
 #include "Tab.hpp"
@@ -1585,16 +1583,6 @@ void UnsavedChangesDialog::update_tree(Preset::Type type, DynamicConfig * config
     }
 }
 
-// Snapmaker Orca: the name of a variant column as the selector of the tab shows it: "Standard" /
-// "High Flow" when every column of the preset shares the drive, "Direct Drive Standard" otherwise.
-static wxString variant_column_text(const std::vector<std::string> &variants, size_t column)
-{
-    const HighFlowNotices::VariantName name = HighFlowNotices::variant_column_label(variants, column);
-    if (name.drive.empty() || name.volume_type.empty())
-        return _L(name.drive.empty() ? name.volume_type : name.drive);
-    return _L(name.drive) + " " + _L(name.volume_type);
-}
-
 void UnsavedChangesDialog::update_tree(Preset::Type type, PresetCollection* presets_)
 {
     Search::SettingsIndex& index = wxGetApp().sidebar().settings_index();
@@ -1624,11 +1612,9 @@ void UnsavedChangesDialog::update_tree(Preset::Type type, PresetCollection* pres
         type = presets->type();
         // Snapmaker Orca: old values come from the saved preset laid out like the edited one
         // (PerHeadProcess::reference_in_layout_of), so a per-head column shows its value, not "Undefined".
-        // A filament with a column the saved preset lacks compares with the saved preset widened by it.
         DynamicPrintConfig        old_storage;
         const DynamicPrintConfig& old_config = type == Preset::TYPE_PRINT ? PerHeadProcess::reference_in_layout_of(new_config, saved_config, old_storage) :
-                                               type == Preset::TYPE_FILAMENT ? filament_reference_in_layout_of(new_config, saved_config, old_storage) :
-                                                                              saved_config;
+                                                                           saved_config;
 
         const std::map<wxString, std::string>& category_icon_map = wxGetApp().get_tab(type)->get_category_icon_map();
 
@@ -1637,6 +1623,28 @@ void UnsavedChangesDialog::update_tree(Preset::Type type, PresetCollection* pres
         // Collect dirty options.
         const bool deep_compare = (type == Preset::TYPE_PRINTER || type == Preset::TYPE_PRINT || type == Preset::TYPE_FILAMENT || type == Preset::TYPE_SLA_MATERIAL);
         auto dirty_options = presets->current_dirty_options(deep_compare);
+        const std::vector<std::string>* flow_options = nullptr;
+        ConfigFlowDomain flow_domain = ConfigFlowDomain::Process;
+        if (type == Preset::TYPE_FILAMENT)
+        {
+            flow_domain = ConfigFlowDomain::Filament;
+            flow_options = &filament_flow_variant_options();
+        }
+        else if (type == Preset::TYPE_PRINT)
+        {
+            flow_options = &process_flow_variant_options();
+        }
+
+        if (flow_options != nullptr)
+        {
+            dirty_options.erase(std::remove_if(dirty_options.begin(), dirty_options.end(), [flow_options](const std::string& key) {
+                return std::find(flow_options->begin(), flow_options->end(), key) != flow_options->end();
+            }), dirty_options.end());
+
+            const std::vector<std::string> flow_dirty_options =
+                presets->current_flow_variant_dirty_options(flow_domain, *flow_options);
+            dirty_options.insert(dirty_options.end(), flow_dirty_options.begin(), flow_dirty_options.end());
+        }
 
         // process changes of extruders count
         if (type == Preset::TYPE_PRINTER && old_pt == ptFFF &&
@@ -1653,18 +1661,6 @@ void UnsavedChangesDialog::update_tree(Preset::Type type, PresetCollection* pres
                 PresetItem pi = {type, "extruders_count", _L("General"), _L("Capabilities"), local_label, old_val, new_val};
                 m_presetitems.push_back(pi);
             }
-        }
-
-        // Snapmaker Orca: High Flow values added without a value change have no row of their own
-        // (filament_extruder_variant is on no page); one row names them.
-        if (type == Preset::TYPE_FILAMENT) {
-            const std::vector<std::string> saved_variants = filament_variants(saved_config);
-            for (const std::string &variant : filament_variants(new_config))
-                if (std::find(saved_variants.begin(), saved_variants.end(), variant) == saved_variants.end()) {
-                    PresetItem pi = {type, "filament_extruder_variant", _L("Filament"), wxEmptyString, _L("High Flow values"), _L("None"), _L("Added")};
-                    m_presetitems.push_back(pi);
-                    break;
-                }
         }
 
         auto variant_key      = Preset::get_iot_type_string(type) + "_extruder_variant";
@@ -1688,7 +1684,6 @@ void UnsavedChangesDialog::update_tree(Preset::Type type, PresetCollection* pres
             if (variant_index == -2) {
                 // When founded option isn't the correct one.
                 // It can be for dirty_options: "default_print_profile", "printer_model", "printer_settings_id",
-<<<<<<< snaporca-int
                 // because of they don't exist in the index.
                 // Snapmaker: still show user-facing option types (bool/float/int/enum) under "Other".
                 // Internal keys like IDs and serialized blobs are coString - skip those silently.
@@ -1703,33 +1698,6 @@ void UnsavedChangesDialog::update_tree(Preset::Type type, PresetCollection* pres
                         fallback_label = def->label;
                 }
                 PresetItem pi = {type, opt_key, _L("Other"), wxEmptyString, fallback_label, old_value, new_value};
-=======
-                // because of they don't exist in the index
-                // Snapmaker: such bool/float/int/enum keys are still listed (as in the other update_tree()
-                // overload), coString/coStrings keys are skipped. A per extruder key ("nozzle_diameter#0")
-                // is looked up by its pure key and listed under its extruder's category.
-                const std::string pure_key = get_pure_opt_key(opt_key);
-                const ConfigOption* o = old_config.option(pure_key);
-                if (!o) o = new_config.option(pure_key);
-                if (!o || o->type() == coString || o->type() == coStrings)
-                    continue;
-                const ConfigOptionDef* def = print_config_def.get(pure_key);
-                const std::string def_label = def ? (def->full_label.empty() ? def->label : def->full_label) : std::string();
-                const wxString other_label = def_label.empty() ? from_u8(pure_key) : _L(def_label);
-                wxString other_category = (def && !def->category.empty()) ?
-                    Tab::translate_category(from_u8(def->category), type) : _L("Others");
-                if (pure_key != opt_key && type == Preset::TYPE_PRINTER && multiple_extruders &&
-                    printer_options_with_variant_2.count(pure_key) == 0) {
-                    const int extruder = std::atoi(opt_key.c_str() + pure_key.size() + 1);
-                    other_category = Tab::translate_category(wxString::Format("Extruder %d", extruder + 1), Preset::TYPE_PRINTER) +
-                                     ": " + other_category;
-                }
-                PresetItem pi = {type, opt_key,
-                    other_category, wxEmptyString,
-                    other_label,
-                    get_string_value(opt_key, old_config),
-                    get_string_value(opt_key, new_config)};
->>>>>>> lixnix/main
                 m_presetitems.push_back(pi);
                 continue;
             }
@@ -1747,14 +1715,9 @@ void UnsavedChangesDialog::update_tree(Preset::Type type, PresetCollection* pres
                 // Orca: Match the untranslated category and use the same extruder names as the printer tabs.
                 if (option.category.compare(0, 9, L"Extruder ") == 0)
                     category = _L("Extruder");
-                // Snapmaker Orca: the same column names as the selector of the tab ("Standard" / "High Flow"
-                // when every column shares the drive).
-                wxString variant_label = variant_column_text(extruder_variant->values, size_t(variant_index));
+                wxString variant_label = L(extruder_variant->values[variant_index]);
                 // Orca: An extruder name only disambiguates variants on printers with multiple extruders.
-                // Snapmaker Orca: and only where the ids tell tool heads apart. A single column and the
-                // flow-only columns of a process preset (ids [1,1]) hold the values of every tool head.
-                if (multiple_extruders && extruder_id && HighFlowNotices::ids_name_tool_heads(extruder_id->values) &&
-                    variant_index < extruder_id->size() && extruder_id->values[variant_index] > 0) {
+                if (multiple_extruders && extruder_id && variant_index < extruder_id->size() && extruder_id->values[variant_index] > 0) {
                     const wxString extruder_name = Tab::translate_category(
                         wxString::Format("Extruder %d", extruder_id->values[variant_index]), Preset::TYPE_PRINTER);
                     variant_label = extruder_name + " (" + variant_label + ")";
@@ -2291,12 +2254,7 @@ void DiffPresetDialog::update_tree()
         // TRN Header of a preset comparison: the two preset names.
         m_tree->model->AddPreset(type, format_wxstr(_L("\"%1%\" vs \"%2%\""), left_preset->name, right_preset->name), left_pt);
 
-<<<<<<< snaporca-int
         // No tab is registered for some preset types (e.g. TYPE_SLA_PRINT) - the map may not exist at all.
-=======
-        // No tab is registered for some preset types (SLA is not built in this fork) -
-        // the map may not exist at all.
->>>>>>> lixnix/main
         static const std::map<wxString, std::string> no_category_icons;
         Tab* type_tab = wxGetApp().get_tab(type);
         const std::map<wxString, std::string>& category_icon_map = type_tab ? type_tab->get_category_icon_map() : no_category_icons;
@@ -2331,27 +2289,7 @@ void DiffPresetDialog::update_tree()
                 // because they do not exist in the index.
                 continue;
             }
-            // Snapmaker Orca: a key changed in several variant columns (Standard / High Flow) is listed per
-            // column, so the category names the column, taken from the side that has it.
-            wxString category = option.category_local;
-            if (const size_t index_pos = opt_key.find('#'); index_pos != std::string::npos) {
-                const bool has_mode    = type == Preset::TYPE_PRINTER && printer_options_with_variant_2.count(lookup_key) > 0;
-                const bool has_variant = has_mode ||
-                    (type == Preset::TYPE_PRINT && print_options_with_variant.count(lookup_key) > 0) ||
-                    (type == Preset::TYPE_FILAMENT && filament_options_with_variant.count(lookup_key) > 0) ||
-                    (type == Preset::TYPE_PRINTER && printer_options_with_variant_1.count(lookup_key) > 0);
-                const std::string variant_key = Preset::get_iot_type_string(type) + "_extruder_variant";
-                const auto *left_variants  = dynamic_cast<const ConfigOptionStrings*>(left_config.option(variant_key));
-                const auto *right_variants = dynamic_cast<const ConfigOptionStrings*>(right_congig.option(variant_key));
-                const int   column         = std::atoi(opt_key.c_str() + index_pos + 1) / (has_mode ? 2 : 1);
-                if (has_variant && column >= 0) {
-                    const auto *variants = left_variants != nullptr && size_t(column) < left_variants->values.size() ? left_variants : right_variants;
-                    const bool  several  = (left_variants != nullptr && left_variants->values.size() > 1) || (right_variants != nullptr && right_variants->values.size() > 1);
-                    if (several && variants != nullptr && size_t(column) < variants->values.size())
-                        category = variant_column_text(variants->values, size_t(column)) + ": " + category;
-                }
-            }
-            m_tree->Append(opt_key, type, category, option.group_local, option.label_local,
+            m_tree->Append(opt_key, type, option.category_local, option.group_local, option.label_local,
                 left_val, right_val, get_category_icon(option.category));
         }
     }
