@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Snapmaker Orca\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-20 13:51+0200\n"
+"POT-Creation-Date: 2026-10-20 13:58+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Carlos Fco. Caruncho Serrano <puzzlero@gmail.com>\n"
 "Language-Team: \n"
@@ -8349,6 +8349,14 @@ msgstr "Error:"
 msgid "WARNING:"
 msgstr "AVISO:"
 
+# AI Translated
+msgid "Jump to: Support on build plate only"
+msgstr "Ir a: Soportes solo en la cama"
+
+# AI Translated
+msgid "Jump to: Support"
+msgstr "Ir a: Soportes"
+
 msgid "Warning:"
 msgstr "Advertencia:"
 
@@ -12768,6 +12776,10 @@ msgstr "Anotaciones"
 msgid "Frequent"
 msgstr "Frecuente"
 
+# AI Translated
+msgid "Modifier cycle"
+msgstr "Ciclo del modificador"
+
 #, c-format, boost-format
 msgid ""
 "Following line %s contains reserved keywords.\n"
@@ -14862,6 +14874,10 @@ msgstr "Seleccione la secuencia de impresión \"Por objeto\" para imprimir vario
 msgid "Spiral (vase) mode does not work when an object contains more than one material."
 msgstr "El modo de jarrón en espiral no funciona cuando un objeto contiene más de un material."
 
+# AI Translated
+msgid "Spiral (vase) mode does not work when an object contains regions with different print settings."
+msgstr "El modo vaso en espiral no funciona cuando un objeto contiene regiones con ajustes de impresión distintos."
+
 #, boost-format
 msgid "While the object %1% itself fits the build volume, it exceeds the maximum build volume height because of material shrinkage compensation."
 msgstr "Aunque el objeto %1% se ajusta al volumen de construcción, supera la altura máxima del volumen de construcción debido a la compensación de la contracción del material."
@@ -16265,6 +16281,11 @@ msgstr "Monotónico"
 msgid "Monotonic line"
 msgstr "Líneas monotónicas"
 
+# AI Translated
+# Needs human review: Patrón de alisado/superficie de Bambu que ordena las líneas monotónicas en toda la capa; comprobar en el desplegable.
+msgid "Global monotonic line"
+msgstr "Línea Monotónica global"
+
 msgid "Rectilinear"
 msgstr "Rectilíneo"
 
@@ -16385,6 +16406,24 @@ msgstr "Patrón de relleno sólido interno"
 
 msgid "Line pattern of internal solid infill. if the detect narrow internal solid infill be enabled, the concentric pattern will be used for the small area."
 msgstr "Patrón lineal de relleno sólido interno. Si se activa la detección de relleno sólido interno delgado, se utilizará el patrón concéntrico para las áreas pequeñas."
+
+# AI Translated
+# Needs human review: Término nuevo 'sub-top surface' (capa sólida bajo la superficie superior); no está en el glosario.
+msgid "Separate sub-top surface"
+msgstr "Separar la superficie bajo la superior"
+
+# AI Translated
+msgid "Print the internal solid infill that supports a visible top surface with its own pattern, set in \"Sub-top surface pattern\". The lines of this layer can print through and mark the top surface."
+msgstr "Imprime con su propio patrón, definido en \"Patrón de la superficie bajo la superior\", el relleno sólido interno que sostiene una superficie superior visible. Las líneas de esta capa pueden transparentarse y marcar la superficie superior."
+
+# AI Translated
+# Needs human review: Término nuevo 'sub-top surface'; no está en el glosario.
+msgid "Sub-top surface pattern"
+msgstr "Patrón de la superficie bajo la superior"
+
+# AI Translated
+msgid "Line pattern of the solid layer that supports a visible top surface. Its lines can print through and mark the top, so a monotonic pattern gives the smoothest result. The whole solid area that a top surface reaches uses this pattern, not only the part directly beneath it."
+msgstr "Patrón de líneas de la capa sólida que sostiene una superficie superior visible. Sus líneas pueden transparentarse y marcar la superficie superior, por lo que un patrón monotónico da el resultado más liso. Toda la zona sólida a la que llega una superficie superior usa este patrón, no solo la parte justo debajo."
 
 msgid "Line width of outer wall. If expressed as a %, it will be computed over the nozzle diameter."
 msgstr "Ancho de línea del perímetro externo. Si se expresa cómo %, se calculará sobre el diámetro de la boquilla."
@@ -17394,6 +17433,13 @@ msgstr ""
 msgid "Line width of the first layer. If expressed as a %, it will be computed over the nozzle diameter."
 msgstr "Ancho de línea de la primera capa. Si se expresa como %, se calculará en base al diámetro de la boquilla."
 
+msgid "First layer infill"
+msgstr "Relleno de la primera capa"
+
+# AI Translated
+msgid "Line width of the infill of the first layer, including sparse infill, solid infill and top surface. Walls, support and everything else on the first layer keep using the first layer line width. If expressed as a %, it will be computed over the nozzle diameter. Zero means to use the first layer line width."
+msgstr "Ancho de línea del relleno de la primera capa, incluidos el relleno de baja densidad, el relleno sólido y la superficie superior. Los perímetros, los soportes y todo lo demás de la primera capa siguen usando el ancho de línea de la primera capa. Si se expresa en %, se calculará sobre el diámetro de la boquilla. Cero significa usar el ancho de línea de la primera capa."
+
 msgid "First layer height"
 msgstr "Altura de la primera capa"
 
@@ -17403,9 +17449,6 @@ msgstr "Altura de la primera capa. Hacer que la altura de la primera capa sea li
 # AI Translated
 msgid "This is the speed for the walls and brim of the first layer."
 msgstr "Velocidad de los perímetros y del borde de adherencia de la primera capa."
-
-msgid "First layer infill"
-msgstr "Relleno de la primera capa"
 
 # AI Translated
 msgid "This is the speed for the first layer except for walls and brim, such as infill, gap fill and support."
@@ -18886,6 +18929,50 @@ msgstr ""
 "Cuando esta opción está activada, es necesario desactivar la opción de asegurar el grosor del perímetro vertical.\n"
 "\n"
 "No se recomienda utilizar el relleno rayo junto con esta opción, ya que el hay una cantidad limitada de relleno donde anclar los perímetros adicionales."
+
+# AI Translated
+msgid "Periodic modifier"
+msgstr "Modificador periódico"
+
+# AI Translated
+msgid "Apply this modifier on a repeating layer cycle. On skipped layers it is ignored, as if this modifier were not there."
+msgstr "Aplica este modificador en un ciclo de capas que se repite. En las capas omitidas se ignora, como si el modificador no existiera."
+
+# AI Translated
+msgid "Skip for"
+msgstr "Omitir durante"
+
+# AI Translated
+msgid "Periodic modifier skip layers"
+msgstr "Capas omitidas del modificador periódico"
+
+# AI Translated
+msgid "Number of consecutive layers on which this modifier is not applied. 0 means the modifier is applied on every layer."
+msgstr "Número de capas consecutivas en las que no se aplica este modificador. 0 significa que el modificador se aplica en todas las capas."
+
+# AI Translated
+msgid "Apply for"
+msgstr "Aplicar durante"
+
+# AI Translated
+msgid "Periodic modifier apply layers"
+msgstr "Capas aplicadas del modificador periódico"
+
+# AI Translated
+msgid "Number of consecutive layers in each cycle on which this modifier is fully applied. The cycle starts at layer 0: first \"Apply for\", then \"Skip for\"."
+msgstr "Número de capas consecutivas de cada ciclo en las que este modificador se aplica por completo. El ciclo empieza en la capa 0: primero \"Aplicar durante\" y después \"Omitir durante\"."
+
+# AI Translated
+msgid "Ignore infill settings"
+msgstr "Ignorar ajustes de relleno"
+
+# AI Translated
+msgid "Modifier ignores infill settings"
+msgstr "El modificador ignora los ajustes de relleno"
+
+# AI Translated
+msgid "Do not apply this modifier's internal infill settings (pattern, density, and related options). Walls and other overrides still apply. Infill is taken from the parent region."
+msgstr "No aplica los ajustes de relleno interno de este modificador (patrón, densidad y opciones relacionadas). Los perímetros y el resto de ajustes sí se aplican. El relleno se toma de la región padre."
 
 msgid "If you want to process the output G-code through custom scripts, just list their absolute paths here. Separate multiple scripts with a semicolon. Scripts will be passed the absolute path to the G-code file as the first argument, and they can access the Snapmaker Orca config settings by reading environment variables."
 msgstr "Si desea procesar el G-Code de salida a través de scripts personalizados, simplemente enumere sus rutas absolutas aquí. Separe diferentes scripts con punto y coma. A los scripts se les pasará la ruta absoluta al archivo G-Code como primer argumento, y pueden acceder a los ajustes de configuración de Snapmaker Orca leyendo variables de entorno."
@@ -22343,6 +22430,16 @@ msgstr "Generación de soportes"
 
 msgid "Optimizing toolpath"
 msgstr "Optimización de la trayectoria de cabezal"
+
+# AI Translated
+#, boost-format
+msgid "Unsupported overhangs were detected on object \"%1%\". Because \"Support on build plate only\" is enabled, supports cannot grow down to the build plate. Try turning this option off."
+msgstr "Se han detectado voladizos sin soporte en el objeto \"%1%\". Como \"Soportes solo en la cama\" está activado, los soportes no pueden llegar hasta la cama. Pruebe a desactivar esta opción."
+
+# AI Translated
+#, boost-format
+msgid "Unsupported overhangs were detected on object \"%1%\": some overhang regions could not get support. Try adjusting the support settings or re-orienting the object."
+msgstr "Se han detectado voladizos sin soporte en el objeto \"%1%\": algunas zonas en voladizo no han podido recibir soporte. Pruebe a ajustar los parámetros de soporte o a reorientar el objeto."
 
 msgid "Empty layers around bottom are replaced by nearest normal layers."
 msgstr "Las capas vacías del fondo se sustituyen por las capas normales más próximas."
@@ -37785,24 +37882,12 @@ msgstr ""
 #~ msgid "Note: The firmware version of SnapmakerU1 should be no less than"
 #~ msgstr "Nota: la versión del firmware de la SnapmakerU1 no debe ser inferior a"
 
-# AI Translated
-#~ msgid "Jump to: Support on build plate only"
-#~ msgstr "Ir a: Soportes solo en la cama"
-
-# AI Translated
-#~ msgid "Jump to: Support"
-#~ msgstr "Ir a: Soportes"
-
 #~ msgid "The selected file"
 #~ msgstr "El archivo seleccionado"
 
 # AI Translated
 #~ msgid "does not exist."
 #~ msgstr "no existe."
-
-# AI Translated
-#~ msgid "Modifier cycle"
-#~ msgstr "Ciclo del modificador"
 
 # AI Translated
 #~ msgid "Orca would re-calculate your flushing volumes everytime the filaments color changed or filaments changed. You could disable the auto-calculate in Snapmaker Orca > Preferences"
@@ -37818,97 +37903,12 @@ msgstr ""
 #~ msgstr "Este recurso web no se ha podido importar porque su versión está desactualizada."
 
 # AI Translated
-#~ msgid "Spiral (vase) mode does not work when an object contains regions with different print settings."
-#~ msgstr "El modo vaso en espiral no funciona cuando un objeto contiene regiones con ajustes de impresión distintos."
-
-# AI Translated
-# Needs human review: Patrón de alisado/superficie de Bambu que ordena las líneas monotónicas en toda la capa; comprobar en el desplegable.
-#~ msgid "Global monotonic line"
-#~ msgstr "Línea Monotónica global"
-
-# AI Translated
-# Needs human review: Término nuevo 'sub-top surface' (capa sólida bajo la superficie superior); no está en el glosario.
-#~ msgid "Separate sub-top surface"
-#~ msgstr "Separar la superficie bajo la superior"
-
-# AI Translated
-#~ msgid "Print the internal solid infill that supports a visible top surface with its own pattern, set in \"Sub-top surface pattern\". The lines of this layer can print through and mark the top surface."
-#~ msgstr "Imprime con su propio patrón, definido en \"Patrón de la superficie bajo la superior\", el relleno sólido interno que sostiene una superficie superior visible. Las líneas de esta capa pueden transparentarse y marcar la superficie superior."
-
-# AI Translated
-# Needs human review: Término nuevo 'sub-top surface'; no está en el glosario.
-#~ msgid "Sub-top surface pattern"
-#~ msgstr "Patrón de la superficie bajo la superior"
-
-# AI Translated
-#~ msgid "Line pattern of the solid layer that supports a visible top surface. Its lines can print through and mark the top, so a monotonic pattern gives the smoothest result. The whole solid area that a top surface reaches uses this pattern, not only the part directly beneath it."
-#~ msgstr "Patrón de líneas de la capa sólida que sostiene una superficie superior visible. Sus líneas pueden transparentarse y marcar la superficie superior, por lo que un patrón monotónico da el resultado más liso. Toda la zona sólida a la que llega una superficie superior usa este patrón, no solo la parte justo debajo."
-
-# AI Translated
 #~ msgid "This option sets the max point for the allowed bed mesh area. Due to the probe's XY offset, most printers are unable to probe the entire bed. To ensure the probe point does not go outside the bed area, the minimum and maximum points of the bed mesh should be set appropriately. Snapmaker_Orca ensures that adaptive_bed_mesh_min/adaptive_bed_mesh_max values do not exceed these min/max points. This information can usually be obtained from your printer manufacturer. The default setting is (99999, 99999), which means there are no limits, thus allowing probing across the entire bed."
 #~ msgstr "Esta opción establece el punto máximo del área permitida de la malla de la cama. Debido al desplazamiento XY de la sonda, la mayoría de impresoras no pueden sondear toda la cama. Para que el punto de sondeo no salga del área de la cama, los puntos mínimo y máximo de la malla de la cama deben ajustarse adecuadamente. Snapmaker_Orca garantiza que los valores adaptive_bed_mesh_min/adaptive_bed_mesh_max no superen estos puntos mínimo/máximo. Normalmente puede obtener esta información del fabricante de su impresora. El valor predeterminado es (99999, 99999), que significa que no hay límites y permite sondear toda la cama."
 
 # AI Translated
-#~ msgid "Line width of the infill of the first layer, including sparse infill, solid infill and top surface. Walls, support and everything else on the first layer keep using the first layer line width. If expressed as a %, it will be computed over the nozzle diameter. Zero means to use the first layer line width."
-#~ msgstr "Ancho de línea del relleno de la primera capa, incluidos el relleno de baja densidad, el relleno sólido y la superficie superior. Los perímetros, los soportes y todo lo demás de la primera capa siguen usando el ancho de línea de la primera capa. Si se expresa en %, se calculará sobre el diámetro de la boquilla. Cero significa usar el ancho de línea de la primera capa."
-
-# AI Translated
-#~ msgid "Periodic modifier"
-#~ msgstr "Modificador periódico"
-
-# AI Translated
-#~ msgid "Apply this modifier on a repeating layer cycle. On skipped layers it is ignored, as if this modifier were not there."
-#~ msgstr "Aplica este modificador en un ciclo de capas que se repite. En las capas omitidas se ignora, como si el modificador no existiera."
-
-# AI Translated
-#~ msgid "Skip for"
-#~ msgstr "Omitir durante"
-
-# AI Translated
-#~ msgid "Periodic modifier skip layers"
-#~ msgstr "Capas omitidas del modificador periódico"
-
-# AI Translated
-#~ msgid "Number of consecutive layers on which this modifier is not applied. 0 means the modifier is applied on every layer."
-#~ msgstr "Número de capas consecutivas en las que no se aplica este modificador. 0 significa que el modificador se aplica en todas las capas."
-
-# AI Translated
-#~ msgid "Apply for"
-#~ msgstr "Aplicar durante"
-
-# AI Translated
-#~ msgid "Periodic modifier apply layers"
-#~ msgstr "Capas aplicadas del modificador periódico"
-
-# AI Translated
-#~ msgid "Number of consecutive layers in each cycle on which this modifier is fully applied. The cycle starts at layer 0: first \"Apply for\", then \"Skip for\"."
-#~ msgstr "Número de capas consecutivas de cada ciclo en las que este modificador se aplica por completo. El ciclo empieza en la capa 0: primero \"Aplicar durante\" y después \"Omitir durante\"."
-
-# AI Translated
-#~ msgid "Ignore infill settings"
-#~ msgstr "Ignorar ajustes de relleno"
-
-# AI Translated
-#~ msgid "Modifier ignores infill settings"
-#~ msgstr "El modificador ignora los ajustes de relleno"
-
-# AI Translated
-#~ msgid "Do not apply this modifier's internal infill settings (pattern, density, and related options). Walls and other overrides still apply. Infill is taken from the parent region."
-#~ msgstr "No aplica los ajustes de relleno interno de este modificador (patrón, densidad y opciones relacionadas). Los perímetros y el resto de ajustes sí se aplican. El relleno se toma de la región padre."
-
-# AI Translated
 #~ msgid "This is  the number of layers of top paint penetration."
 #~ msgstr "Número de capas hasta las que penetra la pintura de la cara superior."
-
-# AI Translated
-#, boost-format
-#~ msgid "Unsupported overhangs were detected on object \"%1%\". Because \"Support on build plate only\" is enabled, supports cannot grow down to the build plate. Try turning this option off."
-#~ msgstr "Se han detectado voladizos sin soporte en el objeto \"%1%\". Como \"Soportes solo en la cama\" está activado, los soportes no pueden llegar hasta la cama. Pruebe a desactivar esta opción."
-
-# AI Translated
-#, boost-format
-#~ msgid "Unsupported overhangs were detected on object \"%1%\": some overhang regions could not get support. Try adjusting the support settings or re-orienting the object."
-#~ msgstr "Se han detectado voladizos sin soporte en el objeto \"%1%\": algunas zonas en voladizo no han podido recibir soporte. Pruebe a ajustar los parámetros de soporte o a reorientar el objeto."
 
 # AI Translated
 #, c-format, boost-format

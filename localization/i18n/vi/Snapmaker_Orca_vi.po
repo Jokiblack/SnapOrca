@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Orca Slicer\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-20 13:51+0200\n"
+"POT-Creation-Date: 2026-10-20 13:58+0200\n"
 "PO-Revision-Date: 2025-10-02 17:43+0700\n"
 "Last-Translator: \n"
 "Language-Team: hainguyen.ts13@gmail.com\n"
@@ -8890,6 +8890,12 @@ msgstr "Lỗi:"
 msgid "WARNING:"
 msgstr "CẢNH BÁO:"
 
+msgid "Jump to: Support on build plate only"
+msgstr ""
+
+msgid "Jump to: Support"
+msgstr ""
+
 msgid "Warning:"
 msgstr "Cảnh báo:"
 
@@ -13507,6 +13513,9 @@ msgstr "Ghi chú"
 msgid "Frequent"
 msgstr "Thường xuyên"
 
+msgid "Modifier cycle"
+msgstr ""
+
 #, c-format, boost-format
 msgid ""
 "Following line %s contains reserved keywords.\n"
@@ -15701,6 +15710,9 @@ msgstr "Vui lòng chọn trình tự in \"Theo đối tượng\" để in nhiề
 msgid "Spiral (vase) mode does not work when an object contains more than one material."
 msgstr "Chế độ bình xoắn ốc không hoạt động khi đối tượng chứa nhiều hơn một vật liệu."
 
+msgid "Spiral (vase) mode does not work when an object contains regions with different print settings."
+msgstr ""
+
 #, boost-format
 msgid "While the object %1% itself fits the build volume, it exceeds the maximum build volume height because of material shrinkage compensation."
 msgstr "Mặc dù đối tượng %1% vừa với thể tích xây dựng, nó vượt quá chiều cao thể tích xây dựng tối đa do bù co ngót vật liệu."
@@ -17176,6 +17188,9 @@ msgstr "Đơn điệu"
 msgid "Monotonic line"
 msgstr "Đường đơn điệu"
 
+msgid "Global monotonic line"
+msgstr ""
+
 msgid "Rectilinear"
 msgstr "Thẳng hàng"
 
@@ -17307,6 +17322,18 @@ msgstr "Mẫu infill đặc bên trong"
 
 msgid "Line pattern of internal solid infill. if the detect narrow internal solid infill be enabled, the concentric pattern will be used for the small area."
 msgstr "Mẫu đường của infill đặc bên trong. nếu phát hiện infill đặc bên trong hẹp được bật, mẫu đồng tâm sẽ được sử dụng cho vùng nhỏ."
+
+msgid "Separate sub-top surface"
+msgstr ""
+
+msgid "Print the internal solid infill that supports a visible top surface with its own pattern, set in \"Sub-top surface pattern\". The lines of this layer can print through and mark the top surface."
+msgstr ""
+
+msgid "Sub-top surface pattern"
+msgstr ""
+
+msgid "Line pattern of the solid layer that supports a visible top surface. Its lines can print through and mark the top, so a monotonic pattern gives the smoothest result. The whole solid area that a top surface reaches uses this pattern, not only the part directly beneath it."
+msgstr ""
 
 msgid "Line width of outer wall. If expressed as a %, it will be computed over the nozzle diameter."
 msgstr "Độ rộng đường của thành ngoài. Nếu được biểu thị dưới dạng %, nó sẽ được tính trên đường kính đầu phun."
@@ -18381,6 +18408,12 @@ msgstr ""
 msgid "Line width of the first layer. If expressed as a %, it will be computed over the nozzle diameter."
 msgstr "Độ rộng đường của lớp đầu tiên. Nếu được biểu thị dưới dạng %, nó sẽ được tính trên đường kính đầu phun."
 
+msgid "First layer infill"
+msgstr "Infill lớp đầu tiên"
+
+msgid "Line width of the infill of the first layer, including sparse infill, solid infill and top surface. Walls, support and everything else on the first layer keep using the first layer line width. If expressed as a %, it will be computed over the nozzle diameter. Zero means to use the first layer line width."
+msgstr ""
+
 msgid "First layer height"
 msgstr "Chiều cao lớp đầu tiên"
 
@@ -18390,9 +18423,6 @@ msgstr "Chiều cao của lớp đầu tiên. Làm cho chiều cao lớp đầu 
 # AI Translated
 msgid "This is the speed for the walls and brim of the first layer."
 msgstr "Tốc độ của thành và brim của lớp đầu tiên."
-
-msgid "First layer infill"
-msgstr "Infill lớp đầu tiên"
 
 # AI Translated
 msgid "This is the speed for the first layer except for walls and brim, such as infill, gap fill and support."
@@ -19936,6 +19966,39 @@ msgstr ""
 "Khi tùy chọn này được bật, tùy chọn đảm bảo độ dày vỏ dọc cần được tắt.\n"
 "\n"
 "Sử dụng infill tia chớp cùng với tùy chọn này không được khuyến nghị vì có infill hạn chế để neo các chu vi bổ sung vào."
+
+msgid "Periodic modifier"
+msgstr ""
+
+msgid "Apply this modifier on a repeating layer cycle. On skipped layers it is ignored, as if this modifier were not there."
+msgstr ""
+
+msgid "Skip for"
+msgstr ""
+
+msgid "Periodic modifier skip layers"
+msgstr ""
+
+msgid "Number of consecutive layers on which this modifier is not applied. 0 means the modifier is applied on every layer."
+msgstr ""
+
+msgid "Apply for"
+msgstr ""
+
+msgid "Periodic modifier apply layers"
+msgstr ""
+
+msgid "Number of consecutive layers in each cycle on which this modifier is fully applied. The cycle starts at layer 0: first \"Apply for\", then \"Skip for\"."
+msgstr ""
+
+msgid "Ignore infill settings"
+msgstr ""
+
+msgid "Modifier ignores infill settings"
+msgstr ""
+
+msgid "Do not apply this modifier's internal infill settings (pattern, density, and related options). Walls and other overrides still apply. Infill is taken from the parent region."
+msgstr ""
 
 msgid "If you want to process the output G-code through custom scripts, just list their absolute paths here. Separate multiple scripts with a semicolon. Scripts will be passed the absolute path to the G-code file as the first argument, and they can access the Snapmaker Orca config settings by reading environment variables."
 msgstr ""
@@ -23355,6 +23418,14 @@ msgstr "Đang tạo support"
 
 msgid "Optimizing toolpath"
 msgstr "Đang tối ưu hóa đường dẫn công cụ"
+
+#, boost-format
+msgid "Unsupported overhangs were detected on object \"%1%\". Because \"Support on build plate only\" is enabled, supports cannot grow down to the build plate. Try turning this option off."
+msgstr ""
+
+#, boost-format
+msgid "Unsupported overhangs were detected on object \"%1%\": some overhang regions could not get support. Try adjusting the support settings or re-orienting the object."
+msgstr ""
 
 msgid "Empty layers around bottom are replaced by nearest normal layers."
 msgstr ""

@@ -6,7 +6,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Snapmaker Orca\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-20 13:51+0200\n"
+"POT-Creation-Date: 2026-10-20 13:58+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: \n"
 "Language-Team: Guislain Cyril, Thomas Lété\n"
@@ -8351,6 +8351,12 @@ msgstr "Erreur:"
 msgid "WARNING:"
 msgstr "ATTENTION :"
 
+msgid "Jump to: Support on build plate only"
+msgstr ""
+
+msgid "Jump to: Support"
+msgstr ""
+
 msgid "Warning:"
 msgstr "Avertissement:"
 
@@ -12676,6 +12682,9 @@ msgstr "Notes"
 msgid "Frequent"
 msgstr "Fréquent"
 
+msgid "Modifier cycle"
+msgstr ""
+
 #, c-format, boost-format
 msgid ""
 "Following line %s contains reserved keywords.\n"
@@ -14750,6 +14759,9 @@ msgstr "Veuillez sélectionner la séquence d'impression \"Par objet\" pour impr
 msgid "Spiral (vase) mode does not work when an object contains more than one material."
 msgstr "Le mode vase en spirale ne fonctionne pas lorsqu'un objet contient plusieurs matériaux."
 
+msgid "Spiral (vase) mode does not work when an object contains regions with different print settings."
+msgstr ""
+
 #, boost-format
 msgid "While the object %1% itself fits the build volume, it exceeds the maximum build volume height because of material shrinkage compensation."
 msgstr "Bien que l’objet %1% corresponde au volume de construction, il dépasse la hauteur maximale du volume de construction en raison de la compensation du rétrécissement du matériau."
@@ -16160,6 +16172,9 @@ msgstr "Monotone"
 msgid "Monotonic line"
 msgstr "Ligne monotone"
 
+msgid "Global monotonic line"
+msgstr ""
+
 msgid "Rectilinear"
 msgstr "Rectiligne"
 
@@ -16291,6 +16306,18 @@ msgstr "Motif de remplissage plein interne"
 
 msgid "Line pattern of internal solid infill. if the detect narrow internal solid infill be enabled, the concentric pattern will be used for the small area."
 msgstr "Modèle de ligne de remplissage interne. Si la détection d’un remplissage interne étroit est activée, le modèle concentrique sera utilisé pour la petite zone."
+
+msgid "Separate sub-top surface"
+msgstr ""
+
+msgid "Print the internal solid infill that supports a visible top surface with its own pattern, set in \"Sub-top surface pattern\". The lines of this layer can print through and mark the top surface."
+msgstr ""
+
+msgid "Sub-top surface pattern"
+msgstr ""
+
+msgid "Line pattern of the solid layer that supports a visible top surface. Its lines can print through and mark the top, so a monotonic pattern gives the smoothest result. The whole solid area that a top surface reaches uses this pattern, not only the part directly beneath it."
+msgstr ""
 
 msgid "Line width of outer wall. If expressed as a %, it will be computed over the nozzle diameter."
 msgstr "Largeur de la ligne de la paroi extérieure. Si elle est exprimée en %, elle sera calculée sur le diamètre de la buse."
@@ -17308,6 +17335,12 @@ msgstr ""
 msgid "Line width of the first layer. If expressed as a %, it will be computed over the nozzle diameter."
 msgstr "Largeur de la ligne de la couche initiale. Si elle est exprimée en %, elle sera calculée sur le diamètre de la buse."
 
+msgid "First layer infill"
+msgstr "Remplissage de la couche initiale"
+
+msgid "Line width of the infill of the first layer, including sparse infill, solid infill and top surface. Walls, support and everything else on the first layer keep using the first layer line width. If expressed as a %, it will be computed over the nozzle diameter. Zero means to use the first layer line width."
+msgstr ""
+
 msgid "First layer height"
 msgstr "Hauteur de couche initiale"
 
@@ -17317,9 +17350,6 @@ msgstr "Hauteur de la première couche. Augmenter la hauteur de la première cou
 # AI Translated
 msgid "This is the speed for the walls and brim of the first layer."
 msgstr "Vitesse des parois et de la bordure de la couche initiale."
-
-msgid "First layer infill"
-msgstr "Remplissage de la couche initiale"
 
 # AI Translated
 msgid "This is the speed for the first layer except for walls and brim, such as infill, gap fill and support."
@@ -18790,6 +18820,39 @@ msgstr ""
 "Lorsque cette option est activée, l’option « assurer l’épaisseur verticale de la coque » doit être désactivée.\n"
 "\n"
 "Il n’est pas recommandé d’utiliser le remplissage par éclairs avec cette option, car il y a peu de remplissage pour ancrer les périmètres supplémentaires."
+
+msgid "Periodic modifier"
+msgstr ""
+
+msgid "Apply this modifier on a repeating layer cycle. On skipped layers it is ignored, as if this modifier were not there."
+msgstr ""
+
+msgid "Skip for"
+msgstr ""
+
+msgid "Periodic modifier skip layers"
+msgstr ""
+
+msgid "Number of consecutive layers on which this modifier is not applied. 0 means the modifier is applied on every layer."
+msgstr ""
+
+msgid "Apply for"
+msgstr ""
+
+msgid "Periodic modifier apply layers"
+msgstr ""
+
+msgid "Number of consecutive layers in each cycle on which this modifier is fully applied. The cycle starts at layer 0: first \"Apply for\", then \"Skip for\"."
+msgstr ""
+
+msgid "Ignore infill settings"
+msgstr ""
+
+msgid "Modifier ignores infill settings"
+msgstr ""
+
+msgid "Do not apply this modifier's internal infill settings (pattern, density, and related options). Walls and other overrides still apply. Infill is taken from the parent region."
+msgstr ""
 
 msgid "If you want to process the output G-code through custom scripts, just list their absolute paths here. Separate multiple scripts with a semicolon. Scripts will be passed the absolute path to the G-code file as the first argument, and they can access the Snapmaker Orca config settings by reading environment variables."
 msgstr "Si vous souhaitez traiter le G-code de sortie via des scripts personnalisés, indiquez simplement leurs chemins absolus ici. Séparez plusieurs scripts par un point-virgule. Les scripts recevront le chemin absolu vers le fichier G-code comme premier argument, et ils peuvent accéder aux paramètres de configuration Snapmaker Orca en lisant les variables d’environnement."
@@ -22134,6 +22197,14 @@ msgstr "Génération des supports"
 
 msgid "Optimizing toolpath"
 msgstr "Optimisation du parcours d'outil"
+
+#, boost-format
+msgid "Unsupported overhangs were detected on object \"%1%\". Because \"Support on build plate only\" is enabled, supports cannot grow down to the build plate. Try turning this option off."
+msgstr ""
+
+#, boost-format
+msgid "Unsupported overhangs were detected on object \"%1%\": some overhang regions could not get support. Try adjusting the support settings or re-orienting the object."
+msgstr ""
 
 msgid "Empty layers around bottom are replaced by nearest normal layers."
 msgstr "Les couches vides situées en bas sont remplacées par les couches normales les plus proches."
