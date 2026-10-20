@@ -229,6 +229,69 @@ jobs:
         run: |
           chmod +x validator-bin/Snapmaker_Orca_profile_validator
           ./validator-bin/Snapmaker_Orca_profile_validator -p "${{ github.workspace }}/resources/profiles" -s -l 2
+  # SnapOrca: G-code regression for the Snapmaker U1. Slices a fixed set of
+  # small models with the PR-built x86_64 AppImage and the shipped U1 profiles
+  # (4 x 0.4 mm heads, 0.20mm Standard, PLA Basic; plus a 0.4/0.6 mixed-nozzle
+  # variant) and diffs the normalized G-code against tests/gcode_regression/
+  # reference. Any difference fails the job and uploads the diffs and the
+  # generated G-code; a case with no reference yet (bootstrap) only uploads it.
+  gcode_regression_linux:
+    name: G-code regression (Linux x86_64)
+    needs: build_linux
+    if: ${{ !cancelled() && success() }}
+    runs-on: ${{ vars.SELF_HOSTED && 'orca-lnx-server' || 'ubuntu-24.04' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Download AppImage
+        uses: actions/download-artifact@v8
+        with:
+          # "Upload artifacts Ubuntu" in build_orca.yml; the x86_64 leg has no
+          # arch suffix, the aarch64 one is Snapmaker_Orca_Linux_ubuntu_2404_aarch64_*.
+          pattern: Snapmaker_Orca_Linux_ubuntu_2404_[PV]*
+          path: appimage
+          merge-multiple: true
+      - name: Extract AppImage
+        run: |
+          set -e
+          APPIMAGE=$(find appimage -maxdepth 1 -name '*.AppImage' ! -name '*aarch64*' | head -1)
+          test -n "$APPIMAGE" || { echo "no x86_64 AppImage in the run's artifacts"; ls -R appimage; exit 1; }
+          chmod +x "$APPIMAGE"
+          (cd appimage && "../$APPIMAGE" --appimage-extract > /dev/null)
+      - name: Install runtime libraries
+        # The CLI opens no window, but the binary links the host's GTK, WebKitGTK, GStreamer
+        # and OpenGL libraries (the AppImage bundles only lib/orca-runtime), which the runner
+        # image does not ship. List taken from `ldd bin/snapmaker-orca` on Ubuntu 24.04.
+        run: |
+          set -eo pipefail
+          sudo apt-get update -qq
+          sudo apt-get install -y -qq --no-install-recommends \
+            libopengl0 libegl1 libgl1 libglx0 libgbm1 libepoxy0 \
+            libgtk-3-0t64 libwebkit2gtk-4.1-0 libjavascriptcoregtk-4.1-0 libsoup-3.0-0 \
+            libgstreamer1.0-0 libgstreamer-plugins-base1.0-0 libgstreamer-gl1.0-0 \
+            libsecret-1-0 libmanette-0.2-0 libenchant-2-2 libhyphen0 libharfbuzz-icu0 \
+            libwebpdemux2 libwebpmux3 libxslt1.1 liborc-0.4-0t64 libunwind8 libevdev2
+          R=appimage/squashfs-root
+          missing=$(LD_LIBRARY_PATH=$R/lib/orca-runtime:$R/lib ldd $R/bin/snapmaker-orca | grep 'not found' || true)
+          if [ -n "$missing" ]; then echo "::error::missing libraries: $missing"; exit 1; fi
+          LD_LIBRARY_PATH=$R/lib/orca-runtime:$R/lib $R/bin/snapmaker-orca --help | head -1
+      - name: Slice and compare
+        id: regression
+        timeout-minutes: 90
+        run: |
+          python3 -I tests/gcode_regression/gcode_regression.py \
+            --slicer appimage/squashfs-root --out gcode-regression-out
+      - name: Upload G-code and diffs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: gcode-regression-diff
+          path: |
+            gcode-regression-out/gcode
+            gcode-regression-out/diff
+            gcode-regression-out/run/*.cmd
+            gcode-regression-out/run/*.log
+          if-no-files-found: warn
   publish_test_results:
     name: Publish Test Results
     needs: [unit_tests_linux_x86_64, unit_tests_linux_aarch64, unit_tests_windows_x64, unit_tests_windows_arm64, unit_tests_macos_arm64, unit_tests_flatpak_x86_64, unit_tests_flatpak_aarch64]
