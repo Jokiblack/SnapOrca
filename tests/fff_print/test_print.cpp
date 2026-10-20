@@ -1036,11 +1036,18 @@ TEST_CASE("Slicing errors are reported per object with the object's name", "[Pri
     Print print;
     Model model;
     init_print({Slic3r::Test::cube(20.)}, print, model);
-    // Lift the cube off the bed: its first layer is empty, which G-code export reports per object.
+    // A first layer that prints nothing, which G-code export reports per object. Lifting the cube off
+    // the bed does not give one here: Snapmaker's fix_slicing_errors() drops the empty bottom layers.
+    // Without walls, bottom shells and sparse infill the first layer is sliced but has no extrusions.
     ModelObject *object = model.objects.front();
-    object->name = "floating cube";
-    object->instances.front()->set_offset(object->instances.front()->get_offset() + Vec3d(0., 0., 2.));
-    print.apply(model, DynamicPrintConfig::full_print_config());
+    object->name = "empty cube";
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_deserialize_strict({
+        { "wall_loops",            0 },
+        { "bottom_shell_layers",   0 },
+        { "sparse_infill_density", "0%" },
+    });
+    print.apply(model, config);
     print.set_status_silent();
 
     ScopedTemporaryFile temp(".gcode");
@@ -1053,7 +1060,7 @@ TEST_CASE("Slicing errors are reported per object with the object's name", "[Pri
         REQUIRE(errors.errors_.size() == 1);
         message = print.slicing_errors_message(errors);
     }
-    CHECK(message.rfind("floating cube: ", 0) == 0);
+    CHECK(message.rfind("empty cube: ", 0) == 0);
     CHECK(message.find("empty first layer") != std::string::npos);
 }
 

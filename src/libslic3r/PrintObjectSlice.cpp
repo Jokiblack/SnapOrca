@@ -974,8 +974,14 @@ void PrintObject::slice()
 #if 1
     // Fix the model.
     //FIXME is this the right place to do? It is done repeateadly at the UI and now here at the backend.
-    std::string warning = fix_slicing_errors(this, m_layers, [this](){ m_print->throw_if_canceled(); }, firstLayerReplacedBy);
-    m_print->throw_if_canceled();
+    // Snapmaker re-enabled this repair, which upstream dropped. Not on a belt printer: there the
+    // slicing frame starts at the belt below the footprint, so the leading layers are empty on
+    // purpose (the supports under a leading overhang are generated in them) and the thin slivers
+    // the tilted layers cut at the leading edge are real geometry, not slicing errors.
+    if (! m_print->config().belt_printer.value) {
+        std::string warning = fix_slicing_errors(this, m_layers, [this](){ m_print->throw_if_canceled(); }, firstLayerReplacedBy);
+        m_print->throw_if_canceled();
+    }
     //BBS: send warning message to slicing callback
     // This warning is inaccurate, because the empty layers may have been replaced, or the model has supports.
     //if (!warning.empty()) {

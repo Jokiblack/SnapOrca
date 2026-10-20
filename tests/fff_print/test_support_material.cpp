@@ -506,7 +506,10 @@ TEST_CASE("Bottom interface spacing controls bottom interface density for every 
         return support_interface_extrusion_length(slice({ model }, {
             { "enable_support", 1 }, { "layer_height", 0.2 }, { "support_on_build_plate_only", 0 },
             { "support_type", support_type }, { "support_style", support_style }, { "support_interface_top_layers", 0 },
-            { "support_interface_bottom_layers", 6 }, { "support_bottom_interface_spacing", spacing } }));
+            { "support_interface_bottom_layers", 6 }, { "support_bottom_interface_spacing", spacing },
+            // Snapmaker rings every interface island with a loop whatever the spacing; on the few small
+            // islands organic lands on the base that loop outweighs the fill whose density is measured.
+            { "support_transition_perimeter", 0 } }));
     };
     REQUIRE(len(type, style, 0.0) > len(type, style, 4.0) * 1.5);
 }
