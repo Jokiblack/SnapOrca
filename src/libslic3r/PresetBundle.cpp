@@ -302,7 +302,6 @@ static std::vector<std::string> s_project_options {
     "curr_bed_type",
     // Snapmaker: flow variants
     "filament_volume_type",
-    "nozzle_volume_type",
     "filament_grouping_mode",
     "flush_multiplier",
     // Fast-purge mode: project-level purge control, inert at Default.
