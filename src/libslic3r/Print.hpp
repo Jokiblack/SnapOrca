@@ -20,11 +20,8 @@
 #include "Point.hpp"
 #include "PrintConfig.hpp"
 #include "Slicing.hpp"
-<<<<<<< snaporca-int
 #include "TriangleMesh.hpp"
-=======
 #include "Surface.hpp"
->>>>>>> lixnix/main
 #include "TriangleMeshSlicer.hpp"
 #include "GCode/ToolOrdering.hpp"
 #include "GCode/WipeTower.hpp"
@@ -33,11 +30,8 @@
 #include "GCode/GCodeProcessor.hpp"
 #include "MultiMaterialSegmentation.hpp"
 #include "MixedFilament.hpp"
-<<<<<<< snaporca-int
 #include "BeltBrim.hpp"
 #include "BeltTransform.hpp"
-=======
->>>>>>> lixnix/main
 #include "ObjectID.hpp"
 #include "TriangleSelector.hpp"
 #include "libslic3r.h"
@@ -53,12 +47,8 @@
 #include <math.h>
 #include <optional>
 #include <set>
-<<<<<<< snaporca-int
 #include <string>
 #include <tuple>
-=======
-#include <vector>
->>>>>>> lixnix/main
 #include <unordered_map>
 #include <vector>
 #include <utility>
@@ -435,8 +425,27 @@ public:
     LayerPtrs&                   layers()               { return m_layers; }
     SupportLayerPtrs&            support_layers()       { return m_support_layers; }
 
-    // Removes the short bridges of current_layer from overhang_regions in place. A non-null
-    // overhang_regions_with_type loses the same bridges; each fragment keeps its region's type.
+    /*!
+     * \brief Remove short bridges from the overhang contact regions so that they are
+     * printed without support.
+     *
+     * Bridges detected on the current layer (straight overhanging perimeter segments
+     * supported at both ends, and short bottom-bridge surfaces) are subtracted in place
+     * from overhang_regions.
+     *
+     * \param lower_layer Layer below the current one; used to test whether the ends of
+     * straight overhanging perimeter segments are supported.
+     * \param current_layer Layer whose bridges are detected.
+     * \param extrusion_width Scaled extrusion width.
+     * \param overhang_regions Overhang regions to filter, updated in place.
+     * \param max_bridge_length Scaled max length of bridges that don't need support.
+     * \param break_bridge Split bridges longer than max_bridge_length into supported
+     * segments; unused by tree supports (poor interface quality, see #4318).
+     * \param overhang_regions_with_type Optional typed overhang list. When non-null it
+     * is kept in sync with overhang_regions by subtracting the same bridge set, and
+     * each diff fragment inherits the type tag of its source region. When null, the
+     * call behaves exactly as if this parameter did not exist.
+     */
     template<typename PolysType>
     static void remove_bridges_from_contacts(
         const Layer* lower_layer,
@@ -722,7 +731,6 @@ private:
     std::vector<std::set<int>> detect_extruder_geometric_unprintables() const;
 
     void slice_volumes();
-<<<<<<< snaporca-int
     // Belt mode: shift the sliced layer grid (layer print_z and the belt floor
     // clipping shift) by delta, used by Print::_align_belt_purge_layers() to
     // snap the purge prism's layers onto the printed objects' layer grid.
@@ -756,10 +764,8 @@ private:
     // regenerate per-layer content over m_layers only, so a stale stash would
     // otherwise be restored on top of fresh content); the plan calls it too.
     void   belt_undo_purge_plan() { belt_restore_dropped_fills(); belt_restore_truncated_layers(); }
-=======
     // Combine slices of regions configured with a thicker extruder layer height into every Nth layer where geometry allows. Called by slice().
     void apply_extruder_layer_heights();
->>>>>>> lixnix/main
     //BBS
     ExPolygons _shrink_contour_holes(double contour_delta, double hole_delta, const ExPolygons& polys) const;
     // BBS
@@ -1030,9 +1036,6 @@ struct FakeWipeTower
 
         return paths;
     }
-    // NOTE: getTrueExtrusionLayersFromWipeTower() is declared once above, next to
-    // getFakeExtrusionPathsFromWipeTower(). Both merge sides added the declaration in a
-    // different spot inside this struct; keeping both would be a member redeclaration.
 };
 
 struct WipeTowerData
@@ -1077,7 +1080,6 @@ struct WipeTowerData
         depth = 0.f;
         local_z_reserve_boxes.clear();
         width = 0.f;
-        local_z_reserve_boxes.clear();
         brim_width = 0.f;
         height = 0.f;
         rib_offset = Vec2f::Zero();
@@ -1085,10 +1087,7 @@ struct WipeTowerData
     }
     void construct_mesh(float width, float depth, float height, float brim_width, bool is_rib_wipe_tower, float rib_width, float rib_length, bool fillet_wall, float cone_angle = 0.f);
 
-<<<<<<< snaporca-int
 
-=======
->>>>>>> lixnix/main
 private:
 	// Only allow the WipeTowerData to be instantiated internally by Print, 
 	// as this WipeTowerData shares reference to Print::m_tool_ordering.
@@ -1444,6 +1443,8 @@ public:
     const PrintRegion&          get_print_region(size_t idx) const  { return *m_print_regions[idx]; }
     const ToolOrdering&         get_tool_ordering() const { return m_wipe_tower_data.tool_ordering; }
     const FakeWipeTower& get_fake_wipe_tower() const { return m_fake_wipe_tower; }
+    BoundingBoxf get_wipe_tower_bbx() const { return m_wipe_tower_data.bbx; }
+    Vec2f get_rib_offset() const { return m_wipe_tower_data.rib_offset; }
 
     //BBS: plate's origin related functions
     void set_plate_origin(Vec3d origin) { m_origin = origin; }
@@ -1520,12 +1521,6 @@ public:
     // Orca: precise counterpart of compacted_wipe_tower_clearance_valid(), run once the tower exists.
     void                validate_compacted_wipe_tower_clearance() const;
     float               get_wipe_tower_depth() const { return m_wipe_tower_data.depth; }
-<<<<<<< snaporca-int
-=======
-    BoundingBoxf        get_wipe_tower_bbx() const { return m_wipe_tower_data.bbx; }
-    Vec2f               get_rib_offset() const { return m_wipe_tower_data.rib_offset; }
-    // get_fake_wipe_tower() is declared once above, with get_tool_ordering().
->>>>>>> lixnix/main
 
     void set_check_multi_filaments_compatibility(bool check) { m_need_check_multi_filaments_compatibility = check; }
     bool need_check_multi_filaments_compatibility() const { return m_need_check_multi_filaments_compatibility; }
@@ -1560,15 +1555,9 @@ public:
     // pipeline's cooling stage, which runs concurrently with the generator stage filling it.
     int get_filament_config_indx(int filament_id, int layer_id, bool use_cache = true);
     int get_nozzle_config_index(int filament_id, int layer_id);
-<<<<<<< snaporca-int
     // Changes with the grouping result and the filament maps, so a caller may reuse a resolved slot
     // until it changes.
     size_t config_index_generation() const { return m_config_index_generation; }
-=======
-    // Snapmaker Orca: the process table slot a filament's travel and first-layer speeds are read at:
-    // get_nozzle_config_index at `layer_id` when a nozzle grouping exists, else the filament's tool head.
-    size_t process_slot_of_filament(unsigned int filament_id, int layer_id);
->>>>>>> lixnix/main
 
     // Orca: Implement prusa's filament shrink compensation approach
     // Both are decided by apply() from the filaments the model uses, before the PrintObject transformations are built.
@@ -1672,7 +1661,7 @@ private:
     }
 
     static void append_model_object_extruders(const ModelObject &mo, std::vector<unsigned int> &extruders);
-    static bool append_support_extruders(const PrintObjectConfig &config, unsigned int num_extruders, std::vector<unsigned int> &extruders);
+    static bool append_support_extruders(const PrintObjectConfig &config, const PrintConfig &print_config, unsigned int num_extruders, std::vector<unsigned int> &extruders);
     void        append_tool_change_extruders(std::vector<unsigned int> &extruders) const;
     void        append_wipe_tower_extruder(std::vector<unsigned int> &extruders) const;
     void        update_shrinkage_compensation(size_t num_extruders, std::vector<int> &variant_index);

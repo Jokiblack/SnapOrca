@@ -8,11 +8,8 @@
 #include "Point.hpp"
 #include "Polygon.hpp"
 #include "Print.hpp"
-<<<<<<< snaporca-int
 #include "BeltTransform.hpp"
-=======
 #include "PerHeadProcess.hpp"
->>>>>>> lixnix/main
 #include "FilamentMixer.hpp"
 #include "Slicing.hpp"
 #include "libslic3r.h"
@@ -318,17 +315,9 @@ static t_config_option_keys print_config_diffs(
         if (opt_new == nullptr)
             //FIXME This may happen when executing some test cases.
             continue;
-        // Orca uses a binary search here, but this fork appends its own keys (z_hop_when_prime, ...)
-        // to m_extruder_retract_keys, so the list is not guaranteed to stay sorted. Use a linear
-        // lookup: it is a superset of the binary search and cannot silently miss an override key.
-        const bool          is_extruder_retract_key = std::find(extruder_retract_keys.begin(), extruder_retract_keys.end(), opt_key) != extruder_retract_keys.end();
-        const ConfigOption *opt_new_filament        = is_extruder_retract_key ? new_full_config.option(filament_prefix + opt_key) : nullptr;
+        const ConfigOption *opt_new_filament = std::binary_search(extruder_retract_keys.begin(), extruder_retract_keys.end(), opt_key) ? new_full_config.option(filament_prefix + opt_key) : nullptr;
 
         if (opt_new_filament != nullptr) {
-            // An extruder retract override is available at some of the filament presets.
-            // Orca's compute_filament_override_value() is canonical here: it also carries the
-            // "ugly" long_retractions_when_cut / retraction_distances_when_cut special casing
-            // this fork used to inline, and it maps filament overrides through per-slot indices.
             std::vector<int> filament_map_indices;
             if (dynamic_override_indices)
                 filament_map_indices = *dynamic_override_indices;
@@ -864,11 +853,7 @@ static bool mm_paint_applies_to_parent_region(const PrintObjectRegions::LayerRan
     return root_model_part != nullptr && root_model_part->is_mm_painted();
 }
 
-<<<<<<< snaporca-int
-PrintRegionConfig region_config_from_model_volume(const PrintRegionConfig &default_or_parent_region_config, const DynamicPrintConfig *layer_range_config, const ModelVolume &volume, size_t num_extruders, std::vector<int>& variant_index);
-=======
 PrintRegionConfig region_config_from_model_volume(const PrintRegionConfig &default_or_parent_region_config, const DynamicPrintConfig *layer_range_config, const ModelVolume &volume, size_t num_extruders, std::vector<int>& variant_index, const VariantOverrideRule &variant_rule = VariantOverrideRule());
->>>>>>> lixnix/main
 
 void print_region_ref_inc(PrintRegion &r) { ++ r.m_ref_cnt; }
 void print_region_ref_reset(PrintRegion &r) { r.m_ref_cnt = 0; }
@@ -1290,25 +1275,6 @@ static PrintObjectRegions* generate_print_object_regions(
                 if (const PrintObjectRegions::VolumeRegion &parent_region = layer_range.volume_regions[parent_region_id];
                     (parent_region.model_volume->is_model_part() || parent_region.model_volume->is_modifier()) &&
                     mm_paint_applies_to_parent_region(layer_range, parent_region_id)) {
-<<<<<<< snaporca-int
-                    PrintRegionConfig cfg = parent_region.region->config();
-                    cfg.outer_wall_filament_id.value     = painted_extruder_id;
-                    cfg.inner_wall_filament_id.value     = painted_extruder_id;
-                    cfg.internal_solid_filament_id.value = painted_extruder_id;
-                    cfg.top_surface_filament_id.value    = painted_extruder_id;
-                    cfg.bottom_surface_filament_id.value = painted_extruder_id;
-                    cfg.sparse_infill_filament_id.value  = painted_extruder_id;
-                    // Snapmaker: keep PrintRegion config-interned. If a painted target resolves to the same
-                    // config as its parent, alias it instead of creating a duplicate PrintRegion.
-                    PrintRegion *painted_region = get_create_region(std::move(cfg));
-                    if (painted_region->config().outer_wall_filament_id.value != painted_extruder_id ||
-                        painted_region->config().internal_solid_filament_id.value != painted_extruder_id ||
-                        painted_region->config().sparse_infill_filament_id.value != painted_extruder_id) {
-                        BOOST_LOG_TRIVIAL(warning) << "Painted region filament mismatch"
-                                                   << " requested_extruder_id=" << painted_extruder_id
-                                                   << " outer_wall_filament_id=" << painted_region->config().outer_wall_filament_id.value
-                                                   << " internal_solid_filament_id=" << painted_region->config().internal_solid_filament_id.value
-=======
                     PrintRegionConfig       cfg    = painted_region_config(parent_region.region->config(), parent_region.model_volume->extruder_id(), painted_extruder_id);
                     const PrintRegionConfig wanted = cfg;
                     // Keep PrintRegion config-interned. If a painted target resolves to the same
@@ -1327,7 +1293,6 @@ static PrintObjectRegions* generate_print_object_regions(
                                                    << " internal_solid_filament_id=" << painted_region->config().internal_solid_filament_id.value
                                                    << " top_surface_filament_id=" << painted_region->config().top_surface_filament_id.value
                                                    << " bottom_surface_filament_id=" << painted_region->config().bottom_surface_filament_id.value
->>>>>>> lixnix/main
                                                    << " sparse_infill_filament_id=" << painted_region->config().sparse_infill_filament_id.value
                                                    << " parent_region_id=" << parent_region_id
                                                    << " parent_print_region_id=" << parent_region.region->print_object_region_id()
@@ -1476,7 +1441,6 @@ static bool same_layer_pointillism_enabled(const MixedFilamentManager &mixed_mgr
     return false;
 }
 
-<<<<<<< snaporca-int
 // Orca: The shrinkage compensation is baked into the PrintObject transformations, so it has to be known before apply()
 // creates them. Derive it from the filaments the new model prints with instead of from the existing PrintObjects and
 // their regions, which do not exist yet on the first apply(). Every feature filament of every part, height range and
@@ -1535,7 +1499,7 @@ void Print::update_shrinkage_compensation(size_t num_extruders, std::vector<int>
         append_model_object_extruders(*model_object, extruders);
         const PrintObjectConfig object_config = PrintObject::object_config_from_model_object(m_default_object_config, *model_object, num_extruders, variant_index);
         if (PrintObject::has_support_material(object_config))
-            append_support_extruders(object_config, (unsigned int)num_extruders, extruders);
+            append_support_extruders(object_config, m_config, (unsigned int)num_extruders, extruders);
     }
     this->append_tool_change_extruders(extruders);
     // A mixed slot prints with its physical components.
@@ -1563,8 +1527,6 @@ void Print::update_shrinkage_compensation(size_t num_extruders, std::vector<int>
         set_compensation(extruders.front());
 }
 
-=======
->>>>>>> lixnix/main
 Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_config, bool extruder_applied)
 {
 #ifdef _DEBUG
@@ -2277,16 +2239,11 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
             bool object_config_changed = ! model_object.config.timestamp_matches(model_object_new.config);
 			if (object_config_changed)
 				model_object.config.assign_config(model_object_new.config);
-<<<<<<< snaporca-int
-            if (! object_diff.empty() || object_config_changed || num_extruders_changed ) {
-                PrintObjectConfig new_config = PrintObject::object_config_from_model_object(m_default_object_config, model_object, num_total_filaments, print_variant_index);
-=======
             if (! object_diff.empty() || object_config_changed || num_extruders_changed || extruder_heights_changed) {
                 // Orca's variant-index signature, fed with this fork's total filament count
                 // (physical + virtual mixed filaments) so mixed-filament ids are not clamped.
                 PrintObjectConfig new_config = PrintObject::object_config_from_model_object(m_default_object_config, model_object, num_total_filaments, print_variant_index, print_variant_rule);
                 fit_object_layer_height(new_config, model_object, new_full_config);
->>>>>>> lixnix/main
                 for (const PrintObjectStatus &print_object_status : print_object_status_db.get_range(model_object)) {
                     t_config_option_keys diff = print_object_status.print_object->config().diff(new_config);
                     if (! diff.empty()) {
@@ -2359,12 +2316,6 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
             // Generate a list of trafos and XY offsets for instances of a ModelObject
             // Producing the config for PrintObject on demand, caching it at print_object_last.
             const PrintObject *print_object_last = nullptr;
-<<<<<<< snaporca-int
-            auto print_object_apply_config = [this, &print_object_last, model_object, num_total_filaments, &print_variant_index](PrintObject *print_object) {
-                print_object->config_apply(print_object_last ?
-                    print_object_last->config() :
-                    PrintObject::object_config_from_model_object(m_default_object_config, *model_object, num_total_filaments, print_variant_index));
-=======
             auto print_object_apply_config = [this, &print_object_last, model_object, num_total_filaments, &print_variant_index, &print_variant_rule, &new_full_config](PrintObject *print_object) {
                 if (print_object_last != nullptr)
                     print_object->config_apply(print_object_last->config());
@@ -2373,7 +2324,6 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
                     fit_object_layer_height(config, *model_object, new_full_config);
                     print_object->config_apply(config);
                 }
->>>>>>> lixnix/main
                 print_object_last = print_object;
             };
             if (old.empty()) {
