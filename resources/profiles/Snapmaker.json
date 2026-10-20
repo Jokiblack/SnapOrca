@@ -525,6 +525,10 @@
     {
       "name": "0.40mm Strength @Snapmaker U1 (0.8 nozzle)",
       "sub_path": "process/0.40mm Strength @Snapmaker U1 (0.8 nozzle).json"
+    },
+    {
+      "name": "0.24 Standard @Snapmaker (0.8 nozzle)",
+      "sub_path": "process/0.24 Standard @Snapmaker (0.8 nozzle).json"
     }
   ],
   "filament_list": [
@@ -1163,10 +1167,6 @@
     {
       "name": "Snapmaker PLA SnapSpeed @Dual",
       "sub_path": "filament/Snapmaker PLA SnapSpeed @Dual.json"
-    },
-    {
-      "name": "Snapmaker PLA SnapSpeed @U1 base",
-      "sub_path": "filament/Snapmaker PLA SnapSpeed @U1 base.json"
     },
     {
       "name": "Snapmaker PLA SnapSpeed @U1 base",
