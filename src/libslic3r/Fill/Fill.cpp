@@ -1585,6 +1585,7 @@ Polylines Layer::generate_sparse_infill_polylines_for_anchoring(const FillAdapti
         case ipCount: continue; break;
         case ipSupportBase: continue; break;
         case ipConcentricInternal: continue; break;
+        case ipIroningArchimedeanSpiral: continue; break;
         case ipLightning:
 		case ipAdaptiveCubic:
         case ipSupportCubic:
