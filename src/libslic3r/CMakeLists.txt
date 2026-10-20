@@ -384,6 +384,7 @@ set(lisbslic3r_sources
     NormalUtils.cpp
     NormalUtils.hpp
     NSVGUtils.cpp
+    NanoSVGImpl.cpp
     NSVGUtils.hpp
     ObjColorUtils.cpp
     ObjColorUtils.hpp
@@ -694,6 +695,7 @@ set(OpenCASCADE_DIR "${CMAKE_PREFIX_PATH}/lib/cmake/occt")
 find_package(OpenCASCADE REQUIRED)
 target_include_directories(libslic3r SYSTEM PUBLIC ${OpenCASCADE_INCLUDE_DIR})
 target_link_libraries(libslic3r PUBLIC nlohmann_json)
+target_link_libraries(libslic3r PUBLIC snapmaker_common)
 
 find_package(JPEG REQUIRED)
 find_package(Draco REQUIRED)

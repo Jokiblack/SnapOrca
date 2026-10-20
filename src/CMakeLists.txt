@@ -18,6 +18,25 @@ set(PAHO_MQTT_C_PATH "${CMAKE_CURRENT_SOURCE_DIR}/mqtt/externals/paho-mqtt-c" CA
 
 find_package(libnoise REQUIRED)
 
+# SnapOrca: Snapmaker helpers (Sentry wrapper, device/version helpers, usage telemetry).
+# libslic3r and the GUI call them, so they live in a static library that libslic3r links;
+# every executable or module built on libslic3r (app, CLI, dev tools, plugin module) gets them.
+# BURY_EXPORTS is PUBLIC so callers see the same dllexport declaration the definitions use.
+add_library(snapmaker_common STATIC
+    sentry_wrapper/SentryWrapper.hpp sentry_wrapper/SentryWrapper.cpp
+    common_func/common_func.hpp common_func/common_func.cpp
+    bury_cfg/bury_point.hpp bury_cfg/bury_point.cpp)
+target_include_directories(snapmaker_common PUBLIC ${CMAKE_CURRENT_SOURCE_DIR})
+target_compile_definitions(snapmaker_common PUBLIC BURY_EXPORTS)
+target_link_libraries(snapmaker_common PUBLIC boost_headeronly nlohmann_json)
+if (SLIC3R_SENTRY)
+    target_compile_definitions(snapmaker_common PUBLIC SLIC3R_SENTRY)
+    target_link_libraries(snapmaker_common PUBLIC sentry::sentry)
+endif ()
+if (APPLE)
+    target_link_libraries(snapmaker_common PUBLIC "-framework IOKit" "-framework CoreFoundation")
+endif ()
+
 add_subdirectory(libslic3r)
 
 if (SLIC3R_GUI)
@@ -341,10 +360,9 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/dev-utils/platform/msw/Snapmaker_Orca
 configure_file(${CMAKE_CURRENT_SOURCE_DIR}/dev-utils/platform/osx/Info.plist.in ${CMAKE_CURRENT_BINARY_DIR}/Info.plist @ONLY)
 if (WIN32)
     # BaseException/StackWalker are compiled into libslic3r_gui on Windows (upstream 2.5 layout).
-    add_library(Snapmaker_Orca SHARED Snapmaker_Orca.cpp Snapmaker_Orca.hpp sentry_wrapper/SentryWrapper.hpp sentry_wrapper/SentryWrapper.cpp bury_cfg/bury_point.hpp bury_cfg/bury_point.cpp common_func/common_func.hpp common_func/common_func.cpp)
-    target_compile_definitions(Snapmaker_Orca PRIVATE BURY_EXPORTS)
+    add_library(Snapmaker_Orca SHARED Snapmaker_Orca.cpp Snapmaker_Orca.hpp)
 else ()
-    add_executable(Snapmaker_Orca Snapmaker_Orca.cpp Snapmaker_Orca.hpp sentry_wrapper/SentryWrapper.hpp sentry_wrapper/SentryWrapper.cpp bury_cfg/bury_point.hpp bury_cfg/bury_point.cpp common_func/common_func.hpp common_func/common_func.cpp)
+    add_executable(Snapmaker_Orca Snapmaker_Orca.cpp Snapmaker_Orca.hpp)
 endif ()
 
 if (MINGW)

@@ -11,7 +11,7 @@
 // nanosvg is header-only and libslic3r's 3mf import references it without carrying the implementation,
 // so every executable that links libslic3r has to supply it. Must precede any include that pulls the
 // header in, or its include guard suppresses the implementation. Same pattern as the other dev tools.
-#define NANOSVG_IMPLEMENTATION
+// nanosvg's implementation comes from libslic3r (NanoSVGImpl.cpp).
 #include "nanosvg/nanosvg.h"
 #define NANOSVGRAST_IMPLEMENTATION
 #include "nanosvg/nanosvgrast.h"

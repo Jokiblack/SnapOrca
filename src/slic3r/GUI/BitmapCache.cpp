@@ -31,7 +31,6 @@
 #endif /* __WXGTK2__ */
 
 #include <glad/gl.h>
-#define NANOSVG_IMPLEMENTATION
 #include "nanosvg/nanosvg.h"
 #define NANOSVGRAST_IMPLEMENTATION
 #include "nanosvg/nanosvgrast.h"
@@ -582,7 +581,14 @@ bool BitmapCache::load_from_svg_file_change_color(const std::string &filename, u
     char temp_color[8];
     strncpy(temp_color, hexColor, 7);
     temp_color[7]             = '\0';
-    unsigned int change_color = nsvg__parseColorHex(temp_color);
+    // Same parsing and grey fallback as nanosvg's internal nsvg__parseColorHex (packed 0xBBGGRR).
+    auto pack_rgb = [](unsigned int r, unsigned int g, unsigned int b) { return r | (g << 8) | (b << 16); };
+    unsigned int r = 0, g = 0, b = 0;
+    unsigned int change_color = pack_rgb(128, 128, 128);
+    if (sscanf(temp_color, "#%2x%2x%2x", &r, &g, &b) == 3)
+        change_color = pack_rgb(r, g, b);
+    else if (sscanf(temp_color, "#%1x%1x%1x", &r, &g, &b) == 3)
+        change_color = pack_rgb(r * 17, g * 17, b * 17);
     change_color |= (unsigned int) (1.0f * 255) << 24; // opacity
     unsigned int green_color = 0xFF889600; // #009688
     for (NSVGshape* shape = image->shapes; shape != nullptr; shape = shape->next) {

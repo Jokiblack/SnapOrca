@@ -3,7 +3,7 @@
 // several of them transitively include nanosvg.h without the implementation macro, and its include
 // guard would then suppress the implementation if the macro were defined afterwards. Same pattern as
 // the test mains.
-#define NANOSVG_IMPLEMENTATION
+// nanosvg's implementation comes from libslic3r (NanoSVGImpl.cpp).
 #include "nanosvg/nanosvg.h"
 #define NANOSVGRAST_IMPLEMENTATION
 #include "nanosvg/nanosvgrast.h"
