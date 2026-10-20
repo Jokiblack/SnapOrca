@@ -57,6 +57,7 @@ namespace fs = boost::filesystem;
 #ifdef __WIN32__
 #include <WebView2.h>
 #include <Shellapi.h>
+#include <shlobj.h>
 #include <slic3r/Utils/Http.hpp>
 #elif defined __linux__
 #include <gtk/gtk.h>
@@ -151,6 +152,8 @@ DWORD DownloadAndInstallWV2RT() {
 class WebViewEdge : public wxWebViewEdge
 {
 public:
+    explicit WebViewEdge(const wxWebViewConfiguration &config) : wxWebViewEdge(config) {}
+
     bool SetUserAgent(const wxString &userAgent) override
     {
         bool dark = userAgent.Contains("dark");
@@ -421,6 +424,32 @@ static wxString linux_user_agent()
 }
 #endif
 
+#if wxUSE_WEBVIEW_EDGE
+// SnapOrca: WebView2 refuses to start a second browser process on a user data folder that is
+// already in use with different environment options (ERROR_INVALID_STATE). wx defaults the folder to
+// GetUserLocalDataDir(), i.e. %LOCALAPPDATA%\Snapmaker_Orca, the one the official Snapmaker Orca
+// (older wx, other options) also uses, so give every SnapOrca WebView its own folder.
+static wxWebViewConfiguration edge_configuration()
+{
+    wxWebViewConfiguration config = wxWebView::NewConfiguration(wxWebViewBackendEdge);
+    wxFileName data_dir(wxStandardPaths::MSWGetShellDir(CSIDL_LOCAL_APPDATA), "");
+    data_dir.AppendDir("SnapOrca");
+    data_dir.AppendDir("WebView2");
+    data_dir.Mkdir(wxS_DIR_DEFAULT, wxPATH_MKDIR_FULL);
+    config.SetDataPath(data_dir.GetFullPath());
+    return config;
+}
+#endif
+
+wxWebView* WebView::New()
+{
+#if wxUSE_WEBVIEW_EDGE
+    return wxWebView::New(edge_configuration());
+#else
+    return wxWebView::New();
+#endif
+}
+
 wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
 {
 #if wxUSE_WEBVIEW_EDGE
@@ -442,7 +471,7 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
     BOOST_LOG_TRIVIAL(trace) << __FUNCTION__ << ": " << url2.ToUTF8();
 
 #ifdef __WIN32__
-    wxWebView* webView = new WebViewEdge;
+    wxWebView* webView = new WebViewEdge(edge_configuration());
 #elif defined(__WXOSX__)
     wxWebView *webView = new WebViewWebKit(url2);
 #else
