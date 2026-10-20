@@ -111,7 +111,7 @@ static ExtrusionPaths closed_gap_fill_loop_to_extrusion_paths(const ThickPolylin
         return paths;
 
     ExtrusionPath path(role);
-    path.polyline.points = thick_polyline.points;
+    path.polyline = Polyline3(Polyline(thick_polyline.points));
     if (!path.polyline.is_valid())
         return paths;
 

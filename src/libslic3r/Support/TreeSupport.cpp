@@ -2633,7 +2633,7 @@ void TreeSupport::draw_circles()
                     roof_1st_layer.clear();
                     max_layers_above_roof  = std::max(max_layers_above_roof, max_layers_above_roof1);
                     max_layers_above_roof1 = 0;
-                    interface_id           = obj_layer_nr % top_interface_layers;
+                    // interface_id is assigned later by the ORCA normalization pass.
                 }
 
                 // ORCA: base interface roofs go after the interface roofs; interface_as_base is keyed on this index.
@@ -4100,9 +4100,13 @@ void TreeSupport::generate_contact_points()
     coord_t    radius_scaled         = scale_(base_radius);
     const coordf_t extrusion_width = config.line_width.value;
     coordf_t       xy_expansion    = scale_(config.support_expansion.value);
-    if (m_support_params.soluble_interface && xy_expansion < EPSILON) xy_expansion = scale_(2);
+    // SupportParameters::soluble_interface is gone in Orca 2.5; keep the Snapmaker meaning (zero top Z distance).
+    const bool soluble_interface = config.support_top_z_distance.value == 0.;
+    if (soluble_interface && xy_expansion < EPSILON) xy_expansion = scale_(2);
 
     bool       on_buildplate_only    = m_object_config->support_on_build_plate_only.value;
+    const bool roof_enabled          = config.support_interface_top_layers.value > 0;
+    const bool force_tip_to_roof     = roof_enabled && soluble_interface;
     const bool has_belt_floor = std::abs(m_slicing_params.belt_floor_shear_factor) > EPSILON;
 
     //First generate grid points to cover the entire area of the print.
@@ -4285,7 +4289,7 @@ void TreeSupport::generate_contact_points()
                     overhangs_regular = diff_ex(overhangs_regular, extrudable_collision);
                 for (auto &overhang : overhangs_regular) {
                     if (is_sharp_tail
-                        && !m_support_params.soluble_interface
+                        && !soluble_interface
                         && overhang.area() < SQ(scale_(2.))) {
                         add_interface = false;
                     }
