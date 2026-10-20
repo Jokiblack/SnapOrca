@@ -6,7 +6,6 @@
     "setting_id": "GFSG96_01",
     "inherits": "Generic PETG HF @U1 base",
     "filament_max_volumetric_speed": [
-        "1",
         "1"
     ],
     "compatible_printers": [
@@ -347,7 +346,6 @@
         "3"
     ],
     "filament_ramming_travel_time": [
-        "0",
         "0"
     ],
     "filament_ramming_travel_time_nc": [
@@ -432,18 +430,15 @@
         "10"
     ],
     "long_retractions_when_ec": [
-        "0",
         "0"
     ],
     "no_slow_down_for_cooling_on_outwalls": [
         "0"
     ],
     "nozzle_temperature": [
-        "220",
         "220"
     ],
     "nozzle_temperature_initial_layer": [
-        "220",
         "220"
     ],
     "nozzle_temperature_range_low": [
@@ -456,7 +451,6 @@
         "0.02"
     ],
     "retraction_distances_when_ec": [
-        "0",
         "0"
     ],
     "slow_down_layer_time": [

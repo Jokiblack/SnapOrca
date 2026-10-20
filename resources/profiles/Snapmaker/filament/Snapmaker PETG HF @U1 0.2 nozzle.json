@@ -346,7 +346,6 @@
         "3"
     ],
     "filament_ramming_travel_time": [
-        "0",
         "0"
     ],
     "filament_ramming_travel_time_nc": [
@@ -425,7 +424,6 @@
         "10"
     ],
     "long_retractions_when_ec": [
-        "0",
         "0"
     ],
     "no_slow_down_for_cooling_on_outwalls": [
@@ -447,7 +445,6 @@
         "0.02"
     ],
     "retraction_distances_when_ec": [
-        "0",
         "0"
     ],
     "slow_down_layer_time": [
