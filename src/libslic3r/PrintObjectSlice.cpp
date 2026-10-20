@@ -434,7 +434,7 @@ static std::vector<std::vector<ExPolygons>> slices_to_regions(
         }
         tbb::parallel_for(
             tbb::blocked_range<size_t>(0, zs_complex.size()),
-            [&slices_by_region, &print_object_regions, &zs_complex, &layer_ranges_regions_to_slices, clip_multipart_objects, &throw_on_cancel_callback]
+            [&slices_by_region, &print_object_regions, &zs_complex, &layer_ranges_regions_to_slices, clip_multipart_objects, spiral_mode = print_config.spiral_mode.value, &throw_on_cancel_callback]
                 (const tbb::blocked_range<size_t> &range) {
                 float z              = zs_complex[range.begin()].second;
                 auto  it_layer_range = layer_range_first(print_object_regions.layer_ranges, z);
@@ -505,7 +505,11 @@ static std::vector<std::vector<ExPolygons>> slices_to_regions(
                                 RegionSlice &parent_slice = temp_slices[region.parent];
                                 RegionSlice &this_slice   = temp_slices[idx_region];
                                 ExPolygons   source       = std::move(this_slice.expolygons);
-                                if (parent_slice.expolygons.empty()) {
+                                // A periodic modifier on a skipped layer leaves the parent untouched.
+                                // Spiral vase needs every layer sliced the same way, so the cycle is ignored there.
+                                const bool skip_periodic = !spiral_mode && region.region != nullptr
+                                    && !periodic_modifier_active(region.region->config(), int(z_idx));
+                                if (skip_periodic || parent_slice.expolygons.empty()) {
                                     this_slice  .expolygons.clear();
                                 } else {
                                     this_slice  .expolygons = intersection_ex(parent_slice.expolygons, source);

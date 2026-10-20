@@ -650,6 +650,8 @@ public:
 	//BBS: GUI refactor
 	TabPrintPart(ParamsPanel* parent);
 	~TabPrintPart() {}
+	void build() override;
+	void toggle_options() override;
 protected:
 	virtual void    notify_changed(ObjectBase * object) override;
 };
