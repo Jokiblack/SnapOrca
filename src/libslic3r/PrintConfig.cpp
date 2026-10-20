@@ -11558,10 +11558,11 @@ void DynamicPrintConfig::normalize_fdm(int used_filaments)
     }
 
     if (this->has("wipe_tower_filament")) {
-        // If invalid, replace with 0.
-        int extruder      = this->opt<ConfigOptionInt>("wipe_tower_filament")->value;
-        int num_extruders = this->opt<ConfigOptionFloats>("nozzle_diameter")->size();
-        if (extruder < 0 || extruder > num_extruders)
+        // If invalid, replace with 0. A process config loaded on its own (CLI --load-settings)
+        // carries no nozzle_diameter, so only validate the index when the printer keys are here.
+        int extruder = this->opt<ConfigOptionInt>("wipe_tower_filament")->value;
+        if (const auto *nozzle_diameter = this->opt<ConfigOptionFloats>("nozzle_diameter", false);
+            extruder < 0 || (nozzle_diameter != nullptr && extruder > int(nozzle_diameter->size())))
             this->option("wipe_tower_filament")->setInt(0);
     }
 
