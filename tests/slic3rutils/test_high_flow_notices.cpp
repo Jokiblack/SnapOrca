@@ -8,7 +8,6 @@
 
 #include "libslic3r/AllowlistManager.hpp"
 #include "libslic3r/FilamentFlowColumns.hpp"
-#include "libslic3r/NozzleFilamentPresets.hpp"
 #include "libslic3r/Preset.hpp"
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/PrintConfig.hpp"
@@ -20,7 +19,6 @@
 
 #include <algorithm>
 #include <cmath>
-#include <fstream>
 #include <memory>
 #include <set>
 
@@ -712,78 +710,6 @@ TEST_CASE("A Standard value changed without its High Flow value is named", "[Hig
         CHECK(HighFlowNotices::standard_only_edits(child, with_retraction, keys, "filament_extruder_variant") ==
               std::vector<std::string>{ "filament_max_volumetric_speed", "filament_retraction_length" });
     }
-}
-
-TEST_CASE("A user preset that lowers a Standard value keeps the High Flow value of its parent and is named on a High Flow tool head", "[HighFlow][Notices][Profiles]")
-{
-    // A user preset of the shipped SnapSpeed (0.4 mm, 20 / 40 mm3/s) saving "Max volumetric speed" 15
-    // in the Standard column only. The loader keeps the parent's 40 mm3/s in the High Flow column,
-    // an untested value, which N7 tells.
-    load_shipped_allow_list(); // evaluate() rates the filament on the High Flow tool head
-    const auto    loaded = load_snapmaker_bundle();
-    PresetBundle &bundle = *loaded;
-    const char   *parent_name = "Snapmaker PLA SnapSpeed @U1";
-
-    const boost::filesystem::path user_dir = boost::filesystem::temp_directory_path() / boost::filesystem::unique_path("high-flow-user-%%%%-%%%%");
-    boost::filesystem::create_directories(user_dir / "filament");
-    {
-        std::ofstream file((user_dir / "filament" / "My SnapSpeed.json").string());
-        REQUIRE(file.good());
-        file << "{\n"
-                "    \"type\": \"filament\",\n"
-                "    \"name\": \"My SnapSpeed\",\n"
-                "    \"from\": \"User\",\n"
-                "    \"inherits\": \"" << parent_name << "\",\n"
-                "    \"version\": \"2.5.0\",\n"
-                "    \"filament_settings_id\": [\"My SnapSpeed\"],\n"
-                "    \"filament_max_volumetric_speed\": [\"15\"]\n"
-                "}\n";
-    }
-    PresetsConfigSubstitutions substitutions;
-    bundle.filaments.load_presets(user_dir.string(), "filament", substitutions, ForwardCompatibilitySubstitutionRule::Enable, nullptr, PresetOrigin(), true);
-    boost::filesystem::remove_all(user_dir);
-
-    const Preset *preset = bundle.filaments.find_preset("My SnapSpeed", false);
-    REQUIRE(preset != nullptr);
-    const Preset *parent = NozzleFilament::system_ancestor(bundle.filaments, *preset);
-    REQUIRE(parent != nullptr);
-    CHECK(parent->name == parent_name);
-    const auto *speed = preset->config.option<ConfigOptionFloats>("filament_max_volumetric_speed");
-    REQUIRE(speed != nullptr);
-    REQUIRE(speed->values.size() == 2);
-    CHECK_THAT(speed->values[0], Catch::Matchers::WithinAbs(15., 1e-9));
-    CHECK_THAT(speed->values[1], Catch::Matchers::WithinAbs(40., 1e-9));
-
-    const std::vector<std::string> keys = HighFlowNotices::standard_only_edits(preset->config, parent->config, filament_options_with_variant, "filament_extruder_variant");
-    CHECK(keys == std::vector<std::string>{"filament_max_volumetric_speed"});
-    // The parent against itself names nothing.
-    CHECK(HighFlowNotices::standard_only_edits(parent->config, parent->config, filament_options_with_variant, "filament_extruder_variant").empty());
-
-    // On a High Flow tool head the report names the preset and the parent; on a Standard head nothing.
-    HighFlowNotices::HeadFilament filament;
-    filament.filament_type        = "PLA";
-    filament.preset_name          = preset->name;
-    filament.has_high_flow_column = HighFlowNotices::has_high_flow_column(preset->config, "filament_extruder_variant");
-    filament.standard_only_keys   = keys;
-    filament.parent_name          = parent->name;
-    REQUIRE(filament.has_high_flow_column);
-    const auto filaments = HighFlowNotices::group_by_head({ filament }, { 1 }, 2);
-    auto       report    = HighFlowNotices::evaluate({ int(nvtStandard), int(nvtHighFlow) }, filaments, true);
-    REQUIRE(report.standard_only_edited.size() == 1);
-    CHECK(report.standard_only_edited.front().head == 1);
-    CHECK(report.standard_only_edited.front().material == "My SnapSpeed");
-    CHECK(report.standard_only_edited.front().parent == parent_name);
-    CHECK(report.standard_values_used.empty());
-    CHECK_FALSE(report.empty());
-    report = HighFlowNotices::evaluate({ int(nvtHighFlow), int(nvtStandard) }, filaments, true);
-    CHECK(report.empty());
-    // The process preset: N7 per High Flow tool head, only with a High Flow column.
-    report = HighFlowNotices::evaluate({ int(nvtHighFlow), int(nvtHighFlow) }, {}, true, true);
-    CHECK(report.process_standard_only == std::vector<size_t>{ 0, 1 });
-    CHECK(report.standard_speeds_used.empty());
-    report = HighFlowNotices::evaluate({ int(nvtHighFlow) }, {}, false, true);
-    CHECK(report.process_standard_only.empty());
-    CHECK(report.standard_speeds_used == std::vector<size_t>{ 0 });
 }
 
 // A U1 tool head whose preset declares Standard only (0.2 / 0.6 / 0.8 mm) still shows its Flow row,

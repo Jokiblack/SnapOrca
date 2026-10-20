@@ -23,8 +23,8 @@ class PresetBundle;
 namespace GUI { namespace HighFlowNotices {
 
 // The nozzle volume types (as integers of NozzleVolumeType) the printer preset declares for
-// tool head `head` in its "extruder_variant_list", in enum order. A printer without the list
-// declares Standard only.
+// tool head `head` in its "extruder_variant_list", in enum order, plus High Flow for every tool head
+// of a preset whose "printer_flow_support" names it. A printer without either declares Standard only.
 std::vector<int> declared_volume_types(const DynamicPrintConfig &printer_config, size_t head);
 
 // The printer preset ships a High Flow column for this tool head.

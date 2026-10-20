@@ -62,6 +62,9 @@ jobs:
           for d in dl/*/; do
             name=$(basename "$d")
             case "$name" in
+              *Mac_bundle*|*profile_validator*|*system_cache*)
+                # Intermediate macOS bundle and helper tools: not release files.
+                continue ;;
               *_portable)
                 # The portable is a folder: ship it as one zip, renamed SnapOrca.
                 (cd "$d" && zip -qr "../../out/${name/Snapmaker_Orca/SnapOrca}.zip" .) ;;
@@ -84,5 +87,11 @@ jobs:
           sha=$(gh api "repos/${{ github.repository }}/actions/runs/${{ inputs.run_id }}" --jq .head_sha)
           title="${{ inputs.title }}"; [ -n "$title" ] || title="SnapOrca ${{ inputs.tag }}"
           flags=(); [ "${{ inputs.prerelease }}" = "true" ] && flags+=(--prerelease) || flags+=(--latest)
-          gh release create "${{ inputs.tag }}" out/* --repo "${{ github.repository }}" --target "$sha" \
-            --title "$title" --notes-file .github/release_notes.md "${flags[@]}"
+          if gh release view "${{ inputs.tag }}" --repo "${{ github.repository }}" >/dev/null 2>&1; then
+            # The release already exists (e.g. a later platform finished): add or replace its files.
+            gh release upload "${{ inputs.tag }}" out/* --repo "${{ github.repository }}" --clobber
+          else
+            gh release create "${{ inputs.tag }}" out/* --repo "${{ github.repository }}" --target "$sha" \
+              --title "$title" --notes-file .github/release_notes.md "${flags[@]}"
+          fi
+          gh release view "${{ inputs.tag }}" --repo "${{ github.repository }}" --json assets --jq '.assets[].name'

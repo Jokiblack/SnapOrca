@@ -1033,7 +1033,10 @@ TEST_CASE("A user printer preset saved with every column is matched column by co
     REQUIRE(parent.option<ConfigOptionFloats>("retraction_length")->values == std::vector<double>({1., 1.5, 2., 2.5}));
 }
 
-TEST_CASE("A user printer preset with two columns for an extruder leaves unmatched parent columns alone", "[Config][HighFlow]")
+// SnapOrca keeps the variant fallback of map_variant_indices(): a parent column the child does not
+// list takes the child's first column of the same extruder, as slicing reads it, so the user's value
+// is never silently replaced by the system one (LixNix leaves such columns at the parent's value).
+TEST_CASE("A user printer preset with two columns for an extruder fills an unmatched parent column from its first one", "[Config][HighFlow]")
 {
     const std::string DD_TPU_HIGH_FLOW = "Direct Drive TPU High Flow";
     DynamicPrintConfig parent;
@@ -1048,11 +1051,11 @@ TEST_CASE("A user printer preset with two columns for an extruder leaves unmatch
     child.option<ConfigOptionFloats>("retraction_length", true)->values = {1., 1.5, 2., 2.5};
 
     parent.update_diff_values_to_child_config(child, "printer_extruder_id", "printer_extruder_variant", printer_options_with_variant_1, no_keys);
-    // Which of the two child columns a third flow type should follow is not decidable: system value kept.
-    REQUIRE(parent.option<ConfigOptionFloats>("retraction_length")->values == std::vector<double>({1., 1.5, 0.6, 2., 2.5, 0.6}));
+    // The TPU High Flow column the child lacks follows the child's first column of that extruder.
+    REQUIRE(parent.option<ConfigOptionFloats>("retraction_length")->values == std::vector<double>({1., 1.5, 1., 2., 2.5, 2.}));
 }
 
-TEST_CASE("A user printer preset with a variant its parent does not declare fills no other column", "[Config][HighFlow]")
+TEST_CASE("A user printer preset with a variant its parent does not declare gives each extruder its own value", "[Config][HighFlow]")
 {
     DynamicPrintConfig parent = make_eight_column_printer_parent();
     DynamicPrintConfig child;
@@ -1061,8 +1064,9 @@ TEST_CASE("A user printer preset with a variant its parent does not declare fill
     child.option<ConfigOptionFloats>("retraction_length", true)->values = {1., 2., 3., 4.};
 
     parent.update_diff_values_to_child_config(child, "printer_extruder_id", "printer_extruder_variant", printer_options_with_variant_1, no_keys);
-    // Exact (variant, id) matches only.
-    REQUIRE(parent.option<ConfigOptionFloats>("retraction_length")->values == std::vector<double>({1., 0.8, 0.8, 0.8, 3., 0.8, 4., 0.8}));
+    // An exact (variant, id) match first, otherwise the child's column of the same extruder: the
+    // Bowden head keeps its 2 mm on both of the parent's columns.
+    REQUIRE(parent.option<ConfigOptionFloats>("retraction_length")->values == std::vector<double>({1., 1., 2., 2., 3., 3., 4., 4.}));
 }
 
 TEST_CASE("The first variant column of a filament is found through the self index, whatever the layout", "[Config][HighFlow][hf_first_filament_variant_column]")
