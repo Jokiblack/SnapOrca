@@ -1828,8 +1828,8 @@ Updates PresetUpdater::priv::get_config_updates(const Semver &old_slic3r_version
 				Semver soft_ver = Semver(std::string(Snapmaker_VERSION));
 				legal           = min_ver <= soft_ver;
 				if (!legal)
-					changelog += ("\nSnapmaker Orca " + min_ver.to_string() + " " + _L("needed, but current version is ") +
-					              soft_ver.to_string() + "\n").ToStdString();
+					changelog += ("\n" + format_wxstr(_L("Snapmaker Orca %1% needed, but current version is %2%"), min_ver.to_string(), soft_ver.to_string()) +
+					              "\n").ToStdString();
 			}
 
 			if (vendor_ver < cache_ver) {
@@ -2605,8 +2605,8 @@ void PresetUpdater::load_flutter_web(const std::string& resource_path, bool serv
                 bool legal = true;
                 legal      = min_ver <= soft_ver;
                 if (!legal) {
-                    changelog += ("\nSnapmaker Orca " + min_ver.to_string() + " " + _L("needed, but current version is ") +
-                                  soft_ver.to_string() + "\n")
+                    changelog += ("\n" + format_wxstr(_L("Snapmaker Orca %1% needed, but current version is %2%"), min_ver.to_string(), soft_ver.to_string()) +
+                                  "\n")
                                      .ToStdString();
                 }
 
@@ -2663,7 +2663,7 @@ void PresetUpdater::load_flutter_web(const std::string& resource_path, bool serv
 
         wxString message;
         if (!outdated_presets.empty() && !serverUpdate) {
-            message = _L("This web resouce could not be imported due to outdated versions.") + "\n";
+            message = _L("This web resource could not be imported due to outdated versions.") + "\n";
             for (const auto& preset : outdated_presets) {
                 message += "• " + preset + "\n";
             }
@@ -2781,8 +2781,8 @@ void PresetUpdater::import_system_profile()
                         bool legal = true;
                         legal      = min_ver <= soft_ver;
                         if (!legal) {
-                            changelog += ("\nSnapmaker Orca " + min_ver.to_string() + " " + _L("needed, but current version is ") +
-                                          soft_ver.to_string() + "\n")
+                            changelog += ("\n" + format_wxstr(_L("Snapmaker Orca %1% needed, but current version is %2%"), min_ver.to_string(), soft_ver.to_string()) +
+                                          "\n")
                                              .ToStdString();
                         }
 

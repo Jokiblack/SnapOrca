@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Snapmaker Orca\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-20 10:56+0200\n"
+"POT-Creation-Date: 2026-10-20 13:51+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Carlos Fco. Caruncho Serrano <puzzlero@gmail.com>\n"
 "Language-Team: \n"
@@ -2140,7 +2140,7 @@ msgid "Draco files"
 msgstr "Archivos Draco"
 
 # AI Translated
-msgid "Snapmaker Orca will terminate because of running out of memory.It may be a bug. It will be appreciated if you report the issue to our team."
+msgid "Snapmaker Orca will terminate because of running out of memory. It may be a bug. It will be appreciated if you report the issue to our team."
 msgstr "Snapmaker Orca se cerrará porque se ha quedado sin memoria. Puede ser un error. Le agradeceremos que informe del problema a nuestro equipo."
 
 msgid "Fatal error"
@@ -4397,12 +4397,9 @@ msgid "About %s"
 msgstr "Acerca de %s"
 
 # AI Translated
-msgid "Snapmaker Orca "
-msgstr "Snapmaker Orca "
-
-# AI Translated
-msgid "Note: The firmware version of SnapmakerU1 should be no less than"
-msgstr "Nota: la versión del firmware de la SnapmakerU1 no debe ser inferior a"
+#, boost-format
+msgid "Note: The firmware version of Snapmaker U1 should be no less than %1%."
+msgstr "Nota: la versión del firmware de la Snapmaker U1 no debe ser inferior a %1%."
 
 # AI Translated
 msgid "Snapmaker Orca is forked from Orca Slicer by SoftFever."
@@ -6692,9 +6689,6 @@ msgstr "Recuperar los perfiles de filamento que una actualización de perfiles e
 msgid "Troubleshoot Center"
 msgstr "Centro de resolución de problemas"
 
-msgid "Open Network Test"
-msgstr "Abrir Test de Red"
-
 # AI Translated
 msgid "Benchmark 3D Scene"
 msgstr "Prueba de rendimiento de la escena 3D"
@@ -6724,6 +6718,9 @@ msgstr "Importar perfil"
 # AI Translated
 msgid "Import Web Resource"
 msgstr "Importar recurso web"
+
+msgid "Open Network Test"
+msgstr "Abrir Test de Red"
 
 #, c-format, boost-format
 msgid "&About %s"
@@ -8352,14 +8349,6 @@ msgstr "Error:"
 msgid "WARNING:"
 msgstr "AVISO:"
 
-# AI Translated
-msgid "Jump to: Support on build plate only"
-msgstr "Ir a: Soportes solo en la cama"
-
-# AI Translated
-msgid "Jump to: Support"
-msgstr "Ir a: Soportes"
-
 msgid "Warning:"
 msgstr "Advertencia:"
 
@@ -9955,12 +9944,16 @@ msgstr "Prueba de esquinado"
 msgid "Import SLA archive"
 msgstr "Importar archivo SLA"
 
-msgid "The selected file"
-msgstr "El archivo seleccionado"
-
 # AI Translated
-msgid "does not exist."
-msgstr "no existe."
+#, boost-format
+msgid ""
+"The selected file:\n"
+"%1%\n"
+"does not exist."
+msgstr ""
+"El archivo seleccionado:\n"
+"%1%\n"
+"no existe."
 
 msgid "Error occurs while loading G-code file"
 msgstr "Se produce un error al cargar el archivo de G-Code"
@@ -12775,10 +12768,6 @@ msgstr "Anotaciones"
 msgid "Frequent"
 msgstr "Frecuente"
 
-# AI Translated
-msgid "Modifier cycle"
-msgstr "Ciclo del modificador"
-
 #, c-format, boost-format
 msgid ""
 "Following line %s contains reserved keywords.\n"
@@ -13710,7 +13699,7 @@ msgid "Ramming line"
 msgstr "Línea de moldeado"
 
 # AI Translated
-msgid "Orca would re-calculate your flushing volumes everytime the filaments color changed or filaments changed. You could disable the auto-calculate in Snapmaker Orca > Preferences"
+msgid "Orca would re-calculate your flushing volumes every time the filaments color changed or filaments changed. You could disable the auto-calculate in Snapmaker Orca > Preferences"
 msgstr "Orca recalculará los volúmenes de purga cada vez que cambie el color de los filamentos o los filamentos. Puede desactivar el cálculo automático en Snapmaker Orca > Preferencias"
 
 msgid "Flushing volume (mm³) for each filament pair."
@@ -14312,9 +14301,9 @@ msgid "request to server update preset resource fail with body:%s,error:%s,statu
 msgstr "la solicitud de actualización de recursos de perfiles al servidor ha fallado con cuerpo:%s,error:%s,estado:%d"
 
 # AI Translated
-# Needs human review: Fragmento concatenado en el código; se desconoce el texto que lo precede.
-msgid "needed, but current version is "
-msgstr "necesaria, pero la versión actual es "
+#, boost-format
+msgid "Snapmaker Orca %1% needed, but current version is %2%"
+msgstr "Se necesita Snapmaker Orca %1%, pero la versión actual es %2%"
 
 # AI Translated
 #. TRN %1% is a comma-separated list of vendor names.
@@ -14345,7 +14334,7 @@ msgid "Import Failed"
 msgstr "Error al importar"
 
 # AI Translated
-msgid "This web resouce could not be imported due to outdated versions."
+msgid "This web resource could not be imported due to outdated versions."
 msgstr "Este recurso web no se ha podido importar porque su versión está desactualizada."
 
 # AI Translated
@@ -14872,10 +14861,6 @@ msgstr "Seleccione la secuencia de impresión \"Por objeto\" para imprimir vario
 
 msgid "Spiral (vase) mode does not work when an object contains more than one material."
 msgstr "El modo de jarrón en espiral no funciona cuando un objeto contiene más de un material."
-
-# AI Translated
-msgid "Spiral (vase) mode does not work when an object contains regions with different print settings."
-msgstr "El modo vaso en espiral no funciona cuando un objeto contiene regiones con ajustes de impresión distintos."
 
 #, boost-format
 msgid "While the object %1% itself fits the build volume, it exceeds the maximum build volume height because of material shrinkage compensation."
@@ -16280,11 +16265,6 @@ msgstr "Monotónico"
 msgid "Monotonic line"
 msgstr "Líneas monotónicas"
 
-# AI Translated
-# Needs human review: Patrón de alisado/superficie de Bambu que ordena las líneas monotónicas en toda la capa; comprobar en el desplegable.
-msgid "Global monotonic line"
-msgstr "Línea Monotónica global"
-
 msgid "Rectilinear"
 msgstr "Rectilíneo"
 
@@ -16405,24 +16385,6 @@ msgstr "Patrón de relleno sólido interno"
 
 msgid "Line pattern of internal solid infill. if the detect narrow internal solid infill be enabled, the concentric pattern will be used for the small area."
 msgstr "Patrón lineal de relleno sólido interno. Si se activa la detección de relleno sólido interno delgado, se utilizará el patrón concéntrico para las áreas pequeñas."
-
-# AI Translated
-# Needs human review: Término nuevo 'sub-top surface' (capa sólida bajo la superficie superior); no está en el glosario.
-msgid "Separate sub-top surface"
-msgstr "Separar la superficie bajo la superior"
-
-# AI Translated
-msgid "Print the internal solid infill that supports a visible top surface with its own pattern, set in \"Sub-top surface pattern\". The lines of this layer can print through and mark the top surface."
-msgstr "Imprime con su propio patrón, definido en \"Patrón de la superficie bajo la superior\", el relleno sólido interno que sostiene una superficie superior visible. Las líneas de esta capa pueden transparentarse y marcar la superficie superior."
-
-# AI Translated
-# Needs human review: Término nuevo 'sub-top surface'; no está en el glosario.
-msgid "Sub-top surface pattern"
-msgstr "Patrón de la superficie bajo la superior"
-
-# AI Translated
-msgid "Line pattern of the solid layer that supports a visible top surface. Its lines can print through and mark the top, so a monotonic pattern gives the smoothest result. The whole solid area that a top surface reaches uses this pattern, not only the part directly beneath it."
-msgstr "Patrón de líneas de la capa sólida que sostiene una superficie superior visible. Sus líneas pueden transparentarse y marcar la superficie superior, por lo que un patrón monotónico da el resultado más liso. Toda la zona sólida a la que llega una superficie superior usa este patrón, no solo la parte justo debajo."
 
 msgid "Line width of outer wall. If expressed as a %, it will be computed over the nozzle diameter."
 msgstr "Ancho de línea del perímetro externo. Si se expresa cómo %, se calculará sobre el diámetro de la boquilla."
@@ -16557,8 +16519,8 @@ msgid "Bed mesh max"
 msgstr "Punto máximo para el mallado de superficie"
 
 # AI Translated
-msgid "This option sets the max point for the allowed bed mesh area. Due to the probe's XY offset, most printers are unable to probe the entire bed. To ensure the probe point does not go outside the bed area, the minimum and maximum points of the bed mesh should be set appropriately. Snapmaker_Orca ensures that adaptive_bed_mesh_min/adaptive_bed_mesh_max values do not exceed these min/max points. This information can usually be obtained from your printer manufacturer. The default setting is (99999, 99999), which means there are no limits, thus allowing probing across the entire bed."
-msgstr "Esta opción establece el punto máximo del área permitida de la malla de la cama. Debido al desplazamiento XY de la sonda, la mayoría de impresoras no pueden sondear toda la cama. Para que el punto de sondeo no salga del área de la cama, los puntos mínimo y máximo de la malla de la cama deben ajustarse adecuadamente. Snapmaker_Orca garantiza que los valores adaptive_bed_mesh_min/adaptive_bed_mesh_max no superen estos puntos mínimo/máximo. Normalmente puede obtener esta información del fabricante de su impresora. El valor predeterminado es (99999, 99999), que significa que no hay límites y permite sondear toda la cama."
+msgid "This option sets the max point for the allowed bed mesh area. Due to the probe's XY offset, most printers are unable to probe the entire bed. To ensure the probe point does not go outside the bed area, the minimum and maximum points of the bed mesh should be set appropriately. Snapmaker Orca ensures that adaptive_bed_mesh_min/adaptive_bed_mesh_max values do not exceed these min/max points. This information can usually be obtained from your printer manufacturer. The default setting is (99999, 99999), which means there are no limits, thus allowing probing across the entire bed."
+msgstr "Esta opción establece el punto máximo del área permitida de la malla de la cama. Debido al desplazamiento XY de la sonda, la mayoría de impresoras no pueden sondear toda la cama. Para que el punto de sondeo no salga del área de la cama, los puntos mínimo y máximo de la malla de la cama deben ajustarse adecuadamente. Snapmaker Orca garantiza que los valores adaptive_bed_mesh_min/adaptive_bed_mesh_max no superen estos puntos mínimo/máximo. Normalmente puede obtener esta información del fabricante de su impresora. El valor predeterminado es (99999, 99999), que significa que no hay límites y permite sondear toda la cama."
 
 msgid "Probe point distance"
 msgstr "Distancia entre puntos de medición"
@@ -17432,13 +17394,6 @@ msgstr ""
 msgid "Line width of the first layer. If expressed as a %, it will be computed over the nozzle diameter."
 msgstr "Ancho de línea de la primera capa. Si se expresa como %, se calculará en base al diámetro de la boquilla."
 
-msgid "First layer infill"
-msgstr "Relleno de la primera capa"
-
-# AI Translated
-msgid "Line width of the infill of the first layer, including sparse infill, solid infill and top surface. Walls, support and everything else on the first layer keep using the first layer line width. If expressed as a %, it will be computed over the nozzle diameter. Zero means to use the first layer line width."
-msgstr "Ancho de línea del relleno de la primera capa, incluidos el relleno de baja densidad, el relleno sólido y la superficie superior. Los perímetros, los soportes y todo lo demás de la primera capa siguen usando el ancho de línea de la primera capa. Si se expresa en %, se calculará sobre el diámetro de la boquilla. Cero significa usar el ancho de línea de la primera capa."
-
 msgid "First layer height"
 msgstr "Altura de la primera capa"
 
@@ -17448,6 +17403,9 @@ msgstr "Altura de la primera capa. Hacer que la altura de la primera capa sea li
 # AI Translated
 msgid "This is the speed for the walls and brim of the first layer."
 msgstr "Velocidad de los perímetros y del borde de adherencia de la primera capa."
+
+msgid "First layer infill"
+msgstr "Relleno de la primera capa"
 
 # AI Translated
 msgid "This is the speed for the first layer except for walls and brim, such as infill, gap fill and support."
@@ -18928,50 +18886,6 @@ msgstr ""
 "Cuando esta opción está activada, es necesario desactivar la opción de asegurar el grosor del perímetro vertical.\n"
 "\n"
 "No se recomienda utilizar el relleno rayo junto con esta opción, ya que el hay una cantidad limitada de relleno donde anclar los perímetros adicionales."
-
-# AI Translated
-msgid "Periodic modifier"
-msgstr "Modificador periódico"
-
-# AI Translated
-msgid "Apply this modifier on a repeating layer cycle. On skipped layers it is ignored, as if this modifier were not there."
-msgstr "Aplica este modificador en un ciclo de capas que se repite. En las capas omitidas se ignora, como si el modificador no existiera."
-
-# AI Translated
-msgid "Skip for"
-msgstr "Omitir durante"
-
-# AI Translated
-msgid "Periodic modifier skip layers"
-msgstr "Capas omitidas del modificador periódico"
-
-# AI Translated
-msgid "Number of consecutive layers on which this modifier is not applied. 0 means the modifier is applied on every layer."
-msgstr "Número de capas consecutivas en las que no se aplica este modificador. 0 significa que el modificador se aplica en todas las capas."
-
-# AI Translated
-msgid "Apply for"
-msgstr "Aplicar durante"
-
-# AI Translated
-msgid "Periodic modifier apply layers"
-msgstr "Capas aplicadas del modificador periódico"
-
-# AI Translated
-msgid "Number of consecutive layers in each cycle on which this modifier is fully applied. The cycle starts at layer 0: first \"Apply for\", then \"Skip for\"."
-msgstr "Número de capas consecutivas de cada ciclo en las que este modificador se aplica por completo. El ciclo empieza en la capa 0: primero \"Aplicar durante\" y después \"Omitir durante\"."
-
-# AI Translated
-msgid "Ignore infill settings"
-msgstr "Ignorar ajustes de relleno"
-
-# AI Translated
-msgid "Modifier ignores infill settings"
-msgstr "El modificador ignora los ajustes de relleno"
-
-# AI Translated
-msgid "Do not apply this modifier's internal infill settings (pattern, density, and related options). Walls and other overrides still apply. Infill is taken from the parent region."
-msgstr "No aplica los ajustes de relleno interno de este modificador (patrón, densidad y opciones relacionadas). Los perímetros y el resto de ajustes sí se aplican. El relleno se toma de la región padre."
 
 msgid "If you want to process the output G-code through custom scripts, just list their absolute paths here. Separate multiple scripts with a semicolon. Scripts will be passed the absolute path to the G-code file as the first argument, and they can access the Snapmaker Orca config settings by reading environment variables."
 msgstr "Si desea procesar el G-Code de salida a través de scripts personalizados, simplemente enumere sus rutas absolutas aquí. Separe diferentes scripts con punto y coma. A los scripts se les pasará la ruta absoluta al archivo G-Code como primer argumento, y pueden acceder a los ajustes de configuración de Snapmaker Orca leyendo variables de entorno."
@@ -20622,9 +20536,10 @@ msgstr "Velocidad de impresión independiente para las capas de transición del 
 msgid "Support transition flow ratio"
 msgstr "Factor de flujo de transición del soporte"
 
-#, c-format, boost-format
+# AI Translated
+#, no-c-format, no-boost-format
 msgid "Flow ratio for support transition layers relative to normal support flow. Slightly lower than interface flow for a more natural transition. 0.85 = 85% of normal support flow."
-msgstr ""
+msgstr "Factor de flujo de las capas de transición de los soportes respecto al flujo normal de los soportes. Algo inferior al de la interfaz para una transición más natural. 0,85 = 85 % del flujo normal de los soportes."
 
 msgid "Preferred Branch Angle"
 msgstr "Pendiente preferida de la rama"
@@ -20799,7 +20714,7 @@ msgid "Top paint penetration layers"
 msgstr "Capas de penetración de la pintura superior"
 
 # AI Translated
-msgid "This is  the number of layers of top paint penetration."
+msgid "This is the number of layers of top paint penetration."
 msgstr "Número de capas hasta las que penetra la pintura de la cara superior."
 
 msgid "Separated infills"
@@ -22429,16 +22344,6 @@ msgstr "Generación de soportes"
 msgid "Optimizing toolpath"
 msgstr "Optimización de la trayectoria de cabezal"
 
-# AI Translated
-#, boost-format
-msgid "Unsupported overhangs were detected on object \"%1%\". Because \"Support on build plate only\" is enabled, supports cannot grow down to the build plate. Try turning this option off."
-msgstr "Se han detectado voladizos sin soporte en el objeto \"%1%\". Como \"Soportes solo en la cama\" está activado, los soportes no pueden llegar hasta la cama. Pruebe a desactivar esta opción."
-
-# AI Translated
-#, boost-format
-msgid "Unsupported overhangs were detected on object \"%1%\": some overhang regions could not get support. Try adjusting the support settings or re-orienting the object."
-msgstr "Se han detectado voladizos sin soporte en el objeto \"%1%\": algunas zonas en voladizo no han podido recibir soporte. Pruebe a ajustar los parámetros de soporte o a reorientar el objeto."
-
 msgid "Empty layers around bottom are replaced by nearest normal layers."
 msgstr "Las capas vacías del fondo se sustituyen por las capas normales más próximas."
 
@@ -23830,7 +23735,7 @@ msgstr "Subir a almacenamiento"
 
 # AI Translated
 #, c-format, boost-format
-msgid "The filename '%s' contains special characters (#, *, ;, \\, /, :, \", <, >, or |) which may cause issues.Do you wish to continue?"
+msgid "The filename '%s' contains special characters (#, *, ;, \\, /, :, \", <, >, or |) which may cause issues. Do you wish to continue?"
 msgstr "El nombre de archivo '%s' contiene caracteres especiales (#, *, ;, \\, /, :, \", <, > o |) que pueden causar problemas. ¿Desea continuar?"
 
 #, c-format, boost-format
@@ -31898,7 +31803,7 @@ msgid "Medium violet red"
 msgstr "Rojo violeta medio"
 
 # AI Translated
-msgid "PaleV violet red"
+msgid "Pale violet red"
 msgstr "Rojo violáceo pálido"
 
 # AI Translated
@@ -32118,8 +32023,7 @@ msgid "Shallow sky"
 msgstr "Cielo somero"
 
 # AI Translated
-# Needs human review: Nombre de color con errata en el original ('Electric bel', probablemente 'Electric blue').
-msgid "Electric bel"
+msgid "Electric blue"
 msgstr "Azul eléctrico"
 
 # AI Translated
@@ -37185,10 +37089,6 @@ msgid "Downloading: %.1f MB..."
 msgstr "Descargando: %.1f MB..."
 
 # AI Translated
-msgid "Donwload failed"
-msgstr "Error en la descarga"
-
-# AI Translated
 msgid "Legend:"
 msgstr "Leyenda:"
 
@@ -37373,9 +37273,9 @@ msgid "Machine Bind"
 msgstr "Vincular máquina"
 
 # AI Translated
-# Needs human review: Fragmento que se añade tras el nombre de la máquina (concatenación en SSWCP.cpp).
-msgid " connected sucessfully !\n"
-msgstr " se ha conectado correctamente.\n"
+#, boost-format
+msgid "%1% connected successfully!"
+msgstr "%1% se ha conectado correctamente."
 
 # AI Translated
 msgid "Machine Connected"
@@ -37385,20 +37285,17 @@ msgstr "Máquina conectada"
 msgid "select file"
 msgstr "seleccionar archivo"
 
-msgid " upload failed"
-msgstr " Carga fallida"
-
 # AI Translated
-msgid "UpLoad Failed"
+msgid "Upload Failed"
 msgstr "Error en la carga"
 
 # AI Translated
-# Needs human review: Fragmento concatenado tras el nombre de archivo (SSWCP.cpp).
-msgid " has already been uploaded"
-msgstr " ya se ha cargado"
+#, c-format, boost-format
+msgid "%s uploaded successfully"
+msgstr "%s se ha cargado correctamente"
 
 # AI Translated
-msgid "UpLoad Successfully"
+msgid "Upload Successful"
 msgstr "Carga correcta"
 
 # AI Translated
@@ -37406,21 +37303,21 @@ msgid "Save file"
 msgstr "Guardar archivo"
 
 # AI Translated
-# Needs human review: Fragmento concatenado tras el nombre de archivo (SSWCP.cpp).
-msgid " download failed"
-msgstr " no se ha podido descargar"
+#, c-format, boost-format
+msgid "%s download failed"
+msgstr "No se ha podido descargar %s"
 
 # AI Translated
-msgid "DownLoad Failed"
+msgid "Download Failed"
 msgstr "Error en la descarga"
 
 # AI Translated
-# Needs human review: Fragmento concatenado tras el nombre de archivo (SSWCP.cpp).
-msgid " has already been downloaded"
-msgstr " ya se ha descargado"
+#, c-format, boost-format
+msgid "%s downloaded successfully"
+msgstr "%s se ha descargado correctamente"
 
 # AI Translated
-msgid "DownLoad Successfully"
+msgid "Download Successful"
 msgstr "Descarga correcta"
 
 # AI Translated
@@ -37470,10 +37367,6 @@ msgstr "Descargado"
 # AI Translated
 msgid "Download Cancelled"
 msgstr "Descarga cancelada"
-
-# AI Translated
-msgid "Download Failed"
-msgstr "Error en la descarga"
 
 # AI Translated
 msgid "Download Lists"
@@ -37879,3 +37772,197 @@ msgid ""
 msgstr ""
 "Evitar la deformación\n"
 "¿Sabía que, al imprimir materiales propensos a deformarse como el ABS, aumentar adecuadamente la temperatura de la cama puede reducir la probabilidad de deformación?"
+
+# AI Translated
+#~ msgid "Snapmaker Orca will terminate because of running out of memory.It may be a bug. It will be appreciated if you report the issue to our team."
+#~ msgstr "Snapmaker Orca se cerrará porque se ha quedado sin memoria. Puede ser un error. Le agradeceremos que informe del problema a nuestro equipo."
+
+# AI Translated
+#~ msgid "Snapmaker Orca "
+#~ msgstr "Snapmaker Orca "
+
+# AI Translated
+#~ msgid "Note: The firmware version of SnapmakerU1 should be no less than"
+#~ msgstr "Nota: la versión del firmware de la SnapmakerU1 no debe ser inferior a"
+
+# AI Translated
+#~ msgid "Jump to: Support on build plate only"
+#~ msgstr "Ir a: Soportes solo en la cama"
+
+# AI Translated
+#~ msgid "Jump to: Support"
+#~ msgstr "Ir a: Soportes"
+
+#~ msgid "The selected file"
+#~ msgstr "El archivo seleccionado"
+
+# AI Translated
+#~ msgid "does not exist."
+#~ msgstr "no existe."
+
+# AI Translated
+#~ msgid "Modifier cycle"
+#~ msgstr "Ciclo del modificador"
+
+# AI Translated
+#~ msgid "Orca would re-calculate your flushing volumes everytime the filaments color changed or filaments changed. You could disable the auto-calculate in Snapmaker Orca > Preferences"
+#~ msgstr "Orca recalculará los volúmenes de purga cada vez que cambie el color de los filamentos o los filamentos. Puede desactivar el cálculo automático en Snapmaker Orca > Preferencias"
+
+# AI Translated
+# Needs human review: Fragmento concatenado en el código; se desconoce el texto que lo precede.
+#~ msgid "needed, but current version is "
+#~ msgstr "necesaria, pero la versión actual es "
+
+# AI Translated
+#~ msgid "This web resouce could not be imported due to outdated versions."
+#~ msgstr "Este recurso web no se ha podido importar porque su versión está desactualizada."
+
+# AI Translated
+#~ msgid "Spiral (vase) mode does not work when an object contains regions with different print settings."
+#~ msgstr "El modo vaso en espiral no funciona cuando un objeto contiene regiones con ajustes de impresión distintos."
+
+# AI Translated
+# Needs human review: Patrón de alisado/superficie de Bambu que ordena las líneas monotónicas en toda la capa; comprobar en el desplegable.
+#~ msgid "Global monotonic line"
+#~ msgstr "Línea Monotónica global"
+
+# AI Translated
+# Needs human review: Término nuevo 'sub-top surface' (capa sólida bajo la superficie superior); no está en el glosario.
+#~ msgid "Separate sub-top surface"
+#~ msgstr "Separar la superficie bajo la superior"
+
+# AI Translated
+#~ msgid "Print the internal solid infill that supports a visible top surface with its own pattern, set in \"Sub-top surface pattern\". The lines of this layer can print through and mark the top surface."
+#~ msgstr "Imprime con su propio patrón, definido en \"Patrón de la superficie bajo la superior\", el relleno sólido interno que sostiene una superficie superior visible. Las líneas de esta capa pueden transparentarse y marcar la superficie superior."
+
+# AI Translated
+# Needs human review: Término nuevo 'sub-top surface'; no está en el glosario.
+#~ msgid "Sub-top surface pattern"
+#~ msgstr "Patrón de la superficie bajo la superior"
+
+# AI Translated
+#~ msgid "Line pattern of the solid layer that supports a visible top surface. Its lines can print through and mark the top, so a monotonic pattern gives the smoothest result. The whole solid area that a top surface reaches uses this pattern, not only the part directly beneath it."
+#~ msgstr "Patrón de líneas de la capa sólida que sostiene una superficie superior visible. Sus líneas pueden transparentarse y marcar la superficie superior, por lo que un patrón monotónico da el resultado más liso. Toda la zona sólida a la que llega una superficie superior usa este patrón, no solo la parte justo debajo."
+
+# AI Translated
+#~ msgid "This option sets the max point for the allowed bed mesh area. Due to the probe's XY offset, most printers are unable to probe the entire bed. To ensure the probe point does not go outside the bed area, the minimum and maximum points of the bed mesh should be set appropriately. Snapmaker_Orca ensures that adaptive_bed_mesh_min/adaptive_bed_mesh_max values do not exceed these min/max points. This information can usually be obtained from your printer manufacturer. The default setting is (99999, 99999), which means there are no limits, thus allowing probing across the entire bed."
+#~ msgstr "Esta opción establece el punto máximo del área permitida de la malla de la cama. Debido al desplazamiento XY de la sonda, la mayoría de impresoras no pueden sondear toda la cama. Para que el punto de sondeo no salga del área de la cama, los puntos mínimo y máximo de la malla de la cama deben ajustarse adecuadamente. Snapmaker_Orca garantiza que los valores adaptive_bed_mesh_min/adaptive_bed_mesh_max no superen estos puntos mínimo/máximo. Normalmente puede obtener esta información del fabricante de su impresora. El valor predeterminado es (99999, 99999), que significa que no hay límites y permite sondear toda la cama."
+
+# AI Translated
+#~ msgid "Line width of the infill of the first layer, including sparse infill, solid infill and top surface. Walls, support and everything else on the first layer keep using the first layer line width. If expressed as a %, it will be computed over the nozzle diameter. Zero means to use the first layer line width."
+#~ msgstr "Ancho de línea del relleno de la primera capa, incluidos el relleno de baja densidad, el relleno sólido y la superficie superior. Los perímetros, los soportes y todo lo demás de la primera capa siguen usando el ancho de línea de la primera capa. Si se expresa en %, se calculará sobre el diámetro de la boquilla. Cero significa usar el ancho de línea de la primera capa."
+
+# AI Translated
+#~ msgid "Periodic modifier"
+#~ msgstr "Modificador periódico"
+
+# AI Translated
+#~ msgid "Apply this modifier on a repeating layer cycle. On skipped layers it is ignored, as if this modifier were not there."
+#~ msgstr "Aplica este modificador en un ciclo de capas que se repite. En las capas omitidas se ignora, como si el modificador no existiera."
+
+# AI Translated
+#~ msgid "Skip for"
+#~ msgstr "Omitir durante"
+
+# AI Translated
+#~ msgid "Periodic modifier skip layers"
+#~ msgstr "Capas omitidas del modificador periódico"
+
+# AI Translated
+#~ msgid "Number of consecutive layers on which this modifier is not applied. 0 means the modifier is applied on every layer."
+#~ msgstr "Número de capas consecutivas en las que no se aplica este modificador. 0 significa que el modificador se aplica en todas las capas."
+
+# AI Translated
+#~ msgid "Apply for"
+#~ msgstr "Aplicar durante"
+
+# AI Translated
+#~ msgid "Periodic modifier apply layers"
+#~ msgstr "Capas aplicadas del modificador periódico"
+
+# AI Translated
+#~ msgid "Number of consecutive layers in each cycle on which this modifier is fully applied. The cycle starts at layer 0: first \"Apply for\", then \"Skip for\"."
+#~ msgstr "Número de capas consecutivas de cada ciclo en las que este modificador se aplica por completo. El ciclo empieza en la capa 0: primero \"Aplicar durante\" y después \"Omitir durante\"."
+
+# AI Translated
+#~ msgid "Ignore infill settings"
+#~ msgstr "Ignorar ajustes de relleno"
+
+# AI Translated
+#~ msgid "Modifier ignores infill settings"
+#~ msgstr "El modificador ignora los ajustes de relleno"
+
+# AI Translated
+#~ msgid "Do not apply this modifier's internal infill settings (pattern, density, and related options). Walls and other overrides still apply. Infill is taken from the parent region."
+#~ msgstr "No aplica los ajustes de relleno interno de este modificador (patrón, densidad y opciones relacionadas). Los perímetros y el resto de ajustes sí se aplican. El relleno se toma de la región padre."
+
+# AI Translated
+#~ msgid "This is  the number of layers of top paint penetration."
+#~ msgstr "Número de capas hasta las que penetra la pintura de la cara superior."
+
+# AI Translated
+#, boost-format
+#~ msgid "Unsupported overhangs were detected on object \"%1%\". Because \"Support on build plate only\" is enabled, supports cannot grow down to the build plate. Try turning this option off."
+#~ msgstr "Se han detectado voladizos sin soporte en el objeto \"%1%\". Como \"Soportes solo en la cama\" está activado, los soportes no pueden llegar hasta la cama. Pruebe a desactivar esta opción."
+
+# AI Translated
+#, boost-format
+#~ msgid "Unsupported overhangs were detected on object \"%1%\": some overhang regions could not get support. Try adjusting the support settings or re-orienting the object."
+#~ msgstr "Se han detectado voladizos sin soporte en el objeto \"%1%\": algunas zonas en voladizo no han podido recibir soporte. Pruebe a ajustar los parámetros de soporte o a reorientar el objeto."
+
+# AI Translated
+#, c-format, boost-format
+#~ msgid "The filename '%s' contains special characters (#, *, ;, \\, /, :, \", <, >, or |) which may cause issues.Do you wish to continue?"
+#~ msgstr "El nombre de archivo '%s' contiene caracteres especiales (#, *, ;, \\, /, :, \", <, > o |) que pueden causar problemas. ¿Desea continuar?"
+
+# AI Translated
+#~ msgid "PaleV violet red"
+#~ msgstr "Rojo violáceo pálido"
+
+# AI Translated
+# Needs human review: Nombre de color con errata en el original ('Electric bel', probablemente 'Electric blue').
+#~ msgid "Electric bel"
+#~ msgstr "Azul eléctrico"
+
+# AI Translated
+#~ msgid "Donwload failed"
+#~ msgstr "Error en la descarga"
+
+# AI Translated
+# Needs human review: Fragmento que se añade tras el nombre de la máquina (concatenación en SSWCP.cpp).
+#~ msgid " connected sucessfully !\n"
+#~ msgstr " se ha conectado correctamente.\n"
+
+#~ msgid " upload failed"
+#~ msgstr " Carga fallida"
+
+# AI Translated
+#~ msgid "UpLoad Failed"
+#~ msgstr "Error en la carga"
+
+# AI Translated
+# Needs human review: Fragmento concatenado tras el nombre de archivo (SSWCP.cpp).
+#~ msgid " has already been uploaded"
+#~ msgstr " ya se ha cargado"
+
+# AI Translated
+#~ msgid "UpLoad Successfully"
+#~ msgstr "Carga correcta"
+
+# AI Translated
+# Needs human review: Fragmento concatenado tras el nombre de archivo (SSWCP.cpp).
+#~ msgid " download failed"
+#~ msgstr " no se ha podido descargar"
+
+# AI Translated
+#~ msgid "DownLoad Failed"
+#~ msgstr "Error en la descarga"
+
+# AI Translated
+# Needs human review: Fragmento concatenado tras el nombre de archivo (SSWCP.cpp).
+#~ msgid " has already been downloaded"
+#~ msgstr " ya se ha descargado"
+
+# AI Translated
+#~ msgid "DownLoad Successfully"
+#~ msgstr "Descarga correcta"

@@ -26544,7 +26544,7 @@ void Plater::load_gcode(const wxString& filename)
     {
         BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": file does not exist: " << filename;
         MessageDialog(this,
-            _L("The selected file") + ":\n" + filename + "\n" + _L("does not exist."),
+            format_wxstr(_L("The selected file:\n%1%\ndoes not exist."), filename),
             wxString(GCODEVIEWER_APP_NAME) + " - " + _L("Error occurs while loading G-code file"),
             wxCLOSE | wxICON_WARNING | wxCENTRE).ShowModal();
         return;
