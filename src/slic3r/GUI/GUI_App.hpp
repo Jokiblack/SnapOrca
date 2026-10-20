@@ -422,7 +422,8 @@ private:
     uint64_t         m_cloud_handoff_gen { 0 };
     bool             m_show_error_msgdlg{false};
     wxString         m_info_dialog_content;
-    //HttpServer       m_http_server;
+    // Orca cloud login callback server (LOCALHOST_PORT); separate from Snapmaker's page server below.
+    HttpServer       m_http_server;
 
 public:
     HttpServer       m_page_http_server;

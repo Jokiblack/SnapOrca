@@ -5722,7 +5722,8 @@ void GUI_App::sm_get_login_info() {
         wxString    strJS      = wxString::Format("window.postMessage(%s)", login_cmd);
         GUI::wxGetApp().run_script(strJS);
     }
-    mainframe->m_webview->SetLoginPanelVisibility(true);
+    if (WebViewPanel* home = WebViewPanel::if_built())
+        home->SetLoginPanelVisibility(true);
 }
 
 void GUI_App::sm_request_login(bool show_user_info)
@@ -5975,7 +5976,7 @@ wxString GUI_App::get_international_url(const wxString& origin_url) {
         region = "US";
     }
 
-    string dark_mode = wxGetApp().app_config->get("dark_color_mode");
+    std::string dark_mode = wxGetApp().app_config->get("dark_color_mode");
 
     if (baseUrl.find("?") != std::string::npos) {
         return baseUrl + wxString::FromUTF8("&locale=") + lang + wxString::FromUTF8("-") + region +
