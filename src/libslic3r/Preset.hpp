@@ -306,6 +306,10 @@ public:
 
     // Alias of the preset
     std::string         alias;
+    // Snapmaker Orca: the "inherits" of a system preset in its vendor file (the flattened config has
+    // none); it tells versions of one material from presets sharing an alias
+    // (libslic3r/NozzleFilamentPresets.hpp). Empty for every other preset.
+    std::string         system_inherits;
     // List of profile names, from which this profile was renamed at some point of time.
     // This list is then used to match profiles by their names when loaded from .gcode, .3mf, .amf,
     // and to match the "inherits" field of user profiles with updated system profiles.
@@ -827,13 +831,20 @@ public:
     // If one of the prefered_alternates is compatible, select it.
     template<typename PreferedCondition> size_t first_compatible_idx(PreferedCondition prefered_condition) const
     {
+        return this->first_compatible_idx(prefered_condition, [](const Preset &preset) { return preset.is_compatible; });
+    }
+    // Snapmaker Orca: the same search with the compatibility asked from `is_compatible` instead of
+    // read from the flag. PresetBundle::first_slot_fit() rates the presets against the tool head of
+    // one filament slot with it; the overload above is mainline's search, unchanged in effect.
+    template<typename PreferedCondition, typename CompatibleCondition> size_t first_compatible_idx(PreferedCondition prefered_condition, CompatibleCondition is_compatible) const
+    {
         size_t i             = m_default_suppressed ? m_num_default_presets : 0;
         size_t n             = this->m_presets.size();
         size_t i_compatible  = n;
         int    match_quality = -1;
         for (; i < n; ++i)
             // Since we use the filament selection from Wizard, it's needed to control the preset visibility too
-            if (m_presets[i].is_compatible && m_presets[i].is_visible) {
+            if (is_compatible(m_presets[i]) && m_presets[i].is_visible) {
                 int this_match_quality = prefered_condition(m_presets[i]);
                 if (this_match_quality > match_quality) {
                     if (match_quality == std::numeric_limits<int>::max())
@@ -870,10 +881,13 @@ public:
     int             error_count() const         { return m_errors; }
 
     // For Print / Filament presets, disable those, which are not compatible with the printer.
+    // Snapmaker Orca: `keep_selected` keeps an incompatible selected preset selected (still flagged
+    // incompatible); PresetBundle::update_compatible sets it for a filament that fits a tool head of
+    // another nozzle size.
     template<typename PreferedCondition>
-    void            update_compatible(const PresetWithVendorProfile &active_printer, const PresetWithVendorProfile *active_print, PresetSelectCompatibleType select_other_if_incompatible, PreferedCondition prefered_condition)
+    void            update_compatible(const PresetWithVendorProfile &active_printer, const PresetWithVendorProfile *active_print, PresetSelectCompatibleType select_other_if_incompatible, PreferedCondition prefered_condition, bool keep_selected = false)
     {
-        if (this->update_compatible_internal(active_printer, active_print, select_other_if_incompatible) == (size_t)-1) {
+        if (this->update_compatible_internal(active_printer, active_print, select_other_if_incompatible, keep_selected) == (size_t)-1) {
             // Find some other compatible preset, or the "-- default --" preset.
             size_t index = this->first_compatible_idx(prefered_condition);
             this->select_preset(index);
@@ -1077,7 +1091,7 @@ private:
     std::deque<Preset>::const_iterator find_preset_renamed(const std::string &name) const
         { return const_cast<PresetCollection*>(this)->find_preset_renamed(name); }
 
-    size_t update_compatible_internal(const PresetWithVendorProfile &active_printer, const PresetWithVendorProfile *active_print, PresetSelectCompatibleType unselect_if_incompatible);
+    size_t update_compatible_internal(const PresetWithVendorProfile &active_printer, const PresetWithVendorProfile *active_print, PresetSelectCompatibleType unselect_if_incompatible, bool keep_selected = false);
 public:
     static bool                     is_dirty(const Preset *edited, const Preset *reference);
     static std::vector<std::string> dirty_options(const Preset *edited, const Preset *reference, const bool deep_compare = false);
