@@ -675,7 +675,7 @@ int ObjectList::get_repaired_errors_count(const int obj_idx, const int vol_idx /
 
 static std::string get_warning_icon_name(const TriangleMeshStats& stats)
 {
-    return stats.manifold() ? (stats.repaired() ? "obj_warning" : "") : "obj_warning";
+    return (!stats.manifold() || stats.has_reversed_faces || stats.repaired()) ? "obj_warning" : "";
 }
 
 MeshErrorsInfo ObjectList::get_mesh_errors_info(const int obj_idx, const int vol_idx /*= -1*/, wxString* sidebar_info /*= nullptr*/, int* non_manifold_edges) const
@@ -687,7 +687,7 @@ MeshErrorsInfo ObjectList::get_mesh_errors_info(const int obj_idx, const int vol
         (*m_objects)[obj_idx]->get_object_stl_stats() :
         (*m_objects)[obj_idx]->volumes[vol_idx]->mesh().stats();
 
-    if (!stats.repaired() && stats.manifold()) {
+    if (!stats.repaired() && stats.manifold() && !stats.has_reversed_faces) {
         //if (sidebar_info)
         //    *sidebar_info = _L("No errors");
         return { {}, {} }; // hide tooltip
@@ -707,9 +707,17 @@ MeshErrorsInfo ObjectList::get_mesh_errors_info(const int obj_idx, const int vol
         tooltip += _L("Remaining errors") + ":\n";
         tooltip += "\t" + format_wxstr(_L_PLURAL("%1$d non-manifold edge", "%1$d non-manifold edges", stats.open_edges), stats.open_edges) + "\n";
     }
+    if (stats.has_reversed_faces) {
+        // Faces wound inwards: the slicer may print them as a hollow or skip them, see MeshDiagnostics.
+        const wxString reversed_info = _L("Error: reversed faces detected. Use \"Fix Model\" to turn them outward.");
+        if (!remaining_info.empty())
+            remaining_info += "\n";
+        remaining_info += reversed_info;
+        tooltip += reversed_info + "\n";
+    }
 
     if (sidebar_info) {
-        *sidebar_info = stats.manifold() ? auto_repaired_info : (remaining_info + (stats.repaired() ? ("\n" + auto_repaired_info) : ""));
+        *sidebar_info = remaining_info.empty() ? auto_repaired_info : (remaining_info + (stats.repaired() ? ("\n" + auto_repaired_info) : ""));
     }
 
     if (non_manifold_edges)

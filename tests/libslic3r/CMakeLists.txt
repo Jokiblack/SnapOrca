@@ -56,6 +56,7 @@ add_executable(${_TEST_NAME}_tests
     test_triangle_selector.cpp
     test_used_filaments.cpp # Snapmaker Orca: the filaments a plate counts before slicing
     test_meshboolean.cpp
+    test_mesh_diagnostics.cpp
     test_mesh_repair.cpp
     test_trianglemesh_slicer.cpp
     test_marchingsquares.cpp

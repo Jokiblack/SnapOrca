@@ -539,6 +539,11 @@ void AppConfig::set_defaults()
         set_bool("show_model_mesh", false);
     }
 
+    // Snapmaker Orca: reversed-face detection on import, off because it adds to the import time.
+    if (get("detect_reversed_faces").empty()) {
+        set_bool("detect_reversed_faces", false);
+    }
+
     if (get("show_model_shadow").empty()) {
         set_bool("show_model_shadow", true);
     }

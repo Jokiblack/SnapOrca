@@ -3292,6 +3292,10 @@ msgstr[1] "%1$d contornos con geometría incorrecta"
 msgid "Click the icon to repair model object"
 msgstr "Haga clic en el icono para reparar modelo"
 
+# AI Translated
+msgid "Error: reversed faces detected. Use \"Fix Model\" to turn them outward."
+msgstr "Error: se han detectado caras invertidas. Utiliza «Reparar modelo» para orientarlas hacia fuera."
+
 msgid "Right click the icon to drop the object settings"
 msgstr "Haga clic con el botón derecho del ratón en el icono para descartar la configuración del objeto"
 
@@ -11166,6 +11170,25 @@ msgstr "Número máximo de archivos recientes"
 
 msgid "Add STL/STEP files to recent files list"
 msgstr "Añadir archivos STL/STEP a la lista de archivos recientes"
+
+# AI Translated
+msgid "Detect reversed faces when importing models"
+msgstr "Detectar caras invertidas al importar modelos"
+
+# AI Translated
+msgid ""
+"If enabled, every imported mesh is checked for faces wound inwards (reversed "
+"normals), which can print as hollows or missing walls, and the object list "
+"shows a warning icon with \"Fix Model\" as the repair. The check adds to the "
+"import time of large models.\n"
+"Default: disabled."
+msgstr ""
+"Si está activado, cada malla importada se comprueba en busca de caras "
+"orientadas hacia dentro (normales invertidas), que pueden imprimirse como "
+"huecos o paredes ausentes, y la lista de objetos muestra un icono de aviso "
+"con «Reparar modelo» como solución. La comprobación alarga la importación de "
+"modelos grandes.\n"
+"Por defecto: desactivado."
 
 msgid "Don't warn when loading 3MF with modified G-code"
 msgstr "No avisar cuando cargue archivos 3MF con G-Codes modificados"
