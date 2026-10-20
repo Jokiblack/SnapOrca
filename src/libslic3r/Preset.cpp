@@ -86,9 +86,7 @@
 
 #include <sstream>
 #include "PlaceholderParser.hpp"
-#include "FilamentFlowColumns.hpp"
 #include "PerHeadProcess.hpp"
-#include "SnapmakerFlowCompat.hpp"
 #include "libslic3r/GCode/Thumbnails.hpp"
 
 namespace fs = boost::filesystem;
@@ -365,13 +363,6 @@ static void keep_flow_support_in_differential_save(const Preset &preset, std::ve
         dirty_options.emplace_back(support_key);
 }
 
-bool normalize_snapmaker_flow_preset(DynamicPrintConfig& config)
-{
-    // The report lists tool heads and filaments of a project; a preset has neither.
-    FlowImportReport report;
-    return normalize_snapmaker_flow_config(config, report);
-}
-
 // 中间版本兼容性处理，如果是nil值，先改成default值，再进行扩展
 void extend_default_config_length(DynamicPrintConfig& config, const bool set_nil_to_default, const DynamicPrintConfig& defaults)
 {
@@ -621,7 +612,6 @@ void Preset::normalize(DynamicPrintConfig &config)
     if (config.option("filament_diameter") != nullptr) {
         // This config contains single or multiple filament presets.
         // Ensure that the filament preset vector options contain the correct number of values.
-<<<<<<< snaporca-int
         const auto *filament_flow_support = config.option<ConfigOptionStrings>("filament_flow_support");
         const auto *filament_flow_step_sizes = config.option<ConfigOptionInts>("filament_flow_step_size");
         size_t flow_variant_value_count = n;
@@ -634,8 +624,6 @@ void Preset::normalize(DynamicPrintConfig &config)
             for (int step_size : filament_flow_step_sizes->values)
                 flow_variant_value_count += size_t(std::max(1, step_size));
         }
-=======
->>>>>>> lixnix/main
         for (const std::string &key : Preset::filament_options()) {
             if (key == "compatible_prints" || key == "compatible_printers" || key == "filament_flow_support")
                 continue;
@@ -645,10 +633,7 @@ void Preset::normalize(DynamicPrintConfig &config)
                 continue;
             if (filament_dev_options.find(key) != filament_dev_options.end())
                 continue;
-<<<<<<< snaporca-int
 
-=======
->>>>>>> lixnix/main
             auto *opt = config.option(key, false);
             if (opt == nullptr) {
                 const ConfigOption* default_opt = defaults.option(key);
@@ -657,7 +642,6 @@ void Preset::normalize(DynamicPrintConfig &config)
                     opt = config.option(key, false);
                 }
             }
-<<<<<<< snaporca-int
             if (opt != nullptr && opt->is_vector()) {
                 // Snapmaker: flow-variant options carry one value per declared flow variant.
                 const size_t expected_size = is_filament_flow_variant_option(key) ? flow_variant_value_count : n;
@@ -667,13 +651,6 @@ void Preset::normalize(DynamicPrintConfig &config)
         }
         // The following keys are mandatory for the UI, but they are not part of FullPrintConfig, therefore they are handled separately.
         for (const std::string key : {"filament_settings_id"}) {
-=======
-            if (opt != nullptr && opt->is_vector() && static_cast<ConfigOptionVectorBase*>(opt)->size() < n)
-                static_cast<ConfigOptionVectorBase*>(opt)->resize(n, defaults.option(key));
-        }
-        // The following keys are mandatory for the UI, but they are not part of FullPrintConfig, therefore they are handled separately.
-        for (const std::string &key : { "filament_settings_id" }) {
->>>>>>> lixnix/main
             auto *opt = config.option(key, false);
             if (opt != nullptr && opt->type() == coStrings && static_cast<ConfigOptionStrings*>(opt)->values.size() < n)
                 static_cast<ConfigOptionStrings*>(opt)->values.resize(n, std::string());
@@ -686,6 +663,16 @@ void Preset::normalize(DynamicPrintConfig &config)
                 if (default_opt != nullptr)
                     config.set_key_value(key, default_opt->clone());
             }
+        }
+
+        const auto *process_flow_support = config.option<ConfigOptionStrings>(flow_support_key(ConfigFlowDomain::Process));
+        const size_t flow_variant_count = process_flow_support == nullptr || process_flow_support->values.empty()
+            ? 1
+            : process_flow_support->values.size();
+        for (const std::string &key : process_flow_variant_options()) {
+            auto *option = dynamic_cast<ConfigOptionVectorBase *>(config.option(key, false));
+            if (option != nullptr && option->size() < flow_variant_count)
+                option->resize(flow_variant_count, defaults.option(key));
         }
     } else if (config.option("nozzle_diameter") != nullptr) {
         // Printer config: ensure all expected options exist in the loaded profile.
@@ -882,19 +869,20 @@ void Preset::remove_files(bool cloud_already_deleted)
 }
 
 //BBS: add logic for only difference save
-<<<<<<< snaporca-int
-bool Preset::save(DynamicPrintConfig* parent_config)
-=======
+// Snapmaker Orca: the load normaliser of a process preset with values set per tool head. Only a preset
+// in that layout (shared columns, PerHeadProcess::is_wide) is normalised: the process flow variants of
+// this fork (process_flow_support) give a plain preset more values than print_extruder_variant has
+// columns, and PerHeadProcess::normalise would cut them to the layout.
+static void normalise_per_head_process(DynamicPrintConfig &config, const DynamicPrintConfig *parent, const DynamicPrintConfig *printer)
+{
+    if (PerHeadProcess::is_wide(config))
+        PerHeadProcess::normalise(config, parent, printer);
+}
 // Snapmaker Orca: a process preset with values set per tool head is compared with its parent laid out
 // like itself (PerHeadProcess::reference_in_layout_of). A marked column is saved even when it equals
 // the parent's, so it does not follow later updates of the parent.
-// A filament preset with a column its parent lacks is compared with the parent widened by that
-// column (filament_reference_in_layout_of), so a High Flow value equal to the parent's Standard value
-// is not written.
 static const DynamicPrintConfig &save_reference(Preset::Type type, const DynamicPrintConfig &config, const DynamicPrintConfig &parent, DynamicPrintConfig &storage)
 {
-    if (type == Preset::TYPE_FILAMENT)
-        return filament_reference_in_layout_of(config, parent, storage);
     return type == Preset::TYPE_PRINT ? PerHeadProcess::reference_in_layout_of(config, parent, storage) : parent;
 }
 static void keep_marked_columns(Preset::Type type, const DynamicPrintConfig &config, const std::string &key, ConfigOptionVectorBase &dst, const ConfigOptionVectorBase &src)
@@ -906,94 +894,7 @@ static void keep_marked_columns(Preset::Type type, const DynamicPrintConfig &con
             dst.set_at(&src, column, column);
 }
 
-// Snapmaker Orca: a filament key with a value per variant column is written in full. With "nil"
-// for a column equal to the parent's, Snapmaker Orca 2.4 (filament_flow_ratio not nullable there)
-// fails to parse the file and deletes it.
-static bool write_all_filament_columns(Preset::Type type, const std::string &key, const ConfigOptionVectorBase &src)
-{
-    return type == Preset::TYPE_FILAMENT && src.size() > 1 && filament_options_with_variant.count(key) > 0;
-}
-
-// Snapmaker Orca: the keys a user preset file and a project copy store against the parent (the differing
-// keys and the variant lists); one writer for both. A nullable vector writes "nil" for a column that
-// follows the parent, except the full-vector cases below.
-static DynamicPrintConfig preset_diff_to_write(Preset::Type type, DynamicPrintConfig &config, const DynamicPrintConfig &parent)
-{
-    auto option_differs_from_default = [](const ConfigBase &cfg, const t_config_option_key &opt_key, const ConfigOption *opt) {
-        if (opt == nullptr)
-            return false;
-        const ConfigDef *def = cfg.def();
-        if (def == nullptr)
-            return true;
-        const ConfigOptionDef *opt_def = def->get(opt_key);
-        if (opt_def == nullptr || opt_def->default_value.get() == nullptr)
-            return true;
-        if (opt->type() != opt_def->default_value->type())
-            return true;
-        return *opt != *opt_def->default_value;
-    };
-
-    DynamicPrintConfig temp_config, reference_storage;
-    if (type == Preset::TYPE_FILAMENT)
-        filament_repair_columns(config);
-    const DynamicPrintConfig &reference = save_reference(type, config, parent, reference_storage);
-    std::vector<std::string> dirty_options = config.diff(reference);
-    for (const t_config_option_key &opt_key : config.keys()) {
-        const ConfigOption *opt_src = config.option(opt_key);
-        if (opt_src != nullptr && reference.option(opt_key) == nullptr &&
-            option_differs_from_default(config, opt_key, opt_src))
-            dirty_options.emplace_back(opt_key);
-    }
-
-    std::string extruder_id_name, extruder_variant_name;
-    std::set<std::string> *key_set1 = nullptr, *key_set2 = nullptr;
-    Preset::get_extruder_names_and_keysets(type, extruder_id_name, extruder_variant_name, &key_set1, &key_set2);
-
-    if (!extruder_id_name.empty()) {
-        dirty_options.emplace_back(extruder_id_name);
-    }
-    if (!extruder_variant_name.empty()) {
-        dirty_options.emplace_back(extruder_variant_name);
-    }
-
-    std::sort(dirty_options.begin(), dirty_options.end());
-    dirty_options.erase(std::unique(dirty_options.begin(), dirty_options.end()), dirty_options.end());
-
-    for (const std::string &option : dirty_options)
-    {
-        ConfigOption *opt_src = config.option(option);
-        if (opt_src == nullptr)
-            continue;
-        ConfigOption *opt_dst = temp_config.option(option, true);
-        if (opt_dst->is_scalar() || !(opt_dst->nullable()))
-            opt_dst->set(opt_src);
-        else {
-            ConfigOptionVectorBase* opt_vec_src = static_cast<ConfigOptionVectorBase*>(opt_src);
-            ConfigOptionVectorBase* opt_vec_dst = static_cast<ConfigOptionVectorBase*>(opt_dst);
-            const ConfigOptionVectorBase* opt_vec_inherit = static_cast<const ConfigOptionVectorBase*>(reference.option(option));
-            const ConfigOptionDef *opt_def = print_config_def.get(option);
-            if (opt_vec_src->size() == 1 || write_all_filament_columns(type, option, *opt_vec_src))
-                opt_dst->set(opt_src);
-            else if (opt_def != nullptr && opt_def->scalar_when_uniform)
-                // Snapmaker Orca: full vector without "nil": older readers parse the key as a scalar
-                // and delete a preset whose first entry is "nil". print_extruder_override marks set columns.
-                opt_dst->set(opt_src);
-            else if (key_set1->find(option) != key_set1->end()) {
-                opt_vec_dst->set_with_nil(opt_vec_src, opt_vec_inherit, 1);
-                keep_marked_columns(type, config, option, *opt_vec_dst, *opt_vec_src);
-            }
-            else if (key_set2->find(option) != key_set2->end()) {
-                opt_vec_dst->set_with_nil(opt_vec_src, opt_vec_inherit, 2);
-            }
-            else
-                opt_dst->set(opt_src);
-        }
-    }
-    return temp_config;
-}
-
-void Preset::save(DynamicPrintConfig* parent_config)
->>>>>>> lixnix/main
+bool Preset::save(DynamicPrintConfig* parent_config)
 {
     //BBS: add project embedded preset logic
     if (this->is_project_embedded)
@@ -1022,7 +923,6 @@ void Preset::save(DynamicPrintConfig* parent_config)
 
     //BBS: only save difference if it has parent
     if (parent_config) {
-<<<<<<< snaporca-int
         // Snapmaker: options absent from the parent but different from their default are dirty too.
         auto option_differs_from_default = [](const ConfigBase &cfg, const t_config_option_key &opt_key, const ConfigOption *opt) {
             if (opt == nullptr)
@@ -1038,10 +938,12 @@ void Preset::save(DynamicPrintConfig* parent_config)
             return *opt != *opt_def->default_value;
         };
 
-        std::vector<std::string> dirty_options = config.diff(*parent_config);
+        DynamicPrintConfig        reference_storage;
+        const DynamicPrintConfig &reference = save_reference(type, config, *parent_config, reference_storage);
+        std::vector<std::string> dirty_options = config.diff(reference);
         for (const t_config_option_key &opt_key : config.keys()) {
             const ConfigOption *opt_src = config.option(opt_key);
-            if (opt_src != nullptr && parent_config->option(opt_key) == nullptr &&
+            if (opt_src != nullptr && reference.option(opt_key) == nullptr &&
                 option_differs_from_default(config, opt_key, opt_src))
                 dirty_options.emplace_back(opt_key);
         }
@@ -1074,11 +976,17 @@ void Preset::save(DynamicPrintConfig* parent_config)
             else {
                 ConfigOptionVectorBase* opt_vec_src = static_cast<ConfigOptionVectorBase*>(opt_src);
                 ConfigOptionVectorBase* opt_vec_dst = static_cast<ConfigOptionVectorBase*>(opt_dst);
-                ConfigOptionVectorBase* opt_vec_inherit = static_cast<ConfigOptionVectorBase*>(parent_config->option(option));
+                const ConfigOptionVectorBase* opt_vec_inherit = static_cast<const ConfigOptionVectorBase*>(reference.option(option));
+                const ConfigOptionDef *opt_def = print_config_def.get(option);
                 if (opt_vec_src->size() == 1)
+                    opt_dst->set(opt_src);
+                else if (opt_def != nullptr && opt_def->scalar_when_uniform)
+                    // Snapmaker Orca: full vector without "nil": older readers parse the key as a scalar
+                    // and delete a preset whose first entry is "nil". print_extruder_override marks set columns.
                     opt_dst->set(opt_src);
                 else if (key_set1->find(option) != key_set1->end()) {
                     opt_vec_dst->set_with_nil(opt_vec_src, opt_vec_inherit, 1);
+                    keep_marked_columns(type, config, option, *opt_vec_dst, *opt_vec_src);
                 }
                 else if (key_set2->find(option) != key_set2->end()) {
                     opt_vec_dst->set_with_nil(opt_vec_src, opt_vec_inherit, 2);
@@ -1088,10 +996,6 @@ void Preset::save(DynamicPrintConfig* parent_config)
             }
         }
         to_save = &temp_config;
-=======
-        DynamicPrintConfig temp_config = preset_diff_to_write(type, config, *parent_config);
-        temp_config.save_to_json(this->file, bare_name, from_str, this->version.to_string());
->>>>>>> lixnix/main
     } else if (!filament_id.empty() && inherits().empty()) {
         temp_config = config;
         temp_config.set_key_value(BBL_JSON_KEY_FILAMENT_ID, new ConfigOptionString(filament_id));
@@ -1130,21 +1034,8 @@ void Preset::reload(Preset const &parent)
     try {
         InstanceLock instance_lock(user_presets_lock_path());
         ConfigSubstitutions                config_substitutions = config.load_from_json(file, substitution_rule, key_values, reason);
-        if (this->type == TYPE_FILAMENT) {
-            // Snapmaker Orca: the column match of the preset loader, so a child keeps one layout when its
-            // base gained a High Flow column or lacks the child's; the columns are repaired after it.
-            normalize_snapmaker_flow_preset(config);
-            extend_default_config_length(config, false, {});
-            std::string            extruder_id_name, extruder_variant_name;
-            std::set<std::string> *key_set1 = nullptr, *key_set2 = nullptr;
-            Preset::get_extruder_names_and_keysets(this->type, extruder_id_name, extruder_variant_name, &key_set1, &key_set2);
-            this->config = parent.config;
-            this->config.update_diff_values_to_child_config(config, extruder_id_name, extruder_variant_name, *key_set1, *key_set2);
-            filament_repair_columns(this->config);
-        } else {
-            this->config = parent.config;
-            this->config.apply(std::move(config));
-        }
+        this->config = parent.config;
+        this->config.apply(std::move(config));
     } catch (const std::exception &err) {
         BOOST_LOG_TRIVIAL(error) << boost::format("Failed loading the user-config file: %1%. Reason: %2%") % file % err.what();
     }
@@ -1369,19 +1260,13 @@ DynamicPrintConfig Preset::load_external_config(Type type, const DynamicPrintCon
             std::string extruder_id_name, extruder_variant_name;
             std::set<std::string> *key_set1 = nullptr, *key_set2 = nullptr;
             Preset::get_extruder_names_and_keysets(type, extruder_id_name, extruder_variant_name, &key_set1, &key_set2);
-            // A filament with a variant column its base lacks takes the unchanged keys from the base
-            // widened by that column, so they keep every column of the project.
-            DynamicPrintConfig  filament_base;
-            DynamicPrintConfig *reference = base_config;
-            if (type == Preset::TYPE_FILAMENT && &filament_reference_in_layout_of(cfg, *base_config, filament_base) != base_config)
-                reference = &filament_base;
-            cfg.update_non_diff_values_to_base_config(*reference, cfg_keys, different_settings_list, extruder_id_name, extruder_variant_name, *key_set1, *key_set2);
+            cfg.update_non_diff_values_to_base_config(*base_config, cfg_keys, different_settings_list, extruder_id_name, extruder_variant_name, *key_set1, *key_set2);
             base = base_config;
         }
     }
     // The layout of the process values set per extruder, normalised against the base when there is one.
     if (type == Preset::TYPE_PRINT)
-        PerHeadProcess::normalise(cfg, base, nullptr);
+        normalise_per_head_process(cfg, base, nullptr);
     if (keys)
         *keys = std::move(cfg_keys);
     return cfg;
@@ -1423,9 +1308,8 @@ BedType Preset::get_default_bed_type(PresetBundle* preset_bundle)
                 return BedType(bed_type_value);
             }
 
-            // Snapmaker: no hard return of btPEI here - an unparseable value falls
-            // through to the printer-model table below, which maps SM_U1 to btPTE.
             BOOST_LOG_TRIVIAL(error) << "default_bed_type: invalid bed type: " << str_bed_type;
+            return BedType::btPEI;
 
         } catch(...) {
             ;
@@ -1470,8 +1354,6 @@ static std::vector<std::string> s_Preset_print_options{
     "bottom_surface_density",
     "bottom_shell_layers",
     "bottom_shell_thickness",
-    "top_color_penetration_layers",
-    "bottom_color_penetration_layers",
     "extra_perimeters_on_overhangs",
     "ensure_vertical_shell_thickness",
     "reduce_crossing_wall",
@@ -1564,7 +1446,6 @@ static std::vector<std::string> s_Preset_print_options{
     "support_interface_pattern",
     "support_interface_spacing",
     "support_interface_loop_pattern",
-    "support_interface_min_area",
     "support_top_z_distance",
     "support_on_build_plate_only",
     "support_critical_regions_only",
@@ -1594,7 +1475,6 @@ static std::vector<std::string> s_Preset_print_options{
     "ooze_prevention",
     "standby_temperature_delta",
     "preheat_time",
-    "delta_temperature",
     "preheat_steps",
     "interface_shells",
     "line_width",
@@ -1622,8 +1502,6 @@ static std::vector<std::string> s_Preset_print_options{
     "prime_tower_enable_framework",
     "prime_tower_width",
     "prime_tower_brim_width",
-    "prime_tower_brim_chamfer",
-    "prime_tower_brim_chamfer_max_width",
     "prime_tower_skip_points",
     "prime_volume",
     "prime_tower_infill_gap",
@@ -1733,7 +1611,6 @@ static std::vector<std::string> s_Preset_print_options{
     "sparse_infill_acceleration",
     "internal_solid_infill_acceleration",
     "tree_support_auto_brim",
-    "tree_support_adaptive_layer_height",
     "tree_support_brim_width",
     "gcode_comments",
     "gcode_label_objects",
@@ -1752,7 +1629,6 @@ static std::vector<std::string> s_Preset_print_options{
     "wipe_tower_cone_angle",
     "wipe_tower_extra_spacing",
     "wipe_tower_max_purge_speed",
-    "local_z_wipe_tower_purge_lines",
     "wipe_tower_wall_type",
     "wipe_tower_extra_rib_length",
     "wipe_tower_rib_width",
@@ -1766,14 +1642,9 @@ static std::vector<std::string> s_Preset_print_options{
     "toolchange_cyclic_order",
     "toolchange_cyclic_first_layer",
     "wipe_tower_rotation_angle",
-    "wipe_tower_wall_gap",
     "tree_support_branch_distance_organic",
     "tree_support_branch_diameter_organic",
     "tree_support_branch_angle_organic",
-    "tree_support_transition_layers",
-    "support_transition_perimeter",
-    "support_transition_speed",
-    "support_transition_flow_ratio",
     "hole_to_polyhole",
     "hole_to_polyhole_threshold",
     "hole_to_polyhole_twisted",
@@ -1800,9 +1671,6 @@ static std::vector<std::string> s_Preset_print_options{
     "interlocking_depth",
     "interlocking_boundary_avoidance",
     "interlocking_beam_width",
-    "dithering_local_z_mode",
-    "dithering_local_z_whole_objects",
-    "dithering_local_z_infill",
     "calib_flowrate_topinfill_special_order",
     // IDEX/IQEX parallel print mode (per-print selection)
     "imex_parallel_mode",
@@ -1908,7 +1776,6 @@ static std::vector<std::string> s_Preset_machine_limits_options {
 
 static std::vector<std::string> s_Preset_printer_options {
     "printer_technology",
-<<<<<<< snaporca-int
     "printable_area", "extruder_printable_area", "support_parallel_printheads", "parallel_printheads_count", "parallel_printheads_bed_exclude_areas", "bed_exclude_area","bed_custom_texture", "bed_custom_model", "build_plate_tilt_x", "build_plate_tilt_y", "belt_printer", "belt_printer_infinite_y",
     "belt_slice_rotation", "belt_slice_rotation_angle",
     "gcode_remap_x", "gcode_remap_y", "gcode_remap_z",
@@ -1917,12 +1784,7 @@ static std::vector<std::string> s_Preset_printer_options {
     "enable_belt_purge_tower",
     "gcode_flavor", "gcode_skip_config_block",
     "fan_kickstart", "part_cooling_fan_min_pwm", "fan_speedup_time", "fan_speedup_overhangs",
-    "single_extruder_multi_material", "manual_filament_change", "file_start_gcode", "machine_start_gcode", "machine_end_gcode", "before_layer_change_gcode", "printing_by_object_gcode", "layer_change_gcode", "time_lapse_gcode", "wrapping_detection_gcode", "change_filament_gcode", "change_extrusion_role_gcode",
-=======
-    "printable_area", "extruder_printable_area", "support_parallel_printheads", "parallel_printheads_count", "parallel_printheads_bed_exclude_areas", "bed_exclude_area","bed_custom_texture", "bed_custom_model", "gcode_flavor",
-     "gcode_skip_config_block", "fan_kickstart", "part_cooling_fan_min_pwm", "fan_speedup_time", "fan_speedup_overhangs",
     "single_extruder_multi_material", "extruder_layer_height_exact", "manual_filament_change", "file_start_gcode", "machine_start_gcode", "machine_end_gcode", "before_layer_change_gcode", "printing_by_object_gcode", "layer_change_gcode", "time_lapse_gcode", "wrapping_detection_gcode", "change_filament_gcode", "change_extrusion_role_gcode",
->>>>>>> lixnix/main
     "printer_model", "printer_variant", "printer_extruder_id", "printer_extruder_variant", "extruder_variant_list", "default_nozzle_volume_type",
     "printable_height", "extruder_printable_height", "extruder_clearance_radius", "extruder_clearance_height_to_lid", "extruder_clearance_height_to_rod", "extruder_clearance_dist_to_rod",
     "nozzle_height", "master_extruder_id",
@@ -1938,7 +1800,7 @@ static std::vector<std::string> s_Preset_printer_options {
     "use_relative_e_distances", "extruder_type", "use_firmware_retraction", "printer_notes",
     "grab_length", "support_object_skip_flush", "physical_extruder_map",
     "cooling_tube_retraction",
-    "cooling_tube_length", "high_current_on_filament_swap", "parking_pos_retraction", "extra_loading_move", "wipe_tower_type", "purge_in_prime_tower", "enable_filament_ramming", "ramming_line_width_ratio", "enable_change_pressure_when_wiping", "ramming_pressure_advance_value", "tool_change_on_wipe_tower", "wait_for_temp_on_wipe_tower",
+    "cooling_tube_length", "high_current_on_filament_swap", "parking_pos_retraction", "extra_loading_move", "wipe_tower_type", "purge_in_prime_tower", "enable_filament_ramming", "tool_change_on_wipe_tower", "wait_for_temp_on_wipe_tower",
     "z_offset",
     "disable_m73", "preferred_orientation", "emit_machine_limits_to_gcode", "pellet_modded_printer", "support_multi_bed_types", "use_3mf", "default_bed_type", "bed_mesh_min","bed_mesh_max","bed_mesh_probe_distance", "adaptive_bed_mesh_margin", "enable_long_retraction_when_cut","long_retractions_when_cut","retraction_distances_when_cut",
     "bed_temperature_formula", "nozzle_flush_dataset",
@@ -2203,17 +2065,10 @@ PresetCollection::UserPresetLoad PresetCollection::resolve_user_preset(
             return out;
         }
 
-<<<<<<< snaporca-int
         // Snapmaker: skip a user preset file whose declared type does not match this collection
         // (e.g. a process preset dropped into the filament folder). Not installed and not discarded.
         if (auto type_it = key_values.find(BBL_JSON_KEY_TYPE); type_it != key_values.end()) {
             const Preset::Type file_type = Preset::get_type_from_string(type_it->second);
-=======
-        // A file of another preset type in this folder is left out.
-        auto type_it = key_values.find(BBL_JSON_KEY_TYPE);
-        if (type_it != key_values.end()) {
-            Preset::Type file_type = Preset::get_type_from_string(type_it->second);
->>>>>>> lixnix/main
             if (file_type != m_type) {
                 BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(
                     ": skip preset %1% because file type %2% does not match collection type %3%")
@@ -2222,25 +2077,6 @@ PresetCollection::UserPresetLoad PresetCollection::resolve_user_preset(
             }
         }
 
-<<<<<<< snaporca-int
-=======
-        auto name_it = key_values.find(BBL_JSON_KEY_NAME);
-        if (name_it != key_values.end() && !name_it->second.empty())
-            // Snapmaker: the json "name" is the authoritative logical name (mix-filament presets
-            // sanitize their file names, so the file stem may differ). Orca: that name is a BARE
-            // name, so re-apply the load path's bundle prefix - the same canonicalization
-            // import_json_presets() performs with get_preset_canonical_name(). For user presets
-            // (origin kind User) this is the identity.
-            preset.name = this->canonical_preset_name(name_it->second, load_origin);
-
-        if (this->find_preset(preset.name, false)) {
-            // A preset with the same logical name is already loaded, typically from a system bundle
-            // or from a JSON file with a different file name.
-            BOOST_LOG_TRIVIAL(warning) << "Preset already present, not loading: " << preset.name;
-            return out;
-        }
-
->>>>>>> lixnix/main
         std::string version_str = key_values[BBL_JSON_KEY_VERSION];
         boost::optional<Semver> version = Semver::parse(version_str);
         if (!version) {
@@ -2268,18 +2104,12 @@ PresetCollection::UserPresetLoad PresetCollection::resolve_user_preset(
             inherit_preset = this->find_preset2(inherits_value);
             Preset::normalize_inherits(config, inherit_preset);
         }
-<<<<<<< snaporca-int
         // Local hot reload only supports FFF; no SLA default printer is installed.
         if (read_only && load_origin.kind == PresetOrigin::Kind::LocalBundle && m_type == Preset::TYPE_PRINTER &&
             Preset::printer_technology(config) != ptFFF) {
             out.errors.push_back((boost::format("local bundle printer %1% is not FFF") % preset.file).str());
             return out;
         }
-=======
-        // A user preset of Snapmaker Orca 2.4 names its Standard / High Flow values with keys
-        // of its own; they become variant columns before the columns are matched with the parent.
-        normalize_snapmaker_flow_preset(config);
->>>>>>> lixnix/main
         const Preset& default_preset = this->default_preset_for(config);
         if (inherit_preset) {
             preset.config = inherit_preset->config;
@@ -2288,7 +2118,7 @@ PresetCollection::UserPresetLoad PresetCollection::resolve_user_preset(
             preset.config.update_diff_values_to_child_config(config, extruder_id_name, extruder_variant_name, *key_set1, *key_set2);
             // Snapmaker Orca: the layout of a process preset with values set per extruder.
             if (m_type == Preset::TYPE_PRINT)
-                PerHeadProcess::normalise(preset.config, &inherit_preset->config, nullptr);
+                normalise_per_head_process(preset.config, &inherit_preset->config, nullptr);
         }
         else {
             auto inherits_config2 = dynamic_cast<ConfigOptionString *>(inherits_config);
@@ -2521,13 +2351,13 @@ Preset* PresetCollection::get_preset_differed_for_save(Preset& preset)
         };
         new_preset = new Preset();
         *new_preset = preset;
-<<<<<<< snaporca-int
 
-        DynamicPrintConfig temp_config;
-        std::vector<std::string> dirty_options = preset.config.diff(parent_preset->config);
+        DynamicPrintConfig temp_config, reference_storage;
+        const DynamicPrintConfig &reference = save_reference(preset.type, preset.config, parent_preset->config, reference_storage);
+        std::vector<std::string> dirty_options = preset.config.diff(reference);
         for (const t_config_option_key &opt_key : preset.config.keys()) {
             const ConfigOption *opt_src = preset.config.option(opt_key);
-            if (opt_src != nullptr && parent_preset->config.option(opt_key) == nullptr &&
+            if (opt_src != nullptr && reference.option(opt_key) == nullptr &&
                 option_differs_from_default(preset.config, opt_key, opt_src))
                 dirty_options.emplace_back(opt_key);
         }
@@ -2560,11 +2390,16 @@ Preset* PresetCollection::get_preset_differed_for_save(Preset& preset)
             else {
                 ConfigOptionVectorBase* opt_vec_src = static_cast<ConfigOptionVectorBase*>(opt_src);
                 ConfigOptionVectorBase* opt_vec_dst = static_cast<ConfigOptionVectorBase*>(opt_dst);
-                ConfigOptionVectorBase* opt_vec_inherit = static_cast<ConfigOptionVectorBase*>(parent_preset->config.option(option));
+                const ConfigOptionVectorBase* opt_vec_inherit = static_cast<const ConfigOptionVectorBase*>(reference.option(option));
+                const ConfigOptionDef *opt_def = print_config_def.get(option);
                 if (opt_vec_src->size() == 1)
+                    opt_dst->set(opt_src);
+                else if (opt_def != nullptr && opt_def->scalar_when_uniform)
+                    // Snapmaker Orca: the same full vector as the user preset file (Preset::save).
                     opt_dst->set(opt_src);
                 else if (key_set1->find(option) != key_set1->end()) {
                     opt_vec_dst->set_with_nil(opt_vec_src, opt_vec_inherit, 1);
+                    keep_marked_columns(preset.type, preset.config, option, *opt_vec_dst, *opt_vec_src);
                 }
                 else if (key_set2->find(option) != key_set2->end()) {
                     opt_vec_dst->set_with_nil(opt_vec_src, opt_vec_inherit, 2);
@@ -2575,9 +2410,6 @@ Preset* PresetCollection::get_preset_differed_for_save(Preset& preset)
         }
 
         new_preset->config = temp_config;
-=======
-        new_preset->config = preset_diff_to_write(preset.type, preset.config, parent_preset->config);
->>>>>>> lixnix/main
     }
 
     return new_preset;
@@ -2622,7 +2454,6 @@ int PresetCollection::get_differed_values_to_update(Preset& preset, std::map<std
                 option_differs_from_default(preset.config, opt_key, opt_src))
                 dirty_options.emplace_back(opt_key);
         }
-<<<<<<< snaporca-int
 
         // Send the variant layout even when it matches the parent's, as the local save does: the loader
         // sizes the per-variant values by it and would otherwise keep only the first one.
@@ -2637,8 +2468,6 @@ int PresetCollection::get_differed_values_to_update(Preset& preset, std::map<std
         // Snapmaker: keep the multi-variant *_flow_support declaration in the differential save.
         keep_flow_support_in_differential_save(preset, dirty_options);
 
-=======
->>>>>>> lixnix/main
         std::sort(dirty_options.begin(), dirty_options.end());
         dirty_options.erase(std::unique(dirty_options.begin(), dirty_options.end()), dirty_options.end());
 
@@ -2738,10 +2567,6 @@ void PresetCollection::load_project_embedded_presets(std::vector<Preset*>& proje
                 inherit_preset = this->find_preset2(inherits_value, true);
                 Preset::normalize_inherits(config, inherit_preset);
             }
-            normalize_snapmaker_flow_preset(config);
-            // Padded to its own columns before the columns are matched, as the other loaders do; a key
-            // narrower than its variant list would otherwise be read past its end.
-            extend_default_config_length(config, false, {});
             const Preset& default_preset = this->default_preset_for(config);
             if (inherit_preset) {
                 preset->config = inherit_preset->config;
@@ -2757,7 +2582,7 @@ void PresetCollection::load_project_embedded_presets(std::vector<Preset*>& proje
             preset->config.update_diff_values_to_child_config(config, extruder_id_name, extruder_variant_name, *key_set1, *key_set2);
             // Snapmaker Orca: the layout of a process preset with values set per tool head.
             if (m_type == Preset::TYPE_PRINT)
-                PerHeadProcess::normalise(preset->config, &inherit_preset->config, nullptr);
+                normalise_per_head_process(preset->config, &inherit_preset->config, nullptr);
             //preset->config.apply(std::move(config));
             Preset::normalize(preset->config);
             // Report configuration fields, which are misplaced into a wrong group.
@@ -3113,7 +2938,6 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
             new_config = default_preset.config;
         }
 
-<<<<<<< snaporca-int
         std::string extruder_id_name, extruder_variant_name;
         std::set<std::string> *key_set1 = nullptr, *key_set2 = nullptr;
         Preset::get_extruder_names_and_keysets(m_type, extruder_id_name, extruder_variant_name, &key_set1, &key_set2);
@@ -3138,9 +2962,6 @@ bool PresetCollection::load_user_preset(std::string name, std::map<std::string, 
                         cloud_config.set_key_value(key, inherit_preset->config.option(key)->clone());
         }
 
-=======
-        normalize_snapmaker_flow_preset(cloud_config);
->>>>>>> lixnix/main
         extend_default_config_length(cloud_config, false, {});
 
         if (inherit_preset)
@@ -4297,17 +4118,6 @@ size_t PresetCollection::first_visible_idx() const
     return first_visible;
 }
 
-std::vector<std::string> PresetCollection::diameters_of_selected_printer()
-{
-    std::set<std::string> diameters;
-    auto printer_model = m_edited_preset.config.opt_string("printer_model");
-    for (auto &preset : m_presets) {
-        if (preset.is_visible && preset.config.opt_string("printer_model") == printer_model)
-            diameters.insert(preset.config.opt_string("printer_variant"));
-    }
-    return std::vector<std::string>{diameters.begin(), diameters.end()};
-}
-
 size_t PresetCollection::first_visible_idx_by_type(const std::string& filament_type) const
 {
     size_t start = m_default_suppressed ? m_num_default_presets : 0;
@@ -4348,12 +4158,11 @@ std::string PresetCollection::filament_id_by_type(const std::string& filament_ty
     return preset(first_visible_idx_by_type(filament_type)).filament_id;
 }
 
-std::vector<std::string> PresetCollection::diameters_for_same_printer_model()
+std::vector<std::string> PresetCollection::diameters_of_selected_printer()
 {
     std::set<std::string> diameters;
-    const std::string     printer_model = m_edited_preset.config.opt_string("printer_model");
+    auto printer_model = m_edited_preset.config.opt_string("printer_model");
     for (auto &preset : m_presets) {
-<<<<<<< snaporca-int
         if (preset.is_visible && preset.config.opt_string("printer_model") == printer_model)
             diameters.insert(preset.config.opt_string("printer_variant"));
     }
@@ -4365,8 +4174,6 @@ std::vector<std::string> PresetCollection::diameters_for_same_printer_model()
     std::set<std::string> diameters;
     const std::string     printer_model = m_edited_preset.config.opt_string("printer_model");
     for (auto &preset : m_presets) {
-=======
->>>>>>> lixnix/main
         if (!preset.is_system)
             continue;
         if (preset.config.opt_string("printer_model") == printer_model)
@@ -4437,13 +4244,6 @@ size_t PresetCollection::update_compatible_internal(const PresetWithVendorProfil
 // Return true if the dirty flag changed.
 bool PresetCollection::update_dirty()
 {
-    // Snapmaker Orca: an edit that missed the column the Filament tab shows leaves keys of another
-    // width than the variant list; saving repairs them (filament_repair_columns).
-    if (m_type == Preset::TYPE_FILAMENT && !filament_columns_consistent(this->get_edited_preset().config)) {
-        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": the columns of filament preset " << this->get_edited_preset().name
-                                 << " disagree with its filament_extruder_variant";
-        assert(false);
-    }
     bool was_dirty = this->get_selected_preset().is_dirty;
     bool is_dirty  = current_is_dirty();
     this->get_selected_preset().is_dirty = is_dirty;
@@ -4634,17 +4434,129 @@ bool PresetCollection::is_dirty(const Preset *edited, const Preset *reference)
     return false;
 }
 
+template<class T>
+void add_flow_variant_opts_to_diff(const std::string &opt_key,
+                                   t_config_option_keys &diff,
+                                   const ConfigBase &edited,
+                                   const ConfigBase &reference,
+                                   const ConfigOptionStrings &edited_modes,
+                                   const ConfigOptionStrings *reference_modes)
+{
+    const auto *edited_values = dynamic_cast<const T *>(edited.option(opt_key));
+    const auto *reference_values = dynamic_cast<const T *>(reference.option(opt_key));
+    const ConfigOptionDef *option_def = edited.def() == nullptr ? nullptr : edited.def()->get(opt_key);
+    const auto *default_values = option_def == nullptr ? nullptr :
+        dynamic_cast<const T *>(option_def->default_value.get());
+    if (edited_values == nullptr || reference_values == nullptr)
+        return;
+
+    for (size_t edited_index = 0; edited_index < edited_modes.values.size() && edited_index < edited_values->values.size(); ++edited_index) {
+        const T *comparison_values = nullptr;
+        size_t comparison_index = 0;
+        if (reference_modes == nullptr) {
+            if (edited_index == 0 && !reference_values->values.empty())
+                comparison_values = reference_values;
+        } else {
+            const auto mode = std::find(reference_modes->values.begin(), reference_modes->values.end(),
+                                        edited_modes.values[edited_index]);
+            if (mode != reference_modes->values.end()) {
+                const size_t reference_index = size_t(std::distance(reference_modes->values.begin(), mode));
+                if (reference_index < reference_values->values.size()) {
+                    comparison_values = reference_values;
+                    comparison_index = reference_index;
+                }
+            }
+        }
+
+        // A mode not declared by the reference preset has no inherited override.
+        // Compare it with the option default instead of borrowing the standard-flow value.
+        if (comparison_values == nullptr && default_values != nullptr && !default_values->values.empty()) {
+            comparison_values = default_values;
+            comparison_index = std::min(edited_index, default_values->values.size() - 1);
+        }
+        if (comparison_values == nullptr && !reference_values->values.empty())
+            comparison_values = reference_values;
+
+        bool differs = comparison_values == nullptr;
+        if (!differs && edited_values->nullable()) {
+            const bool edited_is_nil = edited_values->is_nil(edited_index);
+            const bool comparison_is_nil = comparison_values->is_nil(comparison_index);
+            differs = edited_is_nil != comparison_is_nil;
+            if (!differs && edited_is_nil)
+                continue;
+        }
+        if (!differs)
+            differs = edited_values->values[edited_index] != comparison_values->values[comparison_index];
+        if (differs)
+            diff.emplace_back(opt_key + "#" + std::to_string(edited_index));
+    }
+}
+
+std::vector<std::string> PresetCollection::flow_variant_dirty_options(
+    const Preset *edited,
+    const Preset *reference,
+    ConfigFlowDomain domain,
+    const std::vector<std::string> &option_keys)
+{
+    std::vector<std::string> changed;
+    if (edited == nullptr || reference == nullptr)
+        return changed;
+
+    const auto *edited_support = edited->config.option<ConfigOptionStrings>(flow_support_key(domain));
+    const auto *reference_support = reference->config.option<ConfigOptionStrings>(flow_support_key(domain));
+    if (edited_support == nullptr)
+        return changed;
+
+    for (const std::string &key : option_keys) {
+        const ConfigOption *edited_option = edited->config.option(key);
+        const ConfigOption *reference_option = reference->config.option(key);
+        if (edited_option == nullptr || reference_option == nullptr ||
+            edited_option->type() != reference_option->type())
+            continue;
+        if (*edited_option == *reference_option)
+            continue;
+
+        switch (edited_option->type()) {
+        case coInts:     add_flow_variant_opts_to_diff<ConfigOptionInts>(key, changed, edited->config, reference->config, *edited_support, reference_support); break;
+        case coBools:
+            if (edited_option->nullable())
+                add_flow_variant_opts_to_diff<ConfigOptionBoolsNullable>(key, changed, edited->config, reference->config, *edited_support, reference_support);
+            else
+                add_flow_variant_opts_to_diff<ConfigOptionBools>(key, changed, edited->config, reference->config, *edited_support, reference_support);
+            break;
+        case coFloats:
+            if (edited_option->nullable())
+                add_flow_variant_opts_to_diff<ConfigOptionFloatsNullable>(key, changed, edited->config, reference->config, *edited_support, reference_support);
+            else
+                add_flow_variant_opts_to_diff<ConfigOptionFloats>(key, changed, edited->config, reference->config, *edited_support, reference_support);
+            break;
+        case coFloatsOrPercents:
+            if (edited_option->nullable())
+                add_flow_variant_opts_to_diff<ConfigOptionFloatsOrPercentsNullable>(key, changed, edited->config, reference->config, *edited_support, reference_support);
+            else
+                add_flow_variant_opts_to_diff<ConfigOptionFloatsOrPercents>(key, changed, edited->config, reference->config, *edited_support, reference_support);
+            break;
+        case coStrings:  add_flow_variant_opts_to_diff<ConfigOptionStrings>(key, changed, edited->config, reference->config, *edited_support, reference_support); break;
+        case coPercents: add_flow_variant_opts_to_diff<ConfigOptionPercents>(key, changed, edited->config, reference->config, *edited_support, reference_support); break;
+        case coEnums:    add_flow_variant_opts_to_diff<ConfigOptionInts>(key, changed, edited->config, reference->config, *edited_support, reference_support); break;
+        default:         changed.emplace_back(key); break;
+        }
+    }
+
+    std::sort(changed.begin(), changed.end());
+    changed.erase(std::unique(changed.begin(), changed.end()), changed.end());
+    return changed;
+}
+
 std::vector<std::string> PresetCollection::dirty_options(const Preset *edited, const Preset *reference, const bool deep_compare /*= false*/)
 {
     std::vector<std::string> changed;
     if (edited != nullptr && reference != nullptr) {
         // Snapmaker Orca: a process preset with values set per tool head is wider than its reference;
         // the reference is laid out like it first, so each column compares with the column it stands for.
-        // A filament preset with a column its reference lacks compares with the reference widened by it.
         DynamicPrintConfig        storage;
         const DynamicPrintConfig &reference_config = edited->type == Preset::TYPE_PRINT ?
-            PerHeadProcess::reference_in_layout_of(edited->config, reference->config, storage) :
-            edited->type == Preset::TYPE_FILAMENT ? filament_reference_in_layout_of(edited->config, reference->config, storage) : reference->config;
+            PerHeadProcess::reference_in_layout_of(edited->config, reference->config, storage) : reference->config;
         // Only compares options existing in both configs.
         changed = deep_compare ?
                 deep_diff(edited->config, reference_config) :
@@ -4656,9 +4568,6 @@ std::vector<std::string> PresetCollection::dirty_options(const Preset *edited, c
         for (auto &opt_key : optional_keys)
             if (reference_config.has(opt_key) != edited->config.has(opt_key))
                 changed.emplace_back(opt_key);
-        // An added column is a change of its own, even while its values equal the Standard ones.
-        if (edited->type == Preset::TYPE_FILAMENT && filament_variants(edited->config) != filament_variants(reference->config))
-            changed.emplace_back("filament_extruder_variant");
         std::sort(changed.begin(), changed.end());
         changed.erase(std::unique(changed.begin(), changed.end()), changed.end());
     }
@@ -4850,18 +4759,8 @@ std::vector<std::vector<std::string>> PresetCollection::merge_presets(const std:
             }
             merged.emplace_back(std::move(preset));
         }
-        for (; next != incoming.end() && next->preset->name == merged.back().name; ++ next) {
-            Preset &repeat = *next->preset;
-            duplicates[next->source].emplace_back(repeat.name);
-            // Snapmaker Orca: a Snapmaker preset that repeats the name of another vendor's preset is kept
-            // as well, ahead of it, so a lookup by name finds the Snapmaker preset.
-            if (repeat.vendor != nullptr && repeat.vendor->name == PresetBundle::SM_BUNDLE) {
-                auto it = new_vendors.find(repeat.vendor->id);
-                assert(it != new_vendors.end());
-                repeat.vendor = &it->second;
-                merged.insert(std::prev(merged.end()), std::move(repeat));
-            }
-        }
+        for (; next != incoming.end() && next->preset->name == merged.back().name; ++ next)
+            duplicates[next->source].emplace_back(next->preset->name);
     }
     m_presets = std::move(merged);
     return duplicates;
