@@ -337,8 +337,22 @@ finished:
 	return new_feedrate;
 }
 
+void CoolingBuffer::set_layer_min_fan_speed(size_t layer_id, int speed)
+{
+    std::lock_guard<std::mutex> lock(m_layer_min_fan_speeds_mutex);
+    m_layer_min_fan_speeds[layer_id] = speed;
+}
+
 std::string CoolingBuffer::process_layer(std::string &&gcode, size_t layer_id, bool flush)
 {
+    // SnapOrca: ghost lines minimum fan of this layer, if any.
+    {
+        std::lock_guard<std::mutex> lock(m_layer_min_fan_speeds_mutex);
+        auto it = m_layer_min_fan_speeds.find(layer_id);
+        m_layer_min_fan_speed = it == m_layer_min_fan_speeds.end() ? 0 : it->second;
+        if (it != m_layer_min_fan_speeds.end() && flush)
+            m_layer_min_fan_speeds.erase(it);
+    }
     // Cache the input G-code.
     if (m_gcode.empty())
         m_gcode = std::move(gcode);
@@ -844,6 +858,10 @@ std::string CoolingBuffer::apply_layer_cooldown(
             }
             supp_interface_fan_speed = EXTRUDER_CONFIG(support_material_interface_fan_speed);
             supp_interface_fan_control = supp_interface_fan_speed >= 0;
+
+            // SnapOrca: ghost lines, see GCode::process_layer().
+            if (m_layer_min_fan_speed > 0 && fan_speed_new < float(m_layer_min_fan_speed))
+                fan_speed_new = float(m_layer_min_fan_speed);
 
             overhang_fan_control = overhang_fan_speed > fan_speed_new;
             

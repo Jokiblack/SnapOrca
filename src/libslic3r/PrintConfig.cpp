@@ -8976,6 +8976,18 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionPercent(0));
 
+    def = this->add("ghost_lines_fan", coInt);
+    def->label = L("Minimum fan speed");
+    def->category = L("Quality");
+    def->tooltip = L("Run the part cooling fan at least at this speed on the treated layers, so that the outer wall sets "
+                     "before the internal feature shrinks. The fan is never raised on the layers without cooling "
+                     "(no cooling for the first layers). Set to 0 to leave the fan unchanged.");
+    def->sidetext = "%";
+    def->min = 0;
+    def->max = 100;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionInt(0));
+
     def = this->add("detect_thin_wall", coBool);
     def->label = L("Detect thin walls");
     def->category = L("Strength");

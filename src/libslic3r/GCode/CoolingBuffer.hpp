@@ -4,6 +4,7 @@
 #include "../Point.hpp"
 #include <cstddef>
 #include <map>
+#include <mutex>
 #include <string>
 #include <cfloat>
 #include <vector>
@@ -30,6 +31,9 @@ public:
     void        reset(const Vec3d &position);
     void        set_current_extruder(unsigned int extruder_id, unsigned int nozzle_id) { m_current_extruder = extruder_id; m_current_nozzle = nozzle_id; }
     std::string process_layer(std::string &&gcode, size_t layer_id, bool flush);
+    // SnapOrca: ghost lines, the part cooling fan runs at least at this speed on layer_id. Called by
+    // GCode::process_layer(), which runs in another stage of the export pipeline than process_layer() here.
+    void        set_layer_min_fan_speed(size_t layer_id, int speed);
 
 private:
 	CoolingBuffer& operator=(const CoolingBuffer&) = delete;
@@ -48,6 +52,10 @@ private:
     // Current known fan speed or -1 if not known yet.
     int                         m_fan_speed;
     int                         m_additional_fan_speed;
+    // SnapOrca: see set_layer_min_fan_speed(); m_layer_min_fan_speed is the one of the layer being cooled.
+    std::map<size_t, int>       m_layer_min_fan_speeds;
+    std::mutex                  m_layer_min_fan_speeds_mutex;
+    int                         m_layer_min_fan_speed { 0 };
     // Cached from GCodeWriter.
     // Printing extruder IDs, zero based.
     std::vector<unsigned int>   m_extruder_ids;

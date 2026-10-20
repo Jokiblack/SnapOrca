@@ -1713,6 +1713,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionBool, ghost_lines_outer_wall_first))
     ((ConfigOptionPercent, ghost_lines_outer_wall_flow))
     ((ConfigOptionPercent, ghost_lines_outer_wall_speed))
+    ((ConfigOptionInt, ghost_lines_fan))
     ((ConfigOptionFloatsOrPercentsNullable, top_surface_line_width))
     ((ConfigOptionInt, top_shell_layers))
     ((ConfigOptionFloat, top_shell_thickness))

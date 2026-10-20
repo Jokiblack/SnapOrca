@@ -7579,6 +7579,18 @@ LayerResult GCode::process_layer(
         m_writer.set_process_slot(process_slot_of((int)cur_filament->id()));
     }
     LayerResult   result { {}, layer.id(), false, last_layer };
+    // SnapOrca: ghost lines, minimum fan on the layers where an internal feature joins the outer wall, applied by the
+    // cooling buffer to this layer.
+    if (m_cooling_buffer) {
+        int ghost_lines_fan = 0;
+        for (const LayerToPrint &l : layers)
+            if (l.object_layer != nullptr && l.object_layer->ghost_lines)
+                for (const LayerRegion *layerm : l.object_layer->regions())
+                    if (layerm->region().config().ghost_lines_enable.value)
+                        ghost_lines_fan = std::max(ghost_lines_fan, layerm->region().config().ghost_lines_fan.value);
+        if (ghost_lines_fan > 0)
+            m_cooling_buffer->set_layer_min_fan_speed(layer.id(), ghost_lines_fan);
+    }
     if (layer_tools.extruders.empty())
         // Nothing to extrude.
         return result;
