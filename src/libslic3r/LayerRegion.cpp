@@ -139,7 +139,11 @@ Flow LayerRegion::flow(FlowRole role, double layer_height, bool use_initial_laye
 {
     const PrintConfig          &print_config = m_layer->object()->print()->config();
     ConfigOptionFloatOrPercent config_width;
-    if (use_initial_layer_width && print_config.initial_layer_line_width.value > 0) {
+    // The first layer infill has its own line width; zero keeps following "initial_layer_line_width".
+    const bool infill_role = role == frInfill || role == frSolidInfill || role == frTopSolidInfill;
+    if (use_initial_layer_width && infill_role && print_config.initial_layer_infill_line_width.value > 0) {
+        config_width = print_config.initial_layer_infill_line_width;
+    } else if (use_initial_layer_width && print_config.initial_layer_line_width.value > 0) {
         config_width = print_config.initial_layer_line_width;
     } else if (role == frExternalPerimeter) {
         config_width = m_region->config().outer_wall_line_width;
