@@ -194,6 +194,7 @@ class FillGlobalMonotonicLine : public FillMonotonicLines
 public:
     Fill* clone() const override { return new FillGlobalMonotonicLine(*this); }
     ~FillGlobalMonotonicLine() override = default;
+    void fill_surface_extrusion(const Surface *surface, const FillParams &params, ExtrusionEntitiesPtr &out) override;
 
 protected:
     bool global_monotonic_sweep() const override { return true; }
