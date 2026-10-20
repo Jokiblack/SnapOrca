@@ -3291,7 +3291,7 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
             // The support width at the head of the support and of the interface filament.
             if (object->has_support() || object->has_raft())
                 for (const bool interface_role : {false, true}) {
-                    float        nozzle = 0.f;
+                    double       nozzle = 0.;
                     const size_t head   = support_head(object, interface_role ? object->config().support_interface_filament.value : object->config().support_filament.value,
                                                        interface_role, &nozzle);
                     if (!check_width(object->config(), "support_line_width", head, double(nozzle), layer_height, err_msg))

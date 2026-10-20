@@ -2239,7 +2239,7 @@ SupportGeneratorLayersPtr PrintObjectSupportMaterial::top_contact_layers(
     // check if the sharp tails should be extended higher
     bool detect_first_sharp_tail_only = false;
     // Snapmaker Orca: the width is a column per tool head, read at the interface head whose nozzle resolves it.
-    float        sharp_tail_nozzle = 0.f;
+    double       sharp_tail_nozzle = 0.;
     const size_t sharp_tail_head   = support_head(&object, object.config().support_interface_filament, true, &sharp_tail_nozzle);
     const coordf_t extrusion_width = Flow::width_at(m_object_config->line_width, sharp_tail_head).get_abs_value(sharp_tail_nozzle);
     const coordf_t extrusion_width_scaled = scale_(extrusion_width);

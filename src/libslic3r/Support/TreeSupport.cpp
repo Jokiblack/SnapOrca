@@ -4132,10 +4132,10 @@ void TreeSupport::smooth_nodes()
     // that head's nozzle (the U1 profiles use one); the raw number would take "105%" as 105 mm.
     float max_move = 0.f;
     {
-        float        support_nozzle = 0.f;
+        double       support_nozzle = 0.;
         const size_t head           = support_head(m_object, m_object_config->support_filament, false, &support_nozzle);
-        if (support_nozzle <= 0.f)
-            support_nozzle = float(m_object->print()->config().nozzle_diameter.get_at(head));
+        if (support_nozzle <= 0.)
+            support_nozzle = m_object->print()->config().nozzle_diameter.get_at(head);
         max_move = scale_(m_object_config->get_abs_value_at("support_line_width", head, support_nozzle) / 2);
     }
     // if the branch is very tall, the tip also needs extra wall
