@@ -75,8 +75,9 @@ TEST_CASE("Plugin audit denies app config and token filenames anywhere", "[audit
 
     SECTION("matching is case-insensitive on every platform")
     {
-        CHECK(mgr.is_denied_filename(fs::path("orcaslicer.conf")));
-        CHECK(mgr.is_denied_filename(fs::path("ORCASLICER.CONF")));
+        // SLIC3R_APP_KEY is "Snapmaker_Orca" in this build, so the app config is Snapmaker_Orca.conf.
+        CHECK(mgr.is_denied_filename(fs::path("snapmaker_orca.conf")));
+        CHECK(mgr.is_denied_filename(fs::path("SNAPMAKER_ORCA.CONF")));
         CHECK(mgr.is_denied_filename(fs::path("ORCA_REFRESH_TOKEN.SEC")));
     }
 
