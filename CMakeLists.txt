@@ -608,8 +608,12 @@ if ((NOT MSVC OR IS_CLANG_CL) AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR 
         add_compile_options(-Wno-${w})
     endforeach ()
 
+    # SnapOrca: the Snapmaker sources and their vendored libraries (paho-mqtt-c) were written
+    # without -Werror, so promoting every warning breaks the build on code that is otherwise fine.
+    # Keep warnings visible but only fail on them when SNAPORCA_WERROR is turned on.
+    option(SNAPORCA_WERROR "Treat compiler warnings as errors (OrcaSlicer upstream default)" OFF)
     # GCC is not built in CI, so don't throw errors CI won't catch.
-    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU")
+    if (CMAKE_CXX_COMPILER_ID STREQUAL "GNU" OR NOT SNAPORCA_WERROR)
         add_compile_options(-Werror=return-type)
     else ()
         # Turn everything else into an error. Dependency headers are exempt because the

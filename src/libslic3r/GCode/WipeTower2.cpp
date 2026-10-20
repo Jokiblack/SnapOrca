@@ -3692,7 +3692,7 @@ void WipeTower2::generate_new(std::vector<std::vector<WipeTower::ToolChangeResul
 
                 if (!has_inserted) {
                     if (finish_block_tcr.gcode.empty()) {
-                        finish_block_tcr = finish_block_tcr;
+                        // Nothing to merge: keep finish_block_tcr as it is.
                     }
                     else if (finish_layer_tcr.new_tool != finish_block_tcr.initial_tool && !local_z_layer_result.empty()) {
                         auto nc_iter = std::find_if(local_z_layer_result.begin(), local_z_layer_result.end(),
@@ -3869,7 +3869,7 @@ Polygon WipeTower2::generate_support_wall_new(WipeTowerWriter2& writer,
     const WipeTower::box_coordinates& wt_box, double feedrate, bool first_layer, 
     bool rib_wall, bool extrude_perimeter, bool skip_points)
 {
-    auto get_closet_idx = [this, &writer](Polylines& pls) -> std::pair<int, int> {
+    auto get_closet_idx = [&writer](Polylines& pls) -> std::pair<int, int> {
         Vec2f anchor{ writer.x(), writer.y() };
         int   closestIndex = -1;
         int   closestPl = -1;
