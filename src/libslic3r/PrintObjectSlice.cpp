@@ -440,7 +440,8 @@ static std::vector<std::vector<ExPolygons>> slices_to_regions(
         }
         tbb::parallel_for(
             tbb::blocked_range<size_t>(0, zs_complex.size()),
-            [&slices_by_region, &print_object_regions, &zs_complex, &layer_ranges_regions_to_slices, clip_multipart_objects, spiral_mode = print_config.spiral_mode.value, &throw_on_cancel_callback]
+            [&slices_by_region, &print_object_regions, &zs_complex, &layer_ranges_regions_to_slices, clip_multipart_objects, spiral_mode = print_config.spiral_mode.value,
+             order_independent_carving = print_config.enable_order_independent_overlap_carving.value, &throw_on_cancel_callback]
                 (const tbb::blocked_range<size_t> &range) {
                 float z              = zs_complex[range.begin()].second;
                 auto  it_layer_range = layer_range_first(print_object_regions.layer_ranges, z);
@@ -528,7 +529,7 @@ static std::vector<std::vector<ExPolygons>> slices_to_regions(
                                 // Clip every non-zero region preceding it.
                                 // Pre-pass: accumulate per-layer XY area per print_object_region_id
                                 std::unordered_map<int, double> region_area_map;
-                                for (int i = 0; i < int(temp_slices.size()); ++i) {
+                                for (int i = 0; !order_independent_carving && i < int(temp_slices.size()); ++i) {
                                     const RegionSlice &ts = temp_slices[i];
                                     if (ts.region_id >= 0 && !ts.expolygons.empty())
                                         region_area_map[ts.region_id] += area(ts.expolygons);
@@ -541,6 +542,17 @@ static std::vector<std::vector<ExPolygons>> slices_to_regions(
                                             if (region.model_volume->is_negative_volume()) {
                                                 // Negative volume: always subtract with diff_ex
                                                 temp_slices[idx_region2].expolygons = diff_ex(temp_slices[idx_region2].expolygons, temp_slices[idx_region].expolygons);
+                                            } else if (order_independent_carving) {
+                                                // BBS: the part with the smaller bounding-box volume carves the larger one, whatever
+                                                // their order, with the same decision on every layer (unlike the per-layer area below).
+                                                const auto bbox_volume = [](const PrintObjectRegions::BoundingBox &b) {
+                                                    const auto sz = b.sizes();
+                                                    return double(sz.x()) * double(sz.y()) * double(sz.z());
+                                                };
+                                                if (bbox_volume(*region.bbox) <= bbox_volume(*region2.bbox))
+                                                    temp_slices[idx_region2].expolygons = diff_ex(temp_slices[idx_region2].expolygons, temp_slices[idx_region].expolygons);
+                                                else
+                                                    temp_slices[idx_region].expolygons = diff_ex(temp_slices[idx_region].expolygons, temp_slices[idx_region2].expolygons);
                                             } else if (region.region && region2.region && region.region->print_object_region_id() != region2.region->print_object_region_id()) {
                                                 // Different print regions: smaller per-layer XY area carves larger
                                                 int pid_current = region.region->print_object_region_id();

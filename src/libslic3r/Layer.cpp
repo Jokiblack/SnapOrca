@@ -252,6 +252,15 @@ bool Layer::is_perimeter_compatible(const Print& print, const PrintRegion& a, co
 		&& config.small_perimeter_speed.get_at(wall_head) == other_config.small_perimeter_speed.get_at(wall_head)
 		&& config.small_support_perimeter_speed.get_at(wall_head) == other_config.small_support_perimeter_speed.get_at(wall_head)
         && config.gap_infill_speed.get_at(wall_head) == other_config.gap_infill_speed.get_at(wall_head)
+        // Overhang walls take bridge_speed or the overhang speeds of the region that receives the
+        // merged perimeters, so regions differing only in them must not be merged (BBS 2d6f964e2).
+        && config.bridge_speed.get_at(wall_head) == other_config.bridge_speed.get_at(wall_head)
+        && config.enable_overhang_speed.get_at(wall_head) == other_config.enable_overhang_speed.get_at(wall_head)
+        && config.slowdown_for_curled_perimeters.get_at(wall_head) == other_config.slowdown_for_curled_perimeters.get_at(wall_head)
+        && config.overhang_1_4_speed.get_at(wall_head) == other_config.overhang_1_4_speed.get_at(wall_head)
+        && config.overhang_2_4_speed.get_at(wall_head) == other_config.overhang_2_4_speed.get_at(wall_head)
+        && config.overhang_3_4_speed.get_at(wall_head) == other_config.overhang_3_4_speed.get_at(wall_head)
+        && config.overhang_4_4_speed.get_at(wall_head) == other_config.overhang_4_4_speed.get_at(wall_head)
         && config.filter_out_gap_fill.value == other_config.filter_out_gap_fill.value
 		&& config.detect_overhang_wall                   == other_config.detect_overhang_wall
 		&& config.unsupported_wall_last                  == other_config.unsupported_wall_last

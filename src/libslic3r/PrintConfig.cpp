@@ -5016,6 +5016,14 @@ void PrintConfigDef::init_fff_params()
     def->mode    = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def          = this->add("enable_order_independent_overlap_carving", coBool);
+    def->label   = L("Order-independent overlap carving");
+    def->tooltip = L("When enabled, overlapping model parts are carved by bounding-box size: the smaller part always "
+                     "carves the larger one, with the same result on every layer, so a small part embedded in a larger "
+                     "one is not removed. When disabled, the parts are compared by their area in each layer.");
+    def->mode    = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def           = this->add("wrapping_detection_layers", coInt);
     def->label    = L("Clumping detection layers");
     def->tooltip  = L("Clumping detection layers.");

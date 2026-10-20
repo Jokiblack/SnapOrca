@@ -912,6 +912,8 @@ bool Print::invalidate_state_by_config_options(const ConfigOptionResolver & /* n
             || opt_key == "periodic_modifier_skip_layers"
             || opt_key == "periodic_modifier_apply_layers"
             || opt_key == "modifier_ignore_infill"
+            // Changes how overlapping model parts carve each other in slices_to_regions().
+            || opt_key == "enable_order_independent_overlap_carving"
             // Build plate tilt changes slicing plane orientation.
             || opt_key == "build_plate_tilt_x"
             || opt_key == "build_plate_tilt_y"
