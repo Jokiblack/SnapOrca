@@ -655,6 +655,17 @@ const char* flow_support_key(ConfigFlowDomain domain);
 const std::vector<std::string>& filament_flow_variant_options();
 bool is_filament_flow_variant_option(const std::string &key);
 
+// The flow modes a filament preset declares ("filament_flow_support"); {standard} without the key.
+std::vector<std::string> filament_flow_modes(const ConfigBase &config);
+// Whether a filament preset declares the flow mode `mode` (FLOW_MODE_HIGH_FLOW, say).
+bool filament_declares_flow_mode(const ConfigBase &config, const std::string &mode);
+// Snapmaker Orca: gives a filament preset the values of the flow mode `mode`: the mode is appended
+// to "filament_flow_support" and every present key of filament_flow_variant_options() gets one
+// more value, a copy of its first (Standard) one. The layout is the one of the Snapmaker presets
+// that ship High Flow values. False, with `config` untouched, when the mode is already declared or
+// `mode` is empty.
+bool filament_add_flow_mode(DynamicPrintConfig &config, const std::string &mode);
+
 // Process / printer options whose vector values are stored per declared flow variant.
 const std::vector<std::string>& process_flow_variant_options();
 bool is_process_flow_variant_option(const std::string &key);

@@ -20,6 +20,7 @@
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
+#include <catch2/matchers/catch_matchers_vector.hpp>
 #include <catch2/matchers/catch_matchers_string.hpp>
 #include <catch2/catch_message.hpp>
 #include <catch2/generators/catch_generators.hpp>
@@ -8450,4 +8451,56 @@ TEST_CASE("An empty choice list in a G-code's settings keeps the value it had be
 
     CHECK(config.opt_serialize("nozzle_volume_type") == "High Flow");
     CHECK(config.option<ConfigOptionStrings>("filament_multi_colour")->values.empty());
+}
+
+// Snapmaker Orca: a user filament preset with High Flow values (filament_flow_support of two modes,
+// the layout of the Snapmaker presets and of "Create High Flow values") is loaded with both columns.
+TEST_CASE("A user filament preset keeps its High Flow values and the parent's for what it did not write", "[Preset][Bundle][FilamentFlow]")
+{
+    const char *parent_name = "Snapmaker PLA Matte @U1"; // ships Standard 22 / High Flow 40 mm3/s, 215 / 220 C
+    PresetBundle bundle;
+    bundle.load_vendor_configs_from_json(PROFILES_DIR, "Snapmaker", PresetBundle::LoadSystem,
+                                         ForwardCompatibilitySubstitutionRule::EnableSilent, nullptr, /*allow_cache=*/false);
+    const Preset *parent = bundle.filaments.find_preset(parent_name, false, true);
+    REQUIRE(parent != nullptr);
+    REQUIRE(parent->config.option<ConfigOptionInts>("nozzle_temperature")->values == std::vector<int>({215, 220}));
+
+    const fs::path user_dir = fs::temp_directory_path() / fs::unique_path("high-flow-user-%%%%-%%%%");
+    fs::create_directories(user_dir / "filament");
+    {
+        // What Preset::save writes: the changed keys in full, "nil" where a nullable column equals the parent's.
+        std::ofstream file((user_dir / "filament" / "My Matte.json").string());
+        REQUIRE(file.good());
+        file << "{\n"
+                "    \"type\": \"filament\",\n"
+                "    \"name\": \"My Matte\",\n"
+                "    \"from\": \"User\",\n"
+                "    \"inherits\": \"" << parent_name << "\",\n"
+                "    \"version\": \"2.5.0\",\n"
+                "    \"filament_settings_id\": [\"My Matte\"],\n"
+                "    \"filament_extruder_variant\": [\"Direct Drive Standard\"],\n"
+                "    \"filament_flow_support\": [\"standard\", \"high_flow\"],\n"
+                "    \"filament_max_volumetric_speed\": [\"22\", \"30\"],\n"
+                "    \"filament_retraction_length\": [\"nil\", \"0.9\"]\n"
+                "}\n";
+    }
+    PresetsConfigSubstitutions substitutions;
+    bundle.filaments.load_presets(user_dir.string(), "filament", substitutions, ForwardCompatibilitySubstitutionRule::Enable, nullptr, PresetOrigin(), true);
+    fs::remove_all(user_dir);
+
+    const Preset *preset = bundle.filaments.find_preset("My Matte", false);
+    REQUIRE(preset != nullptr);
+    CHECK(preset->config.option<ConfigOptionStrings>("filament_flow_support")->values == std::vector<std::string>({"standard", "high_flow"}));
+    // The written key keeps the user's High Flow value.
+    CHECK_THAT(preset->config.option<ConfigOptionFloats>("filament_max_volumetric_speed")->values, Catch::Matchers::Approx(std::vector<double>({22., 30.})));
+    // A key the file does not write follows the parent in both columns.
+    CHECK(preset->config.option<ConfigOptionInts>("nozzle_temperature")->values == std::vector<int>({215, 220}));
+    // A "nil" column of a nullable key follows the parent; the written column is the user's.
+    const auto *retraction = preset->config.option<ConfigOptionFloatsNullable>("filament_retraction_length");
+    const auto *parent_retraction = parent->config.option<ConfigOptionFloatsNullable>("filament_retraction_length");
+    REQUIRE(retraction != nullptr);
+    REQUIRE(retraction->values.size() == 2);
+    CHECK(retraction->is_nil(0) == parent_retraction->is_nil(0));
+    CHECK_FALSE(retraction->is_nil(1));
+    CHECK_THAT(retraction->values[1], Catch::Matchers::WithinAbs(0.9, 1e-9));
 }

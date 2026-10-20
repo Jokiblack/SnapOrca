@@ -380,6 +380,10 @@ void extend_default_config_length(DynamicPrintConfig& config, const bool set_nil
 
     if(config.has("filament_extruder_variant"))
         filament_variant_length = config.option<ConfigOptionStrings>("filament_extruder_variant")->size();
+    // Snapmaker: a filament preset with several flow modes (filament_flow_support) keeps one value
+    // per mode in its flow-variant keys; sized by the extruder variant list alone they would be cut
+    // to the Standard value, and a user preset would lose its High Flow values on every load.
+    const int filament_flow_length = std::max(filament_variant_length, int(filament_flow_modes(config).size()));
     if(config.has("print_extruder_variant"))
         process_variant_length = config.option<ConfigOptionStrings>("print_extruder_variant")->size();
     if(config.has("printer_extruder_variant"))  // Use existing variant list if specified, so BBL's multi-variant profiles still works
@@ -416,7 +420,7 @@ void extend_default_config_length(DynamicPrintConfig& config, const bool set_nil
             continue;
         switch (iter->second) {
         case 0: replace_nil_and_resize(key, process_variant_length); break;
-        case 1: replace_nil_and_resize(key, filament_variant_length); break;
+        case 1: replace_nil_and_resize(key, is_filament_flow_variant_option(key) ? filament_flow_length : filament_variant_length); break;
         case 2: replace_nil_and_resize(key, machine_variant_length); break;
         case 3: replace_nil_and_resize(key, machine_variant_length * 2); break;
         }

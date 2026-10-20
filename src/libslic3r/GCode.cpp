@@ -5290,7 +5290,10 @@ bool GCode::uses_process_flow_variants() const
 size_t GCode::filament_flow_index(int filament_id) const
 {
     // Filaments that declare several flow variants have their flow-variant options expanded per
-    // variant (filament_flow_step_size); the upstream extruder variants never coexist with them.
+    // variant (filament_flow_step_size). A config narrowed by Print::apply
+    // (update_values_to_printer_extruders_for_multiple_filaments) holds one value per filament and
+    // every step as 1, so it is read through get_filament_config_index like the other filament keys;
+    // the segment lookup serves a config that was not narrowed.
     const std::vector<int> &step_sizes = m_config.filament_flow_step_size.values;
     if (std::any_of(step_sizes.begin(), step_sizes.end(), [](int step) { return step > 1; }))
         return get_config_idx(m_config, ConfigFlowDomain::Filament, (unsigned int) std::max(0, filament_id));

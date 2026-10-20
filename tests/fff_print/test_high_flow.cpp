@@ -1224,3 +1224,66 @@ TEST_CASE("A filament without High Flow values on a High Flow extruder prints it
     CHECK(tools[0].print_temperature == 220);
     CHECK(tools[1].print_temperature == 255);
 }
+
+// ---------------------------------------------------------------------------------------------
+// The Snapmaker flow modes of a filament (filament_flow_support: Standard and High Flow values in
+// the flow-variant keys, joined per filament by PresetBundle::full_fff_config): the tool head's
+// filament prints the values of the mode the project gives the filament (filament_volume_type),
+// and the filaments after a two-mode filament keep their own values.
+// ---------------------------------------------------------------------------------------------
+
+TEST_CASE("A filament with Snapmaker High Flow values prints them on the High Flow tool head and the next filament keeps its own", "[HighFlow][FlowSupport]")
+{
+    // Snapmaker PLA Matte @U1 ships two modes: 215 / 220 C, 22 / 40 mm3/s, flow ratio 1 / 0.99.
+    // Snapmaker PLA Basic @U1 ships one: 220 C, 15 mm3/s, flow ratio 0.98.
+    const char   *matte = "Snapmaker PLA Matte @U1";
+    const char   *basic = "Snapmaker PLA Basic @U1";
+    const U1Plate plate{U1_MACHINE, U1_PROCESS, {matte, matte, basic, basic}};
+    auto          bundle = std::make_unique<PresetBundle>();
+    DynamicPrintConfig config = u1_plate_config(*bundle, plate, {nvtStandard, nvtHighFlow, nvtStandard, nvtStandard});
+    REQUIRE(config.opt_bool("use_relative_e_distances"));
+    {
+        const Preset *preset = bundle->filaments.find_preset(matte, false, true);
+        REQUIRE(preset != nullptr);
+        REQUIRE(filament_flow_modes(preset->config) == std::vector<std::string>{FLOW_MODE_STANDARD, FLOW_MODE_HIGH_FLOW});
+        REQUIRE(preset->config.option<ConfigOptionInts>("nozzle_temperature")->values == std::vector<int>{215, 220});
+        REQUIRE(preset->config.option<ConfigOptionFloats>("filament_max_volumetric_speed")->values == std::vector<double>{22., 40.});
+        const Preset *one_mode = bundle->filaments.find_preset(basic, false, true);
+        REQUIRE(one_mode != nullptr);
+        REQUIRE(filament_flow_modes(one_mode->config) == std::vector<std::string>{FLOW_MODE_STANDARD});
+        REQUIRE(one_mode->config.option<ConfigOptionInts>("nozzle_temperature")->values == std::vector<int>{220});
+        REQUIRE(one_mode->config.option<ConfigOptionFloats>("filament_max_volumetric_speed")->values == std::vector<double>{15.});
+    }
+    // The joined project config: one segment per filament.
+    REQUIRE(config.option<ConfigOptionInts>("filament_flow_step_size")->values == std::vector<int>{2, 2, 1, 1});
+    REQUIRE(config.option<ConfigOptionInts>("nozzle_temperature")->values == std::vector<int>{215, 220, 215, 220, 220, 220});
+    // The mode of every filament, as the grouping of the application gives it: filament 2 prints High Flow.
+    config.option<ConfigOptionEnumsGeneric>("filament_volume_type", true)->values = {fvtStandard, fvtHighFlow, fvtStandard, fvtStandard};
+
+    Print print;
+    Model model;
+    init_two_head_print(print, model, config, 0.1f); // 2 mm = 10 layers of 0.2 mm
+    {
+        const StringObjectException err = print.validate();
+        INFO(err.string);
+        REQUIRE(err.string.empty());
+    }
+    // Print::apply resolved one value per filament: the mode's value of the two-mode filaments, the
+    // own value of the one-mode filaments after them.
+    const PrintConfig &resolved = print.config();
+    CHECK(resolved.nozzle_temperature.values == std::vector<int>{215, 220, 220, 220});
+    CHECK_THAT(resolved.filament_max_volumetric_speed.values, Catch::Matchers::Approx(std::vector<double>{22., 40., 15., 15.}));
+    CHECK_THAT(resolved.filament_flow_ratio.values, Catch::Matchers::Approx(std::vector<double>{1., 0.99, 0.98, 0.98}));
+
+    const std::string               gcode = Slic3r::Test::gcode(print);
+    std::map<int, ShippedToolFacts> facts = shipped_tool_facts(gcode, config.option<ConfigOptionFloats>("filament_diameter")->get_at(0));
+    const ShippedToolFacts         &standard  = facts[0];
+    const ShippedToolFacts         &high_flow = facts[1];
+    CHECK(standard.print_temperature == 215);
+    CHECK(high_flow.print_temperature == 220);
+    // The 0.20mm Standard process asks for more than either ceiling; each tool head stops at the one of its mode.
+    REQUIRE(standard.max_wall_flow > 0.);
+    CHECK(standard.max_wall_flow < 22. * 1.05);
+    CHECK(high_flow.max_wall_flow > 22. * 1.2);
+    CHECK(high_flow.max_wall_flow < 40. * 1.05);
+}

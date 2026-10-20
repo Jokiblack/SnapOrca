@@ -10646,6 +10646,40 @@ bool is_filament_flow_variant_option(const std::string &key)
     return std::find(options.begin(), options.end(), key) != options.end();
 }
 
+std::vector<std::string> filament_flow_modes(const ConfigBase &config)
+{
+    const ConfigOptionStrings *support = strings_option(config, flow_support_key(ConfigFlowDomain::Filament));
+    if (support == nullptr || support->values.empty())
+        return { FLOW_MODE_STANDARD };
+    return support->values;
+}
+
+bool filament_declares_flow_mode(const ConfigBase &config, const std::string &mode)
+{
+    const std::vector<std::string> modes = filament_flow_modes(config);
+    return std::find(modes.begin(), modes.end(), mode) != modes.end();
+}
+
+bool filament_add_flow_mode(DynamicPrintConfig &config, const std::string &mode)
+{
+    if (mode.empty() || filament_declares_flow_mode(config, mode))
+        return false;
+    std::vector<std::string> modes = filament_flow_modes(config);
+    modes.emplace_back(mode);
+    config.option<ConfigOptionStrings>(flow_support_key(ConfigFlowDomain::Filament), true)->values = modes;
+    for (const std::string &key : filament_flow_variant_options()) {
+        ConfigOption *option = config.option(key, false);
+        if (option == nullptr || option->is_scalar())
+            continue;
+        auto *values = static_cast<ConfigOptionVectorBase *>(option);
+        // ConfigOptionVector::resize() pads a non-empty vector with its first value; the new
+        // column starts as a copy of the Standard one (an empty vector has no column to copy).
+        if (!values->empty() && values->size() < modes.size())
+            values->resize(modes.size(), option);
+    }
+    return true;
+}
+
 const std::vector<std::string>& process_flow_variant_options()
 {
     // Keys whose values are arrayed per declared flow variant (standard / high_flow / ...).
@@ -13188,6 +13222,59 @@ static void gather_option_values(const char *caller, const std::string &key, Opt
     opt->values = std::move(new_values);
 }
 
+// Snapmaker: the flow-variant keys of a joined filament config (filament_flow_variant_options())
+// hold one segment per filament, one value per flow mode the filament declares
+// (filament_flow_step_size, PresetBundle::full_fff_config). The extruder-variant indices of the
+// narrowing below describe filament_extruder_variant, one column per filament, and would read a
+// segmented key at the wrong offsets (filament 2 at filament 1's High Flow value). These helpers
+// give the index of filament `f`'s value for a flow mode in that layout; the narrowing then leaves
+// one value per filament and marks every segment as one wide.
+static bool filament_flow_segments_present(const DynamicPrintConfig &config, size_t filament_count, size_t &segment_total)
+{
+    segment_total = 0;
+    const auto *steps = config.option<ConfigOptionInts>("filament_flow_step_size");
+    if (steps == nullptr || steps->values.size() != filament_count)
+        return false;
+    bool wide = false;
+    for (int step : steps->values) {
+        segment_total += size_t(std::max(1, step));
+        wide |= step > 1;
+    }
+    return wide;
+}
+
+static int filament_flow_segment_index(const DynamicPrintConfig &config, size_t filament_id, const std::string &mode)
+{
+    const auto *steps   = config.option<ConfigOptionInts>("filament_flow_step_size");
+    const auto *support = config.option<ConfigOptionStrings>("filament_flow_support");
+    size_t start = 0;
+    for (size_t i = 0; i < filament_id && i < steps->values.size(); ++i)
+        start += size_t(std::max(1, steps->values[i]));
+    const size_t size = filament_id < steps->values.size() ? size_t(std::max(1, steps->values[filament_id])) : 1;
+    if (support != nullptr)
+        for (size_t pos = 0; pos < size && start + pos < support->values.size(); ++pos)
+            if (support->values[start + pos] == mode)
+                return int(start + pos);
+    // A mode the filament does not declare: its Standard (first) value.
+    return int(start);
+}
+
+static void filament_flow_segments_resolved(DynamicPrintConfig &config, size_t filament_count)
+{
+    config.option<ConfigOptionInts>("filament_flow_step_size", true)->values.assign(filament_count, 1);
+}
+
+// The gather of a flow-variant key by the segment indices when the key is laid out in segments;
+// false when the key is not, and the caller's indices apply.
+template<class OptType, class ValueType>
+static bool gather_flow_segment_values(const char *caller, const std::string &key, OptType *opt, const std::vector<int> &segment_indices, size_t segment_total)
+{
+    if (segment_indices.empty() || !is_filament_flow_variant_option(key) || opt == nullptr || opt->values.size() != segment_total)
+        return false;
+    gather_option_values<OptType, ValueType>(caller, key, opt, segment_indices);
+    return true;
+}
+
 void DynamicPrintConfig::update_values_to_printer_extruders_for_multiple_filaments(DynamicPrintConfig& printer_config, int extruder_count, int extruder_nozzle_volume_count, std::set<std::string>& key_set, std::string id_name, std::string variant_name)
 {
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(", Line %1%: extruder_count %2%, extruder_nozzle_volume_count %3%")%__LINE__ %extruder_count %extruder_nozzle_volume_count;
@@ -13260,6 +13347,13 @@ void DynamicPrintConfig::update_values_to_printer_extruders_for_multiple_filamen
             BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(", Line %1%: can not find config define")%__LINE__;
             return;
         }
+        // Snapmaker: the segment index of every filament's flow mode (filament_volume_type, read by
+        // get_config_idx) for the flow-variant keys laid out in segments; empty without segments.
+        size_t           segment_total = 0;
+        std::vector<int> segment_index;
+        if (filament_flow_segments_present(*this, filament_count, segment_total))
+            for (size_t f_index = 0; f_index < filament_count; ++f_index)
+                segment_index.emplace_back(int(get_config_idx(*this, ConfigFlowDomain::Filament, unsigned(f_index))));
         bool has_id_key = !id_name.empty() && key_set.count(id_name) > 0;
         for (auto& key: key_set)
         {
@@ -13275,18 +13369,28 @@ void DynamicPrintConfig::update_values_to_printer_extruders_for_multiple_filamen
                 vec->resize(filament_count, optdef->default_value.get());
 
             switch (optdef->type) {
-                case coStrings:          gather_option_values<ConfigOptionStrings, std::string>(__FUNCTION__, key, this->option<ConfigOptionStrings>(key), variant_index); break;
-                case coInts:             gather_option_values<ConfigOptionInts, int>(__FUNCTION__, key, this->option<ConfigOptionInts>(key), variant_index); break;
-                case coFloats:           gather_option_values<ConfigOptionFloats, double>(__FUNCTION__, key, this->option<ConfigOptionFloats>(key), variant_index); break;
-                case coPercents:         gather_option_values<ConfigOptionPercents, double>(__FUNCTION__, key, this->option<ConfigOptionPercents>(key), variant_index); break;
-                case coFloatsOrPercents: gather_option_values<ConfigOptionFloatsOrPercents, FloatOrPercent>(__FUNCTION__, key, this->option<ConfigOptionFloatsOrPercents>(key), variant_index); break;
-                case coBools:            gather_option_values<ConfigOptionBools, unsigned char>(__FUNCTION__, key, this->option<ConfigOptionBools>(key), variant_index); break;
-                case coEnums:            gather_option_values<ConfigOptionEnumsGeneric, int>(__FUNCTION__, key, this->option<ConfigOptionEnumsGeneric>(key), variant_index); break;
+                case coStrings:          if (!gather_flow_segment_values<ConfigOptionStrings, std::string>(__FUNCTION__, key, this->option<ConfigOptionStrings>(key), segment_index, segment_total))
+                                             gather_option_values<ConfigOptionStrings, std::string>(__FUNCTION__, key, this->option<ConfigOptionStrings>(key), variant_index); break;
+                case coInts:             if (!gather_flow_segment_values<ConfigOptionInts, int>(__FUNCTION__, key, this->option<ConfigOptionInts>(key), segment_index, segment_total))
+                                             gather_option_values<ConfigOptionInts, int>(__FUNCTION__, key, this->option<ConfigOptionInts>(key), variant_index); break;
+                case coFloats:           if (!gather_flow_segment_values<ConfigOptionFloats, double>(__FUNCTION__, key, this->option<ConfigOptionFloats>(key), segment_index, segment_total))
+                                             gather_option_values<ConfigOptionFloats, double>(__FUNCTION__, key, this->option<ConfigOptionFloats>(key), variant_index); break;
+                case coPercents:         if (!gather_flow_segment_values<ConfigOptionPercents, double>(__FUNCTION__, key, this->option<ConfigOptionPercents>(key), segment_index, segment_total))
+                                             gather_option_values<ConfigOptionPercents, double>(__FUNCTION__, key, this->option<ConfigOptionPercents>(key), variant_index); break;
+                case coFloatsOrPercents: if (!gather_flow_segment_values<ConfigOptionFloatsOrPercents, FloatOrPercent>(__FUNCTION__, key, this->option<ConfigOptionFloatsOrPercents>(key), segment_index, segment_total))
+                                             gather_option_values<ConfigOptionFloatsOrPercents, FloatOrPercent>(__FUNCTION__, key, this->option<ConfigOptionFloatsOrPercents>(key), variant_index); break;
+                case coBools:            if (!gather_flow_segment_values<ConfigOptionBools, unsigned char>(__FUNCTION__, key, this->option<ConfigOptionBools>(key), segment_index, segment_total))
+                                             gather_option_values<ConfigOptionBools, unsigned char>(__FUNCTION__, key, this->option<ConfigOptionBools>(key), variant_index); break;
+                case coEnums:            if (!gather_flow_segment_values<ConfigOptionEnumsGeneric, int>(__FUNCTION__, key, this->option<ConfigOptionEnumsGeneric>(key), segment_index, segment_total))
+                                             gather_option_values<ConfigOptionEnumsGeneric, int>(__FUNCTION__, key, this->option<ConfigOptionEnumsGeneric>(key), variant_index); break;
                 default:
                     BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(", Line %1%: unsupported option type for %2%")%__LINE__%key;
                     break;
             }
         }
+        // Every flow-variant key now holds one value per filament: one segment of one value each.
+        if (!segment_index.empty())
+            filament_flow_segments_resolved(*this, filament_count);
         // Orca: also require a non-empty id list; get_at on an empty vector is undefined.
         if (has_id_key && opt_ids && !opt_ids->values.empty()) {
             // remap the id list itself last: the lookups above still need the original ids
@@ -13336,8 +13440,15 @@ void DynamicPrintConfig::update_filament_config_values_for_multiple_extruders(Dy
         slot_machine_indices->clear();
         slot_machine_indices->reserve(filament_count * 2);
     }
+    // Snapmaker: the flow-variant keys laid out in segments are read per slot at the value of the
+    // slot's flow type (filament_flow_segment_index).
+    size_t           segment_total = 0;
+    const bool       segments      = filament_flow_segments_present(*this, filament_count, segment_total);
+    std::vector<int> slot_segment_indices;
 
     auto resolve_slot = [&](int f_index, ExtruderType extruder_type, NozzleVolumeType nozzle_volume_type, int extruder_id_1based) {
+        if (segments)
+            slot_segment_indices.push_back(filament_flow_segment_index(*this, size_t(f_index), to_string(FilamentVolumeType(nozzle_volume_type))));
         int param_index = get_index_for_extruder(f_index + 1, id_name, extruder_type, nozzle_volume_type, variant_name);
         if (param_index < 0) {
             BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << boost::format(", Line %1%: could not found extruder_type %2%, nozzle_volume_type %3%, filament_index %4%, extruder index %5%")
@@ -13394,18 +13505,27 @@ void DynamicPrintConfig::update_filament_config_values_for_multiple_extruders(Dy
             continue;
         }
         switch (optdef->type) {
-            case coStrings:          gather_option_values<ConfigOptionStrings, std::string>(__FUNCTION__, key, this->option<ConfigOptionStrings>(key), slot_param_indices); break;
-            case coInts:             gather_option_values<ConfigOptionInts, int>(__FUNCTION__, key, this->option<ConfigOptionInts>(key), slot_param_indices); break;
-            case coFloats:           gather_option_values<ConfigOptionFloats, double>(__FUNCTION__, key, this->option<ConfigOptionFloats>(key), slot_param_indices); break;
-            case coPercents:         gather_option_values<ConfigOptionPercents, double>(__FUNCTION__, key, this->option<ConfigOptionPercents>(key), slot_param_indices); break;
-            case coFloatsOrPercents: gather_option_values<ConfigOptionFloatsOrPercents, FloatOrPercent>(__FUNCTION__, key, this->option<ConfigOptionFloatsOrPercents>(key), slot_param_indices); break;
-            case coBools:            gather_option_values<ConfigOptionBools, unsigned char>(__FUNCTION__, key, this->option<ConfigOptionBools>(key), slot_param_indices); break;
-            case coEnums:            gather_option_values<ConfigOptionEnumsGeneric, int>(__FUNCTION__, key, this->option<ConfigOptionEnumsGeneric>(key), slot_param_indices); break;
+            case coStrings:          if (!gather_flow_segment_values<ConfigOptionStrings, std::string>(__FUNCTION__, key, this->option<ConfigOptionStrings>(key), slot_segment_indices, segment_total))
+                                         gather_option_values<ConfigOptionStrings, std::string>(__FUNCTION__, key, this->option<ConfigOptionStrings>(key), slot_param_indices); break;
+            case coInts:             if (!gather_flow_segment_values<ConfigOptionInts, int>(__FUNCTION__, key, this->option<ConfigOptionInts>(key), slot_segment_indices, segment_total))
+                                         gather_option_values<ConfigOptionInts, int>(__FUNCTION__, key, this->option<ConfigOptionInts>(key), slot_param_indices); break;
+            case coFloats:           if (!gather_flow_segment_values<ConfigOptionFloats, double>(__FUNCTION__, key, this->option<ConfigOptionFloats>(key), slot_segment_indices, segment_total))
+                                         gather_option_values<ConfigOptionFloats, double>(__FUNCTION__, key, this->option<ConfigOptionFloats>(key), slot_param_indices); break;
+            case coPercents:         if (!gather_flow_segment_values<ConfigOptionPercents, double>(__FUNCTION__, key, this->option<ConfigOptionPercents>(key), slot_segment_indices, segment_total))
+                                         gather_option_values<ConfigOptionPercents, double>(__FUNCTION__, key, this->option<ConfigOptionPercents>(key), slot_param_indices); break;
+            case coFloatsOrPercents: if (!gather_flow_segment_values<ConfigOptionFloatsOrPercents, FloatOrPercent>(__FUNCTION__, key, this->option<ConfigOptionFloatsOrPercents>(key), slot_segment_indices, segment_total))
+                                         gather_option_values<ConfigOptionFloatsOrPercents, FloatOrPercent>(__FUNCTION__, key, this->option<ConfigOptionFloatsOrPercents>(key), slot_param_indices); break;
+            case coBools:            if (!gather_flow_segment_values<ConfigOptionBools, unsigned char>(__FUNCTION__, key, this->option<ConfigOptionBools>(key), slot_segment_indices, segment_total))
+                                         gather_option_values<ConfigOptionBools, unsigned char>(__FUNCTION__, key, this->option<ConfigOptionBools>(key), slot_param_indices); break;
+            case coEnums:            if (!gather_flow_segment_values<ConfigOptionEnumsGeneric, int>(__FUNCTION__, key, this->option<ConfigOptionEnumsGeneric>(key), slot_segment_indices, segment_total))
+                                         gather_option_values<ConfigOptionEnumsGeneric, int>(__FUNCTION__, key, this->option<ConfigOptionEnumsGeneric>(key), slot_param_indices); break;
             default:
                 BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(", Line %1%: unsupported option type for %2%")%__LINE__%key;
                 break;
         }
     }
+    if (segments)
+        filament_flow_segments_resolved(*this, filament_count);
     // Orca: also require a non-empty id list; get_at on an empty vector is undefined.
     if (has_id_key && opt_ids && !opt_ids->values.empty()) {
         // remap the id list itself last: the slot resolution above still needs the original ids
@@ -13692,7 +13812,15 @@ void DynamicPrintConfig::update_diff_values_to_child_config(DynamicPrintConfig& 
                 // Rather than throw (which is caught upstream and DELETES the user preset file), fall back to the
                 // child's explicit value, which is authoritative for its own extruder/variant layout.
                 if (opt_vec_src->size() != variant_index.size() * size_t(stride)) {
-                    opt_src->set(opt_target);
+                    // Snapmaker: a filament flow-variant key holds one value per flow mode of the preset
+                    // (filament_flow_support), not per extruder variant. The user file wrote "nil" for a
+                    // column equal to the parent's: that column keeps the parent's value.
+                    if (is_filament_flow_variant_option(opt) && opt_vec_dest->size() == opt_vec_src->size() && opt_target->nullable()) {
+                        for (size_t column = 0; column < opt_vec_src->size(); ++column)
+                            if (!opt_vec_dest->is_nil(column))
+                                opt_vec_src->set_at(opt_vec_dest, column, column);
+                    } else
+                        opt_src->set(opt_target);
                 }
                 else
                     opt_vec_src->set_only_diff(opt_vec_dest, variant_index, stride);

@@ -61,6 +61,7 @@ class SwitchButton;
 class MultiSwitchButton;
 
 class ComboBox;
+class Button;
 
 namespace Slic3r {
 
@@ -317,6 +318,9 @@ protected:
         ConfigFlowDomain domain { ConfigFlowDomain::Process };
         std::vector<PageShp> pages;
         SegmentedToggle* selector { nullptr };
+        // Snapmaker Orca, Filament tab: "Create High Flow values" beside the selector, shown while the
+        // preset has no High Flow mode and an extruder of the project is set to High Flow.
+        ::Button* create_button { nullptr };
         std::vector<std::string> modes;
         std::string selected_mode;
         std::function<const std::vector<std::string>&()> options;
@@ -601,6 +605,13 @@ protected:
     void refresh_flow_variant_view();
     void update_flow_variant_view_visibility();
     size_t flow_variant_view_index() const;
+    // Snapmaker Orca, Filament tab: the edited filament may be given High Flow values here: it
+    // declares no High Flow mode, an extruder of the project is set to High Flow and the material
+    // may be printed with a High Flow nozzle (HighFlowCompat).
+    bool flow_mode_creation_offered() const;
+    // Adds the High Flow mode to the edited filament (filament_add_flow_mode: a copy of the Standard
+    // values) and shows its column.
+    void create_high_flow_values();
 
 	void			create_line_with_widget(ConfigOptionsGroup* optgroup, const std::string& opt_key, const std::string& path, widget_t widget);
 	wxSizer*		compatible_widget_create(wxWindow* parent, PresetDependencies &deps);
