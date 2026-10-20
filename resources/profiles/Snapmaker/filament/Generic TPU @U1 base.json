@@ -1,7 +1,7 @@
 {
-    "type": "filament",
-    "from": "system",
-    "instantiation": "false",
-    "name": "Generic TPU @U1 base",
-    "inherits": "fdm_filament_tpu_unspecified_category"
+	"type": "filament",
+	"name": "Generic TPU @U1 base",
+	"inherits": "fdm_filament_tpu_unspecified_category",
+	"from": "system",
+	"instantiation": "false"
 }

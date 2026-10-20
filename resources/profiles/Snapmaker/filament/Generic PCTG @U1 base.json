@@ -1,7 +1,7 @@
 {
-    "type": "filament",
-    "from": "system",
-    "instantiation": "false",
-    "name": "Generic PCTG @U1 base",
-    "inherits": "fdm_filament_pctg_category"
+	"type": "filament",
+	"name": "Generic PCTG @U1 base",
+	"inherits": "fdm_filament_pctg_category",
+	"from": "system",
+	"instantiation": "false"
 }
