@@ -950,13 +950,22 @@ std::string GCodeWriter::eager_lift(const LiftType type) {
     if (effective_type == LiftType::SpiralLift && this->is_current_position_clear()) {
         double radius = target_lift / (2 * PI * atan(filament()->travel_slope()));
         // static spiral alignment when no move in x,y plane.
-        // spiral centra is a radius distance to the right (y=0)
-        Vec2d ij_offset = { radius, 0 };
         // Orca: keep the spiral inside the active extruder's printable area, otherwise
         // fall back to a normal lift to avoid colliding with the print boundary. m_pos
         // includes the plate offset, so remove it to match the printable area coordinates.
-        const Vec2d spiral_center = { m_pos.x() - m_x_offset + ij_offset.x(), m_pos.y() - m_y_offset + ij_offset.y() };
-        if (target_lift > 0 && this->spiral_lift_fits_printable_area(spiral_center, radius)) {
+        // BBS: the default centre is a radius distance to the right (+X); when the current point
+        // is near the bed boundary, try the opposite and orthogonal directions before giving up.
+        const Vec2d cur_xy  = { m_pos.x() - m_x_offset, m_pos.y() - m_y_offset };
+        const Vec2d dirs[4] = { Vec2d(1, 0), Vec2d(-1, 0), Vec2d(0, 1), Vec2d(0, -1) };
+        Vec2d       ij_offset = { radius, 0 };
+        bool        found     = false;
+        for (const Vec2d &d : dirs)
+            if (this->spiral_lift_fits_printable_area(cur_xy + radius * d, radius)) {
+                ij_offset = radius * d;
+                found     = true;
+                break;
+            }
+        if (target_lift > 0 && found) {
             lift_move = this->_spiral_travel_to_z(m_pos(2) + target_lift, ij_offset, "spiral lift Z");
         } else if (target_lift > 0) {
             lift_move = _travel_to_z(m_pos(2) + target_lift, "normal lift Z");
@@ -1020,7 +1029,6 @@ std::string GCodeWriter::travel_to_xyz(const Vec3d &point, const std::string &co
         if (delta(2) > 0 && delta_no_z.norm() != 0.0f)    {
             //BBS: SpiralLift
             if (m_to_lift_type == LiftType::SpiralLift && this->is_current_position_clear()) {
-                //BBS: todo: check the arc move all in bed area, if not, then use lazy lift
                 double radius = delta(2) / (2 * PI * atan(this->filament()->travel_slope()));
                 Vec2d ij_offset = radius * delta_no_z.normalized();
                 ij_offset = { -ij_offset(1), ij_offset(0) };
@@ -1028,8 +1036,14 @@ std::string GCodeWriter::travel_to_xyz(const Vec3d &point, const std::string &co
                 // printable area of the active extruder, otherwise fall back to a normal
                 // lift to avoid colliding with the print boundary. `source` is already in
                 // bed coordinates (plate offset removed), matching the printable area.
-                const Vec2d spiral_center = { source.x() + ij_offset.x(), source.y() + ij_offset.y() };
-                if (this->spiral_lift_fits_printable_area(spiral_center, radius))
+                // BBS: try the perpendicular side first, then the opposite side.
+                const Vec2d source_xy = { source.x(), source.y() };
+                bool found = this->spiral_lift_fits_printable_area(source_xy + ij_offset, radius);
+                if (!found && this->spiral_lift_fits_printable_area(source_xy - ij_offset, radius)) {
+                    ij_offset = -ij_offset;
+                    found     = true;
+                }
+                if (found)
                     slop_move = this->_spiral_travel_to_z(target(2), ij_offset, "spiral lift Z");
                 else
                     slop_move = _travel_to_z(target.z(), "normal lift Z");
