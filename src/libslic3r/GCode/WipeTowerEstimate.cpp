@@ -12,6 +12,8 @@
 #include <cmath>
 #include <cstddef>
 #include <set>
+#include <sstream>
+#include <string>
 #include <vector>
 #include "libslic3r/clonable_ptr.hpp"
 
@@ -162,7 +164,9 @@ WipeTowerFootprint estimate_wipe_tower_footprint(const ConfigBase &config, WipeT
         const double diameter = max_of("filament_diameter", 1.75);
         volume += length * PI * diameter * diameter / 4. * double(filaments_cnt / 2);
     }
-    // Single-extruder multi-material purges the flush matrix instead of the prime volume.
+    // Single-extruder multi-material purges the flush matrix instead of the prime volume. With a
+    // tool change the planned depth below replaces this volume; it only still decides whether a
+    // tower kept for another reason has anything to purge.
     const bool semm_flush = opt_bool("purge_in_prime_tower") && opt_bool("single_extruder_multi_material");
     if (semm_flush)
         volume = WipeTower2::estimate_semm_flush_volume(config, filaments_cnt);
@@ -195,6 +199,61 @@ WipeTowerFootprint estimate_wipe_tower_footprint(const ConfigBase &config, WipeT
 
     const double min_depth      = WipeTower::get_limit_depth_by_height(float(max_object_height));
     const float  perimeter_width = float(nozzle_diameter) * 1.25f; // Width_To_Nozzle_Ratio
+
+    // A single-extruder multi-material tower is reserved the way WipeTower2::set_toolchange() plans
+    // it, one change per further filament and layer: the leaving filament's ram band and whole
+    // purge rows of the entering one, each at its own line width, plus the wall. The volume rule
+    // below rounds none of that and reads the flush matrix through estimate_semm_flush_volume()'s
+    // average, so on a 105 mm bed the generated tower left the plate by a fraction of a
+    // millimetre where the estimate said it fit. The prime-volume towers keep the volume rule:
+    // their reserve does not change here, so neither does the default placement of their profiles.
+    const bool  planned_semm = semm_flush && !type1 && purge_count > 0;
+    const float widest_line  = float(max_of("nozzle_diameter", nozzle_diameter) * 1.25);
+    auto        planned_semm_depth = [&](double tower_width) {
+        const std::vector<std::vector<float>> flush_volumes = WipeTower2::extract_wipe_volumes(config);
+        const auto  *ramming_parameters = dynamic_cast<const ConfigOptionStrings *>(option_of(config, "filament_ramming_parameters"));
+        const bool   ramming            = opt_bool("enable_filament_ramming");
+        const double extra_flow         = opt_float("wipe_tower_extra_flow") / 100.;
+        auto line_width_of = [&](unsigned int id) {
+            const int nozzle = int_at("filament_map", id, 1) - 1; // 1-based nozzle indices
+            return float(float_at("nozzle_diameter", unsigned(std::max(nozzle, 0)), nozzle_diameter) * 1.25);
+        };
+        double depth = 0.;
+        for (size_t k = 1; k < filaments_cnt; ++k) {
+            const unsigned int old_id = filament_ids[k - 1];
+            const unsigned int new_id = filament_ids[k];
+            if (old_id == new_id)
+                continue;
+            // filament_ramming_parameters: line width %, step %, then the flow of every 0.25 s of
+            // the ram, read as the WipeTower2 constructor reads them.
+            float line_width = 100.f, step = 100.f, speed = 0.f, speeds = 0.f;
+            std::istringstream stream(ramming_parameters != nullptr && !ramming_parameters->values.empty() ? ramming_parameters->get_at(old_id) : std::string());
+            stream >> line_width >> step;
+            while (stream >> speed)
+                speeds += speed;
+            WipeTower2::ToolChangeGeometry g;
+            g.tower_width                      = float(tower_width);
+            g.widest_line_width                = widest_line;
+            g.layer_height                     = float(layer_height);
+            g.old_line_width                   = line_width_of(old_id);
+            g.ramming_line_width_multiplicator = line_width / 100.f;
+            g.ramming_step_multiplicator       = step / 100.f;
+            g.ramming_volume                   = 0.25f * speeds;
+            g.ramming                          = ramming;
+            g.new_line_width                   = line_width_of(new_id);
+            // Print purges the matrix entry of the pair, never less than the entering filament's
+            // minimal purge (both folded in by extract_wipe_volumes); a pair the matrix does not
+            // hold gets the prime volume, as a tower without the matrix would.
+            g.wipe_volume = old_id < flush_volumes.size() && new_id < flush_volumes[old_id].size() ?
+                                flush_volumes[old_id][new_id] :
+                                float(std::max(prime_volume, float_at("filament_minimal_purge_on_wipe_tower", new_id, 0.)));
+            g.extra_flow            = float(extra_flow);
+            g.extra_spacing_wipe    = float(extra_spacing * extra_flow);
+            g.extra_spacing_ramming = float(extra_spacing);
+            depth += WipeTower2::toolchange_depth(g).total();
+        }
+        return depth + widest_line;
+    };
     // With nothing to purge, plan_tower_new sizes the tower for wrapping detection or the
     // stability minimum; WipeTower2 only knows the latter.
     const double idle_depth = (type1 && wrapping && !smooth_timelapse) ? WipeTower::get_wrapping_detection_depth() : min_depth;
@@ -204,7 +263,12 @@ WipeTowerFootprint estimate_wipe_tower_footprint(const ConfigBase &config, WipeT
         double side;
         if (!purges.empty())
             side = WipeTower::estimate_rib_tower_bbox_side(purges, float(width), float(layer_height), float(nozzle_diameter), float(extra_spacing), float(rib_width), float(extra_rib_length), float(max_object_height));
-        else {
+        else if (planned_semm) {
+            // WipeTower2::plan_tower_new() squares the rib tower: the width becomes sqrt(depth x
+            // width) rounded up to the wall line, and every change is planned again for it.
+            const double square = std::ceil(std::sqrt(planned_semm_depth(width) * width) / widest_line) * widest_line;
+            side = WipeTower::rib_footprint_side(float(square), float(planned_semm_depth(square)), float(rib_width), float(extra_rib_length), float(max_object_height));
+        } else {
             // Type2 squares the tower from its purge volume; Type1 with no purge list (a lone
             // filament kept for timelapse or wrapping) sizes for the idle depth.
             const bool   has_purge = !type1 && volume > EPSILON;
@@ -218,6 +282,8 @@ WipeTowerFootprint estimate_wipe_tower_footprint(const ConfigBase &config, WipeT
             // plan_tower_new stretches a short purge stack to the stability minimum behind its
             // leading perimeter width.
             depth = purges.empty() ? idle_depth : std::max(min_depth + perimeter_width, double(WipeTower::estimate_tower_blocks_depth(purges, float(width), float(layer_height), float(nozzle_diameter), float(extra_spacing))));
+        } else if (planned_semm) {
+            depth = std::max(min_depth, planned_semm_depth(width));
         } else {
             depth = volume / (layer_height * width);
             // The flush volumes already hold the spacing between wipes.
