@@ -229,7 +229,7 @@ class WebViewWebKit : public wxWebViewWebKit
 public:
     // Snapmaker: the initial URL is held back until the "wx" script handler is installed.
     explicit WebViewWebKit(const wxString &initialUrl)
-        : wxWebViewWebKit(wxWebView::NewConfiguration(wxWebViewBackendWebKit))
+        : wxWebViewWebKit(MakeConfiguration())
         , m_pendingUrl(initialUrl)
     {
     }
@@ -264,6 +264,15 @@ public:
     }
 
 private:
+    static wxWebViewConfiguration MakeConfiguration()
+    {
+        wxWebViewConfiguration config = wxWebView::NewConfiguration(wxWebViewBackendWebKit);
+        // Must be applied to the native WKWebViewConfiguration before the
+        // WKWebView is created (post-creation the configuration is a copy).
+        Slic3r::GUI::WKWebViewConfiguration_keepActiveWhenHidden(config.GetNativeConfiguration());
+        return config;
+    }
+
     static bool IsBlankUrl(const wxString &url)
     {
         return url.empty() || url == wxString("about:blank");
@@ -528,6 +537,7 @@ wxWebView* WebView::CreateWebView(wxWindow * parent, wxString const & url)
 #ifdef __WXMAC__
         WKWebView * wkWebView = (WKWebView *) webView->GetNativeBackend();
         Slic3r::GUI::WKWebView_setTransparentBackground(wkWebView);
+        Slic3r::GUI::WKWebView_keepActiveWhenHidden(wkWebView);
 #endif
         auto addScriptMessageHandler = [] (wxWebView *webView) {
             // Skip if SendAPIKey() already registered "wx"; a duplicate add throws an

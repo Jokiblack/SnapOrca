@@ -22,6 +22,7 @@ add_executable(${_TEST_NAME}_tests
     test_network_versions.cpp
     test_orca_cloud_agent.cpp
     test_action_source.cpp
+    test_timeout_map.cpp # Snapmaker Orca: expiry, pause and snapshot rules of the TimeoutMap behind the SSWCP instance list
     test_plugin_host_api.cpp
     # Exercise seam enums and predicates through the embedded Python host API.
     test_precise_seam_plugin.cpp
