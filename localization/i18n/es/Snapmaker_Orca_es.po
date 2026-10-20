@@ -39226,6 +39226,10 @@ msgid "Flow of the outer wall on the treated layers, as a percentage of its norm
 msgstr "Flujo de la pared exterior en las capas tratadas, como porcentaje de su flujo normal. Un poco más de material (102-105 %) rellena la ligera hendidura que el elemento interno produce en la pared exterior al tirar de ella. Ponga 0 para no cambiar el flujo."
 
 # AI Translated
+msgid "Speed of the outer wall on the treated layers, as a percentage of the outer wall speed. Set to 0 to leave the speed unchanged."
+msgstr "Velocidad de la pared exterior en las capas tratadas, como porcentaje de la velocidad de la pared exterior. Ponga 0 para no cambiar la velocidad."
+
+# AI Translated
 msgid "Leave an air gap of this width between the outer wall and the walls and infill behind it, so that the internal feature does not pull on the outer wall when it shrinks. This is what is done in CAD to hide ghost lines, without changing the model. The gap moves the walls behind it inwards and takes the place of infill or gap fill, never of a wall: where the model has no room for it, it is left out. The outer wall stays joined to the rest of the part on the layers without the gap. The gap is never left on the first or the last layer, where it would be exposed by a top or bottom surface, or in spiral vase mode. Classic wall generator only. Set to 0 to disable."
 msgstr "Deja una cámara de aire de este ancho entre la pared exterior y los perímetros y el relleno que hay detrás, para que el elemento interno no tire de la pared exterior al contraerse. Es lo que se hace en CAD para ocultar las líneas fantasma, sin cambiar el modelo. La cámara desplaza hacia dentro los perímetros que hay detrás y ocupa el lugar del relleno o del relleno de huecos, nunca el de un perímetro: donde el modelo no tiene sitio para ella, no se deja. La pared exterior sigue unida al resto de la pieza en las capas sin cámara. La cámara nunca se deja en la primera ni en la última capa, donde la dejaría al descubierto una superficie superior o inferior, ni en modo jarrón. Solo con el generador de perímetros clásico. Ponga 0 para desactivarla."
 

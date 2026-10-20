@@ -11468,7 +11468,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &path_d
         _mm3_per_mm *= m_config.scarf_joint_flow_ratio;
     }
 
-    // SnapOrca: ghost lines, outer wall flow on the layers where an internal feature joins the outer wall.
+    // SnapOrca: ghost lines, outer wall flow and speed on the layers where an internal feature joins the outer wall.
     const bool ghost_lines_outer_wall = path.role() == erExternalPerimeter && m_layer != nullptr && m_layer->ghost_lines &&
                                         m_config.ghost_lines_enable.value;
     if (ghost_lines_outer_wall && m_config.ghost_lines_outer_wall_flow.value > 0.)
@@ -11525,6 +11525,8 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &path_d
             }
         } else if (path.role() == erExternalPerimeter) {
             speed = NOZZLE_CONFIG(outer_wall_speed);
+            if (ghost_lines_outer_wall && m_config.ghost_lines_outer_wall_speed.value > 0.)
+                speed = m_config.ghost_lines_outer_wall_speed.get_abs_value(speed);
             if (sloped) {
                 speed = std::min(speed, m_config.scarf_joint_speed.get_abs_value(speed));
             }

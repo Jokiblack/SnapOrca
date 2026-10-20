@@ -8965,6 +8965,17 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionPercent(0));
 
+    def = this->add("ghost_lines_outer_wall_speed", coPercent);
+    def->label = L("Outer wall speed");
+    def->category = L("Quality");
+    def->tooltip = L("Speed of the outer wall on the treated layers, as a percentage of the outer wall speed. Set to 0 "
+                     "to leave the speed unchanged.");
+    def->sidetext = "%";
+    def->min = 0;
+    def->max = 200;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionPercent(0));
+
     def = this->add("detect_thin_wall", coBool);
     def->label = L("Detect thin walls");
     def->category = L("Strength");
