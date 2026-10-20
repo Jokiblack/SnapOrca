@@ -1557,7 +1557,13 @@ bool PrintObject::invalidate_state_by_config_options(
             || opt_key == "interlocking_beam_layer_count"
             || opt_key == "interlocking_depth"
             || opt_key == "interlocking_boundary_avoidance"
-            || opt_key == "interlocking_beam_width") {
+            || opt_key == "interlocking_beam_width"
+            // Region assignment changes per layer when a periodic modifier is skipped;
+            // ignoring infill keys can also merge or split regions against the parent.
+            || opt_key == "periodic_modifier"
+            || opt_key == "periodic_modifier_skip_layers"
+            || opt_key == "periodic_modifier_apply_layers"
+            || opt_key == "modifier_ignore_infill") {
             steps.emplace_back(posSlice);
         } else if (
                opt_key == "mixed_filament_gradient_mode"
@@ -2535,6 +2541,14 @@ void PrintObject::process_external_surfaces()
     }
 }
 
+static bool layer_skips_periodic_modifier(const PrintObject &object, int layer_id)
+{
+    for (size_t i = 0; i < object.num_printing_regions(); ++i)
+        if (!periodic_modifier_active(object.printing_region(i).config(), layer_id))
+            return true;
+    return false;
+}
+
 void PrintObject::discover_vertical_shells()
 {
     PROFILE_FUNC();
@@ -2864,7 +2878,10 @@ void PrintObject::discover_vertical_shells()
                     // Trim the shells region by the internal & internal void surfaces.
                     const Polygons polygonsInternal = to_polygons(layerm->fill_surfaces.filter_by_types({ stInternal, stInternalVoid, stInternalSolid }));
                     shell = intersection(shell, polygonsInternal, ApplySafetyOffset::Yes);
-                    polygons_append(shell, diff(polygonsInternal, holes));
+                    // A skipped periodic modifier leaves a 0-wall layer next to a walled layer.
+                    // Do not fill that missing-wall band with solid infill.
+                    if (!layer_skips_periodic_modifier(*this, int(idx_layer)))
+                        polygons_append(shell, diff(polygonsInternal, holes));
                     if (shell.empty())
                         continue;
 
@@ -4240,6 +4257,39 @@ static void apply_to_print_region_config(PrintRegionConfig &out, const DynamicPr
     }
 }
 
+// Internal infill keys a modifier may set that are dropped when modifier_ignore_infill is on.
+static const char *s_modifier_ignored_infill_keys[] = {
+    "sparse_infill_density", "sparse_infill_pattern", "sparse_infill_smooth_factor",
+    "infill_direction", "symmetric_infill_y_axis", "infill_shift_step", "sparse_infill_rotate_template",
+    "lateral_lattice_angle_1", "lateral_lattice_angle_2", "infill_overhang_angle", "align_infill_direction_to_model",
+    "skeleton_infill_density", "skin_infill_density", "fill_multiline", "infill_lock_depth", "skin_infill_depth",
+    "skin_infill_line_width", "skeleton_infill_line_width",
+    "tpms_adaptive", "tpms_interior_density", "tpms_adaptive_gradient", "gyroid_optimized",
+    "sparse_infill_filament_id", "sparse_infill_line_width", "infill_wall_overlap", "sparse_infill_speed",
+    "sparse_infill_flow_ratio", "infill_combination", "infill_combination_max_layer_height", "minimum_sparse_infill_area",
+    "internal_solid_infill_pattern", "internal_solid_infill_line_width", "internal_solid_infill_speed",
+    "internal_solid_infill_flow_ratio", "internal_solid_filament_id", "solid_infill_direction", "solid_infill_rotate_template",
+    "infill_anchor", "infill_anchor_max", "bridge_angle",
+};
+
+static bool volume_ignores_modifier_infill(const ModelVolume &volume)
+{
+    if (!volume.is_modifier())
+        return false;
+    const auto *opt = volume.config.get().option<ConfigOptionBool>("modifier_ignore_infill");
+    return opt != nullptr && opt->value;
+}
+
+static void restore_parent_internal_infill(PrintRegionConfig &config, const PrintRegionConfig &parent)
+{
+    for (const char *key : s_modifier_ignored_infill_keys) {
+        const ConfigOption *src = parent.option(key);
+        ConfigOption       *dst = config.option(key, false);
+        if (src != nullptr && dst != nullptr)
+            dst->set(src);
+    }
+}
+
 PrintRegionConfig region_config_from_model_volume(const PrintRegionConfig &default_or_parent_region_config, const DynamicPrintConfig *layer_range_config, const ModelVolume &volume, size_t num_extruders, std::vector<int>& variant_index)
 {
     PrintRegionConfig config = default_or_parent_region_config;
@@ -4269,6 +4319,15 @@ PrintRegionConfig region_config_from_model_volume(const PrintRegionConfig &defau
         // Not applicable to modifiers.
         assert(volume.is_model_part());
     	apply_to_print_region_config(config, *layer_range_config, feature_overrides, variant_index);
+    }
+    const bool ignore_infill = volume_ignores_modifier_infill(volume);
+    if (ignore_infill)
+        restore_parent_internal_infill(config, default_or_parent_region_config);
+    // Do not inherit these flags onto child modifiers or model parts; they only describe this volume.
+    config.modifier_ignore_infill.value = ignore_infill;
+    {
+        const auto *opt = volume.is_modifier() ? volume.config.get().option<ConfigOptionBool>("periodic_modifier") : nullptr;
+        config.periodic_modifier.value = opt != nullptr && opt->value;
     }
     // Resolve feature defaults and clamp invalid extruders to index 1.
     clamp_feature_filament_to_valid(config.sparse_infill_filament_id, num_extruders);

@@ -1608,6 +1608,12 @@ PRINT_CONFIG_CLASS_DEFINE(
     // Total number of perimeters.
     ((ConfigOptionInt, wall_loops))
     ((ConfigOptionBool, alternate_extra_wall))
+    // Modifier-only: apply this modifier for m layers, then skip it for n layers.
+    ((ConfigOptionBool, periodic_modifier))
+    ((ConfigOptionInt, periodic_modifier_skip_layers))
+    ((ConfigOptionInt, periodic_modifier_apply_layers))
+    // Modifier-only: do not apply this volume's internal infill overrides.
+    ((ConfigOptionBool, modifier_ignore_infill))
     ((ConfigOptionFloat, minimum_sparse_infill_area))
     ((ConfigOptionInt, internal_solid_filament_id))
     ((ConfigOptionInt, top_surface_filament_id))
@@ -1702,6 +1708,17 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloat, zaa_min_z))
     ((ConfigOptionFloat, zaa_minimize_perimeter_height))
     )
+
+// Whether a periodic modifier overlays this layer. Disabled modifiers are always "active",
+// so callers can write: cfg.periodic_modifier && !periodic_modifier_active(cfg, layer_id).
+inline bool periodic_modifier_active(const PrintRegionConfig &cfg, int layer_id)
+{
+    if (!cfg.periodic_modifier.value || cfg.periodic_modifier_apply_layers.value < 1 || layer_id < 0)
+        return true;
+    const int m = cfg.periodic_modifier_apply_layers.value;
+    const int n = std::max(0, cfg.periodic_modifier_skip_layers.value);
+    return (layer_id % (m + n)) < m;
+}
 
 PRINT_CONFIG_CLASS_DEFINE(
     MachineEnvelopeConfig,

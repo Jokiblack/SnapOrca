@@ -6143,6 +6143,43 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
     
+    def = this->add("periodic_modifier", coBool);
+    def->label = L("Periodic modifier");
+    def->category = L("Others");
+    def->tooltip = L("Apply this modifier on a repeating layer cycle. On skipped layers it is ignored, as if this modifier were not there.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("periodic_modifier_skip_layers", coInt);
+    def->label = L("Skip for");
+    def->full_label = L("Periodic modifier skip layers");
+    def->category = L("Others");
+    def->tooltip = L("Number of consecutive layers on which this modifier is not applied. 0 means the modifier is applied on every layer.");
+    def->sidetext = L("layers");
+    def->min = 0;
+    def->max = 1000;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionInt(1));
+
+    def = this->add("periodic_modifier_apply_layers", coInt);
+    def->label = L("Apply for");
+    def->full_label = L("Periodic modifier apply layers");
+    def->category = L("Others");
+    def->tooltip = L("Number of consecutive layers in each cycle on which this modifier is fully applied. The cycle starts at layer 0: first \"Apply for\", then \"Skip for\".");
+    def->sidetext = L("layers");
+    def->min = 1;
+    def->max = 1000;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionInt(1));
+
+    def = this->add("modifier_ignore_infill", coBool);
+    def->label = L("Ignore infill settings");
+    def->full_label = L("Modifier ignores infill settings");
+    def->category = L("Others");
+    def->tooltip = L("Do not apply this modifier's internal infill settings (pattern, density, and related options). Walls and other overrides still apply. Infill is taken from the parent region.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("post_process", coStrings);
     def->label = L("Post-processing Scripts");
     def->tooltip = L("If you want to process the output G-code through custom scripts, "
@@ -11106,6 +11143,7 @@ void DynamicPrintConfig::normalize_fdm(int used_filaments)
         {
             this->opt<ConfigOptionInt>("wall_loops", true)->value       = 1;
             this->opt<ConfigOptionBool>("alternate_extra_wall", true)->value = false;
+            this->opt<ConfigOptionBool>("periodic_modifier", true)->value = false;
             this->opt<ConfigOptionInt>("top_shell_layers", true)->value = 0;
             this->opt<ConfigOptionPercent>("sparse_infill_density", true)->value = 0;
         }
@@ -11203,6 +11241,7 @@ void DynamicPrintConfig::normalize_fdm_1()
         {
             this->opt<ConfigOptionInt>("wall_loops", true)->value       = 1;
             this->opt<ConfigOptionBool>("alternate_extra_wall", true)->value = false;
+            this->opt<ConfigOptionBool>("periodic_modifier", true)->value = false;
             this->opt<ConfigOptionInt>("top_shell_layers", true)->value = 0;
             this->opt<ConfigOptionPercent>("sparse_infill_density", true)->value = 0;
         }
@@ -13182,6 +13221,10 @@ std::map<std::string, std::string> validate(const FullPrintConfig &cfg, bool und
     if (cfg.wall_loops.value < 0) {
         error_message.emplace("wall_loops", _u8L("invalid value ") + std::to_string(cfg.wall_loops.value));
     }
+    if (cfg.periodic_modifier_skip_layers.value < 0)
+        error_message.emplace("periodic_modifier_skip_layers", _u8L("invalid value ") + std::to_string(cfg.periodic_modifier_skip_layers.value));
+    if (cfg.periodic_modifier_apply_layers.value < 1)
+        error_message.emplace("periodic_modifier_apply_layers", _u8L("invalid value ") + std::to_string(cfg.periodic_modifier_apply_layers.value));
 
     // --solid-layers
     if (cfg.top_shell_layers < 0) {

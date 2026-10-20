@@ -4754,6 +4754,44 @@ TabPrintPart::TabPrintPart(ParamsPanel* parent) :
     m_parent_tab = wxGetApp().get_model_tab();
 }
 
+void TabPrintPart::build()
+{
+    TabPrintModel::build();
+    PageShp others;
+    for (auto &page : m_pages)
+        if (page->title() == L("Others")) {
+            others = page;
+            break;
+        }
+    if (!others)
+        others = add_options_page(L("Others"), "custom-gcode_other");
+    auto optgroup = others->new_optgroup(L("Modifier cycle"), L"param_wall");
+    optgroup->have_sys_config = [this] { m_back_to_sys = true; return true; };
+    optgroup->append_single_option_line("periodic_modifier");
+    optgroup->append_single_option_line("periodic_modifier_skip_layers");
+    optgroup->append_single_option_line("periodic_modifier_apply_layers");
+    optgroup->append_single_option_line("modifier_ignore_infill");
+}
+
+void TabPrintPart::toggle_options()
+{
+    TabPrintModel::toggle_options();
+    // The modifier cycle only means something on modifier volumes.
+    bool is_modifier = !m_object_configs.empty();
+    for (auto &item : m_object_configs) {
+        auto *vol = dynamic_cast<ModelVolume *>(item.first);
+        if (!vol || !vol->is_modifier()) {
+            is_modifier = false;
+            break;
+        }
+    }
+    toggle_line("periodic_modifier", is_modifier);
+    const bool show_cycle = is_modifier && m_config->has("periodic_modifier") && m_config->opt_bool("periodic_modifier");
+    toggle_line("periodic_modifier_skip_layers", show_cycle);
+    toggle_line("periodic_modifier_apply_layers", show_cycle);
+    toggle_line("modifier_ignore_infill", is_modifier);
+}
+
 void TabPrintPart::notify_changed(ObjectBase * object)
 {
     auto vol = dynamic_cast<ModelVolume*>(object);
