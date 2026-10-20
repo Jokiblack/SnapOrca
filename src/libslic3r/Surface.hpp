@@ -35,6 +35,9 @@ enum SurfaceType {
     stInternalVoid,
     // Inner/outer perimeters.
     stPerimeter,
+    // Internal solid island right below a visible top surface (sub-top), see PrintObject::discover_sub_top_surfaces().
+    // Kept after stPerimeter so the numeric values of the older types, stored in cached slicing data, do not change.
+    stSubTop,
     // Number of SurfaceType enums.
     stCount,
 };
@@ -116,7 +119,8 @@ public:
     bool   is_internal_bridge() const { return this->surface_type == stInternalBridge; }
 	bool   is_external() const { return this->is_top() || this->is_bottom(); }
 	bool   is_internal() const { return ! this->is_external(); }
-	bool   is_solid()    const { return this->is_external() || this->surface_type == stInternalSolid || this->surface_type == stInternalBridge; }
+	bool   is_sub_top()  const { return this->surface_type == stSubTop; }
+	bool   is_solid()    const { return this->is_external() || this->surface_type == stInternalSolid || this->surface_type == stSubTop || this->surface_type == stInternalBridge; }
 	bool   is_solid_infill() const { return this->surface_type == stInternalSolid; }
 };
 
