@@ -50,8 +50,10 @@ TEST_CASE("Plugin audit denies app config and token filenames anywhere", "[audit
 
     SECTION("the seeded names are denied by their base name")
     {
+        CHECK(mgr.is_denied_filename(fs::path(SLIC3R_APP_DATA_KEY ".conf")));
         CHECK(mgr.is_denied_filename(fs::path(SLIC3R_APP_KEY ".conf")));
         CHECK(mgr.is_denied_filename(fs::path(GCODEVIEWER_APP_KEY ".conf")));
+        CHECK(mgr.is_denied_filename(fs::path(SLIC3R_APP_DATA_KEY ".ini")));
         CHECK(mgr.is_denied_filename(fs::path(SLIC3R_APP_KEY ".ini")));
         CHECK(mgr.is_denied_filename(fs::path(GCODEVIEWER_APP_KEY ".ini")));
         CHECK(mgr.is_denied_filename(fs::path(secret_constants::USER_SECRET_FILENAME)));

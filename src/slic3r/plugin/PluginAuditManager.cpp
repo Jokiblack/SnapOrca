@@ -300,9 +300,13 @@ std::vector<std::string> PluginAuditManager::default_denied_filenames()
     // four names is cheaper and more robust than replicating that; the two unused names cost one
     // string comparison each.  Single-sourced here so install_hook() and the tests seed from the
     // same list and cannot drift apart.
+    // SnapOrca: the editor config is named after SLIC3R_APP_DATA_KEY; the SLIC3R_APP_KEY names stay
+    // denied because the official Snapmaker Orca keeps its config under them next door.
     return {
+        SLIC3R_APP_DATA_KEY ".conf",
         SLIC3R_APP_KEY ".conf",
         GCODEVIEWER_APP_KEY ".conf",
+        SLIC3R_APP_DATA_KEY ".ini",
         SLIC3R_APP_KEY ".ini",
         GCODEVIEWER_APP_KEY ".ini",
         secret_constants::USER_SECRET_FILENAME,

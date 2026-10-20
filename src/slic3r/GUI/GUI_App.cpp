@@ -2848,7 +2848,12 @@ void GUI_App::init_webview_runtime()
 void GUI_App::init_app_config()
 {
 	// Profiles for the alpha are stored into the PrusaSlicer-alpha directory to not mix with the current release.
-    SetAppName(SLIC3R_APP_KEY);
+    // SnapOrca: the app name picks the user data folder (wxStandardPaths::GetUserDataDir() and
+    // GetUserLocalDataDir(), and the XDG path below), so it is SLIC3R_APP_DATA_KEY to keep SnapOrca
+    // apart from an official Snapmaker Orca installed side by side. The display name stays what wx
+    // derived from SLIC3R_APP_KEY before, so no wx-provided caption or menu changes.
+    SetAppName(SLIC3R_APP_DATA_KEY);
+    SetAppDisplayName(SLIC3R_APP_KEY);
 //	SetAppName(SLIC3R_APP_KEY "-alpha");
 //  SetAppName(SLIC3R_APP_KEY "-beta");
 //	SetAppDisplayName(SLIC3R_APP_NAME);
@@ -9291,7 +9296,7 @@ bool GUI_App::load_language(wxString language, bool initial)
     	// Get the active language from PrusaSlicer.ini, or empty string if the key does not exist.
         language = app_config->get("language");
         if (! language.empty())
-        	BOOST_LOG_TRIVIAL(info) << boost::format("language provided by Snapmaker_Orca.conf: %1%") % language;
+        	BOOST_LOG_TRIVIAL(info) << boost::format("language provided by " SLIC3R_APP_DATA_KEY ".conf: %1%") % language;
         else {
             // Get the system language.
             const wxLanguage lang_system = wxLanguage(wxLocale::GetSystemLanguage());
