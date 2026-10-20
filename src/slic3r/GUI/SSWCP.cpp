@@ -1,9 +1,7 @@
 // Implementation of web communication protocol for Slicer Studio
 #include "SSWCP.hpp"
-#include "libslic3r/SSWCPProtocol.hpp"
 #include "FilamentColorUtils.hpp"
 #include "GUI_App.hpp"
-#include "DeviceManager.hpp"
 #include "MainFrame.hpp"
 #include "Notebook.hpp"
 #include "PrinterWebView.hpp"
@@ -12,6 +10,7 @@
 #include "nlohmann/json.hpp"
 #include "slic3r/GUI/Tab.hpp"
 #include "libslic3r/Model.hpp"
+#include "libslic3r/SSWCPProtocol.hpp"
 #include "sentry_wrapper/SentryWrapper.hpp"
 #include "slic3r/Utils/SnapLogClient.hpp"
 #include <algorithm>
@@ -21,6 +20,8 @@
 #include <iomanip>
 #include <regex>
 #include <thread>
+#include <type_traits>
+#include <unordered_map>
 #include <string_view>
 #include <vector>
 #include <boost/algorithm/string/predicate.hpp>
@@ -51,17 +52,16 @@
 #include "slic3r/GUI/SMPhysicalPrinterDialog.hpp"
 #include "slic3r/GUI/WebUrlDialog.hpp"
 #include "slic3r/GUI/WebSMUserLoginDialog.hpp"
+#include "slic3r/GUI/FilamentGroupDialog.hpp"
+#include "slic3r/GUI/FlowTypeHelper.hpp"
 
 #include "miniz/miniz.h"
 #include "slic3r/Utils/MQTT.hpp"
 #include "slic3r/Utils/Http.hpp"
 #include "libslic3r/Utils.hpp"
 #include <boost/filesystem/operations.hpp>
-<<<<<<< snaporca-int
 #include <boost/filesystem/path.hpp>
 #include <openssl/sha.h>
-=======
->>>>>>> lixnix/main
 
 namespace pt = boost::property_tree;
 namespace fs = boost::filesystem;
@@ -270,7 +270,7 @@ std::vector<std::string> load_thumbnails(const std::string& file, size_t image_c
     ifs.clear();
     ifs.seekg(0);
 
-    return res;
+    return std::move(res);
 }
 
 // Util
@@ -413,13 +413,24 @@ std::string make_wcp_download_url(const std::string& file_path)
 // Compute SHA-256 digest → standard Base64, matching Flutter's base64Encode(sha256.convert(bytes).bytes)
 static std::string calc_sha256_base64(const std::string& file_path)
 {
-    // The digest lives in libslic3r (EVP, UTF-8 path, never a partial hash) so that it has a unit
-    // test. "" means "no checksum", which is what an unreadable file always produced here.
-    std::array<unsigned char, 32> digest;
-    if (!Slic3r::calc_file_sha256(file_path, digest)) {
+    std::ifstream ifs(file_path, std::ios::binary);
+    if (!ifs.is_open()) {
         return "";
     }
-    return base64_encode((const char*) digest.data(), digest.size());
+
+    SHA256_CTX ctx;
+    SHA256_Init(&ctx);
+
+    static constexpr size_t kChunkSize = 64 * 1024;
+    std::string             buf(kChunkSize, 0);
+    while (ifs.read(buf.data(), buf.size()) || ifs.gcount() > 0) {
+        SHA256_Update(&ctx, buf.data(), ifs.gcount());
+    }
+
+    unsigned char digest[SHA256_DIGEST_LENGTH];
+    SHA256_Final(digest, &ctx);
+
+    return base64_encode((const char*) digest, SHA256_DIGEST_LENGTH);
 }
 
 json get_or_create_zip_json(const std::string& name1,   // origin file "1.gcode"
@@ -555,28 +566,6 @@ void SSWCP_Instance::sw_UploadEvent() {
     }
 }
 
-namespace {
-// Snapmaker Orca: limits for what a web page may put into the SnapLog queue. The client caps a
-// rendered line much lower (2000 bytes per value, 8000 per ext object), but only when it renders;
-// until then the queue of up to 4096 entries would hold whatever a page sends.
-constexpr std::size_t SNAPLOG_WCP_MAX_TEXT_BYTES = 64 * 1024;
-constexpr std::size_t SNAPLOG_WCP_MAX_LOG_BYTES  = 8 * 1024;
-constexpr std::size_t SNAPLOG_WCP_MAX_EXT_PAIRS  = 64;
-
-// Cuts on a UTF-8 character boundary.
-void snaplog_wcp_clip(std::string& text, std::size_t max_bytes)
-{
-    if (text.size() <= max_bytes)
-        return;
-    std::size_t cut = max_bytes;
-    while (cut > 0 && (static_cast<unsigned char>(text[cut]) & 0xC0) == 0x80)
-        --cut;
-    text.resize(cut);
-}
-} // namespace
-
-// Forwards a page event to SnapLog, clipped by snaplog_wcp_clip(). Exists in every build: without
-// SnapLog the event is dropped, but "log" still reaches the local log and the page gets an answer.
 void SSWCP_Instance::sw_SnapLog()
 {
     const auto require_string = [this](const char* name) -> bool {
@@ -599,13 +588,11 @@ void SSWCP_Instance::sw_SnapLog()
 
     std::string level_str = m_param_data["level"].get<std::string>();
     std::string message   = m_param_data["message"].get<std::string>();
-    snaplog_wcp_clip(message, SNAPLOG_WCP_MAX_TEXT_BYTES);
 
     if (m_param_data.count("log") && !m_param_data["log"].empty()) {
         const auto& log_value = m_param_data["log"];
         std::string local_log = log_value.is_string() ? log_value.get<std::string>() : log_value.dump();
         boost::algorithm::trim(local_log);
-        snaplog_wcp_clip(local_log, SNAPLOG_WCP_MAX_LOG_BYTES);
         if (!local_log.empty()) {
             BOOST_LOG_TRIVIAL(warning) << "[WCP] [SnapLog] " << local_log;
         }
@@ -615,11 +602,7 @@ void SSWCP_Instance::sw_SnapLog()
     SnapLogExt ext;
     if (m_param_data.count("ext") && m_param_data["ext"].is_object()) {
         for (auto it = m_param_data["ext"].begin(); it != m_param_data["ext"].end(); ++it) {
-            if (ext.size() >= SNAPLOG_WCP_MAX_EXT_PAIRS)
-                break;
             ext.emplace_back(it.key(), it.value().is_string() ? it.value().get<std::string>() : it.value().dump());
-            snaplog_wcp_clip(ext.back().first, SNAPLOG_WCP_MAX_TEXT_BYTES);
-            snaplog_wcp_clip(ext.back().second, SNAPLOG_WCP_MAX_TEXT_BYTES);
         }
     }
     ext.emplace_back("source", "flutter");
@@ -1154,16 +1137,12 @@ void SSWCP_Instance::sw_SwitchTab() {
         if (m_param_data.count("target")) {
             std::string target_tab = m_param_data["target"].get<std::string>();
             if (SSWCP::m_tab_map.count(target_tab)) {
-<<<<<<< snaporca-int
                 MainFrame* frame = wxGetApp().mainframe;
                 wxString   tab_id = wxString::FromUTF8(SSWCP::m_tab_map[target_tab]);
                 // In printer-agents mode the Snapmaker device page is the separate web Device tab.
                 if (tab_id == TAB_ID_MONITOR && frame->m_tabpanel->FindPageByName(TAB_ID_MONITOR_WEB) != wxNOT_FOUND)
                     tab_id = TAB_ID_MONITOR_WEB;
                 frame->request_select_tab(tab_id);
-=======
-                wxGetApp().mainframe->request_select_tab(SSWCP::m_tab_map[target_tab]);
->>>>>>> lixnix/main
                 send_to_js();
                 finish_job();
                 return;
@@ -1712,6 +1691,7 @@ void SSWCP_Instance::update_filament_info(const json& objects, bool send_message
                 // entire filament update, which would discard otherwise-valid entries.
                 nozzle_volume_types.clear();
             }
+
 
             // save filament and update the gui filament
             auto& filaments = wxGetApp().preset_bundle->machine_filaments;
@@ -3164,18 +3144,11 @@ void SSWCP_MachineOption_Instance::sw_UploadFiletoMachine() {
             http_object
                 .form_add("print", "false")
                 .form_add_file("file", std::string(filepath.ToUTF8()), std::string(filename.ToUTF8()))
-<<<<<<< snaporca-int
-                .on_error([=](std::string body, std::string error, unsigned status) {
-                    handle_general_fail();
-                    wxGetApp().CallAfter([filename]() {
-                        MessageDialog msg_window(nullptr, wxString::Format(_L("%s upload failed"), filename) + "\n", _L("Upload Failed"),
-=======
                 .on_error([self, filename](std::string body, std::string error, unsigned status) {
                     // Http thread: the instance is touched on the UI thread only.
                     wxGetApp().CallAfter([self, filename]() {
                         self->handle_general_fail();
-                        MessageDialog msg_window(nullptr, " " + filename + _L(" upload failed") + "\n", _L("UpLoad Failed"),
->>>>>>> lixnix/main
+                        MessageDialog msg_window(nullptr, wxString::Format(_L("%s upload failed"), filename) + "\n", _L("Upload Failed"),
                                                  wxICON_QUESTION | wxOK);
                         msg_window.ShowModal();
                     });
@@ -3188,22 +3161,11 @@ void SSWCP_MachineOption_Instance::sw_UploadFiletoMachine() {
                         self->send_to_js();
 
 
-<<<<<<< snaporca-int
-                            MessageDialog msg_window(nullptr, wxString::Format(_L("%s uploaded successfully"), filename) + "\n",
-                                                     _L("Upload Successful"), wxICON_QUESTION | wxOK);
-                            msg_window.ShowModal();
-                            finish_job();
-                        });
-                    } catch (std::exception& e) {
-                        handle_general_fail();
-                    }
-=======
-                        MessageDialog msg_window(nullptr, " " + filename + _L(" has already been uploaded") + "\n",
-                                                 _L("UpLoad Successfully"), wxICON_QUESTION | wxOK);
+                        MessageDialog msg_window(nullptr, wxString::Format(_L("%s uploaded successfully"), filename) + "\n",
+                                                 _L("Upload Successful"), wxICON_QUESTION | wxOK);
                         msg_window.ShowModal();
                         self->finish_job();
                     });
->>>>>>> lixnix/main
                 })
                 .on_progress([self](Http::Progress progress, bool& cancel) {
                     // A transfer over Wi-Fi may take longer than the instance timeout.
@@ -3279,18 +3241,11 @@ void SSWCP_MachineOption_Instance::sw_DownloadMachineFile() {
 
             Http http_object = Http::get(final_url);
             http_object
-<<<<<<< snaporca-int
-                .on_error([=](std::string body, std::string error, unsigned status) {
-                    handle_general_fail();
-                    wxGetApp().CallAfter([filename]() {
-                        MessageDialog msg_window(nullptr, wxString::Format(_L("%s download failed"), filename) + "\n", _L("Download Failed"),
-=======
                 .on_error([self, filename](std::string body, std::string error, unsigned status) {
                     // Http thread: the instance is touched on the UI thread only.
                     wxGetApp().CallAfter([self, filename]() {
                         self->handle_general_fail();
-                        MessageDialog msg_window(nullptr, " " + filename + _L(" download failed") + "\n", _L("DownLoad Failed"),
->>>>>>> lixnix/main
+                        MessageDialog msg_window(nullptr, wxString::Format(_L("%s download failed"), filename) + "\n", _L("Download Failed"),
                                                  wxICON_QUESTION | wxOK);
                         msg_window.ShowModal();
                     });
@@ -3315,31 +3270,16 @@ void SSWCP_MachineOption_Instance::sw_DownloadMachineFile() {
                             self->handle_general_fail();
                             return;
                         }
-<<<<<<< snaporca-int
-
-                        file.write(body.c_str(), body.size());
-                        file.close();
-
-                        wxGetApp().CallAfter([=]() {
-                            MessageDialog msg_window(nullptr, wxString::Format(_L("%s downloaded successfully"), filename) + "\n",
-                                                     _L("Download Successful"), wxICON_QUESTION | wxOK);
-                            msg_window.ShowModal();
-                        });
-                    } catch (std::exception& e) {
-                        handle_general_fail();
-                    }
-=======
                         json response;
                         response["filename"] = std::string(filename.ToUTF8());
                         response["path"]     = std::string(path.ToUTF8());
                         self->m_res_data     = response;
                         self->send_to_js();
-                        MessageDialog msg_window(nullptr, " " + filename + _L(" has already been downloaded") + "\n",
-                                                 _L("DownLoad Successfully"), wxICON_QUESTION | wxOK);
+                        MessageDialog msg_window(nullptr, wxString::Format(_L("%s downloaded successfully"), filename) + "\n",
+                                                 _L("Download Successful"), wxICON_QUESTION | wxOK);
                         msg_window.ShowModal();
                         self->finish_job();
                     });
->>>>>>> lixnix/main
                 })
                 .on_progress([self](Http::Progress progress, bool& cancel) {
                     SSWCP::renew_instance_timeout(self.get());
@@ -3364,9 +3304,15 @@ void SSWCP_MachineOption_Instance::sw_FinishFilamentMapping()
                     dialog->SafeEndModal(wxID_CANCEL);
                 }
 
-                // Dispatch the post-close action selected by params.event. Absent, unknown and
-                // malformed values close the webview only.
-                switch (SSWCPProtocol::parse_finish_filament_mapping_event(m_param_data)) {
+                // Dispatch the post-close action selected by params.event.
+                // Handlers run via CallAfter so the webview modal finishes
+                // tearing down first. Add new cases alongside new enum values.
+                int event_int = 0;
+                if (m_param_data.count("event") && !m_param_data["event"].is_null()) {
+                    event_int = m_param_data["event"].get<int>();
+                }
+                const auto event = static_cast<SSWCPProtocol::FinishFilamentMappingEvent>(event_int);
+                switch (event) {
                 case SSWCPProtocol::FinishFilamentMappingEvent::CustomFlowRegroup:
                     on_finish_filament_mapping_custom_flow_regroup();
                     break;
@@ -3381,11 +3327,19 @@ void SSWCP_MachineOption_Instance::sw_FinishFilamentMapping()
 }
 void SSWCP_MachineOption_Instance::on_finish_filament_mapping_custom_flow_regroup()
 {
-    // Filaments print with the flow type of their tool head, so the request opens the Flow row of
-    // the sidebar nozzle tabs. CallAfter lets the modal webview close first.
+    // event 1: open the "custom filament flow regrouping" dialog once the
+    // preprint webview has finished closing. Only meaningful for printers that
+    // declare a high-flow nozzle. Scheduled via CallAfter to avoid running a
+    // modal dialog nested inside the webview's own modal event loop.
+    if (!GUI::FlowType::printer_supports_high_flow())
+        return;
     wxGetApp().CallAfter([]() {
-        if (wxGetApp().plater() != nullptr)
-            wxGetApp().plater()->show_tool_head_flow_types();
+        wxWindow *parent = static_cast<wxWindow *>(wxGetApp().mainframe);
+        GUI::FilamentGroupDialog dlg(parent);
+        // Confirming the custom flow regrouping proceeds straight to slicing (the
+        // same action as the slice button); cancelling changes nothing.
+        if (dlg.ShowModal() == wxID_OK && wxGetApp().mainframe)
+            wxGetApp().mainframe->start_slice();
     });
 }
 void SSWCP_MachineOption_Instance::sw_GetFileFilamentMapping()
@@ -3496,31 +3450,24 @@ void SSWCP_MachineOption_Instance::sw_GetFileFilamentMapping()
             response["filament_type"] = filament_types;
         }
 
-        // Flow types of the file in the wire spelling: tool heads as sliced (else the project's); a
-        // filament reports the type of the tool head that prints it.
+        // filament volume type (flow type per filament)
         {
-            size_t filament_count = 0;
+            size_t fvt_count = 0;
             if (const auto* ftype_opt = full_config.option<ConfigOptionStrings>("filament_type"))
-                filament_count = std::max(filament_count, ftype_opt->values.size());
+                fvt_count = std::max(fvt_count, ftype_opt->values.size());
             if (const auto* fcolour_opt = full_config.option<ConfigOptionStrings>("filament_colour"))
-                filament_count = std::max(filament_count, fcolour_opt->values.size());
-            if (filament_count == 0) filament_count = 1;
+                fvt_count = std::max(fvt_count, fcolour_opt->values.size());
+            if (fvt_count == 0) fvt_count = 1;
 
-            const auto* volume_types = full_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type");
-            if (volume_types == nullptr)
-                volume_types = wxGetApp().preset_bundle->project_config.option<ConfigOptionEnumsGeneric>("nozzle_volume_type");
-            const std::vector<int> head_types = volume_types != nullptr ? volume_types->values : std::vector<int>();
-            size_t head_count = head_types.size();
-            if (const auto* diameters = full_config.option<ConfigOptionFloats>("nozzle_diameter"))
-                head_count = diameters->values.size();
-
-            const std::vector<int> filament_types = SSWCPProtocol::filament_volume_types_by_head(
-                head_types, wxGetApp().plater()->filament_tool_heads(filament_count, head_count), filament_count);
-            response["filament_volume_type"] = SSWCPProtocol::build_filament_volume_types(&filament_types, filament_count);
-            response["nozzle_volume_types"]  = SSWCPProtocol::build_nozzle_volume_types(head_types, head_count);
+            const auto* volume_types = full_config.option<ConfigOptionEnumsGeneric>("filament_volume_type");
+            const std::vector<int>* fvt_values = volume_types ? &volume_types->values : nullptr;
+            response["filament_volume_type"] = SSWCPProtocol::build_filament_volume_types(fvt_values, fvt_count);
         }
 
-        // file nozzle diameters
+        // nozzle flow type (per-nozzle Standard/High Flow selection from the
+        // project config "nozzle_volume_types", mirrored in AppConfig "nozzle_volume_types")
+        response["nozzle_volume_types"] = GUI::FlowType::nozzle_volume_types();
+
         if (full_config.has("nozzle_diameter")) {
             const auto *opt_nozzle_diameters = full_config.option<ConfigOptionFloats>("nozzle_diameter");
             if (opt_nozzle_diameters != nullptr) {
@@ -7143,8 +7090,11 @@ void SSWCP_MqttAgent_Instance::sw_mqtt_connect()
             auto self = std::dynamic_pointer_cast<SSWCP_MqttAgent_Instance>(weak_ptr.lock());
             const std::string session_id = self ? self->get_connect_session_id() : std::string{};
 
-            // The callback is stored inside the engine, so it captures the engine weakly: a strong
-            // capture would keep the client alive forever and leak its Paho handles.
+            // Capture the engine WEAKLY: this callback is stored inside the
+            // engine itself (MqttClient::connection_failure_callback_), so a
+            // shared_ptr capture would keep its refcount >= 1 forever and
+            // ~MqttClient — the only place the callback gets cleared — would
+            // never run, leaking the client and its Paho handles.
             std::weak_ptr<MqttClient> weak_engine = engine;
             engine->SetConnectionFailureCallback([weak_engine, session_id]() {
                 auto engine = weak_engine.lock();
@@ -7727,7 +7677,7 @@ void SSWCP_MqttAgent_Instance::sw_mqtt_set_engine()
                                         wxString url      = wxString::FromUTF8(LOCALHOST_URL + std::to_string(wxGetApp().get_page_http_port()) +
                                                                                "/web/flutter_web/index.html?path=2");
                                         auto     real_url = wxGetApp().get_international_url(url);
-                                        wxGetApp().mainframe->load_printer_url(real_url); 
+                                        wxGetApp().mainframe->load_printer_url(real_url);
                                     } else {
                                         if (reload_device_view) {
                                             wxString url      = wxString::FromUTF8(LOCALHOST_URL + std::to_string(wxGetApp().get_page_http_port()) +
@@ -7911,15 +7861,9 @@ std::unique_ptr<WebSocketDebugServer> SSWCP::m_debug_server = nullptr;
 std::mutex SSWCP::m_debug_server_mutex;
 bool SSWCP::m_debug_mode_enabled = false;
 
-<<<<<<< snaporca-int
 // Tabs are addressed by id since upstream 2.5; "Auxiliary" was the old name of the Project tab.
 // "DebugTool" has no tab any more, so it is reported as a failure like any unknown name.
 std::unordered_map<std::string, std::string> SSWCP::m_tab_map = {
-=======
-// Tab pages are addressed by stable name ids (see TAB_ID_* in MainFrame.hpp);
-// ids without a registered page make the switch request a no-op.
-std::unordered_map<std::string, wxString> SSWCP::m_tab_map = {
->>>>>>> lixnix/main
     {"Home", TAB_ID_HOME},
     {"3DEditor", TAB_ID_PREPARE},
     {"Preview", TAB_ID_PREVIEW},
@@ -7927,12 +7871,7 @@ std::unordered_map<std::string, wxString> SSWCP::m_tab_map = {
     {"MultiDevice", TAB_ID_MULTI_DEVICE},
     {"Project", TAB_ID_PROJECT},
     {"Calibration", TAB_ID_CALIBRATION},
-<<<<<<< snaporca-int
     {"Auxiliary", TAB_ID_PROJECT},
-=======
-    {"Auxiliary", "auxiliary"},
-    {"DebugTool", "debug_tool"}
->>>>>>> lixnix/main
 };
 
 std::unordered_set<std::string> SSWCP::m_machine_find_cmd_list = {
@@ -8357,53 +8296,74 @@ void SSWCP::update_active_filename(const std::string& filename)
 }
 
 // query the info of the machine
-bool SSWCP::query_machine_info(std::shared_ptr<PrintHost>& host, std::string& out_model, std::vector<std::string>& out_nozzle_diameters, std::string& device_name, int timeout_second)
+bool SSWCP::query_machine_info(std::shared_ptr<PrintHost>& host, MachineInfo& out, int timeout_second)
 {
-    // One implementation of the request and of the parsing: resolve_machine_info(). The outputs
-    // are touched only by what the printer answered, as before.
-    const SSWCPProtocol::ResolveResult result = resolve_machine_info(host, timeout_second);
-    if (result.status == SSWCPProtocol::ResolveStatus::NoResponse)
-        return false;
-    // Firmware aliases ("lava", "Snapmaker test") arrive as "Snapmaker U1".
-    out_model = result.info.model;
-    out_nozzle_diameters.insert(out_nozzle_diameters.end(), result.info.nozzle_diameters.begin(), result.info.nozzle_diameters.end());
-    if (!result.info.device_name.empty())
-        device_name = result.info.device_name;
-    return true;
+    if (!host) return false;
+
+    std::condition_variable cv;
+    std::shared_ptr<std::mutex> mutex(new std::mutex);
+    std::weak_ptr<std::mutex>   cb_mutex = mutex;
+    bool received = false;
+    bool timeout = false;
+    json system_info;
+
+    host->async_get_system_info(
+        [&, cb_mutex](const json& response) {
+            if (cb_mutex.expired()) {
+                return;
+            }
+            std::lock_guard<std::mutex> lock(*mutex);
+            if (!response.is_null() && !response.count("error")) {
+                system_info = response;
+            }
+            received = true;
+            cv.notify_one();
+        }
+    );
+
+    {
+        std::unique_lock<std::mutex> lock(*mutex);
+        auto predicate = [&received]() { return received; };
+        timeout = !cv.wait_for(lock, std::chrono::seconds(timeout_second), predicate);
+    }
+
+    if (!timeout && !system_info.is_null())
+        return SSWCPProtocol::parse_machine_info_response(system_info, out);
+    return false;
 }
 
-// The two answers are merged by SSWCPProtocol::merge_machine_info(), which is unit tested.
+
 SSWCPProtocol::ResolveResult SSWCP::resolve_machine_info(std::shared_ptr<PrintHost>& host, int timeout_second)
 {
-    if (!host) return {};
+    SSWCPProtocol::ResolveResult result;
+    if (!host) return result;
 
-    // The callbacks own the state: one that fires after the timeout finds it alive and unused.
-    struct Shared {
-        std::mutex              mutex;
-        std::condition_variable cv;
-        bool                    done { false };
-        bool                    system_answered { false };
-        bool                    objects_answered { false };
-        json                    system_info;
-        json                    objects_query;
-    };
-    auto shared = std::make_shared<Shared>();
+    std::condition_variable cv;
+    std::shared_ptr<std::mutex> mutex(new std::mutex);
+    std::weak_ptr<std::mutex>   cb_mutex = mutex;
+    std::shared_ptr<bool>       done(new bool(false));
+    int                         received_count = 0;
+    const int                   expected_count = 2;
+    json                        system_info;
+    json                        objects_query;
 
-    auto on_system_info = [shared](const json& response) {
-        std::lock_guard<std::mutex> lock(shared->mutex);
-        if (shared->done) return;
+    auto on_system_info = [&, cb_mutex, done](const json& response) {
+        auto locked = cb_mutex.lock();
+        if (!locked) return;
+        std::lock_guard<std::mutex> lock(*locked);
+        if (*done) return;
         if (!response.is_null() && !response.count("error"))
-            shared->system_info = response;
-        shared->system_answered = true;
-        shared->cv.notify_all();
+            system_info = response;
+        if (++received_count >= expected_count) cv.notify_one();
     };
-    auto on_objects_query = [shared](const json& response) {
-        std::lock_guard<std::mutex> lock(shared->mutex);
-        if (shared->done) return;
+    auto on_objects_query = [&, cb_mutex, done](const json& response) {
+        auto locked = cb_mutex.lock();
+        if (!locked) return;
+        std::lock_guard<std::mutex> lock(*locked);
+        if (*done) return;
         if (!response.is_null() && !response.count("error"))
-            shared->objects_query = response;
-        shared->objects_answered = true;
-        shared->cv.notify_all();
+            objects_query = response;
+        if (++received_count >= expected_count) cv.notify_one();
     };
 
     // Send both requests in parallel; seq_ids are distinct so they never collide.
@@ -8416,26 +8376,53 @@ SSWCPProtocol::ResolveResult SSWCP::resolve_machine_info(std::shared_ptr<PrintHo
     host->async_get_system_info(on_system_info);
     host->async_get_machine_info(extruder_targets, on_objects_query);
 
-    json system_info;
-    json objects_query;
     {
-        std::unique_lock<std::mutex> lock(shared->mutex);
-        const auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(timeout_second);
-        shared->cv.wait_until(lock, deadline, [&shared]() { return shared->system_answered; });
-        // The identity is in (or will not come): the extruder objects get a short while more.
-        const auto objects_deadline = std::min(deadline, std::chrono::steady_clock::now() + std::chrono::seconds(3));
-        shared->cv.wait_until(lock, objects_deadline, [&shared]() { return shared->system_answered && shared->objects_answered; });
-        shared->done  = true;
-        system_info   = std::move(shared->system_info);
-        objects_query = std::move(shared->objects_query);
+        std::unique_lock<std::mutex> lock(*mutex);
+        cv.wait_for(lock, std::chrono::seconds(timeout_second),
+                    [&received_count, expected_count]() { return received_count >= expected_count; });
+        *done = true;
+    }
+    // --- Merge by field priority ---
+    MachineInfo& mi = result.info;
+    // model / device_name: system_info is authoritative, normalized for whitelist safety.
+    MachineInfo sys_mi;
+    bool        got_system = !system_info.is_null() && SSWCPProtocol::parse_machine_info_response(system_info, sys_mi);
+    if (got_system) {
+        mi.model       = SSWCPProtocol::normalize_machine_model(sys_mi.model);
+        mi.device_name = sys_mi.device_name;
+        // system_info nozzle data as fallback
+        mi.nozzle_diameters    = sys_mi.nozzle_diameters;
+        mi.nozzle_volume_types = sys_mi.nozzle_volume_types;
+    }
+    // nozzle: objects.query is preferred (real-time), overrides system_info.
+    std::vector<std::string> obj_diameters, obj_flows;
+    if (!objects_query.is_null() && SSWCPProtocol::parse_extruder_nozzle_info(objects_query, obj_diameters, obj_flows)) {
+        mi.nozzle_diameters    = std::move(obj_diameters);
+        // Only overwrite flows when objects.query actually reported them; otherwise keep
+        // whatever system_info provided so we never silently clear the user's flow config.
+        if (!obj_flows.empty())
+            mi.nozzle_volume_types = std::move(obj_flows);
     }
 
-    try {
-        return SSWCPProtocol::merge_machine_info(system_info, objects_query);
-    } catch (std::exception&) {
-        return {};
-    }
+    // If the machine reported nozzle diameters but no flow types (neither system_info
+    // nor objects.query carried them), default to standard -- one per nozzle. This
+    // matches the read-side semantics (FlowType::nozzle_volume_types() pads missing
+    // entries with standard) and lets sync always write a complete, usable vector
+    // instead of silently skipping the update.
+    if (!mi.nozzle_diameters.empty() && mi.nozzle_volume_types.empty())
+        mi.nozzle_volume_types.assign(mi.nozzle_diameters.size(), FLOW_MODE_STANDARD);
+
+    // Determine status
+    if (mi.model.empty())
+        result.status = SSWCPProtocol::ResolveStatus::NoResponse;
+    else if (mi.nozzle_diameters.empty())
+        result.status = SSWCPProtocol::ResolveStatus::GotIdentity;
+    else
+        result.status = SSWCPProtocol::ResolveStatus::Complete;
+
+    return result;
 }
+
 
 MachineIPType* MachineIPType::getInstance()
 {

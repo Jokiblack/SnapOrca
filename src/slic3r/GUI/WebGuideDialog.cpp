@@ -89,7 +89,6 @@ using namespace nlohmann;
 
 namespace Slic3r { namespace GUI {
 
-<<<<<<< snaporca-int
 // The strings of every setup wizard page (resources/web/guide), keyed by their data-i18n and T() ids.
 // The pages share one web view, so they share one table.
 static json guide_strings()
@@ -156,17 +155,6 @@ static json guide_strings()
         {"install_bambu_plugin", _u8L("Install Bambu Network plug-in")},
     };
 }
-=======
-// Snapmaker: the profile JSON stays a namespace-scope global (not a GuideFrame
-// member) because SSWCP and the preset web dialog access it via extern. It is
-// filled by the background loading thread while the GUI thread serves the
-// wizard's web page from it, so every access is taken under this mutex. The
-// loading path (LoadProfileData and everything it calls) holds it for the whole
-// load, because the TBB workers in LoadProfileFamily read the JSON through
-// const references without locking.
-json m_ProfileJson;
-std::mutex m_ProfileJson_mutex;
->>>>>>> lixnix/main
 
 static wxString update_custom_filaments()
 {
@@ -242,7 +230,7 @@ GuideFrame::GuideFrame(GUI_App *pGUI, long style)
     m_SectionName = "firstguide";
     m_page        = BBL_WELCOME;
     PrivacyUse    = false;
-    StealthMode   = true;
+    StealthMode   = false;
     InstallNetplugin = false;
 
     m_MainPtr = pGUI;
@@ -425,7 +413,6 @@ void GuideFrame::OnNavigationRequest(wxWebViewEvent &evt)
  * Callback invoked when a navigation request was accepted
  */
 // The empty shape every profile-loading path starts from or falls back to.
-// Precondition: the caller holds m_ProfileJson_mutex.
 void GuideFrame::reset_profile_json()
 {
     m_ProfileJson["model"]    = json::array();
@@ -434,7 +421,6 @@ void GuideFrame::reset_profile_json()
     m_ProfileJson["process"]  = json::array();
 }
 
-// Precondition: the caller holds m_ProfileJson_mutex.
 void GuideFrame::init_guide_paths()
 {
     m_ProfileJson = json::parse("{}");
@@ -442,11 +428,7 @@ void GuideFrame::init_guide_paths()
 
     vendor_dir      = (boost::filesystem::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR).make_preferred();
     rsrc_vendor_dir = (boost::filesystem::path(resources_dir()) / "profiles").make_preferred();
-<<<<<<< snaporca-int
     sm_bundle_rsrc = true;
-=======
-    sm_bundle_rsrc  = true;
->>>>>>> lixnix/main
 
     if (boost::filesystem::exists(vendor_dir)) {
         for (const auto& entry : boost::filesystem::directory_iterator(vendor_dir)) {
@@ -465,19 +447,11 @@ void GuideFrame::init_guide_paths()
         : (rsrc_vendor_dir / PresetBundle::ORCA_FILAMENT_LIBRARY).string();
 }
 
-// Must be called on the main thread, and WITHOUT m_ProfileJson_mutex held:
-// SaveProfileData() takes it itself, as does the dump below.
 void GuideFrame::on_profile_loaded()
 {
-    //sync to appconfig first to populate current selections
+    // Must be called on the main thread.
     SaveProfileData();
-
-    //sync to web after selections are populated
-    std::string strAll;
-    {
-        std::lock_guard<std::mutex> lock(m_ProfileJson_mutex);
-        strAll = m_ProfileJson.dump(-1, ' ', false, json::error_handler_t::ignore);
-    }
+    const std::string strAll = m_ProfileJson.dump(-1, ' ', false, json::error_handler_t::ignore);
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << ", finished, json contents:\n" << strAll;
     m_profile_ready = true;
     notify_profile_loaded();
@@ -501,15 +475,8 @@ void GuideFrame::OnNavigationComplete(wxWebViewEvent &evt)
     if (!bFirstComplete) {
         bFirstComplete = true;
         try {
-            bool built = false;
-            {
-                // The helpers below assume the caller owns the profile JSON, see
-                // m_ProfileJson_mutex; on_profile_loaded() must NOT run under it.
-                std::lock_guard<std::mutex> lock(m_ProfileJson_mutex);
-                init_guide_paths();
-                built = BuildProfileDataFromPresetBundle();
-            }
-            if (built) {
+            init_guide_paths();
+            if (BuildProfileDataFromPresetBundle()) {
                 if (!*m_cancel_token)
                     on_profile_loaded();
             } else {
@@ -651,56 +618,55 @@ void GuideFrame::OnScriptMessage(wxWebViewEvent &evt)
                 for (auto it = MSelected.begin(); it != MSelected.end(); ++it) {
                     json OneSelect = it.value();
 
-                        wxString s1 = TmpModel["model"];
-                        wxString s2 = OneSelect["model"];
-                        if (s1.compare(s2) == 0) {
-                            m_ProfileJson["model"][m]["nozzle_selected"] = m_ProfileJson["model"][m]["nozzle_diameter"];
+                    wxString s1 = TmpModel["model"];
+                    wxString s2 = OneSelect["model"];
+                    if (s1.compare(s2) == 0) {
+                        m_ProfileJson["model"][m]["nozzle_selected"] = m_ProfileJson["model"][m]["nozzle_diameter"];
 
-                            // Automatically select default materials for this printer model
-                            // This mirrors the behavior of the old ConfigWizard::select_default_materials_for_printer_model()
-                            if (TmpModel.contains("materials") && !TmpModel["materials"].is_null()) {
-                                std::string materials_str;
+                        // Automatically select default materials for this printer model
+                        // This mirrors the behavior of the old ConfigWizard::select_default_materials_for_printer_model()
+                        if (TmpModel.contains("materials") && !TmpModel["materials"].is_null()) {
+                            std::string materials_str;
 
-                                // Handle both string and JSON array formats for materials
-                                if (TmpModel["materials"].is_string()) {
-                                    materials_str = TmpModel["materials"].get<std::string>();
-                                } else if (TmpModel["materials"].is_array()) {
-                                    // Convert JSON array to semicolon-separated string for unescape_strings_cstyle
-                                    for (const auto& material : TmpModel["materials"]) {
-                                        if (!materials_str.empty()) materials_str += ";";
-                                        materials_str += material.get<std::string>();
-                                    }
-                                } else {
-                                    materials_str = "";
-                                }
-
-                                boost::trim(materials_str);
-                                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " Processing default_materials for printer: " << s1.ToStdString() << " - materials: " << materials_str;
-
-                                // Use the same parsing logic as ConfigWizard::select_default_materials_for_printer_model()
-                                // This calls unescape_strings_cstyle() just like Preset.cpp:298 does
-                                std::vector<std::string> materials;
-                                if (Slic3r::unescape_strings_cstyle(materials_str, materials)) {
-                                    for (const std::string& material : materials) {
-                                        if (!material.empty()) {
-                                            // Mark this filament as selected if it exists in our filament list
-                                            // This mirrors appconfig_new.set(section, material, "true") from ConfigWizard.cpp:2150
-                                            if (m_ProfileJson["filament"].contains(material)) {
-                                                m_ProfileJson["filament"][material]["selected"] = 1;
-                                                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " Automatically selected default filament: " << material;
-                                            } else {
-                                                BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << " Default filament '" << material << "' not found in available filaments for printer: " << s1.ToStdString();
-                                            }
-                                        }
-                                    }
-                                } else {
-                                    BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " Malformed default_materials field: " << materials_str << " for printer: " << s1.ToStdString();
+                            // Handle both string and JSON array formats for materials
+                            if (TmpModel["materials"].is_string()) {
+                                materials_str = TmpModel["materials"].get<std::string>();
+                            } else if (TmpModel["materials"].is_array()) {
+                                // Convert JSON array to semicolon-separated string for unescape_strings_cstyle
+                                for (const auto& material : TmpModel["materials"]) {
+                                    if (!materials_str.empty()) materials_str += ";";
+                                    materials_str += material.get<std::string>();
                                 }
                             } else {
-                                BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " No default_materials defined for printer: " << s1.ToStdString();
+                                materials_str = "";
                             }
-                            break;
+
+                            boost::trim(materials_str);
+                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " Processing default_materials for printer: " << s1.ToStdString() << " - materials: " << materials_str;
+
+                            // Use the same parsing logic as ConfigWizard::select_default_materials_for_printer_model()
+                            // This calls unescape_strings_cstyle() just like Preset.cpp:298 does
+                            std::vector<std::string> materials;
+                            if (Slic3r::unescape_strings_cstyle(materials_str, materials)) {
+                                for (const std::string& material : materials) {
+                                    if (!material.empty()) {
+                                        // Mark this filament as selected if it exists in our filament list
+                                        // This mirrors appconfig_new.set(section, material, "true") from ConfigWizard.cpp:2150
+                                        if (m_ProfileJson["filament"].contains(material)) {
+                                            m_ProfileJson["filament"][material]["selected"] = 1;
+                                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " Automatically selected default filament: " << material;
+                                        } else {
+                                            BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << " Default filament '" << material << "' not found in available filaments for printer: " << s1.ToStdString();
+                                        }
+                                    }
+                                }
+                            } else {
+                                BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << " Malformed default_materials field: " << materials_str << " for printer: " << s1.ToStdString();
+                            }
+                        } else {
+                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " No default_materials defined for printer: " << s1.ToStdString();
                         }
+                        break;
                     }
                 }
             }
@@ -768,25 +734,17 @@ void GuideFrame::OnScriptMessage(wxWebViewEvent &evt)
                             // vendor) and push the refreshed list to the webview, the same way
                             // request_userguide_profile does, so the printer list picks them up
                             // without needing to reopen the guide.
-                            wxString profileJS;
-                            if (!installed_vendors.empty()) {
-                                json profile_response = json::object();
-                                {
-                                    // Snapmaker: LoadProfileFamily() needs m_ProfileJson_mutex (m_ProfileJson is
-                                    // a shared global); it is released before RunScript(), whose webview handlers
-                                    // re-enter OnScriptMessage() and the mutex is not recursive.
-                                    std::lock_guard<std::mutex> lock(m_ProfileJson_mutex);
-                                    for (const auto& vendor_id : installed_vendors) {
-                                        weak_this->LoadProfileFamily(vendor_id, (weak_this->vendor_dir / (vendor_id + ".json")).string());
-                                    }
-                                    profile_response["command"]     = "response_userguide_profile";
-                                    profile_response["sequence_id"] = "10001";
-                                    profile_response["response"]    = m_ProfileJson;
-                                }
-                                profileJS = wxString::Format("HandleStudio(%s)", profile_response.dump(-1, ' ', true));
+                            for (const auto& vendor_id : installed_vendors) {
+                                weak_this->LoadProfileFamily(vendor_id, (weak_this->vendor_dir / (vendor_id + ".json")).string());
                             }
-                            if (!profileJS.empty())
+                            if (!installed_vendors.empty()) {
+                                json profile_response            = json::object();
+                                profile_response["command"]      = "response_userguide_profile";
+                                profile_response["sequence_id"]  = "10001";
+                                profile_response["response"]     = weak_this->m_ProfileJson;
+                                wxString profileJS = wxString::Format("HandleStudio(%s)", profile_response.dump(-1, ' ', true));
                                 weak_this->RunScript(profileJS);
+                            }
 
                             response["vendors"]  = installed_vendors;
                             response["declined"] = declined;
@@ -804,11 +762,7 @@ void GuideFrame::OnScriptMessage(wxWebViewEvent &evt)
         else if (strCmd == "user_guide_finish") {
             SaveProfile();
 
-            std::string oldregion;
-            {
-                std::lock_guard<std::mutex> lock(m_ProfileJson_mutex);
-                oldregion = m_ProfileJson["region"];
-            }
+            std::string oldregion = m_ProfileJson["region"];
             if (m_Region != oldregion) {
                 AppConfig* config = GUI::wxGetApp().app_config;
                 std::string country_code = config->get_country_code();
@@ -877,10 +831,7 @@ void GuideFrame::OnScriptMessage(wxWebViewEvent &evt)
         BOOST_LOG_TRIVIAL(trace) << "GuideFrame::OnScriptMessage;Error:" << e.what();
     }
 
-    {
-        std::lock_guard<std::mutex> lock(m_ProfileJson_mutex);
-        wxString strAll = m_ProfileJson.dump(-1,' ',false, json::error_handler_t::ignore);
-    }
+    wxString strAll = m_ProfileJson.dump(-1,' ',false, json::error_handler_t::ignore);
 }
 
 void GuideFrame::RunScript(const wxString &javascript)
@@ -1350,7 +1301,7 @@ int GuideFrame::GetFilamentInfo( std::string VendorDirectory, json & pFilaList, 
     return GetFilamentInfo(VendorDirectory, pFilaList, filepath, sVendor, sType, visiting);
 }
 
-int GuideFrame::GetFilamentInfo(const std::string& VendorDirectory, const json& pFilaList,
+int GuideFrame::GetFilamentInfo(const std::string& VendorDirectory, json& pFilaList,
                                 const std::string& filepath, std::string& sVendor,
                                 std::string& sType, std::unordered_set<std::string>& visiting)
 {
@@ -1376,25 +1327,12 @@ int GuideFrame::GetFilamentInfo(const std::string& VendorDirectory, const json& 
     std::string type;
     int         status = 0;
 
-    // Snapmaker: LoadProfileFamily drives this through load_section(), i.e. from TBB
-    // workers, so the cache map must be guarded. The lock is only ever held around the
-    // map operations themselves — never across the recursive call below — so the plain
-    // (non-recursive) mutex cannot deadlock.
-    static std::mutex s_filament_info_cache_mutex;
-
-    bool cache_hit = false;
-    {
-        std::lock_guard<std::mutex> cache_lock(s_filament_info_cache_mutex);
-        const auto cache_it = filament_info_cache.find(filepath);
-        if (cache_it != filament_info_cache.end()) {
-            vendor    = cache_it->second.vendor;
-            type      = cache_it->second.type;
-            status    = cache_it->second.status;
-            cache_hit = true;
-        }
-    }
-
-    if (!cache_hit) {
+    const auto cache_it = filament_info_cache.find(filepath);
+    if (cache_it != filament_info_cache.end()) {
+        vendor = cache_it->second.vendor;
+        type   = cache_it->second.type;
+        status = cache_it->second.status;
+    } else {
         try {
             std::string contents;
             LoadFile(filepath, contents);
@@ -1418,28 +1356,19 @@ int GuideFrame::GetFilamentInfo(const std::string& VendorDirectory, const json& 
                     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "pFilaList - Not Contains inherits filaments: " << FName;
                     status = -1;
                 } else {
-                    // Snapmaker hardening: pFilaList is a const json&, so use at() and validate
-                    // sub_path instead of relying on operator[] on a possibly malformed entry.
-                    const json &inherited = pFilaList.at(FName); // contains()-checked above, cannot throw
-                    if (!inherited.contains("sub_path") || !inherited["sub_path"].is_string()) {
-                        BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << "inherits filament " << FName << " has no sub_path";
-                        status = -1;
-                    } else {
-                        std::string FPath = inherited["sub_path"];
-                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " Before Format Inherits Path: VendorDirectory - " << VendorDirectory << ", sub_path - " << FPath;
-                        // Avoid w2s()/mb_str(): ANSI code page breaks Unicode paths on Windows.
-                        boost::filesystem::path inherits_path = (boost::filesystem::path(VendorDirectory) / FPath).make_preferred();
-                        if (!boost::filesystem::exists(inherits_path))
-                            inherits_path = (boost::filesystem::path(m_OrcaFilaLibPath) / boost::filesystem::path(FPath)).make_preferred();
+                    std::string FPath = pFilaList[FName]["sub_path"];
+                    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " Before Format Inherits Path: VendorDirectory - " << VendorDirectory << ", sub_path - " << FPath;
+                    wxString strNewFile = wxString::Format("%s%c%s", wxString(VendorDirectory.c_str(), wxConvUTF8), boost::filesystem::path::preferred_separator, FPath);
+                    boost::filesystem::path inherits_path(w2s(strNewFile));
+                    if (!boost::filesystem::exists(inherits_path))
+                        inherits_path = (boost::filesystem::path(m_OrcaFilaLibPath) / boost::filesystem::path(FPath)).make_preferred();
 
-                        if (boost::filesystem::exists(inherits_path)) {
-                            // Traverse the full chain for errors; inherited values only fill local gaps
-                            // (this file's own (vendor, type) is the chain accumulator).
-                            status = GetFilamentInfo(VendorDirectory, pFilaList, inherits_path.string(), vendor, type, visiting);
-                        } else {
-                            BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " inherits File Not Exist: " << inherits_path;
-                            status = -1;
-                        }
+                    if (boost::filesystem::exists(inherits_path)) {
+                        // Traverse the full chain for errors; inherited values only fill local gaps.
+                        status = GetFilamentInfo(VendorDirectory, pFilaList, inherits_path.string(), vendor, type, visiting);
+                    } else {
+                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << " inherits File Not Exist: " << inherits_path;
+                        status = -1;
                     }
                 }
             } else {
@@ -1456,10 +1385,7 @@ int GuideFrame::GetFilamentInfo(const std::string& VendorDirectory, const json& 
             status = -1;
         }
 
-        {
-            std::lock_guard<std::mutex> cache_lock(s_filament_info_cache_mutex);
-            filament_info_cache[filepath] = CachedFilamentInfo{status, vendor, type};
-        }
+        filament_info_cache[filepath] = CachedFilamentInfo{status, vendor, type};
     }
 
     // Merge this file's resolved values into the caller's out-params (fill empties only).
@@ -1469,12 +1395,9 @@ int GuideFrame::GetFilamentInfo(const std::string& VendorDirectory, const json& 
     return status;
 }
 
-// Precondition: the caller holds m_ProfileJson_mutex (OnNavigationComplete on the
-// GUI thread, LoadProfileData on the loading thread).
 bool GuideFrame::BuildProfileJson(const PresetBundle& bundle, bool require_all_resource_vendors)
 {
     try {
-<<<<<<< snaporca-int
         // Models from vendor profiles.
         // Snapmaker: the Snapmaker vendor goes first so its printers top the machine list.
         std::vector<const VendorProfile*> ordered_vendors;
@@ -1487,10 +1410,6 @@ bool GuideFrame::BuildProfileJson(const PresetBundle& bundle, bool require_all_r
                 ordered_vendors.push_back(&vp);
         for (const VendorProfile* vp_ptr : ordered_vendors) {
             const VendorProfile& vp = *vp_ptr;
-=======
-        // Models from vendor profiles
-        auto push_vendor_models = [this](const VendorProfile& vp) {
->>>>>>> lixnix/main
             for (const auto& model : vp.models) {
                 std::string nozzle_str;
                 for (const auto& v : model.variants) {
@@ -1517,15 +1436,7 @@ bool GuideFrame::BuildProfileJson(const PresetBundle& bundle, bool require_all_r
                 entry["sub_path"]        = "";
                 m_ProfileJson["model"].push_back(entry);
             }
-        };
-        // Snapmaker: emit the Snapmaker vendor first so its printers head the
-        // wizard's machine list, as the JSON scan in LoadProfileData does.
-        const std::string sm_bundle(PresetBundle::SM_BUNDLE);
-        if (auto sm = bundle.vendors.find(sm_bundle); sm != bundle.vendors.end())
-            push_vendor_models(sm->second);
-        for (const auto& [vendor_id, vp] : bundle.vendors)
-            if (vendor_id != sm_bundle)
-                push_vendor_models(vp);
+        }
 
         // Machine map: preset name -> {model, nozzle variant}
         for (const Preset& p : bundle.printers()) {
@@ -1612,7 +1523,6 @@ bool GuideFrame::BuildProfileJson(const PresetBundle& bundle, bool require_all_r
     }
 }
 
-// Precondition: the caller holds m_ProfileJson_mutex.
 bool GuideFrame::BuildProfileDataFromPresetBundle()
 {
     PresetBundle* pb = wxGetApp().preset_bundle;
@@ -1621,7 +1531,6 @@ bool GuideFrame::BuildProfileDataFromPresetBundle()
     return BuildProfileJson(*pb, /*require_all_resource_vendors=*/true);
 }
 
-// Precondition: the caller (LoadProfileData) holds m_ProfileJson_mutex.
 bool GuideFrame::BuildProfileDataFromVendors()
 {
     try {
@@ -1745,13 +1654,6 @@ int GuideFrame::LoadProfileData()
     //   1. Load every vendor, from its preset cache wherever one covers it
     //   2. Read all vendor JSONs by hand
     try {
-        // Snapmaker: the whole load runs under m_ProfileJson_mutex — the TBB workers
-        // in LoadProfileFamily read m_ProfileJson through const references without
-        // locking, which is only race-free while this thread owns it. Everything
-        // called from here (BuildProfileDataFromVendors, BuildProfileJson,
-        // reset_profile_json, LoadProfileFamily) therefore does NOT lock itself.
-        std::lock_guard<std::mutex> lock(m_ProfileJson_mutex);
-
         if (!BuildProfileDataFromVendors()) {
             // Last resort — read all vendor JSONs
             std::set<std::string> loaded_vendors;
@@ -1762,11 +1664,7 @@ int GuideFrame::LoadProfileData()
                 LoadProfileFamily(PresetBundle::ORCA_FILAMENT_LIBRARY, (rsrc_vendor_dir / filament_library_name).string());
             loaded_vendors.insert(PresetBundle::ORCA_FILAMENT_LIBRARY);
 
-<<<<<<< snaporca-int
             // Snapmaker: load the Snapmaker vendor first so it appears at the top of the machine list.
-=======
-            // Snapmaker: load the Snapmaker vendor next, so it heads the machine list.
->>>>>>> lixnix/main
             auto sm_bundle_name = boost::filesystem::path(PresetBundle::SM_BUNDLE).replace_extension(".json");
             if (boost::filesystem::exists(vendor_dir / sm_bundle_name)) {
                 LoadProfileFamily(PresetBundle::SM_BUNDLE, (vendor_dir / sm_bundle_name).string());
@@ -1913,14 +1811,7 @@ void StringReplace(std::string &strBase, std::string strSrc, std::string strDes)
     }
 }
 
-<<<<<<< snaporca-int
 
-=======
-// Precondition: the caller (LoadProfileData) holds m_ProfileJson_mutex for the
-// whole load. The TBB workers below read the shared m_ProfileJson via const
-// references without locking; that is only race-free because every other
-// accessor of it locks the same mutex and this thread owns it here.
->>>>>>> lixnix/main
 int GuideFrame::LoadProfileFamily(std::string strVendor, std::string strFilePath)
 {
     // wxString strFolder = strFilePath.BeforeLast(boost::filesystem::path::preferred_separator);
@@ -1942,19 +1833,8 @@ int GuideFrame::LoadProfileFamily(std::string strVendor, std::string strFilePath
 
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(",  got %1% machine models") % nsize;
 
-<<<<<<< snaporca-int
         for (int n = 0; n < nsize; n++) {
             json OneModel = pmodels.at(n);
-=======
-        {
-            const json &pmodels_ro = pmodels;
-            load_section(nsize, *m_cancel_token, [&](int n, json &slot) {
-                json OneModel = pmodels_ro.at(n);
-                if (!OneModel.is_object() || !OneModel["name"].is_string() || !OneModel["sub_path"].is_string()) {
-                    BOOST_LOG_TRIVIAL(warning) << "LoadProfileFamily: machine model " << n << " of vendor " << strVendor << " malformed, skipped";
-                    return;
-                }
->>>>>>> lixnix/main
 
             OneModel["model"] = OneModel["name"];
             OneModel.erase("name");
@@ -1973,7 +1853,6 @@ int GuideFrame::LoadProfileFamily(std::string strVendor, std::string strFilePath
             json pm = json::parse(contents);
             // wxLogMessage("GUIDE: json_path2  loaded");
 
-<<<<<<< snaporca-int
             OneModel["name"]      = pm["name"];
             OneModel["vendor"]    = strVendor;
             std::string NozzleOpt = pm["nozzle_diameter"];
@@ -1990,47 +1869,21 @@ int GuideFrame::LoadProfileFamily(std::string strVendor, std::string strFilePath
                                  .make_preferred();
                 if (!boost::filesystem::exists(cover_path))
                     cover_path = (boost::filesystem::absolute(boost::filesystem::path(resources_dir()) / "/web/image/printer/") / cover_file)
-=======
-                std::string             cover_file = s1 + "_cover.png";
-                // Orca: the vendor directory comes first, so that a vendor installed by the updater
-                // into the data directory shows the covers it ships.
-                boost::filesystem::path cover_path = boost::filesystem::absolute(vendor_dir / cover_file).make_preferred();
-                if (!boost::filesystem::exists(cover_path, ec) || ec) {
-                    cover_path = boost::filesystem::absolute(boost::filesystem::path(resources_dir()) / "/profiles/" / strVendor / cover_file)
->>>>>>> lixnix/main
                                      .make_preferred();
-                    if (!boost::filesystem::exists(cover_path, ec) || ec)
-                        cover_path = (boost::filesystem::absolute(boost::filesystem::path(resources_dir()) / "/web/image/printer/") / cover_file)
-                                         .make_preferred();
-                }
-                OneModel["cover"] = into_u8(file_url_from_path(cover_path));
+            }
+            OneModel["cover"]                  = into_u8(file_url_from_path(cover_path));
 
-                OneModel["nozzle_selected"] = "";
-
-<<<<<<< snaporca-int
             OneModel["nozzle_selected"] = "";
 
             m_ProfileJson["model"].push_back(OneModel);
-=======
-                slot = std::move(OneModel);
-            }, [this](json &item) { m_ProfileJson["model"].push_back(std::move(item)); });
-            if (*m_cancel_token) return 0;
->>>>>>> lixnix/main
         }
 
         // BBS:Machine
         json pmachine = jLocal["machine_list"];
         nsize         = pmachine.size();
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(",  got %1% machines") % nsize;
-<<<<<<< snaporca-int
         for (int n = 0; n < nsize; n++) {
             json OneMachine = pmachine.at(n);
-=======
-        {
-            const json &pmachine_ro = pmachine;
-            load_section(nsize, *m_cancel_token, [&](int n, json &slot) {
-                json OneMachine = pmachine_ro.at(n);
->>>>>>> lixnix/main
 
             std::string s1 = OneMachine["name"];
             std::string s2 = OneMachine["sub_path"];
@@ -2048,29 +1901,8 @@ int GuideFrame::LoadProfileFamily(std::string strVendor, std::string strFilePath
                 OneMachine["model"] = pm["printer_model"];
                 OneMachine["nozzle"] = pm["nozzle_diameter"][0];
 
-<<<<<<< snaporca-int
                 m_ProfileJson["machine"][s1]=OneMachine;
             }
-=======
-                // json == const char* never throws: a missing or non-string
-                // "instantiation" simply compares unequal.
-                if (pm["instantiation"] == "true") {
-                    const json &nd = pm["nozzle_diameter"];
-                    if (!nd.is_array() && !nd.is_null()) {
-                        BOOST_LOG_TRIVIAL(warning) << "LoadProfileFamily: machine file " << sub_file << " has malformed nozzle_diameter, skipped";
-                        return;
-                    }
-                    OneMachine["model"]  = pm["printer_model"];
-                    OneMachine["nozzle"] = (nd.is_array() && !nd.empty()) ? nd[0] : json();
-
-                    slot = std::move(OneMachine);
-                }
-            }, [this](json &item) {
-                std::string s1 = item["name"];
-                m_ProfileJson["machine"][s1] = std::move(item);
-            });
-            if (*m_cancel_token) return 0;
->>>>>>> lixnix/main
         }
 
         // BBS:Filament
@@ -2092,22 +1924,8 @@ int GuideFrame::LoadProfileFamily(std::string strVendor, std::string strFilePath
         int nModel  = 0;
         int nFinish = 0;
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(",  got %1% filaments") % nsize;
-<<<<<<< snaporca-int
         for (int n = 0; n < nsize; n++) {
             json OneFF = pFilament.at(n);
-=======
-        {
-            const json &pFilament_ro        = pFilament;
-            const json &tFilaList_ro        = tFilaList;
-            const json &machines_ro         = m_ProfileJson["machine"];
-            const json &loaded_filaments_ro = m_ProfileJson["filament"];
-            load_section(nsize, *m_cancel_token, [&](int n, json &slot) {
-                json OneFF = pFilament_ro.at(n);
-                if (!OneFF.is_object() || !OneFF["name"].is_string() || !OneFF["sub_path"].is_string()) {
-                    BOOST_LOG_TRIVIAL(warning) << "LoadProfileFamily: filament " << n << " of vendor " << strVendor << " malformed, skipped";
-                    return;
-                }
->>>>>>> lixnix/main
 
             std::string s1 = OneFF["name"];
             std::string s2 = OneFF["sub_path"];
@@ -2128,39 +1946,15 @@ int GuideFrame::LoadProfileFamily(std::string strVendor, std::string strFilePath
                     std::string sV;
                     std::string sT;
 
-                std::string sV;
-                std::string sT;
-
-                int nRet = GetFilamentInfo(vendor_dir.string(), tFilaList_ro, sub_file, sV, sT);
-                if (nRet != 0 || sV.empty() || sT.empty()) {
-                    BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "Load Filament:" << s1 << ",unresolved vendor/type, Vendor:" << sV << ",Type:"<< sT;
-                    return;
-                }
-
-                OneFF["vendor"] = sV;
-                OneFF["type"]   = sT;
-
-                OneFF["models"]   = "";
-
-                const json &pPrinters = pm["compatible_printers"];
-                std::string ModelList = "";
-                if (pPrinters.is_array()) {
-                    for (const json &printer : pPrinters) {
-                        if (!printer.is_string()) continue;
-                        std::string sP = printer;
-                        if (!machines_ro.contains(sP)) continue;
-                        const json &m = machines_ro.at(sP);
-                        if (!m.contains("model") || !m["model"].is_string() || !m.contains("nozzle") || !m["nozzle"].is_string()) continue;
-                        std::string mModel  = m["model"];
-                        std::string mNozzle = m["nozzle"];
-
-                        ModelList += "[" + mModel + "++" + mNozzle + "]";
+                    int nRet = GetFilamentInfo(vendor_dir.string(),tFilaList, sub_file, sV, sT);
+                    if (nRet != 0 || sV.empty() || sT.empty()) {
+                        BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << "Load Filament:" << s1 << ",unresolved vendor/type, Vendor:" << sV << ",Type:"<< sT;
+                        continue;
                     }
 
                     OneFF["vendor"] = sV;
                     OneFF["type"]   = sT;
 
-<<<<<<< snaporca-int
                     OneFF["models"]   = "";
 
                     json pPrinters = pm["compatible_printers"];
@@ -2187,16 +1981,6 @@ int GuideFrame::LoadProfileFamily(std::string strVendor, std::string strFilePath
                     continue;
 
             }
-=======
-                slot = std::move(OneFF);
-            }, [this](json &item) {
-                std::string s1 = item["name"];
-                // first occurrence wins, matching the old serial semantics
-                if (!m_ProfileJson["filament"].contains(s1))
-                    m_ProfileJson["filament"][s1] = std::move(item);
-            });
-            if (*m_cancel_token) return 0;
->>>>>>> lixnix/main
         }
         if(strVendor == PresetBundle::ORCA_FILAMENT_LIBRARY)
             m_OrcaFilaList = tFilaList;
@@ -2205,19 +1989,8 @@ int GuideFrame::LoadProfileFamily(std::string strVendor, std::string strFilePath
         json pProcess = jLocal["process_list"];
         nsize         = pProcess.size();
         BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(",  got %1% processes") % nsize;
-<<<<<<< snaporca-int
         for (int n = 0; n < nsize; n++) {
             json OneProcess = pProcess.at(n);
-=======
-        {
-            const json &pProcess_ro = pProcess;
-            load_section(nsize, *m_cancel_token, [&](int n, json &slot) {
-                json OneProcess = pProcess_ro.at(n);
-                if (!OneProcess.is_object() || !OneProcess["sub_path"].is_string()) {
-                    BOOST_LOG_TRIVIAL(warning) << "LoadProfileFamily: process " << n << " of vendor " << strVendor << " malformed, skipped";
-                    return;
-                }
->>>>>>> lixnix/main
 
             std::string s2 = OneProcess["sub_path"];
             // wxString ModelFilePath = wxString::Format("%s\\%s\\%s", strFolder, strVendor, s2);
@@ -2228,14 +2001,8 @@ int GuideFrame::LoadProfileFamily(std::string strVendor, std::string strFilePath
             LoadFile(sub_file, contents);
             json pm = json::parse(contents);
 
-<<<<<<< snaporca-int
             std::string bInstall = pm["instantiation"];
             if (bInstall == "true") { m_ProfileJson["process"].push_back(OneProcess); }
-=======
-                if (pm["instantiation"] == "true") slot = std::move(OneProcess);
-            }, [this](json &item) { m_ProfileJson["process"].push_back(std::move(item)); });
-            if (*m_cancel_token) return 0;
->>>>>>> lixnix/main
         }
 
     } catch (nlohmann::detail::parse_error &err) {

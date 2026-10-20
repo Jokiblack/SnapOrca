@@ -103,8 +103,6 @@
 #include "libslic3r/Preset.hpp"
 #include "libslic3r/FilamentFlowColumns.hpp"
 #include "libslic3r/PerHeadProcess.hpp"
-#include "libslic3r/SnapmakerFlowCompat.hpp"
-#include "libslic3r/ClipperUtils.hpp"
 #include "libslic3r/Geometry.hpp"
 #include "libslic3r/GCode.hpp"
 #include "libslic3r/MeshRepair.hpp"
@@ -178,7 +176,7 @@ using json = nlohmann::json;
 #ifdef SLIC3R_GUI
     #include "slic3r/GUI/GUI_Init.hpp"
     // BBLPrinterAgent::from_orca_filament_id(); the map and its lookups live in libslic3r_gui,
-    // which only a SLIC3R_GUI build links (see target_link_libraries(Snapmaker_Orca libslic3r_gui)
+    // which only a SLIC3R_GUI build links (see target_link_libraries(OrcaSlicer libslic3r_gui)
     // in CMakeLists).
     #include "slic3r/Utils/BBLPrinterAgent.hpp"
 #endif /* SLIC3R_GUI */
@@ -1951,20 +1949,6 @@ int CLI::run(int argc, char **argv)
                     BOOST_LOG_TRIVIAL(info) << "Found legacy configuration values, substituted when loading " << file << ":\n";
                     for (const ConfigSubstitution &subst : config_substitutions.substitutions)
                         BOOST_LOG_TRIVIAL(info) << "\tkey = \"" << subst.opt_def->opt_key << "\"\t old_value = \"" << subst.old_value << "\tnew_value = \"" << subst.new_value->serialize() << "\"\n";
-                }
-
-                // A Snapmaker Orca 2.4 project is rewritten into variant columns first; what that changed
-                // about the tool heads is logged, the command line has no notice area.
-                {
-                    FlowImportReport flow_import;
-                    if (normalize_snapmaker_flow_config(config, flow_import)) {
-                        for (const FlowImportReport::HeadChange &change : flow_import.changed_heads)
-                            BOOST_LOG_TRIVIAL(warning) << file << ": extruder " << change.head << " set to a "
-                                                       << (change.to_high_flow ? "High Flow" : "Standard") << " nozzle to follow its filaments";
-                        for (const FlowImportReport::DroppedFilament &dropped : flow_import.dropped_filaments)
-                            BOOST_LOG_TRIVIAL(warning) << file << ": the flow type of filament " << dropped.filament
-                                                       << " is dropped, it follows extruder " << dropped.head;
-                    }
                 }
 
                 // config is applied to m_print_config before the current m_config values.
@@ -4604,10 +4588,6 @@ int CLI::run(int argc, char **argv)
                                  << " wipe_y=" << plate_obj_size_info.wipe_y
                                  << " wipe_width=" << plate_obj_size_info.wipe_width
                                  << " wipe_depth=" << plate_obj_size_info.wipe_depth
-<<<<<<< snaporca-int
-=======
-                                 << " wipe_height=" << footprint.height
->>>>>>> lixnix/main
                                  << " brim_width=" << brim_width;
 
         Vec3d origin = plate->get_origin();
@@ -5456,11 +5436,7 @@ int CLI::run(int argc, char **argv)
                     if (tower_brim_width < 0.f) tower_brim_width = 8.f; // auto: object heights unknown here, 8 mm is the auto cap
                     const float tower_margin = WIPE_TOWER_MARGIN + tower_brim_width;
                     int plate_width = 0, plate_depth = 0;
-<<<<<<< snaporca-int
                     double plate_height = 0;
-=======
-                    double plate_height = 0.;
->>>>>>> lixnix/main
                     partplate_list.get_plate_size(plate_width, plate_depth, plate_height);
 
                     // set the default position: x the same with print config(left), y at the middle of the plate
@@ -5482,17 +5458,9 @@ int CLI::run(int argc, char **argv)
                     ConfigOptionFloat* width_option = m_print_config.option<ConfigOptionFloat>("prime_tower_width", true);
                     ConfigOptionFloat* rotation_angle_option = m_print_config.option<ConfigOptionFloat>("wipe_tower_rotation_angle", true);
                     ConfigOptionFloat* volume_option = m_print_config.option<ConfigOptionFloat>("prime_volume", true);
-                    // Snapmaker: fork-only prime tower brim chamfer options - fetched with create-if-missing
-                    // semantics so that older projects get the fork defaults injected.
-                    ConfigOptionFloat* brim_chamfer_max_width_option = m_print_config.option<ConfigOptionFloat>("prime_tower_brim_chamfer_max_width", true);
-                    ConfigOptionBool* brim_chamfer_option = m_print_config.option<ConfigOptionBool>("prime_tower_brim_chamfer", true);
                     ConfigOptionEnum<WipeTowerWallType> *prime_tower_rib_wall_option = m_print_config.option<ConfigOptionEnum<WipeTowerWallType>>("wipe_tower_wall_type", true);
 
-                    // Snapmaker: the two brim chamfer options are fork-only, so a config without their
-                    // definitions yields a null pointer here - log a neutral value instead of dereferencing it.
-                    const bool  brim_chamfer           = (brim_chamfer_option != nullptr) && brim_chamfer_option->value;
-                    const float brim_chamfer_max_width = (brim_chamfer_max_width_option != nullptr) ? float(brim_chamfer_max_width_option->value) : 0.f;
-                    BOOST_LOG_TRIVIAL(info) << boost::format("prime_tower_width %1% wipe_tower_rotation_angle %2% prime_volume %3%, rib_wall %4%, brim_chamfer %5%, brim_chamfer_max_width %6%") % width_option->value % rotation_angle_option->value % volume_option->value %prime_tower_rib_wall_option->value %brim_chamfer %brim_chamfer_max_width;
+                    BOOST_LOG_TRIVIAL(info) << boost::format("prime_tower_width %1% wipe_tower_rotation_angle %2% prime_volume %3%, rib_wall %4%") % width_option->value % rotation_angle_option->value % volume_option->value %prime_tower_rib_wall_option->value;
 
                     ConfigOptionFloat wt_x_opt(x);
                     ConfigOptionFloat wt_y_opt(y);
@@ -5615,18 +5583,11 @@ int CLI::run(int argc, char **argv)
                 {
                     //prepare the wipe tower
                     auto printer_structure_opt = m_print_config.option<ConfigOptionEnum<PrinterStructure>>("printer_structure");
-<<<<<<< snaporca-int
                     // set the default position, the same with print config(left top)
                     // Snapmaker: the tower defaults to the middle of the plate depth (no Y constant).
                     int plate_width = 0, plate_depth = 0;
                     double plate_height = 0;
                     partplate_list.get_plate_size(plate_width, plate_depth, plate_height);
-=======
-                    int plate_width = 0, plate_depth = 0;
-                    double plate_height = 0.;
-                    partplate_list.get_plate_size(plate_width, plate_depth, plate_height);
-                    // set the default position: x the same with print config(left), y at the middle of the plate
->>>>>>> lixnix/main
                     float x = WIPE_TOWER_DEFAULT_X_POS;
                     float y = plate_depth * 0.5f;
                     if (printer_structure_opt && printer_structure_opt->value == PrinterStructure::psI3) {
@@ -5799,11 +5760,7 @@ int CLI::run(int argc, char **argv)
                         if (tower_brim_width < 0.f) tower_brim_width = 8.f; // auto: object heights unknown here, 8 mm is the auto cap
                         const float tower_margin          = WIPE_TOWER_MARGIN + tower_brim_width;
                         int plate_width = 0, plate_depth = 0;
-<<<<<<< snaporca-int
                         double plate_height = 0;
-=======
-                        double plate_height = 0.;
->>>>>>> lixnix/main
                         partplate_list.get_plate_size(plate_width, plate_depth, plate_height);
                         // set the default position: x the same with print config(left), y at the middle of the plate
                         float x = WIPE_TOWER_DEFAULT_X_POS;
@@ -5830,11 +5787,7 @@ int CLI::run(int argc, char **argv)
                         ConfigOptionFloat* brim_chamfer_max_width_option = m_print_config.option<ConfigOptionFloat>("prime_tower_brim_chamfer_max_width", true);
                         ConfigOptionBool* brim_chamfer_option = m_print_config.option<ConfigOptionBool>("prime_tower_brim_chamfer", true);
 
-                        // Snapmaker: fork-only options, fetched so older projects get the fork defaults injected;
-                        // null when the definitions are missing, hence no dereference without a check.
-                        const bool  brim_chamfer           = (brim_chamfer_option != nullptr) && brim_chamfer_option->value;
-                        const float brim_chamfer_max_width = (brim_chamfer_max_width_option != nullptr) ? float(brim_chamfer_max_width_option->value) : 0.f;
-                        BOOST_LOG_TRIVIAL(info) << boost::format("prime_tower_width %1% wipe_tower_rotation_angle %2% prime_volume %3%, brim_chamfer %4%, brim_chamfer_max_width %5%")%width_option->value %rotation_angle_option->value %volume_option->value %brim_chamfer %brim_chamfer_max_width;
+                        BOOST_LOG_TRIVIAL(info) << boost::format("prime_tower_width %1% wipe_tower_rotation_angle %2% prime_volume %3%")%width_option->value %rotation_angle_option->value %volume_option->value ;
 
 
                         for (int bedid = 0; bedid < MAX_PLATE_COUNT; bedid++) {
@@ -5914,11 +5867,7 @@ int CLI::run(int argc, char **argv)
                         if (duplicate_count > 0) {
                             auto printer_structure_opt = m_print_config.option<ConfigOptionEnum<PrinterStructure>>("printer_structure");
                             int plate_width = 0, plate_depth = 0;
-<<<<<<< snaporca-int
                             double plate_height = 0;
-=======
-                            double plate_height = 0.;
->>>>>>> lixnix/main
                             partplate_list.get_plate_size(plate_width, plate_depth, plate_height);
                             x = WIPE_TOWER_DEFAULT_X_POS;
                             y = plate_depth * 0.5f;
@@ -7060,10 +7009,6 @@ int CLI::run(int argc, char **argv)
                         (dynamic_cast<Print*>(print))->is_BBL_printer() = is_bbl_vendor_preset;
 
                         std::vector<StringObjectException> warnings;
-                        // Snapmaker: the fork used to run an explicit high/low temperature filament mixing
-                        // guard here. Orca's Print::validate() now performs the same check (and reports
-                        // STRING_EXCEPT_FILAMENTS_MIXING_TEMP -> CLI_FILAMENTS_DIFFERENT_TEMP below) while
-                        // honouring the --allow-mix-temp CLI switch, so the manual guard was dropped.
                         print_fff->set_check_multi_filaments_compatibility(!allow_mix_temp);
                         auto err = print->validate(&warnings);
                         if (!err.string.empty()) {
@@ -8577,18 +8522,10 @@ __declspec(dllexport) int __stdcall Snapmaker_Orca_get_privacy_policy() { return
         for (size_t i = 0; i < argc; ++ i)
             argv_ptrs[i] = argv_narrow[i].data();
 
-<<<<<<< snaporca-int
         // Snapmaker: write a local crash report (<data_dir>/log/crash_*.log + .dmp, nothing is
         // sent anywhere). Builds without a Sentry SDK otherwise die without a trace; with Sentry
         // the filter hands the crash on to crashpad, which the launcher installed before us.
         CBaseException::install_crash_handlers();
-=======
-        // Snapmaker: upstream registers the BBS default unhandled-exception filter here
-        // (SET_DEFULTER_HANDLER). That is deliberately left out: initSentry() has already installed
-        // the Sentry/crashpad unhandled-exception filter in Snapmaker_Orca_app_msvc.cpp's wmain(),
-        // and SetUnhandledExceptionFilter() would replace it, losing every Windows crash report.
-        //
->>>>>>> lixnix/main
         // Dump before unwinding, while the stack still names what asked for the memory. Throwing
         // std::bad_alloc is standard-permitted here and is what reaches generic_exception_handle().
         std::set_new_handler([]() {
@@ -8619,10 +8556,6 @@ int main(int argc, char **argv)
     // Snapmaker Orca with SIGPIPE (exit 141) and produces no crash report.
     std::signal(SIGPIPE, SIG_IGN);
 #endif
-<<<<<<< snaporca-int
-=======
-
->>>>>>> lixnix/main
     initSentry();
     auto soft_start_time = get_time_timestamp();
     auto res = CLI().run(argc, argv);

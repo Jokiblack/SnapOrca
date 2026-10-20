@@ -28,7 +28,6 @@
 #endif
 #include "slic3r/Utils/BBLNetworkPlugin.hpp"
 #include "libslic3r/Thread.hpp"
-<<<<<<< snaporca-int
 #include <cstddef>
 #include <istream>
 #include <memory>
@@ -40,81 +39,12 @@
 #include <sstream>
 #include <ostream>
 #include <utility>
-=======
-#include  "sentry_wrapper/SentryWrapper.hpp"
-#include <boost/beast/core/detail/base64.hpp>
-#include <nlohmann/json.hpp>
-// windows.h stays last: its min/max/GetObject macros break nlohmann/json.hpp.
-#ifdef _WIN32
-#include <windows.h>
-#include <io.h>
-#endif
->>>>>>> lixnix/main
 
 using json = nlohmann::json;
 
 namespace Slic3r { namespace GUI {
 
-// 检测Windows系统是否支持UTF-8模式
-bool is_windows_utf8_mode()
-{
-#ifdef _WIN32
-    static bool checked = false;
-    static bool utf8_mode = false;
-    
-    if (!checked) {
-        // 检查系统是否启用了UTF-8模式
-        // 最可靠的方法：检查ANSI代码页是否为UTF-8
-        if (GetACP() == CP_UTF8) {
-            utf8_mode = true;
-        } else {
-            // 对于现代Windows系统（Windows 10 1903+），
-            // 即使没有全局启用UTF-8模式，文件系统API通常也能处理UTF-8路径
-            // 这里我们采用保守策略：只有在明确启用UTF-8模式时才返回true
-            utf8_mode = false;
-        }
-        checked = true;
-    }
-    
-    return utf8_mode;
-#else
-    return true; // 非Windows系统通常支持UTF-8
-#endif
-}
-
-// 辅助函数：将UTF-8字符串转换为适合文件系统操作的编码
-std::string utf8_to_filesystem_encoding(const std::string& utf8_str)
-{
-#ifdef _WIN32
-    if (utf8_str.empty()) return utf8_str;
-    
-    // 策略1：如果系统明确支持UTF-8模式，直接返回UTF-8字符串
-    if (is_windows_utf8_mode()) {
-        return utf8_str;
-    }
-    
-    // 策略2：传统模式需要转换为系统编码（GBK）
-    // 虽然某些情况下UTF-8路径可能成功，但为了确保兼容性，还是进行编码转换
-    // 将UTF-8转换为宽字符（UTF-16）
-    int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8_str.c_str(), -1, nullptr, 0);
-    if (wlen <= 0) return utf8_str; // 转换失败，返回原字符串
-    
-    std::wstring wstr(wlen - 1, 0);
-    MultiByteToWideChar(CP_UTF8, 0, utf8_str.c_str(), -1, &wstr[0], wlen);
-    
-    // 将宽字符转换为系统编码（GBK）
-    int len = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), -1, nullptr, 0, nullptr, nullptr);
-    if (len <= 0) return utf8_str; // 转换失败，返回原字符串
-    
-    std::string result(len - 1, 0);
-    WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), -1, &result[0], len, nullptr, nullptr);
-    
-    return result;
-#else
-    // 在非Windows系统上，UTF-8通常就是系统编码
-    return utf8_str;
-#endif
-}
+std::string utf8_to_filesystem_encoding(const std::string& utf8_str);
 
 std::string http_headers::get_header(const std::string& name) const
 {
@@ -223,9 +153,9 @@ bool is_not_modified(const std::string& if_modified_since, const std::string& if
                      const std::string& etag, std::time_t mtime)
 {
     if (!if_none_match.empty()) {
-        // If-None-Match: * is deliberately not answered with 304, although RFC 7232 allows
-        // it for an existing representation. A 304 has an empty body; if the client has no
-        // usable cache entry, the shell stays blank. Only the concrete ETag matches.
+        // Do not treat If-None-Match: * as 304. A 304 has an empty body; if the
+        // client has no usable cache entry, the shell stays blank. Match the
+        // concrete ETag only.
         return if_none_match == etag;
     }
 
@@ -311,6 +241,67 @@ void write_common_headers(std::stringstream& out, int status_code, const std::st
 
 } // namespace
 
+// 检测Windows系统是否支持UTF-8模式
+bool is_windows_utf8_mode()
+{
+#ifdef _WIN32
+    static bool checked = false;
+    static bool utf8_mode = false;
+    
+    if (!checked) {
+        // 检查系统是否启用了UTF-8模式
+        // 最可靠的方法：检查ANSI代码页是否为UTF-8
+        if (GetACP() == CP_UTF8) {
+            utf8_mode = true;
+        } else {
+            // 对于现代Windows系统（Windows 10 1903+），
+            // 即使没有全局启用UTF-8模式，文件系统API通常也能处理UTF-8路径
+            // 这里我们采用保守策略：只有在明确启用UTF-8模式时才返回true
+            utf8_mode = false;
+        }
+        checked = true;
+    }
+    
+    return utf8_mode;
+#else
+    return true; // 非Windows系统通常支持UTF-8
+#endif
+}
+
+// 辅助函数：将UTF-8字符串转换为适合文件系统操作的编码
+std::string utf8_to_filesystem_encoding(const std::string& utf8_str)
+{
+#ifdef _WIN32
+    if (utf8_str.empty()) return utf8_str;
+    
+    // 策略1：如果系统明确支持UTF-8模式，直接返回UTF-8字符串
+    if (is_windows_utf8_mode()) {
+        return utf8_str;
+    }
+    
+    // 策略2：传统模式需要转换为系统编码（GBK）
+    // 虽然某些情况下UTF-8路径可能成功，但为了确保兼容性，还是进行编码转换
+    // 将UTF-8转换为宽字符（UTF-16）
+    int wlen = MultiByteToWideChar(CP_UTF8, 0, utf8_str.c_str(), -1, nullptr, 0);
+    if (wlen <= 0) return utf8_str; // 转换失败，返回原字符串
+    
+    std::wstring wstr(wlen - 1, 0);
+    MultiByteToWideChar(CP_UTF8, 0, utf8_str.c_str(), -1, &wstr[0], wlen);
+    
+    // 将宽字符转换为系统编码（GBK）
+    int len = WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), -1, nullptr, 0, nullptr, nullptr);
+    if (len <= 0) return utf8_str; // 转换失败，返回原字符串
+    
+    std::string result(len - 1, 0);
+    WideCharToMultiByte(CP_ACP, 0, wstr.c_str(), -1, &result[0], len, nullptr, nullptr);
+    
+    return result;
+#else
+    // 在非Windows系统上，UTF-8通常就是系统编码
+    return utf8_str;
+#endif
+}
+
 std::string url_get_param(const std::string& url, const std::string& key)
 {
     size_t start = url.find(key);
@@ -343,10 +334,9 @@ void session::read_first_line()
 {
     auto self(shared_from_this());
 
-    // Read up to the full CRLF: completing on '\r' alone can fire before the
-    // trailing '\n' has arrived, desyncing the line parser and deadlocking the
-    // connection (the peer waits for a response that is never sent).
-    async_read_until(socket, buff, "\r\n", [this, self](const boost::beast::error_code& e, std::size_t s) {
+    // Wait for the full CRLF. Completing on '\r' alone can fire before LF arrives.
+    // Use a string delimiter; the multichar literal '\r\n' is an int, not "\r\n".
+    async_read_until(socket, buff, std::string("\r\n"), [this, self](const boost::beast::error_code& e, std::size_t s) {
         if (!e) {
             std::string  line, ignore;
             std::istream stream{&buff};
@@ -389,8 +379,7 @@ void session::read_next_line()
         return; // 提前返回，避免后续逻辑
     }
 
-    // "\r\n" delimiter for the same reason as in read_first_line().
-    async_read_until(socket, buff, "\r\n", [this, self](const boost::beast::error_code& e, std::size_t s) {
+    async_read_until(socket, buff, std::string("\r\n"), [this, self](const boost::beast::error_code& e, std::size_t s) {
         if (!e) {
             std::string  line, ignore;
             std::istream stream{&buff};
@@ -495,24 +484,15 @@ HttpServer::~HttpServer()
 
 bool HttpServer::is_port_available(boost::asio::ip::port_type port)
 {
-    // Probe by CONNECTING rather than binding: a bind probe with reuse_address(true)
-    // false-positives on macOS/BSD while another instance is actively LISTENING on the
-    // port (both listeners set SO_REUSEADDR), which made a second app instance believe
-    // 13619 was free, fail to serve, and leave the Flutter home blank. A connect probe
-    // reports an active listener as unavailable, while a TIME_WAIT-only port (fast app
-    // restart) refuses the connection and correctly reads as available - the real
-    // acceptor keeps reuse_address(true) to rebind through TIME_WAIT.
     try {
-        boost::asio::io_service      io_service;
-        boost::asio::ip::tcp::socket probe(io_service);
-        boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::address_v4::loopback(), port);
-        boost::system::error_code    ec;
-        probe.connect(endpoint, ec);
-        if (!ec) {
-            // Something answered: the port is taken.
-            probe.close(ec);
-            return false;
-        }
+        boost::asio::io_service        io_service;
+        boost::asio::ip::tcp::acceptor acceptor(io_service);
+        boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::tcp::v4(), port);
+
+        acceptor.open(endpoint.protocol());
+        acceptor.set_option(boost::asio::ip::tcp::acceptor::reuse_address(true));
+        acceptor.bind(endpoint);
+        acceptor.close();
         return true;
     } catch (const boost::system::system_error&) {
         return false;
@@ -537,22 +517,12 @@ void HttpServer::start()
 {
     {
         std::lock_guard<std::mutex> lock(m_server_mtx);
-<<<<<<< snaporca-int
         start_locked();
     }
 
     // Started with m_server_mtx released: start_health_check() may join a
     // retired health-check thread that is blocked in is_healthy() waiting for
     // that lock — joining it under the lock would deadlock.
-=======
-        if (start_http_server)
-            return;
-        start_locked();
-    }
-
-    // Started with m_server_mtx released: start_health_check() may join a retired
-    // health-check thread that is blocked in is_healthy() waiting for that lock.
->>>>>>> lixnix/main
     start_health_check();
 }
 
@@ -561,11 +531,7 @@ void HttpServer::start_locked()
     BOOST_LOG_TRIVIAL(info) << "start_http_service...";
 
     try {
-<<<<<<< snaporca-int
         // 如果指定端口不可用，查找下一个可用端口
-=======
-        // Switch to the next free port when the configured one is taken.
->>>>>>> lixnix/main
         if (!is_port_available(port)) {
             auto new_port = find_available_port(port + 1);
             BOOST_LOG_TRIVIAL(info) << "Original port " << port << " is in use, switching to port " << new_port;
@@ -573,7 +539,6 @@ void HttpServer::start_locked()
         }
 
         start_http_server = true;
-<<<<<<< snaporca-int
         // Create the IOServer on the CALLING thread so the io thread never
         // writes server_ (that write raced the locked readers in
         // is_healthy()/stop()/restart()). Thread creation provides the
@@ -581,10 +546,6 @@ void HttpServer::start_locked()
         // destroying the server, so the raw pointer below stays valid. If
         // listen() throws, the next start() overwrites server_ (unique_ptr
         // assignment destroys the stale server) — no cleanup needed here.
-=======
-        // The IOServer is created on the calling thread, so the io thread never writes server_;
-        // stop() and restart() join the io thread before destroying it, which keeps srv valid.
->>>>>>> lixnix/main
         server_ = std::make_unique<IOServer>(*this);
         server_->acceptor.listen();
         server_->do_accept();
@@ -600,11 +561,7 @@ void HttpServer::start_locked()
             }
         });
 
-<<<<<<< snaporca-int
         // 等待服务器启动
-=======
-        // Give the server thread time to start.
->>>>>>> lixnix/main
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
         if (!start_http_server) {
@@ -614,13 +571,9 @@ void HttpServer::start_locked()
 
         BOOST_LOG_TRIVIAL(info) << "HTTP server started successfully on port " << port;
 
-<<<<<<< snaporca-int
         // The health check is started by start()/restart() AFTER m_server_mtx
         // is released (see start_health_check's join path).
 
-=======
-        // start() and restart() start the health check once m_server_mtx is released.
->>>>>>> lixnix/main
     } catch (const std::exception& e) {
         BOOST_LOG_TRIVIAL(error) << "Failed to start HTTP server: " << e.what();
         std::string error_msg = "bury_point_Failed to start HTTP server on port " + std::to_string(port) + ": " + e.what();
@@ -633,11 +586,15 @@ void HttpServer::start_locked()
 void HttpServer::stop()
 {
     start_http_server = false;
-
+    
+    // 停止健康检查
     stop_health_check();
-
-    // Handlers call IOServer::stop(session) on the io thread, so the acceptor and the sessions
-    // are shut down there as well; m_server_mtx serializes this with restart() and is_healthy().
+    
+    // 重启检查已集成到健康检查中，无需单独停止
+    
+    // the io thread was still dispatching handlers, and handlers themselves
+    // call IOServer::stop(session) — mutating the same sessions set from two
+    // threads at once, which crashed with EXC_BAD_ACCESS / heap corruption.
     std::lock_guard<std::mutex> lock(m_server_mtx);
     if (server_) {
         boost::system::error_code ignored_ec;
@@ -646,7 +603,6 @@ void HttpServer::stop()
     }
     if (m_http_server_thread.joinable())
         m_http_server_thread.join();
-    // The io thread is gone: drop any session its early exit left behind.
     if (server_)
         server_->stop_all();
     server_.reset();
@@ -657,22 +613,18 @@ void HttpServer::restart()
     BOOST_LOG_TRIVIAL(info) << "Restarting HTTP server on port " << port << "...";
 
     BOOST_LOG_TRIVIAL(debug) << "Stopping current HTTP server...";
-    // Stops only the HTTP server; the health-check thread keeps running.
+    // 只停止HTTP服务器，不停止健康检查和重启检查线程
     start_http_server = false;
 
     {
-        // Held across teardown and start_locked(): an is_healthy() in between would see no
-        // server and trigger another restart on top of this one.
+        // Hold the lock across teardown AND start_locked(): if is_healthy()
+        // ran in the gap between the two it would see server_ == nullptr and
+        // trigger another restart on top of this one.
         std::lock_guard<std::mutex> lock(m_server_mtx);
         if (server_) {
-            IOServer* io_server = server_.get();
-            boost::asio::post(io_server->io_service, [io_server] {
-                boost::system::error_code ec;
-                io_server->acceptor.cancel(ec);
-                io_server->acceptor.close(ec);
-                io_server->stop_all();
-                io_server->io_service.stop();
-            });
+            boost::system::error_code ignored_ec;
+            server_->acceptor.close(ignored_ec);
+            server_->io_service.stop();
         }
         if (m_http_server_thread.joinable())
             m_http_server_thread.join();
@@ -681,14 +633,17 @@ void HttpServer::restart()
         server_.reset();
 
         BOOST_LOG_TRIVIAL(debug) << "Waiting for resources to be released...";
-        std::this_thread::sleep_for(std::chrono::milliseconds(500));
+        std::this_thread::sleep_for(std::chrono::milliseconds(500)); // 等待资源释放
 
         BOOST_LOG_TRIVIAL(debug) << "Starting new HTTP server...";
         start_locked();
     }
 
-    // Runs with m_server_mtx released: start_health_check() joins a retired health-check
-    // thread, which may be blocked in is_healthy() waiting for that lock.
+    // Must run with m_server_mtx released: a retired health-check thread can
+    // still be blocked in is_healthy() waiting for this lock, and
+    // start_health_check() joins it — joining under the lock deadlocks
+    // (T1 holds m_server_mtx waiting on join, T2 waits on m_server_mtx to
+    // finish is_healthy()).
     start_health_check();
 
     BOOST_LOG_TRIVIAL(info) << "HTTP server restart completed";
@@ -704,19 +659,19 @@ bool HttpServer::is_healthy()
     }
     
     try {
-        // The acceptor must be open.
+        // 检查acceptor是否正常打开
         if (!server_->acceptor.is_open()) {
             BOOST_LOG_TRIVIAL(fatal) << "Health check failed: acceptor is not open";
             return false;
         }
         
-        // The io_service must be running.
+        // 检查io_service是否正在运行
         if (server_->io_service.stopped()) {
             BOOST_LOG_TRIVIAL(fatal) << "Health check failed: io_service is stopped";
             return false;
         }
         
-        // A test connection verifies that the server actually responds.
+        // 尝试创建一个测试连接来验证服务器是否真正响应
         boost::asio::io_service test_io_service;
         boost::asio::ip::tcp::socket test_socket(test_io_service);
         boost::asio::ip::tcp::endpoint endpoint(boost::asio::ip::address::from_string("127.0.0.1"), port);
@@ -746,14 +701,16 @@ void HttpServer::start_health_check()
 
         if (m_health_check_enabled) {
             BOOST_LOG_TRIVIAL(info) << "Health check is already running";
-            return;
+            return; // 已经在运行
         }
 
         if (m_health_check_thread.joinable()) {
             if (m_health_check_thread.get_id() == boost::this_thread::get_id()) {
-                // stop() disabled the check while this health-check thread was restarting the
-                // server. Reassigning its own joinable handle would terminate, so the handle is
-                // detached and the check stays disabled; the loop exits on its next iteration.
+                // stop() disabled the check while THIS (health-check) thread
+                // was inside restart() -> start(). Assigning to our own
+                // joinable boost::thread handle calls std::terminate();
+                // detach the handle instead and leave the check disabled —
+                // our own loop exits on its next iteration.
                 m_health_check_thread.detach();
                 BOOST_LOG_TRIVIAL(warning) << "Health check was disabled during restart; leaving it stopped";
                 return;
@@ -762,13 +719,14 @@ void HttpServer::start_health_check()
         }
     }
 
-    // Joined outside m_health_check_mutex: the retired thread takes it to leave its loop.
+    // Join outside m_health_check_mutex: to exit its loop the retired thread
+    // must take the same mutex.
     if (retired.joinable())
         retired.join();
 
     std::lock_guard<std::mutex> lock(m_health_check_mutex);
     if (m_health_check_enabled) {
-        // Another thread started the check during the join.
+        // Another thread started the check while we were joining.
         return;
     }
 
@@ -1018,13 +976,8 @@ std::shared_ptr<HttpServer::Response> HttpServer::auth_handle_request(const std:
 
         const std::string title = login_ok ? _u8L("Authentication complete") : _u8L("Authentication failed");
         const std::string message = login_ok
-<<<<<<< snaporca-int
             ? _u8L("You can return to OrcaSlicer. This window will close automatically.")
             : _u8L("Something went wrong. Please return to OrcaSlicer and try again.");
-=======
-            ? "You can return to Snapmaker Orca. This window will close automatically."
-            : "Something went wrong. Please return to Snapmaker Orca and try again.";
->>>>>>> lixnix/main
         const std::string html =
             "<html><head><meta charset=\"utf-8\">"
             "<style>body{font-family:Arial,sans-serif;background:#f7f7f7;color:#222;margin:32px;}"
@@ -1283,24 +1236,8 @@ std::string HttpServer::map_url_to_file_path(const std::string& url)
 
 void HttpServer::ResponseRedirect::write_response(std::stringstream& ssOut)
 {
-<<<<<<< snaporca-int
     const std::string sHTML          = "<html><body><p>redirect to url </p></body></html>";
     size_t            content_length = sHTML.size(); // 字节长度（与字符数相同，因无多字节字符）
-=======
-    // Orca's richer landing page (rebranded), emitted with the fork's strict CRLF/Content-Length headers.
-    const std::string sHTML =
-        "<html><head><meta charset=\"utf-8\">"
-        "<meta http-equiv=\"refresh\" content=\"0;url=" + location_str + "\">"
-        "<style>body{font-family:Arial,sans-serif;background:#f7f7f7;color:#222;margin:32px;}"
-        "a.button{display:inline-block;padding:10px 16px;margin-top:12px;background:#0f8bff;color:#fff;text-decoration:none;border-radius:6px;}"
-        "</style></head><body><div class=\"container\">"
-        "<h2>Authentication complete</h2>"
-        "<p>You can return to Snapmaker Orca. If your browser does not redirect automatically, use the button below.</p>"
-        "<a class=\"button\" href=\"" + location_str + "\">Continue</a>"
-        "<script>setTimeout(function(){try{window.close();}catch(e){}},1500);</script>"
-        "</div></body></html>";
-    size_t            content_length = sHTML.size(); // 字节长度
->>>>>>> lixnix/main
 
     write_common_headers(ssOut, 302, "Found");
     ssOut << "Location: " << location_str << "\r\n";
@@ -1407,12 +1344,10 @@ void HttpServer::ResponseFile::write_response(std::stringstream& ssOut)
 
 void HttpServer::ResponseHtml::write_response(std::stringstream& ssOut)
 {
-    const size_t content_length = html.size(); // 字节长度
-
-    write_common_headers(ssOut, 200, "OK");
-    ssOut << "Content-Type: text/html\r\n";
-    ssOut << "Content-Length: " << content_length << "\r\n";
-    ssOut << "\r\n";
+    ssOut << "HTTP/1.1 200 OK" << std::endl;
+    ssOut << "content-type: text/html" << std::endl;
+    ssOut << "content-length: " << html.length() << std::endl;
+    ssOut << std::endl;
     ssOut << html;
 }
 
