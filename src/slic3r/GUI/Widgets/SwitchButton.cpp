@@ -789,11 +789,7 @@ Button *MultiSwitchButton::make_button(const wxString &option, void *clientData)
     btn->SetPaddingSize(FromDIP(m_button_padding));
     btn->SetClientData(clientData);
     btns.push_back(btn);
-<<<<<<< snaporca-int
     btns_modified.push_back(false);
-    sizer->Add(btn, 1, wxEXPAND | wxALIGN_CENTER_VERTICAL);
-=======
->>>>>>> lixnix/main
 
     return btn;
 }
@@ -850,11 +846,8 @@ void MultiSwitchButton::DeleteAllOptions()
             btn->Destroy();
     }
     btns.clear();
-<<<<<<< snaporca-int
     btns_modified.clear();
-=======
     m_rows = 1;
->>>>>>> lixnix/main
     if (sizer)
         sizer->Clear(false);
 }
@@ -873,7 +866,7 @@ void MultiSwitchButton::SetMaxRowWidth(int width)
 
 int MultiSwitchButton::MeasureOption(unsigned int index, const wxString &option) const
 {
-    int width = GetTextExtent(option).x + m_button_padding.x * 2;
+    int width = GetTextExtent(option).x + FromDIP(m_button_padding).x * 2;
     // The dot and its gap, as Button::messureSize adds them.
     if (index < btns.size() && btns[index]->HasIndicator())
         width += FromDIP(6) + FromDIP(6);
@@ -980,13 +973,8 @@ void MultiSwitchButton::SetButtonPadding(const wxSize &padding)
 {
     m_button_padding = padding;
     for (auto *btn : btns)
-<<<<<<< snaporca-int
         btn->SetPaddingSize(FromDIP(padding));
-    update_scroll_range();
-=======
-        btn->SetPaddingSize(padding);
     rebuild_rows();
->>>>>>> lixnix/main
     Layout();
     Refresh();
 }
@@ -1003,14 +991,9 @@ void MultiSwitchButton::Rescale()
     for (auto *btn : btns) {
         btn->SetPaddingSize(FromDIP(m_button_padding));
         btn->Rescale();
-<<<<<<< snaporca-int
     }
-    // Rescaling can change how the labels measure, and the scrollbar range follows the buttons.
-    update_scroll_range();
-=======
     // Rescaling can change how the labels measure, and the rows and the scrollbar range follow the buttons.
     rebuild_rows();
->>>>>>> lixnix/main
 }
 
 void MultiSwitchButton::button_clicked(wxCommandEvent &event)

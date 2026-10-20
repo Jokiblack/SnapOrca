@@ -157,11 +157,7 @@ BundleMap BundleMap::load()
     const auto vendor_dir = (boost::filesystem::path(Slic3r::data_dir()) / PRESET_SYSTEM_DIR).make_preferred();
     const auto rsrc_vendor_dir = (boost::filesystem::path(resources_dir()) / "profiles").make_preferred();
 
-<<<<<<< snaporca-int
     // SM_FEATURE: load the Snapmaker bundle first as the default one
-=======
-    // SM_FEATURE: the Snapmaker bundle is this fork's default vendor
->>>>>>> lixnix/main
     //Orca: add json logic for vendor bundle
     {
         const bool from_rsrc = ! is_vendor_installed(PresetBundle::SM_BUNDLE);

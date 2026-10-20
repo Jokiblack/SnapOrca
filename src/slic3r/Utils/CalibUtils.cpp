@@ -13,6 +13,8 @@
 #include "libslic3r/Utils.hpp"
 
 #include "libslic3r/Model.hpp"
+#include "libslic3r/Preset.hpp"
+#include "libslic3r/PresetFlowVariant.hpp"
 #include "slic3r/GUI/Jobs/BoostThreadWorker.hpp"
 #include "slic3r/GUI/Jobs/PlaterWorker.hpp"
 #include "../GUI/MsgDialog.hpp"
@@ -502,17 +504,6 @@ bool CalibUtils::validate_input_flow_ratio(wxString flow_ratio, float* output_va
 
     *output_value = flow_ratio_value;
     return true;
-}
-
-// filament_max_volumetric_speed holds one value per filament variant column (Standard / High
-// Flow). A calibration overrides all of them, so the head that prints the test gets the value
-// whatever its flow type is and the vector keeps the width the preset declares.
-static void set_max_volumetric_speed_for_calibration(DynamicPrintConfig &filament_config, double value)
-{
-    size_t columns = 1;
-    if (const auto *variants = filament_config.option<ConfigOptionStrings>("filament_extruder_variant"))
-        columns = std::max<size_t>(variants->values.size(), 1);
-    filament_config.set_key_value("filament_max_volumetric_speed", new ConfigOptionFloats(columns, value));
 }
 
 static void cut_model(Model &model, double z, ModelObjectCutAttributes attributes)
@@ -1282,8 +1273,11 @@ void CalibUtils::calib_max_vol_speed(const CalibInfo &calib_info, wxString &erro
     auto max_lh = printer_config.option<ConfigOptionFloats>("max_layer_height");
     if (max_lh->values[0] < layer_height) max_lh->values[0] = {layer_height};
 
-    set_max_volumetric_speed_for_calibration(filament_config, 50.);
-    // slow_down_layer_time is defined as coFloats; a coInts option here throws in ConfigBase::apply_only.
+    size_t max_speed_variants = 1;
+    if (const auto *flow_support = filament_config.option<ConfigOptionStrings>("filament_flow_support");
+        flow_support != nullptr && !flow_support->values.empty())
+        max_speed_variants = flow_support->values.size();
+    filament_config.set_key_value("filament_max_volumetric_speed", new ConfigOptionFloats(max_speed_variants, 50.));
     filament_config.set_key_value("slow_down_layer_time", new ConfigOptionFloats{0.0});
     filament_config.set_key_value("curr_bed_type", new ConfigOptionEnum<BedType>(calib_info.bed_type));
 
@@ -1359,7 +1353,6 @@ void CalibUtils::calib_VFA(const CalibInfo &calib_info, wxString &error_message)
     // Resolved layer height: use the (possibly auto-adjusted) value if provided, else default to nozzle/2.
     double layer_height = params.vfa_layer_height > 0.0 ? params.vfa_layer_height : nozzle_diameter / 2.0;
 
-<<<<<<< snaporca-int
     filament_config.set_key_value("slow_down_layer_time", new ConfigOptionFloats{0.0});
     // Snapmaker: one value per declared flow variant
     size_t max_speed_variants = 1;
@@ -1367,11 +1360,6 @@ void CalibUtils::calib_VFA(const CalibInfo &calib_info, wxString &error_message)
         flow_support != nullptr && !flow_support->values.empty())
         max_speed_variants = flow_support->values.size();
     filament_config.set_key_value("filament_max_volumetric_speed", new ConfigOptionFloats(max_speed_variants, 200.));
-=======
-    // slow_down_layer_time is defined as coFloats; a coInts option here throws in ConfigBase::apply_only.
-    filament_config.set_key_value("slow_down_layer_time", new ConfigOptionFloats{0.0});
-    set_max_volumetric_speed_for_calibration(filament_config, 200.);
->>>>>>> lixnix/main
     filament_config.set_key_value("curr_bed_type", new ConfigOptionEnum<BedType>(calib_info.bed_type));
 
     print_config.set_key_value("enable_overhang_speed", new ConfigOptionBoolsNullable({false}));
