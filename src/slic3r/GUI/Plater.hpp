@@ -102,6 +102,7 @@ class ObjectSettings;
 class ObjectLayers;
 class ObjectList;
 class GLCanvas3D;
+class GLTexture;
 class Mouse3DController;
 class NotificationManager;
 class DailyTipsWindow;
@@ -213,15 +214,11 @@ public:
     // Snapmaker Orca: `tool_head` (0-based) selects that tool head on the process tab after the
     // page is shown (a validation message about a value set per tool head); -1 selects none.
     void jump_to_option(const std::string& opt_key, Preset::Type type, const std::wstring& category, int tool_head = -1);
-    // BBS. Add on_filaments_change() method.
-    void on_filaments_change(size_t num_filaments);
-    // Orca-named alias for on_filaments_change(); kept so upstream call sites compile.
-    void on_filament_count_change(size_t num_filaments) { on_filaments_change(num_filaments); }
-    void change_filament(size_t from_id, size_t to_id);
-    void merge_mixed_filament(size_t from_id, size_t to_id,
-                              bool skip_update = false, bool skip_serialize = false);
+    // BBS. Add filament_added() method.
+    void on_filament_count_change(size_t num_filaments);
+    void on_filaments_delete(size_t filament_id);
+
     void add_filament();
-<<<<<<< snaporca-int
     // skip_dependency_check / skip_update: Snapmaker batch match and merge paths
     void delete_filament(size_t filament_id = size_t(-1), int replace_filament_id = -1,
                          bool skip_dependency_check = false,
@@ -229,11 +226,6 @@ public:
     void change_filament(size_t from_id, size_t to_id);  // 0 base
     void merge_mixed_filament(size_t from_id, size_t to_id,
                               bool skip_update = false, bool skip_serialize = false);
-=======
-    void delete_filament(size_t filament_id  = size_t(-1), int replace_filament_id = -1,
-                         bool skip_dependency_check = false,
-                         bool skip_update = false); // 0 base, -1 means default
->>>>>>> lixnix/main
     // on_progress (optional) is invoked once per physical-filament deletion inside the
     // batch loop, passing (current, total) where total = redundant physical count.
     // Callers that show a progress dialog map (current/total) to a percentage and
@@ -241,35 +233,23 @@ public:
     // many-second) deletion loop. Default-empty: existing callers see no change.
     void cleanup_unused_filaments_after_batch_match(const BatchMatchResult& match_result,
                                                     std::function<void(int /*current*/, int /*total*/)> on_progress = nullptr);
-<<<<<<< snaporca-int
     void edit_filament();
-=======
->>>>>>> lixnix/main
     void add_custom_filament(wxColour new_col, const std::string& preset_name = std::string(), bool skip_preset_validation = false);
-    void edit_filament();
     bool is_new_project_in_gcode3mf();
 
-<<<<<<< snaporca-int
     // Snapmaker Full Spectrum / color mix panels
-=======
-    void on_filaments_delete(size_t filament_id);
->>>>>>> lixnix/main
     void init_color_mix_panel(wxWindow* parent, wxSizer* sizer);
     void update_color_mix_panel();
     void update_mixed_filament_panel(bool sync_manager = true);
     std::vector<unsigned int> get_ui_ordered_filament_ids() const;
-<<<<<<< snaporca-int
     void update_physical_filament_scroll_height();
     void scroll_physical_filaments_to_end();
     void update_add_filament_buttons_enabled();
-=======
->>>>>>> lixnix/main
     // BBS
     void on_bed_type_change(BedType bed_type);
     void load_ams_list(MachineObject* obj);
     std::map<int, DynamicPrintConfig> build_filament_ams_list(MachineObject* obj);
     void sync_ams_list(bool is_from_big_sync_btn = false);
-    void show_sync_filament_dialog();
     bool sync_extruder_list();
     bool is_fila_switch_ready();
     void reset_fila_switch();
@@ -292,8 +272,6 @@ public:
     void update_dynamic_filament_list();
 
     void update_nozzle_settings(bool switch_machine = false);
-<<<<<<< snaporca-int
-=======
     // Sets only nozzle `nozzle_idx`'s diameter (`variant` as the profiles name it, "0.4"),
     // keeping the printer preset; see Plater.cpp.
     void apply_nozzle_diameter(size_t nozzle_idx, const wxString &diameter_label);
@@ -318,7 +296,6 @@ public:
     // of the Process tab opens on the flow type of this tool head.
     size_t selected_nozzle_tab() const;
 
->>>>>>> lixnix/main
     PlaterPresetComboBox *  printer_combox();
     ObjectList*             obj_list();
     ObjectSettings*         obj_settings();
@@ -373,7 +350,6 @@ public:
     void                                 udpate_combos_filament_badge();
 
     // Mixed-color filament sidebar section
-<<<<<<< snaporca-int
     void add_mixed_filament();
     // The filament slot that blends `components` (1-based physical filament indices) in `ratios`
     // (percentages) at a fixed ratio, creating it when no existing fixed mixed slot already describes
@@ -385,8 +361,6 @@ public:
     // interleaving from its own paint mask to the slicer, where it happens per layer.
     int ensure_mixed_filament(const std::vector<unsigned int> &components, const std::vector<int> &ratios);
     void edit_mixed_filament(size_t idx);
-=======
->>>>>>> lixnix/main
     void delete_mixed_filament_at(size_t idx);
     // Drops every mixed filament at once, after confirming. The texture displacement gizmo can create
     // one slot per colour in its palette, so clearing them one at a time is tedious.
@@ -404,7 +378,6 @@ public:
     Search::SettingsIndex&          settings_index();
     std::string&                    get_search_line();
     void                            update_printer_thumbnail();
-    const std::vector<std::string>& get_bed_type_combo_enum_values() const { return m_bed_type_combo_enum_values; }
 
     bool need_auto_sync_after_connect_printer() const { return m_need_auto_sync_after_connect_printer; }
     void set_need_auto_sync_after_connect_printer(bool need_auto_sync) { m_need_auto_sync_after_connect_printer = need_auto_sync; }
@@ -417,10 +390,6 @@ private:
     std::unique_ptr<priv> p;
 
     wxBoxSizer* m_scrolled_sizer = nullptr;
-    ComboBox* m_bed_type_list = nullptr;
-    std::vector<std::string> m_bed_type_combo_enum_values;
-    ScalableButton* connection_btn = nullptr;
-    ScalableButton* machine_connecting_btn = nullptr;
     bool            m_need_auto_sync_after_connect_printer{false};
 };
 
@@ -513,7 +482,7 @@ public:
     // Helper: returns config indices where filament_is_mixed == false
     std::vector<size_t> physical_filament_config_indices() const;
 
-    int new_project(bool skip_confirm = false, bool silent = false, const wxString& project_name = wxString(), bool reload_presets = true, bool keep_tab = false);
+    int new_project(bool skip_confirm = false, bool silent = false, const wxString& project_name = wxString(), bool reload_presets = true);
     // BBS: save & backup
     void load_project(wxString const & filename = "", wxString const & originfile = "-");
     int save_project(bool saveAs = false);
@@ -762,7 +731,7 @@ public:
     /* -1: send current gcode if not specified
      * -2: send all gcode to target machine */
     int send_gcode(int plate_idx = -1, Export3mfProgressFn proFn = nullptr);
-    void send_gcode_legacy(int plate_idx = -1, Export3mfProgressFn proFn = nullptr, bool use_3mf = false);
+    void send_gcode_legacy(int plate_idx = -1, Export3mfProgressFn proFn = nullptr);
     int export_config_3mf(int plate_idx = -1, Export3mfProgressFn proFn = nullptr);
     //BBS jump to nonitor after print job finished
     void send_calibration_job_finished(wxCommandEvent &evt);
@@ -794,16 +763,11 @@ public:
     // BBS: return false if not changed
     bool leave_gizmos_stack();
 
-    void on_filaments_change(size_t extruders_count);
-    // Orca-named alias for on_filaments_change(); kept so upstream call sites compile.
-    void on_filament_count_change(size_t extruders_count) { on_filaments_change(extruders_count); }
     void on_filament_change(size_t filament_idx);
+    void on_filament_count_change(size_t extruders_count);
     void on_filaments_delete(size_t extruders_count, size_t filament_id, int replace_filament_id = -1, const std::vector<unsigned char>& is_mixed_before_delete = {});
     std::vector<Slic3r::ColorRGBA> get_extruders_colors();
-<<<<<<< snaporca-int
     // Snapmaker Full Spectrum: confirm auto-generated gradient mixes when the physical count changes
-=======
->>>>>>> lixnix/main
     bool confirm_auto_generated_gradients(size_t num_physical);
     void set_auto_generated_gradient_decision(size_t num_physical, bool create_auto_gradients);
     // BBS
@@ -884,11 +848,14 @@ public:
     /// @brief Sync (close + re-push) cold-plate notifications for the current plate.
     /// @return True if slicing is allowed on current plate after sync.
     bool sync_cold_plate_notification();
+    /// Check and guard filament temp mixing before slicing current plate.
     /// Check and guard filament temp mixing before slicing current plate. explicit_request = false (preview
     /// switch): starts nothing while a slice question is up and reuses the long-slice answer (confirm_long_slice_before_slice).
     bool guard_before_slice_plate(bool explicit_request = true);
-    /// Shows the yellow by-object warning while the current plate's effective print sequence is by object and
-    /// closes it otherwise. Called on global and per-plate print_sequence edits, plate switches and page switches.
+    /// Live (non-slice) warning: yellow notification when the CURRENT plate's
+    /// effective print sequence is by-object. Re-evaluated on global/per-plate
+    /// print-sequence edits, on plate switch, and on page switch (prepare
+    /// and preview both render it).
     void sync_print_seq_warning_notification();
     /// Check and guard filament temp mixing before slicing all plates.
     bool guard_before_slice_all();
@@ -944,10 +911,7 @@ public:
     // BBS
     //void show_action_buttons(const bool is_ready_to_slice) const;
 
-<<<<<<< snaporca-int
 
-=======
->>>>>>> lixnix/main
     wxString get_project_filename(const wxString& extension = wxEmptyString) const;
     wxString get_export_gcode_filename(const wxString& extension = wxEmptyString, bool only_filename = false, bool export_all = false) const;
     void set_project_filename(const wxString& filename);
@@ -1407,7 +1371,7 @@ public:
     wxMenu* instance_menu();
     wxMenu* layer_menu();
     wxMenu* multi_selection_menu();
-    wxMenu*     filament_action_menu(int active_filament_id);
+    wxMenu* filament_action_menu(int active_filament_menu_id);
     int     GetPlateIndexByRightMenuInLeftUI();
     void    SetPlateIndexByRightMenuInLeftUI(int);
     static bool has_illegal_filename_characters(const wxString& name);
