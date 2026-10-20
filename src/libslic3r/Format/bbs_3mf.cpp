@@ -782,6 +782,12 @@ static int max_supported_filament_id_from_project_config(const DynamicPrintConfi
         if (physical_count > 0)
             physical_colors.assign(physical_count, "#FFFFFF");
     }
+    // The filament list is what upstream counts; a shorter colour list must not clamp valid ids.
+    if (const auto *settings_ids = config.option<ConfigOptionStrings>("filament_settings_id");
+        settings_ids != nullptr && settings_ids->values.size() > physical_count) {
+        physical_count = settings_ids->values.size();
+        physical_colors.resize(physical_count, "#FFFFFF");
+    }
 
     if (physical_count == 0)
         return std::numeric_limits<int>::max();
