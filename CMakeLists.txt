@@ -692,6 +692,28 @@ include(cmake/sanitizers.cmake)
 # ── Code Coverage ───────────────────────────────────────────────────────────
 include(cmake/coverage.cmake)
 
+# ── Link-time optimization ──────────────────────────────────────────────────
+# SnapOrca: ThinLTO for the Release configuration, Clang only (clang-cl on Windows, clang on
+# Linux/macOS): it inlines across translation units, which the slicing code with its many small
+# helpers split over files benefits from. OFF by default because it lengthens the link and needs an
+# LTO-capable linker and archiver (lld-link/llvm-lib, ld.lld/llvm-ar, ld64); the Windows clang-cl CI
+# leg turns it on. MSVC cl.exe is left out: its /GL whole-program LTCG is much slower and heavier.
+option(SNAPORCA_LTO "Link-time optimization (ThinLTO) for Release builds with Clang" OFF)
+if (SNAPORCA_LTO)
+    include(CheckIPOSupported)
+    check_ipo_supported(RESULT _snaporca_ipo_ok OUTPUT _snaporca_ipo_msg LANGUAGES C CXX)
+    if (NOT CMAKE_CXX_COMPILER_ID MATCHES "Clang")
+        message(WARNING "SNAPORCA_LTO is only implemented for Clang; building without LTO.")
+    elseif (NOT _snaporca_ipo_ok)
+        message(WARNING "SNAPORCA_LTO: the toolchain cannot link LTO objects, building without LTO: ${_snaporca_ipo_msg}")
+    else ()
+        set(CMAKE_INTERPROCEDURAL_OPTIMIZATION_RELEASE ON)
+        message(STATUS "SNAPORCA_LTO: ThinLTO enabled for the Release configuration")
+    endif ()
+    unset(_snaporca_ipo_ok)
+    unset(_snaporca_ipo_msg)
+endif ()
+
 if (APPLE)
     set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -Werror=partial-availability -Werror=unguarded-availability -Werror=unguarded-availability-new")
     set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Werror=partial-availability -Werror=unguarded-availability -Werror=unguarded-availability-new")

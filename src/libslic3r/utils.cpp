@@ -1896,23 +1896,18 @@ size_t total_physical_memory()
 size_t get_available_physical_memory()
 {
 #ifdef _WIN32
-    // Physical RAM available (predicts page-fault thrashing).
-    size_t phys_avail = 0;
+    // Physical RAM available (predicts page-fault thrashing) and commit available to this process
+    // (predicts OOM crash). Both come from one GlobalMemoryStatusEx() call: the memory guard samples
+    // this from a slicing worker thread, and GetPerformanceInfo() is much slower because it also
+    // counts every process, thread and handle on the system.
+    size_t phys_avail   = 0;
+    size_t commit_avail = 0;
     {
         MEMORYSTATUSEX memInfo;
         memInfo.dwLength = sizeof(memInfo);
-        if (GlobalMemoryStatusEx(&memInfo))
-            phys_avail = static_cast<size_t>(memInfo.ullAvailPhys);
-    }
-    // System commit available (predicts OOM crash).
-    size_t commit_avail = 0;
-    {
-        PERFORMANCE_INFORMATION perfInfo;
-        perfInfo.cb = sizeof(perfInfo);
-        if (GetPerformanceInfo(&perfInfo, sizeof(perfInfo)) && perfInfo.PageSize > 0) {
-            if (perfInfo.CommitLimit > perfInfo.CommitTotal)
-                commit_avail = static_cast<size_t>(perfInfo.CommitLimit - perfInfo.CommitTotal)
-                             * static_cast<size_t>(perfInfo.PageSize);
+        if (GlobalMemoryStatusEx(&memInfo)) {
+            phys_avail   = static_cast<size_t>(memInfo.ullAvailPhys);
+            commit_avail = static_cast<size_t>(memInfo.ullAvailPageFile);
         }
     }
     // Return whichever is more constraining.
