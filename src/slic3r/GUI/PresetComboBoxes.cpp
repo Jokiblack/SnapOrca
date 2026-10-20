@@ -1,4 +1,5 @@
 #include "PresetComboBoxes.hpp"
+#include "../Utils/ColorSpaceConvert.hpp"
 
 #include <climits>
 #include <boost/log/trivial.hpp>
@@ -33,6 +34,7 @@
 #include <boost/algorithm/string.hpp>
 
 #include <wx/gdicmn.h>
+#include <wx/colordlg.h>
 #include <wx/colour.h>
 #include <wx/event.h>
 #include <wx/image.h>
@@ -1506,6 +1508,7 @@ void PlaterPresetComboBox::update()
     invalidate_selection();
 
     const Preset* selected_filament_preset = nullptr;
+    std::string filament_color;
     if (m_type == Preset::TYPE_FILAMENT)
     {
         //unsigned char rgb[3];
