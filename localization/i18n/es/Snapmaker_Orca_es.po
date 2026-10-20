@@ -39194,16 +39194,24 @@ msgid "Air gap behind the outer wall"
 msgstr "Cámara de aire tras la pared exterior"
 
 # AI Translated
-msgid "Leave an air gap of this width between the outer wall and the inner walls and infill behind it, so that the internal feature does not pull on the outer wall when it shrinks. This is what is done in CAD to hide ghost lines, without changing the model. The outer wall stays joined to the rest of the part on the layers without the gap. The gap is never left on the first or the last layer, where it would be exposed by a top or bottom surface, or in spiral vase mode. Classic wall generator only. Set to 0 to disable."
-msgstr "Deja una cámara de aire de este ancho entre la pared exterior y los perímetros interiores y el relleno que hay detrás, para que el elemento interno no tire de la pared exterior al contraerse. Es lo que se hace en CAD para ocultar las líneas fantasma, sin cambiar el modelo. La pared exterior sigue unida al resto de la pieza en las capas sin cámara. La cámara nunca se deja en la primera ni en la última capa, donde la dejaría al descubierto una superficie superior o inferior, ni en modo jarrón. Solo con el generador de perímetros clásico. Ponga 0 para desactivarla."
-
-# AI Translated
 msgid "Air gap bond interval"
 msgstr "Intervalo de unión de la cámara de aire"
 
 # AI Translated
 msgid "Print every Nth layer without the air gap, so that the outer wall stays bonded to the inside of the part at regular heights. Set to 0 to leave the gap on every treated layer."
 msgstr "Imprime una de cada N capas sin cámara de aire, para que la pared exterior quede unida al interior de la pieza a alturas regulares. Ponga 0 para dejar la cámara en todas las capas tratadas."
+
+# AI Translated
+msgid "Leave an air gap of this width between the outer wall and the walls and infill behind it, so that the internal feature does not pull on the outer wall when it shrinks. This is what is done in CAD to hide ghost lines, without changing the model. The gap moves the walls behind it inwards and takes the place of infill or gap fill, never of a wall: where the model has no room for it, it is left out. The outer wall stays joined to the rest of the part on the layers without the gap. The gap is never left on the first or the last layer, where it would be exposed by a top or bottom surface, or in spiral vase mode. Classic wall generator only. Set to 0 to disable."
+msgstr "Deja una cámara de aire de este ancho entre la pared exterior y los perímetros y el relleno que hay detrás, para que el elemento interno no tire de la pared exterior al contraerse. Es lo que se hace en CAD para ocultar las líneas fantasma, sin cambiar el modelo. La cámara desplaza hacia dentro los perímetros que hay detrás y ocupa el lugar del relleno o del relleno de huecos, nunca el de un perímetro: donde el modelo no tiene sitio para ella, no se deja. La pared exterior sigue unida al resto de la pieza en las capas sin cámara. La cámara nunca se deja en la primera ni en la última capa, donde la dejaría al descubierto una superficie superior o inferior, ni en modo jarrón. Solo con el generador de perímetros clásico. Ponga 0 para desactivarla."
+
+# AI Translated
+msgid "Air gap after wall"
+msgstr "Cámara de aire tras el perímetro"
+
+# AI Translated
+msgid "Leave the air gap after this wall, counted from the outside: 1 leaves it right behind the outer wall, 2 behind the first inner wall, and so on, so that the walls in front of the gap print together as the skin of the part. Larger values give a stronger skin and a little less isolation. There is always at least one wall behind the gap: with fewer walls the gap moves out, and with a single wall it is not left."
+msgstr "Deja la cámara de aire después de este perímetro, contando desde fuera: 1 la deja justo detrás de la pared exterior, 2 detrás del primer perímetro interior, y así sucesivamente, de modo que los perímetros delante de la cámara se imprimen juntos como la piel de la pieza. Los valores mayores dan una piel más resistente y algo menos de aislamiento. Siempre queda al menos un perímetro detrás de la cámara: con menos perímetros la cámara se desplaza hacia fuera y con un solo perímetro no se deja."
 
 # AI Translated
 #~ msgid "Note: Inconsistent nozzle diameters. Current version does not support mixed diameter printing. Please select one nozzle for this print."

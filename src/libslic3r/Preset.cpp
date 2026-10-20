@@ -1366,6 +1366,7 @@ static std::vector<std::string> s_Preset_print_options{
     "ghost_lines_scope",
     "ghost_lines_feature_depth",
     "ghost_lines_air_gap",
+    "ghost_lines_gap_after_wall",
     "ghost_lines_bond_layers",
     "detect_overhang_wall",
     "unsupported_wall_last",

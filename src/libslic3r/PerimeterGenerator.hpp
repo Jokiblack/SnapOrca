@@ -125,9 +125,11 @@ public:
     std::vector<std::pair<FuzzySkinConfig, ExPolygons>> regions_by_fuzzify;
     // Area resting on the layer below, where fuzzy skin is allowed. Unset means no restriction.
     std::optional<ExPolygons>                       fuzzy_supported_area;
-    // SnapOrca: where the inner walls and infill keep ghost_lines_air_gap away from the outer wall, see
-    // GhostLines.hpp. Set on the layers with the air gap only. Classic wall generator only.
-    const ExPolygons                               *ghost_lines_region = nullptr;
+    // SnapOrca: where the inner walls and infill keep an air gap away from the outer wall, and how wide (each area
+    // with its own width), see GhostLines.hpp. Classic wall generator only. ghost_lines_layer tells whether
+    // the layer is a treated one (Layer::ghost_lines) for the other treatments.
+    const std::vector<std::pair<ExPolygons, coord_t>> *ghost_lines_gaps = nullptr;
+    bool                                            ghost_lines_layer = false;
     
     PerimeterGenerator(
         // Input:

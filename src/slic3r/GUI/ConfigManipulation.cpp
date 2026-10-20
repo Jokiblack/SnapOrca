@@ -1416,7 +1416,8 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
     toggle_line("ghost_lines_feature_depth", ghost_lines && config->opt_enum<GhostLinesScope>("ghost_lines_scope") == GhostLinesScope::InternalFeatures);
     toggle_line("ghost_lines_air_gap", ghost_lines);
     toggle_field("ghost_lines_air_gap", ghost_lines && !have_arachne && !config->opt_bool("spiral_mode"));
-    toggle_line("ghost_lines_bond_layers", ghost_lines && config->opt_float("ghost_lines_air_gap") > 0.);
+    for (auto el : { "ghost_lines_gap_after_wall", "ghost_lines_bond_layers" })
+        toggle_line(el, ghost_lines && config->opt_float("ghost_lines_air_gap") > 0.);
 
     // Orca
     auto is_role_based_wipe_speed = config->opt_bool("role_based_wipe_speed");

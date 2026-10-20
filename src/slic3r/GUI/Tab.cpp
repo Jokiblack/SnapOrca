@@ -3530,6 +3530,7 @@ void TabPrint::build()
         optgroup->append_single_option_line("ghost_lines_scope");
         optgroup->append_single_option_line("ghost_lines_feature_depth");
         optgroup->append_single_option_line("ghost_lines_air_gap");
+        optgroup->append_single_option_line("ghost_lines_gap_after_wall");
         optgroup->append_single_option_line("ghost_lines_bond_layers");
 
         optgroup = page->new_optgroup(L("Precision"), L"param_precision");

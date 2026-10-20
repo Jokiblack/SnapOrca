@@ -1707,6 +1707,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionEnum<GhostLinesScope>, ghost_lines_scope))
     ((ConfigOptionFloat, ghost_lines_feature_depth))
     ((ConfigOptionFloat, ghost_lines_air_gap))
+    ((ConfigOptionInt, ghost_lines_gap_after_wall))
     ((ConfigOptionInt, ghost_lines_bond_layers))
     ((ConfigOptionFloatsOrPercentsNullable, top_surface_line_width))
     ((ConfigOptionInt, top_shell_layers))

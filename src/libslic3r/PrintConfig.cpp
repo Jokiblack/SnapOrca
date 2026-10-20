@@ -8899,17 +8899,31 @@ void PrintConfigDef::init_fff_params()
     def = this->add("ghost_lines_air_gap", coFloat);
     def->label = L("Air gap behind the outer wall");
     def->category = L("Quality");
-    def->tooltip = L("Leave an air gap of this width between the outer wall and the inner walls and infill behind it, so "
-                     "that the internal feature does not pull on the outer wall when it shrinks. This is what is done in "
-                     "CAD to hide ghost lines, without changing the model. The outer wall stays joined to the rest of the "
-                     "part on the layers without the gap. The gap is never left on the first or the last layer, where it "
-                     "would be exposed by a top or bottom surface, or in spiral vase mode. Classic wall generator only. "
-                     "Set to 0 to disable.");
+    def->tooltip = L("Leave an air gap of this width between the outer wall and the walls and infill behind it, so that "
+                     "the internal feature does not pull on the outer wall when it shrinks. This is what is done in CAD "
+                     "to hide ghost lines, without changing the model. The gap moves the walls behind it inwards and "
+                     "takes the place of infill or gap fill, never of a wall: where the model has no room for it, it is "
+                     "left out. The outer wall stays joined to the rest of the part on the layers without the gap. The "
+                     "gap is never left on the first or the last layer, where it would be exposed by a top or bottom "
+                     "surface, or in spiral vase mode. Classic wall generator only. Set to 0 to disable.");
     def->sidetext = L("mm");
     def->min = 0;
     def->max = 2;
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(0));
+
+    def = this->add("ghost_lines_gap_after_wall", coInt);
+    def->label = L("Air gap after wall");
+    def->category = L("Quality");
+    def->tooltip = L("Leave the air gap after this wall, counted from the outside: 1 leaves it right behind the outer "
+                     "wall, 2 behind the first inner wall, and so on, so that the walls in front of the gap print "
+                     "together as the skin of the part. Larger values give a stronger skin and a little less "
+                     "isolation. There is always at least one wall behind the gap: with fewer walls the gap moves "
+                     "out, and with a single wall it is not left.");
+    def->min = 1;
+    def->max = 10;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionInt(1));
 
     def = this->add("ghost_lines_bond_layers", coInt);
     def->label = L("Air gap bond interval");

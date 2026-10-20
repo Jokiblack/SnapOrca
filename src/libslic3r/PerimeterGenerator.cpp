@@ -1564,6 +1564,11 @@ void PerimeterGenerator::process_classic()
         if (loop_number > 0 && only_one_wall_top && this->upper_slices == nullptr)
             loop_number = 0;
 
+        // SnapOrca: ghost lines air gap after this wall from the outside (1 = the outer wall), always with a wall
+        // inside it; 0 = no gap.
+        const int ghost_gap_after = this->ghost_lines_gaps == nullptr || m_spiral_vase ? 0 :
+            std::min(this->config->ghost_lines_gap_after_wall.value, loop_number);
+
         ExPolygons last        = union_ex(surface.expolygon.simplify_p(surface_simplify_resolution));
         ExPolygons gaps;
         ExPolygons top_fills;
@@ -1720,22 +1725,40 @@ void PerimeterGenerator::process_classic()
                             ClipperUtils::clip_clipper_polygons_with_subject_bbox(reach, get_extents(hole.polygon).inflated(SCALED_EPSILON))).empty();
                 }
 
-                // SnapOrca: ghost lines air gap. Pull the region the inner walls and infill are built from away
-                // from the outer wall, so that their edge is ghost_lines_air_gap from the outer wall's inner edge,
-                // where the layers above and below cover the gap: it never opens a hole in a top or bottom surface.
-                if (i == 0 && this->ghost_lines_region != nullptr && ! this->ghost_lines_region->empty() &&
-                    this->upper_slices != nullptr && this->lower_slices != nullptr && ! m_spiral_vase) {
-                    // last is the outer wall's centerline, the next loop goes ext_perimeter_spacing2 inside it.
-                    const coord_t shrink = scaled<coord_t>(this->config->ghost_lines_air_gap.value) +
-                                           (ext_perimeter_width + perimeter_width) / 2 - ext_perimeter_spacing2;
+                // SnapOrca: ghost lines air gap. After the ghost_gap_after-th wall from the outside, pull the region the
+                // next walls and the infill are built from away from it, so that their edge is the gap from its inner
+                // edge, where the layers above and below cover the gap: it never opens a hole in a top or bottom surface.
+                if (ghost_gap_after > 0 && i == ghost_gap_after - 1 && this->upper_slices != nullptr && this->lower_slices != nullptr) {
+                    // last is the centerline of wall i, the next one goes `spacing` inside it.
+                    const coord_t spacing = i == 0 ? ext_perimeter_spacing2 : perimeter_spacing;
+                    const coord_t width   = i == 0 ? (ext_perimeter_width + perimeter_width) / 2 : perimeter_width;
                     Polygons contours;
                     contours.reserve(last.size());
                     for (const ExPolygon &ex : last)
                         contours.emplace_back(ex.contour);
-                    const ExPolygons gap = intersection_ex(intersection_ex(intersection_ex(diff_ex(contours, offset(contours, -float(shrink))),
-                                                                                           *this->ghost_lines_region),
-                                                                           *this->upper_slices),
-                                                           *this->lower_slices);
+                    // The gap goes between walls and never takes the place of one: where a hole of the island is too
+                    // close behind it to fit the gap, the walls left on this side and the hole's own walls (a wall as
+                    // thin as its walls next to a compartment), it is left out. It may take the place of gap fill or
+                    // infill.
+                    Polygons island_holes;
+                    for (const Polygon &hole : surface.expolygon.holes) {
+                        island_holes.emplace_back(hole);
+                        island_holes.back().make_counter_clockwise();
+                    }
+                    const coord_t room = coord_t(loop_number - i) * perimeter_spacing + ext_perimeter_width + coord_t(loop_number) * perimeter_spacing;
+                    Polygons gaps_cut;
+                    for (const auto &[area, gap] : *this->ghost_lines_gaps) {
+                        const coord_t shrink = gap + width - spacing;
+                        Polygons cut = intersection(diff(contours, offset(contours, -float(shrink))), to_polygons(area));
+                        if (! island_holes.empty() && ! cut.empty()) {
+                            // Where the cut's inner edge is too close to a hole, drop the cut across its whole depth.
+                            const Polygons too_close = intersection(cut, offset(island_holes, float(room), jtRound, scaled<double>(0.01)));
+                            if (! too_close.empty())
+                                cut = diff(cut, offset(too_close, float(shrink + SCALED_EPSILON), jtRound, scaled<double>(0.01)));
+                        }
+                        append(gaps_cut, std::move(cut));
+                    }
+                    const ExPolygons gap = intersection_ex(intersection_ex(union_ex(gaps_cut), *this->upper_slices), *this->lower_slices);
                     if (! gap.empty())
                         last = diff_ex(last, gap);
                 }

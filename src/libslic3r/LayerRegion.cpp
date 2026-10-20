@@ -336,15 +336,23 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, const LayerRe
         g.gap_fill_flow         = this->flow(frSolidInfill, height, (unsigned int)std::max(0, perimeter_config.outer_wall_filament_id.value));
 
         // SnapOrca: ghost lines, see GhostLines.hpp. Declared after g so it outlives the process_*() calls below.
-        ExPolygons ghost_lines;
+        std::vector<std::pair<ExPolygons, coord_t>> ghost_lines_gaps;
         if (perimeter_config.ghost_lines_enable.value) {
-            ghost_lines = ghost_lines_area(*this->layer(), perimeter_config,
-                g.ext_perimeter_flow.scaled_width() + g.perimeter_flow.scaled_width() + scaled<coord_t>(perimeter_config.ghost_lines_air_gap.value));
-            if (! ghost_lines.empty()) {
+            const coord_t gap        = scaled<coord_t>(perimeter_config.ghost_lines_air_gap.value);
+            // Deep enough to reach the wall the gap goes after, see ghost_lines_gap_after_wall.
+            const coord_t band_depth = g.ext_perimeter_flow.scaled_width() +
+                                       coord_t(std::max(1, perimeter_config.ghost_lines_gap_after_wall.value)) * g.perimeter_flow.scaled_width() + gap;
+            ExPolygons    area       = ghost_lines_area(*this->layer(), perimeter_config, band_depth);
+            if (! area.empty()) {
                 this->layer()->ghost_lines = true;
-                if (ghost_lines_air_gap_on_layer(*this->layer(), perimeter_config) && ! print_config.spiral_mode &&
-                    this->layer()->object()->config().wall_generator.value == PerimeterGeneratorType::Classic)
-                    g.ghost_lines_region = &ghost_lines;
+                g.ghost_lines_layer = true;
+            }
+            if (gap > 0 && ghost_lines_air_gap_on_layer(*this->layer(), perimeter_config) && ! print_config.spiral_mode &&
+                this->layer()->object()->config().wall_generator.value == PerimeterGeneratorType::Classic) {
+                if (! area.empty())
+                    ghost_lines_gaps.emplace_back(std::move(area), gap);
+                if (! ghost_lines_gaps.empty())
+                    g.ghost_lines_gaps = &ghost_lines_gaps;
             }
         }
 
