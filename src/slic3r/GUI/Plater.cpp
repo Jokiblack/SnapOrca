@@ -1985,6 +1985,8 @@ struct Sidebar::priv
 #endif
 };
 
+static bool is_snapmaker_printer_selected();
+
 void Sidebar::priv::layout_printer(bool isBBL, bool isDual)
 {
     // Printer - preset
@@ -2078,9 +2080,13 @@ void Sidebar::priv::layout_printer(bool isBBL, bool isDual)
 
         // The variant box switches the machine variant. The card below lists the nozzles when there
         // are flow variants to choose or several extruders to show; otherwise the box says it all.
+        // SnapOrca: Snapmaker printers list every nozzle (diameter and flow) in their own tabbed
+        // panel (m_nozzle_notebook, see update_nozzle_settings); upstream's nozzle card would show
+        // the same settings a second time.
+        const bool snapmaker_nozzle_tabs = m_nozzle_notebook != nullptr && is_snapmaker_printer_selected();
         panel_nozzle_dia->Show(true);
-        extruder_single_sizer->Show(has_flow_variant || multi_extruder_rows);
-        single_extruder->SetNozzleRowCount(multi_extruder_rows ? size_t(extruder_count) : 1);
+        extruder_single_sizer->Show(!snapmaker_nozzle_tabs && (has_flow_variant || multi_extruder_rows));
+        single_extruder->SetNozzleRowCount(multi_extruder_rows && !snapmaker_nozzle_tabs ? size_t(extruder_count) : 1);
     } else {
         panel_nozzle_dia->Show(false);
         extruder_single_sizer->Show(false);
