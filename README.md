@@ -76,8 +76,29 @@ The merge, the fixes and the tests were done with the help of **Claude (Anthropi
 - Its own folder, uninstaller, Start-menu entry and data folder.
 - It does not take over the official `Snapmaker_Orca://` links.
 
+### In progress: pull requests after 2.5.0-snaporca.1
+
+These changes are in open pull requests and go into the next release once "Build all" is green and the U1 default G-code (4 × 0.4 mm, 0.20mm Standard, Snapmaker PLA Basic; 1 and 4 filaments; with and without prime tower) is confirmed identical to `main`. Every new feature is behind an option that is off by default.
+
+**Fixes to the engine**
+- **Per-toolhead speeds now reach the U1 G-code** ([#1](https://github.com/Jokiblack/SnapOrca/pull/1)). Three causes: `GCode::process_slot_of` returned the extruder index instead of the toolhead column (the U1 has Standard / High Flow columns per toolhead); the prime tower read every toolhead's speeds from column 0; a filament without its own column read filament 1's values. With equal columns the G-code does not change.
+- **High Flow per filament** ([#11](https://github.com/Jokiblack/SnapOrca/pull/11)). Porting the LixNix column model was studied and rejected (≈2,000 lines, breaks Snapmaker profile loading and 3MF files shared with 2.4). Instead: a **"Create High Flow values"** button in the Filament tab (shown only when a toolhead is on High Flow and the filament has no High Flow values), a fix so a user preset with two flow modes no longer loses its High Flow values on restart, and a fix in `Print::apply` that applied the flow-column offset twice with segmented filaments.
+- **Prime tower outside the bed on 0.2 mm single-extruder profiles** ([#2](https://github.com/Jokiblack/SnapOrca/pull/2)): Geeetech M1, Mellow M1 and Rook MK1 LDO. The tower estimate used purge volume while the planner lays whole rows plus ramming and wall; the estimate now reserves what the planner prints, only for single-extruder-multi-material towers. The U1 keeps its tower where it was.
+
+**Ported from Bambu Studio**
+- **First-layer infill line width per toolhead** ([#3](https://github.com/Jokiblack/SnapOrca/pull/3), Bambu c9089d03c): `main` had the option as a single value; it is now one column per toolhead like the other widths. 0 = use the first-layer line width, as before.
+- **Mixed colour: no diagonal Z descent when travelling between sublayers** ([#4](https://github.com/Jokiblack/SnapOrca/pull/4), Bambu bf8d52c72). The other three B7 fixes were already in `main` or do not apply to Orca 2.5's preview.
+- **Cut keeps the filament of every part** ([#5](https://github.com/Jokiblack/SnapOrca/pull/5), Bambu 29faefd6a): contour and dovetail cuts of a multi-part object merged all parts into one volume without config. Painted areas were already kept when "Keep painted areas after mesh changes" is on.
+- **Reversed-face detection on import** ([#6](https://github.com/Jokiblack/SnapOrca/pull/6), Bambu b2c5009cf and follow-ups): new preference "Detect reversed faces when importing models" (off); a warning in the object list points to Fix Model. Whole-mesh inversion was already repaired.
+- **Regression tests only**, because the fix was already in `main` or Orca 2.5 solves it another way: modifier infill density on cut models with connectors and supports after changing filament shrinkage ([#8](https://github.com/Jokiblack/SnapOrca/pull/8)); travel before the first tool selection and layer Z after a raft toolchange in spiral vase ([#9](https://github.com/Jokiblack/SnapOrca/pull/9)); periodic modifier ([#10](https://github.com/Jokiblack/SnapOrca/pull/10)). The uncovered-overhang warning was already complete.
+
+**Ported from the LixNix fork** ([#7](https://github.com/Jokiblack/SnapOrca/pull/7))
+- **Mesh level of detail** in the 3D view: preference "Simplify distant objects" (off). Slicing never uses the simplified mesh.
+- **Vendor profile updates only through Snapmaker OTA**: option (off) that skips Orca's profile CDN. The GitHub new-version notice is untouched.
+- Not ported: stealth mode (already complete in SnapOrca), Sentry crash reporting, and the change of `independent_support_layer_height`'s default.
+
 ### Known limitations
-- The per-toolhead **speeds** from LixNix have no effect on the U1: Snapmaker's process profiles already use those columns for the Standard / High Flow variants. Layer heights, line widths, the tower and supports per nozzle do work.
+- The per-toolhead **speeds** from LixNix have no effect on the U1 in 2.5.0-snaporca.1. Fixed in [#1](https://github.com/Jokiblack/SnapOrca/pull/1), pending verification. Layer heights, line widths, the tower and supports per nozzle do work.
 - Multi-nozzle printing is new. Check the preview, and start with small parts.
 - Main target: **Windows x64**. Linux and macOS builds are made but less tested.
 
@@ -152,8 +173,29 @@ La fusión, los arreglos y las pruebas se han hecho con ayuda de **Claude (Anthr
 - Carpeta, desinstalador, entrada del menú Inicio y carpeta de datos propios.
 - No se apropia de los enlaces `Snapmaker_Orca://` del oficial.
 
+### En marcha: pull requests posteriores a la 2.5.0-snaporca.1
+
+Estos cambios están en pull requests abiertas y entrarán en la siguiente versión cuando "Build all" esté en verde y se confirme que el G-code por defecto de la U1 (4 × 0,4 mm, 0.20mm Standard, Snapmaker PLA Basic; 1 y 4 filamentos; con y sin torre de purga) sigue idéntico al de `main`. Toda función nueva va detrás de una opción desactivada por defecto.
+
+**Arreglos del motor**
+- **Las velocidades por cabezal ya llegan al G-code de la U1** ([#1](https://github.com/Jokiblack/SnapOrca/pull/1)). Tres causas: `GCode::process_slot_of` devolvía el índice del extrusor en vez de la columna del cabezal (la U1 tiene columnas Standard / High Flow por cabezal); la torre de purga leía las velocidades de todos los cabezales en la columna 0; un filamento sin columna propia leía los valores del filamento 1. Con columnas iguales el G-code no cambia.
+- **High Flow por filamento** ([#11](https://github.com/Jokiblack/SnapOrca/pull/11)). Se estudió portar el modelo de columnas de LixNix y se descartó (≈2.000 líneas, rompe la carga de los perfiles Snapmaker y los 3MF compartidos con la 2.4). En su lugar: botón **«Crear valores High Flow»** en la pestaña Filamento (solo aparece con un cabezal en High Flow y un filamento sin esos valores), un arreglo para que un preset de usuario con dos modos de flujo no pierda sus valores High Flow al reiniciar, y un arreglo en `Print::apply`, que aplicaba dos veces el desplazamiento de columna con filamentos segmentados.
+- **Torre de purga fuera de la cama en perfiles de 0,2 mm de un solo extrusor** ([#2](https://github.com/Jokiblack/SnapOrca/pull/2)): Geeetech M1, Mellow M1 y Rook MK1 LDO. La estimación de la torre usaba el volumen de purga mientras el planificador pone filas enteras más ramming y pared; ahora la estimación reserva lo que el planificador imprime, solo en torres de un extrusor multimaterial. La U1 conserva su torre donde estaba.
+
+**Traído de Bambu Studio**
+- **Ancho de línea del relleno de la primera capa por cabezal** ([#3](https://github.com/Jokiblack/SnapOrca/pull/3), Bambu c9089d03c): `main` tenía la opción como un solo valor; ahora es una columna por cabezal como los demás anchos. 0 = usar el ancho de la primera capa, como antes.
+- **Color mezclado: sin bajadas de Z en diagonal al desplazarse entre subcapas** ([#4](https://github.com/Jokiblack/SnapOrca/pull/4), Bambu bf8d52c72). Los otros tres arreglos B7 ya estaban en `main` o no aplican a la vista previa de Orca 2.5.
+- **Cortar conserva el filamento de cada pieza** ([#5](https://github.com/Jokiblack/SnapOrca/pull/5), Bambu 29faefd6a): los cortes por contorno y en cola de milano de un objeto multipieza fundían todas las piezas en un volumen sin configuración. Las zonas pintadas ya se conservaban con «Mantener las zonas pintadas tras cambiar la malla».
+- **Detección de caras invertidas al importar** ([#6](https://github.com/Jokiblack/SnapOrca/pull/6), Bambu b2c5009cf y siguientes): preferencia nueva «Detectar caras invertidas al importar modelos» (desactivada); un aviso en la lista de objetos remite a Reparar modelo. La inversión de la malla entera ya se reparaba.
+- **Solo pruebas de regresión**, porque el arreglo ya estaba en `main` o Orca 2.5 lo resuelve de otra forma: densidad de relleno de modificadores en piezas cortadas con conectores y soportes tras cambiar la contracción del filamento ([#8](https://github.com/Jokiblack/SnapOrca/pull/8)); desplazamiento antes de la primera selección de herramienta y Z de capa tras el cambio de herramienta de la balsa en vaso espiral ([#9](https://github.com/Jokiblack/SnapOrca/pull/9)); modificador periódico ([#10](https://github.com/Jokiblack/SnapOrca/pull/10)). El aviso de voladizos sin cubrir ya estaba completo.
+
+**Traído del fork de LixNix** ([#7](https://github.com/Jokiblack/SnapOrca/pull/7))
+- **Nivel de detalle de la malla** en la vista 3D: preferencia «Simplificar los objetos lejanos» (desactivada). El laminado nunca usa la malla simplificada.
+- **Actualizaciones de perfiles de fabricante solo por OTA de Snapmaker**: opción (desactivada) que salta el CDN de perfiles de Orca. El aviso de versión nueva de GitHub no cambia.
+- No se portan: el modo sigilo (ya está completo en SnapOrca), el envío de errores a Sentry y el cambio de valor por defecto de `independent_support_layer_height`.
+
 ### Limitaciones conocidas
-- Las **velocidades** por cabezal de LixNix no tienen efecto en la U1: los perfiles de proceso de Snapmaker ya usan esas columnas para las variantes Standard / High Flow. Las alturas de capa, los anchos de línea, la torre y los soportes por boquilla sí funcionan.
+- Las **velocidades** por cabezal de LixNix no tienen efecto en la U1 en la 2.5.0-snaporca.1. Arreglado en [#1](https://github.com/Jokiblack/SnapOrca/pull/1), pendiente de verificación. Las alturas de capa, los anchos de línea, la torre y los soportes por boquilla sí funcionan.
 - La impresión con boquillas distintas es nueva. Revisa la vista previa y empieza con piezas pequeñas.
 - Plataforma principal: **Windows x64**. Las versiones de Linux y macOS se compilan, pero se han probado menos.
 
