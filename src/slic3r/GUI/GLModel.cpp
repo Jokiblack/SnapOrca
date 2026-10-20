@@ -34,6 +34,7 @@
 #include <cmath>
 #include <math.h>
 #include <cstdlib>
+#include <boost/log/trivial.hpp>
 #include "libslic3r/Geometry.hpp"
 
 #if defined(L)
@@ -719,7 +720,17 @@ void GLModel::render(const std::pair<size_t, size_t>& range, GLShaderProgram* sh
 #if SLIC3R_OPENGL_ES
     const bool use_cached_vao = false;
 #else
-    const bool use_cached_vao = OpenGLManager::VertexArraysSupported() && !OpenGLManager::get_gl_info().is_core_profile();
+    // SnapOrca: SNAPORCA_GL_NO_VAO_CACHE=1 in the environment turns the cached VAO off, to tell a
+    // driver problem with it apart from other crashes without needing another build.
+    static const bool vao_cache_disabled = [] {
+        const char *v = std::getenv("SNAPORCA_GL_NO_VAO_CACHE");
+        const bool off = v != nullptr && *v != '\0' && *v != '0';
+        if (off)
+            BOOST_LOG_TRIVIAL(warning) << "GLModel: cached VAO disabled by SNAPORCA_GL_NO_VAO_CACHE";
+        return off;
+    }();
+    const bool use_cached_vao = !vao_cache_disabled && OpenGLManager::VertexArraysSupported() &&
+                                !OpenGLManager::get_gl_info().is_core_profile();
 #endif
     if (use_cached_vao) {
         if (m_render_data.vao_id == 0)
