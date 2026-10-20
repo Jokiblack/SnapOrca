@@ -9077,8 +9077,12 @@ void PresetBundle::update_multi_material_filament_presets(size_t to_delete_filam
                     this->project_config.set_key_value(key, new ConfigOptionString(value));
             };
 
-            color_opt->values.resize(num_filaments, "#26A69A");
-            this->mixed_filaments.auto_generate(color_opt->values);
+            // The nozzle-count top-up above grows filament_presets on its own; the per-filament
+            // arrays (filament_colour among them) are resized together by set_num_filaments(), so
+            // only a padded copy feeds the mixed filament manager here.
+            std::vector<std::string> physical_colors = color_opt->values;
+            physical_colors.resize(num_filaments, "#26A69A");
+            this->mixed_filaments.auto_generate(physical_colors);
 
             int   gradient_mode = get_mixed_mode(false) ? 1 : 0;
             float lower_bound = get_mixed_float("mixed_filament_height_lower_bound", 0.04f);
@@ -9091,7 +9095,7 @@ void PresetBundle::update_multi_material_filament_presets(size_t to_delete_filam
             this->mixed_filaments.clear_custom_entries();
             this->mixed_filaments.load_custom_entries(
                 deleting_filament ? post_delete_mixed_defs : get_mixed_string("mixed_filament_definitions"),
-                color_opt->values);
+                physical_colors);
             this->mixed_filaments.apply_gradient_settings(gradient_mode, lower_bound, upper_bound, advanced_dithering);
 
             const std::string serialized = this->mixed_filaments.serialize_custom_entries();
