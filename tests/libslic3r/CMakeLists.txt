@@ -73,6 +73,7 @@ add_executable(${_TEST_NAME}_tests
     # test_png_io.cpp
     test_indexed_triangle_set.cpp
     test_connected_bodies.cpp
+    test_cut_utils.cpp # Snapmaker Orca: a cut keeps the painting and the per-part filaments
     test_texture_displacement.cpp
     test_instance_lock.cpp
     ../libnest2d/printer_parts.cpp
