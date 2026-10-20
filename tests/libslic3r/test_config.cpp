@@ -266,6 +266,38 @@ SCENARIO("Config ini load/save interface", "[Config]") {
     }
 }
 
+TEST_CASE("normalize_fdm validates wipe_tower_filament only when nozzle_diameter is known", "[Config][Regression]") {
+    using namespace Slic3r;
+    // A process preset loaded on its own (CLI --load-settings) carries wipe_tower_filament but no
+    // printer keys: normalize_fdm used to dereference the missing nozzle_diameter and crash.
+    SECTION("No nozzle_diameter: the value is left alone") {
+        DynamicPrintConfig config;
+        config.set_key_value("wipe_tower_filament", new ConfigOptionInt(2));
+        config.normalize_fdm();
+        CHECK(config.opt_int("wipe_tower_filament") == 2);
+    }
+    SECTION("A negative index is reset without nozzle_diameter") {
+        DynamicPrintConfig config;
+        config.set_key_value("wipe_tower_filament", new ConfigOptionInt(-1));
+        config.normalize_fdm();
+        CHECK(config.opt_int("wipe_tower_filament") == 0);
+    }
+    SECTION("With nozzle_diameter an index past the last extruder is reset") {
+        DynamicPrintConfig config;
+        config.set_key_value("wipe_tower_filament", new ConfigOptionInt(5));
+        config.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.4, 0.4, 0.4, 0.4}));
+        config.normalize_fdm();
+        CHECK(config.opt_int("wipe_tower_filament") == 0);
+    }
+    SECTION("With nozzle_diameter a valid index is kept") {
+        DynamicPrintConfig config;
+        config.set_key_value("wipe_tower_filament", new ConfigOptionInt(4));
+        config.set_key_value("nozzle_diameter", new ConfigOptionFloats({0.4, 0.4, 0.4, 0.4}));
+        config.normalize_fdm();
+        CHECK(config.opt_int("wipe_tower_filament") == 4);
+    }
+}
+
 TEST_CASE("Flush-volume warning predicate respects used filament transitions", "[Config][Regression]")
 {
     const std::vector<double> multipliers = {1.0};
