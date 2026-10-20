@@ -34,6 +34,7 @@ const std::unordered_map<TestMesh, const char*, TestMeshHash> mesh_names {
     std::pair<TestMesh, const char*>(TestMesh::L,						"L"), 
     std::pair<TestMesh, const char*>(TestMesh::V,						"V"), 
     std::pair<TestMesh, const char*>(TestMesh::_40x10,					"40x10"), 
+    std::pair<TestMesh, const char*>(TestMesh::cube_20x20x20,			"cube_20x20x20"),
     std::pair<TestMesh, const char*>(TestMesh::sphere_50mm,				"sphere_50mm"), 
     std::pair<TestMesh, const char*>(TestMesh::bridge,					"bridge"), 
     std::pair<TestMesh, const char*>(TestMesh::bridge_with_hole,		"bridge_with_hole"), 
@@ -54,6 +55,9 @@ TriangleMesh mesh(TestMesh m)
 {
     TriangleMesh mesh;
     switch(m) {
+        case TestMesh::cube_20x20x20:
+            mesh = Slic3r::make_cube(20, 20, 20);
+            break;
         case TestMesh::sphere_50mm:
             mesh = Slic3r::make_sphere(50, PI / 243.0);
             break;
