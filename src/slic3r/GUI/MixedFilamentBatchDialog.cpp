@@ -18,6 +18,8 @@
 #include "Plater.hpp"
 #include "PartPlate.hpp"
 #include "BitmapCache.hpp"
+#include "Camera.hpp"
+#include "GLCanvas3D.hpp"
 
 #include <set>
 #include <algorithm>
@@ -50,6 +52,15 @@ static const std::vector<std::string> FULL_SPECTRUM_FALLBACK_COLORS = {
 // item keeps its natural width and the card height is computed correctly on macOS
 // (same rationale as MixedFilamentDialog's fixed-col swatch grid).
 static constexpr int LEGEND_GRID_COLS = 4;
+
+// ThumbnailView lists the same viewpoints, in the same order, as the first
+// entries of Camera::ViewAngleType, which render_thumbnail takes.
+static Camera::ViewAngleType to_view_angle_type(ThumbnailView view)
+{
+    static_assert(static_cast<int>(ThumbnailView::Rear) == static_cast<int>(Camera::ViewAngleType::Rear),
+                  "ThumbnailView must mirror Camera::ViewAngleType");
+    return static_cast<Camera::ViewAngleType>(view);
+}
 
 // Component-weight bounds for recipe generation (see launch_background_match).
 // Recommended mode caps a single component at 70% (product spec); manual mode is
@@ -646,11 +657,11 @@ void MixedFilamentBatchDialog::render_match_thumb_for_plate(int plate_idx)
 
     ThumbnailsParams tp = { {}, false, true, true, true, plate_idx };
     ThumbnailData td;
-    // Named-viewpoint overload (ThumbnailView arg). Original side also follows m_view.
-    canvas->render_thumbnail(td,
+    // Extruder-colour overload at the named viewpoint. Original side also follows m_view.
+    canvas->render_thumbnail(td, m_match_colors,
         static_cast<unsigned int>(match_w), static_cast<unsigned int>(match_h),
-        tp, canvas->get_volumes(), m_match_colors,
-        Camera::EType::Ortho, m_view, false, false);
+        tp, wxGetApp().model().objects, canvas->get_volumes(),
+        Camera::EType::Ortho, to_view_angle_type(m_view), false, false);
     match[plate_idx] = thumbnail_to_bitmap(td, match_w, match_h);
 }
 
@@ -706,11 +717,11 @@ void MixedFilamentBatchDialog::render_original_thumb_for_plate(int plate_idx)
 
     ThumbnailsParams tp = { {}, false, true, true, true, plate_idx };
     ThumbnailData td;
-    // Named-viewpoint overload (ThumbnailView arg) — original side follows m_view.
-    canvas->render_thumbnail(td,
+    // Extruder-colour overload at the named viewpoint — original side follows m_view.
+    canvas->render_thumbnail(td, orig_colors,
         static_cast<unsigned int>(orig_w), static_cast<unsigned int>(orig_h),
-        tp, canvas->get_volumes(), orig_colors,
-        Camera::EType::Ortho, m_view, false, false);
+        tp, wxGetApp().model().objects, canvas->get_volumes(),
+        Camera::EType::Ortho, to_view_angle_type(m_view), false, false);
     orig[plate_idx] = thumbnail_to_bitmap(td, orig_w, orig_h);
 }
 
