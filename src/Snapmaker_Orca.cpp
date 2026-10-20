@@ -8480,8 +8480,10 @@ __declspec(dllexport) int __stdcall Snapmaker_Orca_get_privacy_policy() { return
         for (size_t i = 0; i < argc; ++ i)
             argv_ptrs[i] = argv_narrow[i].data();
 
-        // Snapmaker: crashes are reported through Sentry (initialised by the launcher), so the
-        // BBS SetUnhandledExceptionFilter handler is not registered here.
+        // Snapmaker: write a local crash report (<data_dir>/log/crash_*.log + .dmp, nothing is
+        // sent anywhere). Builds without a Sentry SDK otherwise die without a trace; with Sentry
+        // the filter hands the crash on to crashpad, which the launcher installed before us.
+        CBaseException::install_crash_handlers();
         // Dump before unwinding, while the stack still names what asked for the memory. Throwing
         // std::bad_alloc is standard-permitted here and is what reaches generic_exception_handle().
         std::set_new_handler([]() {
