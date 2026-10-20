@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Snapmaker Orca V2.3.0 Official Release\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-20 13:58+0200\n"
+"POT-Creation-Date: 2026-10-20 21:31+0200\n"
 "PO-Revision-Date: 2025-07-06 21:08+0700\n"
 "Last-Translator: \n"
 "Language-Team: Andylg <andylg@yandex.ru>\n"
@@ -2738,6 +2738,7 @@ msgstr "Поддержка"
 msgid "Flush options"
 msgstr "Параметры очистки"
 
+#. TRN Prefix of a speed, acceleration or jerk setting in the list of values set for a tool head ("Speed: Outer wall")
 msgid "Speed"
 msgstr "Скорость"
 
@@ -3991,6 +3992,7 @@ msgstr "Поиск..."
 
 # в Сохранение толщины вертикальной оболочки.
 # было Везде, но из-за условия совместимости изменено.... как тогда быть?
+#. TRN The first entry of the speed selector on the Process tab, in a narrow sidebar (short for "All extruders")
 msgid "All"
 msgstr "Все"
 
@@ -5295,6 +5297,21 @@ msgstr "Радиус ушек каймы"
 msgid "Brim width"
 msgstr "Ширина каймы"
 
+msgid "Support for mixed nozzle sizes"
+msgstr ""
+
+msgid "This printer uses different nozzle sizes. Select the nozzle size that prints the support, and the filament types used for the raft and the support interface."
+msgstr ""
+
+msgid "Support nozzle size"
+msgstr ""
+
+msgid "Raft and support base"
+msgstr ""
+
+msgid "Support interface"
+msgstr "Связующий слой"
+
 msgid "Spiral mode only works when wall loops is 1, support is disabled, clumping detection by probing is disabled, top shell layers is 0, sparse infill density is 0 and timelapse type is traditional."
 msgstr ""
 "Для печати в режиме вазы необходимы следующие настройки:\n"
@@ -5317,6 +5334,198 @@ msgstr "Использовать эти настройки и режим ваз�
 
 msgid "N/A"
 msgstr "Н/Д"
+
+#. TRN Tooltip of a disabled Flow row. %1% is the nozzle size of this tool head, e.g. 0.2
+#, boost-format
+msgid "Flow type of this nozzle. Snapmaker Orca has no High Flow values for %1% mm nozzles, so this nozzle prints with the Standard values."
+msgstr ""
+
+msgid "Flow type of this nozzle. A High Flow nozzle prints with the High Flow values of the filament and process presets."
+msgstr ""
+
+#. TRN Why a tool head prints with a process preset. %1% is a layer height in mm
+#, boost-format
+msgid "Automatic: the nearest layer height to the preferred %1% mm."
+msgstr ""
+
+#. TRN Why a tool head prints with a process preset. %1% is a layer height in mm
+#, boost-format
+msgid "Automatic: the nearest layer height to the plate's %1% mm."
+msgstr ""
+
+#. TRN Why a tool head prints with a process preset. %1% is a quality class ("Standard"), %2% a layer height in mm
+#, boost-format
+msgid "Automatic: the plate's quality (%1%), nearest to the preferred layer height %2% mm."
+msgstr ""
+
+#. TRN Why a tool head prints with a process preset. %1% is a quality class ("Standard"), %2% a layer height in mm
+#, boost-format
+msgid "Automatic: the plate's quality (%1%), nearest to the plate's layer height %2% mm."
+msgstr ""
+
+#. TRN Why a tool head prints with a process preset. %1% is a quality class ("Standard"), %2% a layer height in mm
+#, boost-format
+msgid "Automatic: %1%, nearest to the preferred layer height %2% mm."
+msgstr ""
+
+#. TRN Why a tool head prints with a process preset. %1% is a quality class ("Standard"), %2% a layer height in mm
+#, boost-format
+msgid "Automatic: %1%, nearest to the plate's layer height %2% mm."
+msgstr ""
+
+#. TRN Why a tool head prints with a process preset. %1% is the plate's quality class ("High Quality"), %2% a nozzle size, %3% the class used instead ("Standard"), %4% a layer height in mm
+#, boost-format
+msgid "Automatic: no %1% preset exists for a %2% mm nozzle, so %3%, nearest to the preferred layer height %4% mm."
+msgstr ""
+
+#. TRN Why a tool head prints with a process preset. %1% is the plate's quality class ("High Quality"), %2% a nozzle size, %3% the class used instead ("Standard"), %4% a layer height in mm
+#, boost-format
+msgid "Automatic: no %1% preset exists for a %2% mm nozzle, so %3%, nearest to the plate's layer height %4% mm."
+msgstr ""
+
+#. TRN Why a tool head prints with a process preset. %1% is a nozzle size
+#, boost-format
+msgid "Automatic: the default preset of a %1% mm nozzle."
+msgstr ""
+
+#. TRN Why a tool head prints with a process preset. %1% is a nozzle size
+#, boost-format
+msgid "Automatic: the first preset installed for a %1% mm nozzle."
+msgstr ""
+
+#. TRN Line on the Speed page under a selected High Flow tool head that prints the Standard speeds by choice. %1% the tool head, %2% its nozzle size
+#, boost-format
+msgid "Extruder %1%, %2% mm nozzle, High Flow, printing the Standard speeds (chosen)."
+msgstr ""
+
+#. TRN Line on the Speed page under a selected tool head. %1% the tool head, %2% its nozzle size, %3% its flow type ("Standard")
+#, boost-format
+msgid "Extruder %1%, %2% mm nozzle, %3%."
+msgstr ""
+
+#. TRN Tooltip of an entry of the speed selector: a High Flow tool head that prints the Standard speeds by choice. %1% the tool head, %2% its nozzle size
+#, boost-format
+msgid "Extruder %1% (sidebar: Nozzle %1%), %2% mm nozzle, High Flow, printing the Standard speeds (chosen)."
+msgstr ""
+
+#. TRN Tooltip of an entry of the speed selector. %1% the tool head, %2% its nozzle size, %3% its flow type ("Standard")
+#, boost-format
+msgid "Extruder %1% (sidebar: Nozzle %1%), %2% mm nozzle, %3%."
+msgstr ""
+
+#. TRN Line under the rows of a nozzle tab in the sidebar. %1% is a process preset ("0.20mm Standard") whose High Flow column the tool head prints with, %2% "(automatic)" or "(chosen)", %3%..%5% the outer wall speed, sparse infill speed and acceleration
+#, boost-format
+msgid "Preset: %1%, High Flow %2% · speeds: outer wall %3%, sparse %4%, accel %5%"
+msgstr ""
+
+#. TRN Line under the rows of a nozzle tab in the sidebar. %1% is a process preset with its state ("0.20mm High Quality", "0.18mm Standard (automatic)") whose Standard speeds the High Flow tool head prints by choice, %2%..%4% the outer wall speed, sparse infill speed and acceleration
+#, boost-format
+msgid "Preset: %1%, Standard (chosen for this High Flow nozzle) · speeds: outer wall %2%, sparse %3%, accel %4%"
+msgstr ""
+
+#. TRN Line under the rows of a nozzle tab in the sidebar. %1% is a process preset ("0.12mm Standard"), %2% "(automatic)" or "(chosen)", %3%..%5% the outer wall speed, sparse infill speed and acceleration the tool head prints with
+#, boost-format
+msgid "Preset: %1% %2% · speeds: outer wall %3%, sparse %4%, accel %5%"
+msgstr ""
+
+msgid "This extruder carries a High Flow nozzle and prints the Standard speeds, accelerations and jerk, chosen with the toggle of the Speed page; its filament settings stay those of a High Flow nozzle."
+msgstr ""
+
+#. TRN Line on the Quality page of the process settings when every tool head prints the widths of another preset. %1% lists tool heads with their nozzle sizes ("1 (0.2 mm), 3 (0.6 mm)"), %2% process presets
+#, boost-format
+msgid "Extruders %1% print with the line widths of %2%. The line widths below apply to every extruder for the widths you changed; every other setting on this page applies to every extruder."
+msgstr ""
+
+#. TRN Line on the Quality page of the process settings. %1% lists tool heads with their nozzle sizes ("1 (0.2 mm), 3 (0.6 mm)"), %2% process presets, %3% the other tool heads ("2")
+#, boost-format
+msgid "Extruders %1% print with the line widths of %2%. The line widths below apply to extruders %3%, and to every extruder for the widths you changed; every other setting on this page applies to every extruder."
+msgstr ""
+
+#. TRN Line on the Quality page of the process settings. %1% is a tool head with its nozzle size ("3 (0.6 mm)"), %2% a process preset, %3% the other tool heads ("1, 2, 4")
+#, boost-format
+msgid "Extruder %1% prints with the line widths of %2%. The line widths below apply to extruders %3%, and to every extruder for the widths you changed; every other setting on this page applies to every extruder."
+msgstr ""
+
+#. TRN Line under the picker of the process preset of a tool head, on the Quality / Speed page of the process settings
+msgid "Its line widths print on this extruder; so do its speeds (Speed page)."
+msgstr ""
+
+msgid "Its speeds, accelerations and jerk print on this extruder; so do its line widths (Quality page)."
+msgstr ""
+
+#. TRN Under a selected tool head on the Quality page. %1% a layer height in mm, %2% the nozzle in the sidebar
+#, boost-format
+msgid "This extruder prints %1% mm layers (preferred layer height, nozzle %2% in the sidebar)."
+msgstr ""
+
+#. TRN Under a selected tool head on the Quality page. %1% a line width setting ("Inner wall"), %2% its value under All tool heads ("110%"), %3% the process preset the tool head takes its widths from, %4% that preset's value
+#, boost-format
+msgid "%1% %2% from All extruders (%3% has %4%)."
+msgstr ""
+
+#. TRN A count of line widths set for a tool head, in a list like "1 line width, 3 speeds"
+#, boost-format
+msgid "%1% line width"
+msgid_plural "%1% line widths"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#. TRN A count of speeds, accelerations and jerk values set for a tool head, in a list like "1 line width, 3 speeds"
+#, boost-format
+msgid "%1% speed"
+msgid_plural "%1% speeds"
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#. TRN Under a selected tool head on the Quality page. %1% the number of line widths set for it
+#, boost-format
+msgid "%1% line width set for this extruder."
+msgid_plural "%1% line widths set for this extruder."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+#. TRN Under a selected tool head on the Speed page. %1% the number of speeds, accelerations and jerk values set for it
+#, boost-format
+msgid "%1% speed set for this extruder."
+msgid_plural "%1% speeds set for this extruder."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
+
+msgid "Greyed settings are shared by every extruder; the layer height of an extruder is set in the sidebar."
+msgstr ""
+
+#. TRN Link under a selected tool head of the Quality / Speed page of the process settings
+msgid "Clear the line widths set for this extruder"
+msgstr ""
+
+msgid "Clear the speeds set for this extruder"
+msgstr ""
+
+#. TRN Under a selected tool head on the Quality page: a line width set for it has the other unit than the value under All tool heads. %1% the setting ("Default"), %2% the value an older version reads ("0.42 %")
+#, boost-format
+msgid "Older versions of Snapmaker Orca read this preset's %1% as %2%; use the same unit for every extruder."
+msgstr ""
+
+#. TRN A line width of zero in a tooltip: the width follows the nozzle
+msgid "auto"
+msgstr ""
+
+#. TRN The last tool head of a list: "1, 3 and 4"
+#, boost-format
+msgid "%1% and %2%"
+msgstr ""
+
+#. TRN Notice of the object list once "Add settings" added a line width to an object printed by several tool heads. %1% the tool heads that printed it with another line width ("1 and 4")
+#, boost-format
+msgid "Line widths added to an object apply on every extruder that prints it; extruder %1% printed it with the line widths of its own nozzle size."
+msgid_plural "Line widths added to an object apply on every extruder that prints it; extruders %1% printed it with the line widths of their own nozzle size."
+msgstr[0] ""
+msgstr[1] ""
+msgstr[2] ""
 
 msgid "Printing"
 msgstr "Идёт печать"
@@ -5908,9 +6117,6 @@ msgstr "Заполнение пробелов"
 
 msgid "Skirt"
 msgstr "Юбка"
-
-msgid "Support interface"
-msgstr "Связующий слой"
 
 msgid "Prime tower"
 msgstr "Черновая башня"
@@ -7718,6 +7924,7 @@ msgstr "Слой: Н/Д"
 msgid "Click to view thermal preconditioning explanation"
 msgstr "Просмотр подробностей преднагрева"
 
+#. TRN Hypertext of the notice: clears the line widths set for the tool head
 msgid "Clear"
 msgstr "Сбросить"
 
@@ -9140,12 +9347,6 @@ msgstr ""
 msgid "No nozzle information detected. Please go to the printer settings to configure the nozzle."
 msgstr ""
 
-msgid "Note: Inconsistent nozzle diameters. Current version does not support mixed diameter printing. Please select one nozzle for this print."
-msgstr ""
-
-msgid "Set Nozzle Diameter"
-msgstr ""
-
 msgid "Nozzle settings synchronized successfully"
 msgstr ""
 
@@ -9417,10 +9618,171 @@ msgstr ""
 msgid "Filament types and colors have been successfully synced from the printer."
 msgstr ""
 
-msgid "Note: Changing this will sync all other nozzles to the same diameter."
+#. TRN Warning under the preferred layer height of a nozzle tab. %1% the entered height, %2% the height it prints at, %3% the object layer height, all in mm
+#, boost-format
+msgid "%1% mm is not on this plate's layer grid and prints at %2% mm (object layer height %3% mm)."
 msgstr ""
 
-msgid "Don't show this again"
+#. TRN Under the preferred layer height Default of a nozzle tab. %1% the height it prints at, %2% the object layer height, in mm
+#, boost-format
+msgid "Default: prints %1% mm layers (object layer height %2% mm)."
+msgstr ""
+
+#. TRN Under the preferred layer height of a nozzle tab. %1% the height it prints at, %2% the object layer height, in mm
+#, boost-format
+msgid "Prints %1% mm layers (object layer height %2% mm)."
+msgstr ""
+
+#, boost-format
+msgid "Nozzle %1%: layer height limits set to %2%-%3% mm, from \"%4%\"."
+msgstr ""
+
+#, boost-format
+msgid "Nozzle %1%: %2%, from \"%3%\"."
+msgstr ""
+
+#, boost-format
+msgid "This printer has no profile for a %1% mm nozzle. Please review the layer height limits of nozzle %2% in the printer settings."
+msgstr ""
+
+#, boost-format
+msgid "The preferred layer height of nozzle %1% no longer fits through it and was reset to Default."
+msgstr ""
+
+#, boost-format
+msgid "Filament %1% of nozzle %2% has no value of its own for some of these settings and prints with the printer's."
+msgstr ""
+
+#. TRN %1% the tool head, %2% the number of values set for it on the Speed and Quality pages of the process settings
+#, boost-format
+msgid "Extruder %1% keeps %2% values set for it (Speed and Quality pages)."
+msgstr ""
+
+#. TRN %1% the tool head, %2% a line width in mm set for it, %3% the nozzle size it had, %4% the new nozzle size
+#, boost-format
+msgid "Extruder %1% keeps a line width of %2% mm set for a %3% mm nozzle; it now has %4% mm."
+msgstr ""
+
+#. TRN %1% the tool head, %2% line widths in mm set for it ("0.45, 0.5"), %3% the nozzle size it had, %4% the new nozzle size
+#, boost-format
+msgid "Extruder %1% keeps line widths of %2% mm set for a %3% mm nozzle; it now has %4% mm."
+msgstr ""
+
+msgid "the selected preset"
+msgstr ""
+
+#. TRN %1% the nozzle, %2% the process preset chosen for its tool head, %3% the nozzle size the preset is made for, %4% the new size, %5% the preset the head prints with now
+#, boost-format
+msgid "Nozzle %1%: %2%, chosen for this extruder in this project, is made for a %3% mm nozzle and does not apply while the nozzle is %4% mm; the extruder uses %5% (automatic)."
+msgstr ""
+
+#. TRN %1% the nozzle, %2% the process preset chosen for its tool head, %3% the new size, %4% the preset the head prints with now
+#, boost-format
+msgid "Nozzle %1%: %2%, chosen for this extruder in this project, is not made for a %3% mm nozzle and does not apply; the extruder uses %4% (automatic)."
+msgstr ""
+
+#. TRN %1% the nozzle, %2% the process preset chosen for its tool head
+#, boost-format
+msgid "Nozzle %1%: %2%, chosen for this extruder in this project, applies again."
+msgstr ""
+
+#. TRN Hypertext of the notice: opens the picker of the tool head's preset
+msgid "Choose preset"
+msgstr ""
+
+msgid "Diameter of this nozzle. This printer has presets for one nozzle diameter only."
+msgstr ""
+
+msgid "Diameter of this nozzle. Its layer height limits and the filament presets it prints follow the diameter."
+msgstr ""
+
+msgid "Preferred layer height"
+msgstr ""
+
+msgid "Layer height this nozzle should print with. Pick a listed height, which prints as listed, or enter any height in mm; Default prints the object layer height. For slicing, the object layer height is chosen so that every preferred layer height is a whole multiple of it; the line below names the height the extruder prints when it differs."
+msgstr ""
+
+#, boost-format
+msgid "\"%1%\" is not a valid layer height for extruder %2%. Enter a height in mm, or Default."
+msgstr ""
+
+#, boost-format
+msgid "The layer height of extruder %1% cannot exceed its nozzle diameter (%2% mm)."
+msgstr ""
+
+#. TRN Link under the warning of a preferred layer height off the layer grid; turns on "Exact preferred layer heights"
+msgid "Print exact heights"
+msgstr ""
+
+msgid "Turns on \"Exact preferred layer heights\" in the printer settings: every preferred layer height prints as entered, and the object layer height becomes the coarsest height they are all whole multiples of, which can mean many more layers."
+msgstr ""
+
+#. TRN The state of the process preset a tool head prints with: given by the rule; empty for the selected preset itself
+#. TRN Marks a process preset a tool head takes its speeds from by the user's choice
+msgid "(chosen)"
+msgstr ""
+
+msgid "(automatic)"
+msgstr ""
+
+#. TRN Tooltip of the line under a nozzle tab. %1% is the process preset the user chose for the tool head, %2% the default line width it prints ("110 % (0.22 mm)"), %3% a list of settings or "none"
+#, boost-format
+msgid "This extruder takes its speeds, accelerations, jerk and line widths from %1%, chosen in this project. Line width %2%. Every other setting comes from the selected process preset. Values you changed in the selected preset are kept: %3%."
+msgstr ""
+
+msgid "none"
+msgstr ""
+
+#, boost-format
+msgid "%1% has no High Flow values; the extruder prints its Standard values."
+msgstr ""
+
+#. TRN Tooltip of the line under a nozzle tab. %1% is a process preset, %2% the preset the tool head's line widths come from, %3% a list of settings or "none"
+#, boost-format
+msgid "This extruder carries a High Flow nozzle and the selected process preset has no High Flow speeds. Its speeds, accelerations and jerk come from the High Flow column of %1%, the process preset of its nozzle size that has one. Its line widths are those of %2%. Every other setting comes from the selected process preset. Values you changed in the selected preset are kept: %3%."
+msgstr ""
+
+msgid "the selected process preset"
+msgstr ""
+
+#. TRN Tooltip of the line under a nozzle tab. %1% is a process preset, %2% a sentence that says why the rule chose it, %3% the default line width the tool head prints ("110 % (0.22 mm)"), %4% a list of settings or "none"
+#, boost-format
+msgid "This extruder has another nozzle size than the printer preset. Its speeds, accelerations, jerk and line widths come from %1%. %2% Line width %3%. Every other setting comes from the selected process preset. Values you changed in the selected preset are kept: %4%."
+msgstr ""
+
+#, boost-format
+msgid "Its High Flow speeds are those of the selected process preset, as %1% has no High Flow values."
+msgstr ""
+
+#. TRN Line under the rows of a nozzle tab in the sidebar. %1% the number of values set for the tool head on the Speed and Quality pages, %2%..%4% the outer wall speed, sparse infill speed and acceleration it prints with
+#, boost-format
+msgid "Values set for this extruder: %1% (outer wall %2%, sparse %3%, accel %4%)"
+msgstr ""
+
+#. TRN Line under the rows of a nozzle tab in the sidebar. %1% is a process preset chosen for the tool head that does not apply now, %2%..%4% the outer wall speed, sparse infill speed and acceleration the tool head prints with
+#, boost-format
+msgid "Preset: %1% (inactive) · speeds: outer wall %2%, sparse %3%, accel %4%"
+msgstr ""
+
+msgid "The process preset chosen for this extruder in this project does not apply now; the extruder prints with the selected process preset."
+msgstr ""
+
+#. TRN Tooltip of the line under a nozzle tab. %1% is a process preset chosen for the tool head that does not apply now
+#, boost-format
+msgid "%1%, chosen in this project for this extruder, does not apply now."
+msgstr ""
+
+#. TRN Tooltip of the line under a nozzle tab. %1% lists the settings set for the tool head on the Speed and Quality pages of the process settings
+#, boost-format
+msgid "Values set for this extruder: %1%."
+msgstr ""
+
+msgid "Click to choose the preset of this extruder."
+msgstr ""
+
+#. TRN Line under the disabled Flow row of a nozzle tab in the sidebar. %1% is the nozzle size of this tool head, e.g. 0.2
+#, boost-format
+msgid "High Flow is not available for a %1% mm nozzle."
 msgstr ""
 
 #, boost-format
@@ -9670,6 +10032,31 @@ msgstr "Отключить притягивание компонентов к с
 msgid "Object with floating parts was detected"
 msgstr "Обнаружен объект с парящими элементами"
 
+msgid "Slicing would take very long:"
+msgstr ""
+
+#, boost-format
+msgid "Plate %1%: "
+msgstr ""
+
+#, boost-format
+msgid "\"%1%\" would be sliced into about %2% layers at a layer height of %3% mm."
+msgstr ""
+
+#, boost-format
+msgid "The object layer height follows the finest preferred layer height (extruder %1%). A coarser preferred layer height there gives a much faster slice."
+msgstr ""
+
+msgid "Do you want to proceed?"
+msgstr ""
+
+#, boost-format
+msgid "Automatic slicing skipped: \"%1%\" would be sliced into about %2% layers at a layer height of %3% mm, which takes very long. Use Slice to slice anyway."
+msgstr ""
+
+msgid "Set for this extruder"
+msgstr ""
+
 msgid "(unknown)"
 msgstr ""
 
@@ -9768,6 +10155,16 @@ msgstr "Ошибка во время перезагрузки"
 
 msgid "Reload all"
 msgstr "Перезагрузить всё"
+
+#. TRN After a switch of the process preset. %1% a tool head, %2% the preset chosen for it, %3% the new process preset
+#, boost-format
+msgid "Extruder %1% keeps %2%, chosen in this project; the other extruders follow %3%."
+msgstr ""
+
+#. TRN After a switch of the process preset. %1% tool heads ("1, 4"), %2% the presets chosen for them, %3% the new process preset
+#, boost-format
+msgid "Extruders %1% keep %2%, chosen in this project; the other extruders follow %3%."
+msgstr ""
 
 msgid "There are warnings after slicing models:"
 msgstr "Предупреждение о нарезке моделей:"
@@ -10192,7 +10589,13 @@ msgstr "Неправильные данные файла печати. Пожа�
 msgid "Printing by object with caution. This function may cause the print head to collide with printed parts during switching."
 msgstr ""
 
+msgid "Slicing was not started because you aborted the very long slice. Use Slice to slice anyway."
+msgstr ""
+
 msgid "Confirm slicing"
+msgstr ""
+
+msgid "Abort slicing"
 msgstr ""
 
 msgid "Send G-code"
@@ -10314,6 +10717,123 @@ msgstr "Используйте «Восстановить» для исправ�
 #, c-format, boost-format
 msgid "Plate %d: %s is not suggested for use printing filament %s (%s). If you still want to do this print job, please set this filament's bed temperature to a number that is not zero."
 msgstr "Покрытие «%2$s» (стол %1$d) не поддерживает печать %4$s (материал %3$s). Смените покрытие или настройте его температуру в профиле материала, чтобы продолжить нарезку."
+
+#, boost-format
+msgid "Extruder %1% was set back to a Standard nozzle: there are no High Flow values for a nozzle of its size with this printer preset."
+msgstr ""
+
+#, boost-format
+msgid "%1% (filament %2%)"
+msgstr ""
+
+#, boost-format
+msgid "Filament %1% keeps the user preset \"%2%\", made for a %3% mm nozzle, on the %4% mm nozzle."
+msgstr ""
+
+#, boost-format
+msgid "Filament %1% keeps the user preset \"%2%\" on the %3% mm nozzle."
+msgstr ""
+
+#, boost-format
+msgid "The preset for that size is \"%1%\"."
+msgstr ""
+
+#, boost-format
+msgid "Filament %1% keeps \"%2%\" and its unsaved changes. Save or discard them, then choose the preset for the %3% mm nozzle."
+msgstr ""
+
+#, boost-format
+msgid "Filament %1% uses \"%2%\", which is not made for a particular nozzle size. Check its maximum volumetric speed for the %3% mm nozzle."
+msgstr ""
+
+#, boost-format
+msgid "Filament %1% now uses \"%2%\", the preset for a %3% mm nozzle."
+msgstr ""
+
+#, boost-format
+msgid "Filaments %1% now use the presets for the size of their nozzles."
+msgstr ""
+
+#, boost-format
+msgid "No %1% mm preset exists for: %2%. The presets of the printer's nozzle size are used; check flow ratio, pressure advance and maximum volumetric speed."
+msgstr ""
+
+#, boost-format
+msgid "Filament %1% uses a preset made for another nozzle size than the nozzle that prints it."
+msgstr ""
+
+#, boost-format
+msgid "Filaments %1% use presets made for another nozzle size than the nozzle that prints them."
+msgstr ""
+
+#, boost-format
+msgid "On this plate filament %1% is printed by nozzle %2% (%3% mm), while its preset follows the printer preset (%4% mm)."
+msgstr ""
+
+#, boost-format
+msgid "On this plate filament %1% is printed by nozzle %2% (%3% mm), while its preset follows nozzle %4% (%5% mm)."
+msgstr ""
+
+msgid "Use the preset for this nozzle"
+msgstr ""
+
+msgid "Use the presets for these nozzles"
+msgstr ""
+
+#, boost-format
+msgid "Extruder %1% (%2% mm) printed with %3% when this project was saved; it now prints with %4%."
+msgstr ""
+
+msgid "The preset is not installed."
+msgstr ""
+
+msgid "The option \"Process speeds and line widths follow the nozzle size\" is off."
+msgstr ""
+
+msgid "The nozzle size of the extruder changed."
+msgstr ""
+
+msgid "The quality rule of Snapmaker Orca changed."
+msgstr ""
+
+msgid "A filament is printed with the flow type of its extruder. Choose Standard or High Flow for every extruder in the Flow row of the nozzle tabs, then slice again."
+msgstr ""
+
+#, boost-format
+msgid "%1%mm High Flow nozzles are not recommended for %2%"
+msgstr ""
+
+#. TRN N3: %1% is a filament preset name, %2% an extruder number
+#, boost-format
+msgid "%1% has no High Flow values; its Standard values are used on extruder %2%. Open it from the filament slot of extruder %2% and change a High Flow value, or use Create High Flow values."
+msgstr ""
+
+#, boost-format
+msgid "The process preset has no High Flow speeds; extruder %1% prints at Standard speeds."
+msgstr ""
+
+#. TRN N7: %1% is a filament preset name, %2% an extruder number, %3% the name of the system preset %1% was made from
+#, boost-format
+msgid "%1% changes Standard values that its High Flow column does not follow; extruder %2% prints with the High Flow values of %3%."
+msgstr ""
+
+#. TRN N7: %1% is a filament preset name, %2% an extruder number
+#, boost-format
+msgid "%1% changes Standard values that its High Flow column does not follow; extruder %2% prints the earlier High Flow values."
+msgstr ""
+
+#. TRN N7: %1% is a list of tool head numbers, %2% the name of the system process preset
+#, boost-format
+msgid "The process preset changes Standard speeds that its High Flow column does not follow; extruder %1% prints with the High Flow speeds of %2%."
+msgstr ""
+
+#, boost-format
+msgid "These filaments cannot be printed with the %1%mm high flow nozzle: %2%"
+msgstr ""
+
+#, boost-format
+msgid "Load another filament or set extruder %1% to a Standard nozzle."
+msgstr ""
 
 msgid "Currently, the object configuration form cannot be used with a multiple-extruder printer."
 msgstr "Сводка настроек моделей пока не поддерживает многоэкструдерные принтеры."
@@ -10656,6 +11176,18 @@ msgstr "Запоминать конфигурацию принтера"
 
 msgid "If enabled, Orca will remember and switch filament/process configuration for each printer automatically."
 msgstr "Если включено, программа будет запоминать связь выбранного профиля принтера с профилем пластиковой нити и процессом печати, выставленными вами в последний раз."
+
+msgid "Filament presets follow the nozzle size"
+msgstr ""
+
+msgid "If enabled, each filament gets the preset made for the size of the nozzle that prints it. User presets are kept unless exactly one counterpart for the other size exists. Line widths given in percent follow each nozzle."
+msgstr ""
+
+msgid "Process speeds and line widths follow the nozzle size"
+msgstr ""
+
+msgid "If enabled, an extruder whose nozzle size differs from the printer preset prints with the speeds, accelerations, jerk and line widths of the process preset of the same quality as the selected preset made for its size, at the nearest layer height. Walls, infill and every other setting stay those of the selected process preset, and values you changed in it are kept on every extruder. Values set for one extruder on the Speed or Quality page, and a process preset chosen for an extruder there, apply to that extruder whether this is on or off."
+msgstr ""
 
 msgid "Group user filament presets"
 msgstr "Группировка пользов. материалов"
@@ -11398,6 +11930,21 @@ msgstr "Настройки отладки успешно сохранены."
 msgid "Cloud environment switched; please login again!"
 msgstr "Смена облачной среды; необходима повторная аутентификация."
 
+#. TRN One tool head in the tooltip of the process combo. %1% the tool head, %2% the process preset it prints with
+#, boost-format
+msgid "extruder %1% %2%"
+msgstr ""
+
+#. TRN Tooltip of the process combo of the sidebar. %1% lists tool heads with the process preset each prints with
+#, boost-format
+msgid "Extruders of other nozzle sizes print with presets of this quality for their size: %1%."
+msgstr ""
+
+#. TRN: the nozzle size a filament preset is made for, in front of its name in the filament list. %1% is a number like 0.2.
+#, boost-format
+msgid "%1% mm"
+msgstr ""
+
 msgid "System presets"
 msgstr "Системные профили"
 
@@ -11436,6 +11983,11 @@ msgstr "Изменить профиль"
 
 msgid "Change extruder color"
 msgstr "Изменить цвет экструдера"
+
+#. TRN: separator in the filament list of a tool head, above the materials that have no preset for its nozzle size. %1% is a number like 0.6.
+#, boost-format
+msgid "No %1% mm version:"
+msgstr ""
 
 # Название группы материала в выпадающем списке, если включена группировка
 # кастомных профилей и в профиле не задан производитель и/или тип.
@@ -12730,6 +13282,7 @@ msgstr "полное имя профиля"
 msgid "symbolic profile name"
 msgstr "символическое имя профиля"
 
+#. TRN Prefix of a line width setting in the list of values set for a tool head ("Line width: Outer wall")
 msgid "Line width"
 msgstr "Ширина экструзии"
 
@@ -12784,6 +13337,9 @@ msgstr "Подложка"
 msgid "Filament for Supports"
 msgstr "Материал поддержки"
 
+msgid "Show legacy filament selection"
+msgstr ""
+
 msgid "Support ironing"
 msgstr "Разглаживание поддержки"
 
@@ -12827,6 +13383,171 @@ msgstr "Настройка плагинов"
 
 msgid "Notes"
 msgstr "Заметки"
+
+#. TRN %1% a tool head, %2% the values set for it by kind ("1 line width, 3 speeds")
+#. TRN %1% a tool head, %2% the value set for it
+#, boost-format
+msgid "Extruder %1%: %2%"
+msgstr ""
+
+#. TRN Line on the Speed and Quality pages. %1% lists tool heads with the values set for each ("Extruder 2: 3 speeds, Extruder 4: 1 line width, 2 speeds")
+#, boost-format
+msgid "Values set per extruder: %1%."
+msgstr ""
+
+msgid "Clear the values set per extruder..."
+msgstr ""
+
+msgid "An override on a part applies on every extruder that prints it."
+msgstr ""
+
+#. TRN Line on the Speed page of the process settings. %1% is a tool head with its nozzle size ("2 (0.2 mm)"), %2% a process preset, %3% the other tool heads ("1, 3, 4")
+#, boost-format
+msgid "Extruder %1% prints with the speeds of %2%. The values below apply to extruders %3%, and to every extruder for the settings you changed."
+msgstr ""
+
+#. TRN Line on the Speed page of the process settings. %1% lists tool heads with their nozzle sizes ("2 (0.2 mm), 3 (0.6 mm)"), %2% process presets, %3% the other tool heads ("1, 4")
+#, boost-format
+msgid "Extruders %1% print with the speeds of %2%. The values below apply to extruders %3%, and to every extruder for the settings you changed."
+msgstr ""
+
+msgid "Set per extruder:"
+msgstr ""
+
+#. TRN Label of the picker on the Speed and Quality pages: the process preset a tool head takes its speeds and line widths from
+msgid "Extruder preset:"
+msgstr ""
+
+#. TRN Tooltip of the button beside the speed picker that clears the process preset chosen for the tool head
+msgid "Use the automatic preset again"
+msgstr ""
+
+#. TRN The first item of the speed picker. %1% is a process preset ("0.24mm Standard")
+#, boost-format
+msgid "%1% (automatic)"
+msgstr ""
+
+msgid "Selected preset (automatic)"
+msgstr ""
+
+#. TRN An item of the speed picker: the chosen process preset is not installed
+#, boost-format
+msgid "%1% (not installed)"
+msgstr ""
+
+#. TRN An item of the speed picker: the chosen process preset does not apply to this tool head now
+#, boost-format
+msgid "%1% (inactive)"
+msgstr ""
+
+#. TRN Header in the speed picker above the vendor's process presets of a nozzle size. %1% is the size ("0.8")
+#, boost-format
+msgid "System presets · %1% mm nozzle"
+msgstr ""
+
+msgid "Chosen user presets travel with the project only where they are installed."
+msgstr ""
+
+#. TRN Header in the speed picker above the process presets embedded in the project
+msgid "Project presets"
+msgstr ""
+
+#. TRN Second line of an item tooltip of the picker on the Quality page: the line widths this tool head would print from the preset ("110 % (0.22 mm)")
+#, boost-format
+msgid "default %1%, outer wall %2%, first layer %3%"
+msgstr ""
+
+#. TRN Second line of an item tooltip of the speed picker: the values this tool head would print from the preset
+#, boost-format
+msgid "outer wall %1%, sparse %2%, accel %3%"
+msgstr ""
+
+msgid "Standard values only; this extruder is at High Flow."
+msgstr ""
+
+msgid "Line widths differ from the automatic preset."
+msgstr ""
+
+#. TRN Item tooltip of the speed picker. %1% the layer height the preset is made for, %2% the one the tool head prints
+#, boost-format
+msgid "Made for %1% mm layers; this extruder prints %2% mm layers."
+msgstr ""
+
+msgid "Also the automatic choice today. Choosing it by name keeps this preset for the extruder when the plate's quality changes; automatic follows the quality."
+msgstr ""
+
+msgid "The selected process preset. Choosing it by name keeps it for the extruder when the plate's preset changes."
+msgstr ""
+
+msgid "Speeds, accelerations, jerk and line widths come from this preset; every other setting stays the plate's."
+msgstr ""
+
+msgid "The process preset this extruder takes its speeds, accelerations, jerk and line widths from. Every other setting stays the plate's."
+msgstr ""
+
+msgid "The process preset is detached from its system preset, so the speeds and line widths of other presets cannot be combined with it."
+msgstr ""
+
+#. TRN Tooltip of the disabled speed picker. %1% is a nozzle size
+#. TRN %1% is a nozzle size
+#, boost-format
+msgid "No process preset for a %1% mm nozzle is installed; the extruder prints with the speeds and line widths of the selected preset."
+msgstr ""
+
+#. TRN Under a tool head whose process preset was chosen in the picker. %1% is the preset the rule would give it
+#, boost-format
+msgid "Chosen in this project; automatic would be %1%."
+msgstr ""
+
+msgid "Chosen in this project; automatic would be the selected preset."
+msgstr ""
+
+msgid "Chosen in this project; the same as the selected process preset, so the extruder keeps it when the plate's preset changes."
+msgstr ""
+
+#. TRN %1% the chosen process preset, %2% the preset the tool head prints with instead
+#, boost-format
+msgid "%1%, chosen in this project, is not installed; the extruder uses %2% (automatic)."
+msgstr ""
+
+#. TRN %1% the chosen process preset, %2% the nozzle size it is made for, %3% the size of the tool head, %4% the preset the tool head prints with instead
+#, boost-format
+msgid "%1%, chosen in this project, is made for a %2% mm nozzle and does not apply while the nozzle is %3% mm; the extruder uses %4% (automatic)."
+msgstr ""
+
+#. TRN %1% the chosen process preset, %2% the size of the tool head, %3% the preset the tool head prints with instead
+#, boost-format
+msgid "%1%, chosen in this project, is not made for a %2% mm nozzle and does not apply; the extruder uses %3% (automatic)."
+msgstr ""
+
+#. TRN %1% the chosen process preset
+#, boost-format
+msgid "%1%, chosen in this project, does not apply: the process preset is detached from its system preset, so the speeds and line widths of other presets cannot be combined with it."
+msgstr ""
+
+msgid "\"Process speeds and line widths follow the nozzle size\" is off in Preferences, so the extruder prints with the selected process preset; a preset chosen here still applies."
+msgstr ""
+
+msgid "This extruder has the nozzle size of the printer preset and prints with the selected process preset."
+msgstr ""
+
+#. TRN Under a High Flow tool head. %1% is the process preset whose High Flow speeds it prints, %2% the preset its line widths come from
+#, boost-format
+msgid "Automatic: %1%, the preset of this nozzle size with High Flow speeds; the selected preset has none. Line widths stay those of %2%."
+msgstr ""
+
+#. TRN %1% the number of settings changed under All tool heads
+#, boost-format
+msgid "%1% settings changed under All extruders apply here too."
+msgstr ""
+
+#. TRN Confirmation before every value set per tool head is cleared. %1% the number of values, %2% the tool heads ("2, 4")
+#, boost-format
+msgid "This clears %1% values set for extruders %2%. They will follow All extruders again."
+msgstr ""
+
+msgid "Clear the values set per extruder"
+msgstr ""
 
 msgid "Frequent"
 msgstr "Частые"
@@ -13010,6 +13731,9 @@ msgstr ""
 msgid "Printable space"
 msgstr "Область печати"
 
+msgid "Per-extruder layer heights"
+msgstr ""
+
 msgid "Select the network agent implementation for printer communication. Available agents are registered at startup."
 msgstr "Реализация сетевого агента для обмена информацией с принтером. Доступные реализации определяются при запуске."
 
@@ -13159,6 +13883,12 @@ msgstr "Показывать перед нарезкой диалоговое о
 msgid "Modes"
 msgstr "Режимы"
 
+msgid "Nozzle flow"
+msgstr ""
+
+msgid "The choice belongs to the project and does not change the printer preset."
+msgstr ""
+
 msgid "This is a single extruder multi-material printer, diameters of all extruders will be set to the new value. Do you want to proceed?"
 msgstr "Это принтер с одиночным мультиматериальным экструдером, диаметры всех экструдеров будут установлены на новое значение. Продолжить?"
 
@@ -13196,6 +13926,24 @@ msgstr ""
 
 msgid "Firmware Retraction"
 msgstr "Откат из прошивки"
+
+msgid ""
+"Exact preferred layer heights are experimental. The object layer height becomes the coarsest height every preferred layer height is a whole multiple of, which can be very fine: extruders left at Default, supports, the first layers and the areas that cannot follow an extruder's height then print at that grid, and slicing and printing can take much longer.\n"
+"\n"
+"Continue?"
+msgstr ""
+
+msgid "Exact preferred layer heights"
+msgstr ""
+
+msgid ""
+"The prime tower prints one slab per tool change on the object layer grid and bridges the layers between them, in either mode. A coarse extruder that purges on a slab of a fine grid extrudes below its minimum layer height there; the finer grid of exact preferred layer heights makes this more likely. Slicing reports the affected slabs per extruder.\n"
+"\n"
+"Keep exact preferred layer heights together with the prime tower?"
+msgstr ""
+
+msgid "Prime tower layer height"
+msgstr ""
 
 msgid "Switching to a printer with different extruder types or numbers will discard or reset changes to extruder or multi-nozzle-related parameters."
 msgstr "Изменения в настройках экструдера и параметрах сопел не будут перенесены в профиль принтера с другим типом или количеством сопел."
@@ -13259,6 +14007,11 @@ msgstr ""
 msgid "Are you sure you want to delete the selected preset?"
 msgstr "Вы действительно хотите удалить выбранный профиль?"
 
+#. TRN Notice after a process preset chosen for a tool head was deleted. %1% the preset, %2% the tool head, %3% the preset the head prints with now
+#, boost-format
+msgid "%1% supplied the speeds and line widths of extruder %2% in this project; the extruder uses %3% (automatic) until another preset is chosen."
+msgstr ""
+
 msgid "Select printers"
 msgstr "Выбор профиля принтера"
 
@@ -13310,6 +14063,34 @@ msgstr "Продолжить"
 msgid "Don't warn again for this preset"
 msgstr "Больше не спрашивать для этого профиля"
 
+msgid "The values below apply to every extruder that has no value of its own for them."
+msgstr ""
+
+#. TRN %1% is the process preset the user chose for the tool head (its speeds and line widths)
+#, boost-format
+msgid "Preset %1% (chosen in this project)."
+msgstr ""
+
+#. TRN %1% is a process preset whose High Flow column the tool head prints with by the automatic rule
+#, boost-format
+msgid "Preset %1%, High Flow (automatic)."
+msgstr ""
+
+#. TRN %1% is a process preset the tool head prints with by the automatic rule
+#, boost-format
+msgid "Preset %1% (automatic)."
+msgstr ""
+
+#. TRN %1% is a process preset chosen for the tool head that cannot apply now (not installed, another nozzle size)
+#, boost-format
+msgid "%1%, chosen in this project, does not apply now."
+msgstr ""
+
+#. TRN %1% the number of values set for the tool head, %2% their names
+#, boost-format
+msgid "%1% values set for this extruder: %2%."
+msgstr ""
+
 # AI Translated
 #. TRN Short tag for the Standard nozzle flow type.
 msgctxt "Nozzle flow type"
@@ -13339,6 +14120,29 @@ msgstr "E3D HF"
 msgctxt "Nozzle flow type"
 msgid "XHF"
 msgstr "XHF"
+
+msgid "All extruders"
+msgstr ""
+
+#. TRN An entry of the speed selector on the Process tab: the tool head and its nozzle size ("Extruder 2 · 0.2")
+#, boost-format
+msgid "Extruder %1% · %2%"
+msgstr ""
+
+#. TRN An entry of the speed selector in a narrow sidebar: the tool head and its nozzle size ("E2 · 0.2")
+#, boost-format
+msgid "E%1% · %2%"
+msgstr ""
+
+#. TRN An entry of the speed selector on the Process tab
+#, boost-format
+msgid "Extruder %1%"
+msgstr ""
+
+#. TRN An entry of the speed selector in a narrow sidebar (short for "Extruder 2")
+#, boost-format
+msgid "E%1%"
+msgstr ""
 
 msgid "No modifications need to be copied."
 msgstr "Перенос изменений не требуется."
@@ -14372,6 +15176,9 @@ msgstr ""
 msgid "request to server update preset resource fail with body:%s,error:%s,status:%d"
 msgstr ""
 
+msgid "This profile package was built by an earlier Snapmaker Orca and does not carry every setting of this version; a package built for this version is needed."
+msgstr ""
+
 #, boost-format
 msgid "Snapmaker Orca %1% needed, but current version is %2%"
 msgstr ""
@@ -14947,6 +15754,9 @@ msgstr "Функция переменной высоты слоя не совм�
 msgid "The wipe tower filament cannot be a mixed filament."
 msgstr "Материал черновой башни не может быть смешанным материалом."
 
+msgid "Different filament diameters may not work well when the prime tower is enabled: the tower purges every filament with one filament area."
+msgstr ""
+
 msgid "Different nozzle diameters and different filament diameters may not work well when the prime tower is enabled. It's very experimental, so please proceed with caution."
 msgstr "Использование разных диаметров сопла и разных диаметров пластиковых нити может привести к некорректной нарезке при включенной черновой башни. Этот метод работы экспериментальный, поэтому, будьте осторожны при использовании."
 
@@ -14968,6 +15778,9 @@ msgstr "Печать черновой башни не поддерживаетс
 msgid "A prime tower requires any “support gap” to be a multiple of layer height."
 msgstr "Для черновой башни требуется, чтобы «зазор поддержки...» был кратен высоте слоя."
 
+msgid "A prime tower with printing by object is not supported together with the dynamic filament map. Print by layer, or disable the dynamic filament map."
+msgstr ""
+
 msgid "A prime tower requires that all objects have the same layer height."
 msgstr "Для использования черновой башни требуется, чтобы у всех моделей была одинаковая высота слоя."
 
@@ -14986,11 +15799,13 @@ msgstr "Для черновой башни требуется, чтобы все
 msgid "One or more object were assigned an extruder that the printer does not have."
 msgstr "Для одного или нескольких моделей был назначен экструдер, который у принтера отсутствует."
 
-msgid "Line width too small"
-msgstr "Слишком маленькая ширина линии"
+#, boost-format
+msgid "Line width too small on extruder %1%"
+msgstr ""
 
-msgid "Line width too large"
-msgstr "Слишком большая ширина линии"
+#, boost-format
+msgid "Line width too large on extruder %1%"
+msgstr ""
 
 # ???  (support_filament == 0 или support_interface_filament == 0)
 msgid "Printing with multiple extruders of differing nozzle diameters. If support is to be printed with the current filament (support_filament == 0 or support_interface_filament == 0), all nozzles have to be of the same diameter."
@@ -14998,6 +15813,30 @@ msgstr "Печать несколькими экструдерами с разн
 
 msgid "A prime tower requires that support has the same layer height as the object."
 msgstr "Для черновой башни требуется, чтобы поддержка и модель имели одинаковую высоту слоя."
+
+msgid "No extruder has a nozzle matching the support nozzle diameter."
+msgstr ""
+
+msgid "The support/raft base filament prints with a nozzle that does not match the support nozzle diameter."
+msgstr ""
+
+msgid "The support/raft interface filament prints with a nozzle that does not match the support nozzle diameter."
+msgstr ""
+
+msgid "Support may print with extruders of differing nozzle diameters. Set the support nozzle diameter (or explicit support and interface filaments) to keep the support on one nozzle size."
+msgstr ""
+
+msgid "No loaded filament matches the support/raft interface material (and the support nozzle diameter)."
+msgstr ""
+
+msgid "No loaded filament matches the support/raft base material (and the support nozzle diameter)."
+msgstr ""
+
+msgid "The support/raft interface filament is not of the support/raft interface material."
+msgstr ""
+
+msgid "The support/raft base filament is not of the support/raft base material."
+msgstr ""
 
 # избегаем "поддержек поддерживает"
 msgid "For Organic supports, two walls are supported only with the Hollow/Default base pattern."
@@ -15025,8 +15864,82 @@ msgstr "Используется принудительная поддержка
 msgid "Layer height cannot exceed nozzle diameter."
 msgstr "Высота слоя не может быть больше диаметра сопла."
 
-msgid "Bridge line width must not exceed nozzle diameter"
-msgstr "Ширина линии моста не может превышать диаметр сопла"
+msgid "Line widths set per extruder are not supported on this printer; set one value under All extruders."
+msgstr ""
+
+#, boost-format
+msgid "Extruder %1% (%2% mm nozzle) prints %3% at %4% mm, a value changed under All extruders."
+msgstr ""
+
+#, boost-format
+msgid "The maximum width of a segmented region (%1% mm) is narrower than the outer wall of filament %2% (%3% mm): painted regions of that filament print nothing where the cut leaves less than one wall, and the base filament shows instead. Use at least the widest painted outer wall (more on slopes printed in thick runs), or 0 for no limit."
+msgstr ""
+
+#, boost-format
+msgid "The layer height of extruder %1% (%2% mm) is ignored for some object parts: it must be an integer multiple of the object layer height (%3% mm), not below it, and must not exceed the extruder's nozzle diameter."
+msgstr ""
+
+#, boost-format
+msgid "The preferred layer height of extruder %1% (%2% mm) is not a whole multiple of the object layer height (%3% mm). Set the object layer height (for this object: its own layer height in the object settings) to %4% mm, the object layer height derived from the preferred layer heights of the extruders in use, or change the preferred layer heights."
+msgstr ""
+
+#, boost-format
+msgid "The layer height of extruder %1% (%2% mm) cannot exceed its nozzle diameter."
+msgstr ""
+
+#, boost-format
+msgid "Some object parts prefer %1% mm layers, but the nozzle of wall filament %2% is too small to extrude that height. Outer and inner walls print together, so these walls keep the object layer height. Assign both wall features to filaments with large enough nozzles."
+msgstr ""
+
+#, boost-format
+msgid "Some object parts prefer %1% mm layers, but the nozzle of filament %2% printing other features of the part is too small to extrude that height. These parts print with the object layer height instead."
+msgstr ""
+
+#, boost-format
+msgid "The wall layer height of filament %1% was adjusted from the preferred %2% mm to %3% mm so the outer and inner walls can print at compatible layer heights (\"Adjust wall layer height\"). Only this filament's walls print the adjusted height; its other features keep the preferred one."
+msgstr ""
+
+#, boost-format
+msgid "The wall filaments of some object parts prefer different layer heights. Outer and inner walls print together, so these walls print with the lower height (%1% mm)."
+msgstr ""
+
+msgid "The wall filaments of some object parts prefer different layer heights. Outer and inner walls print together, so these walls keep the object layer height. Assign both wall features to filaments preferring the same height to print thicker walls."
+msgstr ""
+
+#, boost-format
+msgid "Some object parts print %1% mm layers with filament %2% whose maximum layer height is %3% mm. Assign the part's features to filaments of the coarser nozzle, raise the filament's maximum layer height, or accept printing above it."
+msgstr ""
+
+#, boost-format
+msgid "The %1% mm infill line width is too small for infill combined to %2% mm high layers. Increase the line width or lower the preferred layer height of the infill filament."
+msgstr ""
+
+#, boost-format
+msgid "Some object parts print %1% mm layers with filament %2% whose minimum layer height is %3% mm. Raise the object layer height (with preferred layer heights: choose heights that share a coarser common divisor), use a filament with a finer nozzle for these features, or accept printing below the extruder's minimum."
+msgstr ""
+
+msgid "Some object parts use filaments whose preferred layer heights cannot all be honored: a part prints its features with one layer pitch (set by its wall filaments, or by the other features' agreement when no wall filament has a preference); the walls, the top surfaces and the infill can each combine to their own height when the rest of the part cannot follow them, but the remaining features print with the part's pitch."
+msgstr ""
+
+#, boost-format
+msgid "The %1% mm line width is too small for the %2% mm layer height of its extruder. Increase the line width or lower the extruder layer height."
+msgstr ""
+
+msgid "Per-extruder layer heights are not supported in spiral vase mode."
+msgstr ""
+
+msgid "Per-extruder layer heights are not supported together with interface shells."
+msgstr ""
+
+msgid "Per-extruder layer heights are not supported together with interlocking beams. Disable the interlocking beams or set the extruders' preferred layer heights to Default."
+msgstr ""
+
+msgid "Per-extruder layer heights are not supported together with variable layer height or height range modifiers that change the layer height. Remove them for this object or set the extruders' preferred layer heights to Default."
+msgstr ""
+
+#, boost-format
+msgid "Bridge line width must not exceed the nozzle diameter of extruder %1%"
+msgstr ""
 
 msgid "\"G92 E0\" was found in before_layer_change_gcode, but the G or E are not uppercase. Please change them to the exact uppercase \"G92 E0\"."
 msgstr "В G-code перед сменой слоя обнаружена команда «G92 E0» с неправильным регистром. Измените регистр «G92 E0» на заглавные буквы."
@@ -15119,6 +16032,14 @@ msgstr "Экспорт в G-код"
 msgid "Generating G-code"
 msgstr "Генерация G-кода"
 
+#, boost-format
+msgid "extruder %1%: %2% slabs down to %3% mm, minimum layer height %4% mm"
+msgstr ""
+
+#, boost-format
+msgid "The prime tower prints %1% slabs on the object layer grid, some thinner than the minimum layer height of an extruder that purges on them (%2%). Preferred layer heights that share a coarser grid, or fewer tool changes per layer, reduce them."
+msgstr ""
+
 # AI Translated
 #. TRN %1% is a file path.
 #, boost-format
@@ -15195,8 +16116,10 @@ msgstr ""
 "Начальное значение плотности сплошного заполнения для компенсации дефекта «слоновьей ноги».\n"
 "Позволяет компенсировать избыток материала за счёт снижения плотности первых слоёв с постепенным её восстановлением к слою, указанному выше."
 
-msgid "This is the height for each layer. Smaller layer heights give greater accuracy but longer printing time."
-msgstr "Высота каждого слоя. Чем меньше, тем выше качество поверхности и затраты времени (и наоборот)."
+msgid ""
+"This is the height for each layer. Smaller layer heights give greater accuracy but longer printing time.\n"
+"While a preferred layer height is set for any extruder (printer settings), the object layer height is derived from the preferred layer heights - the finest one - and the global value is locked here."
+msgstr ""
 
 msgid "Printable height"
 msgstr "Высота печати"
@@ -16887,6 +17810,24 @@ msgstr "Авто для сопоставления"
 
 msgid "Nozzle Manual"
 msgstr "Ручная настройка сопел"
+
+msgid "Process preset per extruder"
+msgstr ""
+
+msgid "The process preset each extruder printed with when this project was last sliced. An extruder whose nozzle size differs from the printer preset prints with the speeds of a process preset made for its size."
+msgstr ""
+
+msgid "Process preset chosen per extruder"
+msgstr ""
+
+msgid "The process preset an extruder takes its speeds, accelerations, jerk and line widths from, chosen in this project. Empty: the preset of the selected process preset's quality made for the extruder's nozzle size."
+msgstr ""
+
+msgid "Speeds flow type chosen per extruder"
+msgstr ""
+
+msgid "The flow type whose speeds, accelerations and jerk an extruder prints with, chosen in this project when it is not the flow type of its nozzle: a High Flow nozzle set to the Standard speeds. Empty: the nozzle's own flow type."
+msgstr ""
 
 msgid "Flush temperature"
 msgstr "Температура прочистки"
@@ -18946,8 +19887,15 @@ msgstr ""
 msgid "Special auxiliary cooling fan speed, effective only for the first x layers."
 msgstr "Особая скорость вспомогательного вентилятора для первых N слоёв."
 
-msgid "The lowest printable layer height for the extruder. Used to limit the minimum layer height when enable adaptive layer height."
-msgstr "Минимальная высота слоя для печати этим экструдером. Используется в качестве ограничения при использовании адаптивной высоты слоя."
+msgid "The lowest printable layer height for the extruder. Used to limit the minimum layer height when enable adaptive layer height. Parts printed with a thicker preferred extruder layer height never fall back below this height either (the first layer excepted)."
+msgstr ""
+
+#, no-c-format, no-boost-format
+msgid "Layer height this extruder should print with, used for printers whose extruders have different nozzle sizes. Any value can be entered and is kept as entered. For slicing, the object layer height becomes the coarsest height on which every preferred layer height lands within 0.01 mm of a whole multiple (from the finest preferred height down to a quarter of it), and the preferred heights print rounded to those multiples; with \"Exact preferred layer heights\" enabled every entered value prints exactly instead. A part whose features all follow this extruder prints only on every Nth layer with correspondingly thicker extrusions, wherever its geometry allows it; elsewhere it falls back to the object layer height. When the rest of the part cannot follow, walls assigned to this extruder still combine to this height on their own, full-density top surfaces absorb the solid layers below them, and sparse or 100% dense infill combines to this height where the part prints every layer; inside a part printing on every Nth layer the infill follows that part's layers. 0 means to use the object layer height."
+msgstr ""
+
+msgid "Experimental. Keep every preferred layer height exactly as entered: the object layer height becomes the coarsest height all of them are whole multiples of, which can be very fine (0.13 and 0.37 mm share only 0.01 mm). Extruders left at Default, supports, the first layers and the areas that cannot follow an extruder's height print at that grid, so slicing and printing can take much longer. The prime tower prints one slab per tool change on that grid in either mode; a coarse extruder purging on a slab of a fine grid extrudes below its minimum layer height there, which slicing reports. Off: the preferred heights print rounded to the coarsest grid on which they land within 0.01 mm."
+msgstr ""
 
 msgid "Min print speed"
 msgstr "Минимальная скорость печати"
@@ -19134,6 +20082,30 @@ msgid ""
 msgstr ""
 "Материал для печати внутренних периметров.\n"
 "«По умолчанию» – текущий материал модели/части."
+
+msgid "Adjust wall layer height"
+msgstr ""
+
+msgid "Outer and inner walls automatically print at their own preferred layer heights when one height is an integer multiple of the other. When the heights do not divide evenly, this option adjusts the wall layer height of one of the two wall filaments (chosen below) to the nearest multiple or divisor of the other, so the walls can still split. The adjusted height only applies to that filament's walls; other features keep the preferred layer height. Adjustments never leave the filament's layer height limits: if no allowed height exists in the chosen direction, the walls print together at the lower height as usual."
+msgstr ""
+
+msgid "Adjusted walls"
+msgstr ""
+
+msgid "Which of the two wall filaments gets its wall layer height adjusted when the preferred layer heights do not divide evenly."
+msgstr ""
+
+msgid "Adjustment direction"
+msgstr ""
+
+msgid "Whether the adjusted wall filament's wall layer height is decreased or increased to reach a height compatible with the other wall filament. Heights outside the adjusted filament's layer height limits are never used: if no allowed height exists in this direction, the walls print together at the lower height as usual."
+msgstr ""
+
+msgid "Decrease"
+msgstr ""
+
+msgid "Increase"
+msgstr ""
 
 msgid "Line width of inner wall. If expressed as a %, it will be computed over the nozzle diameter."
 msgstr "Ширина экструзии внутренних периметров. Если задано в процентах, то значение вычисляться относительно диаметра сопла."
@@ -20419,6 +21391,24 @@ msgstr "Избегать исп. связующего прутка для тел
 msgid "Avoid using support interface filament to print support base if possible."
 msgstr "Избегать использования прутка связующего слоя поддержки для тела поддержки."
 
+msgid "Support nozzle diameter"
+msgstr ""
+
+msgid "On printers whose extruders have different nozzle diameters, only filaments of this nozzle diameter are used to print support, raft and support interface. This keeps filaments of other nozzle sizes - with their different line widths and layer height limits - out of the support. Support filaments set to a non-default value must match this diameter. Value 0 allows any filament to print support."
+msgstr ""
+
+msgid "Support/raft base material"
+msgstr ""
+
+msgid "Print the support and raft base only with filaments of this material type; extruders loaded with other types are not used for it. Combines with the support nozzle diameter restriction. Leave empty for no restriction; an explicitly selected support/raft base filament still takes precedence."
+msgstr ""
+
+msgid "Support/raft interface material"
+msgstr ""
+
+msgid "Print the support and raft interface only with filaments of this material type; extruders loaded with other types are not used for it. Combines with the support nozzle diameter restriction. Leave empty for no restriction; an explicitly selected support/raft interface filament still takes precedence."
+msgstr ""
+
 msgid "Line width of support. If expressed as a %, it will be computed over the nozzle diameter."
 msgstr "Ширина экструзии для поддержки. Если задано в процентах, то значение вычисляться относительно диаметра сопла."
 
@@ -20576,11 +21566,32 @@ msgstr "Крепкий (древ. поддержка)"
 msgid "Tree Hybrid"
 msgstr "Гибридный (древ. поддержка)"
 
+msgid "Support layer height step"
+msgstr ""
+
+msgid "Step granularity for independent tree support layer heights while the prime tower is enabled (classic supports print on the object's layers with the prime tower). Automatic picks the coarsest step whose multiples reach the tallest support layer the support nozzle allows (e.g. quarter steps for a 0.14 mm maximum on a 0.08 mm object layer height); every support layer under an overhang contact still ends exactly one support gap below it. Maximum uses the same step but lets every support layer be as tall as possible: the support top under each contact is then the nearest support layer, so the gap varies by up to half a support layer above the configured value. With whole layers, support layer heights are multiples of the object layer height. Half or quarter steps also allow multiples like 1.5x or 1.25x, which helps when the support nozzle's maximum layer height sits between two whole multiples. Support boundaries may then fall between object layers; such support-only layers print without a prime tower layer: the switch to the support filament happens directly (any residue ends up in the support) and the switch back purges on the next full prime tower layer. With smooth timelapse the sub-layer boundaries get their own prime tower layers instead and are only used where those stay at or above the nozzles' minimum layer height. Not used with single-extruder multi-material, which keeps whole layers."
+msgstr ""
+
+msgid "100% (whole layers)"
+msgstr ""
+
+msgid "50%"
+msgstr ""
+
+msgid "25%"
+msgstr ""
+
+msgid "Automatic (exact gap)"
+msgstr ""
+
+msgid "Maximum (gap rounded to support layers)"
+msgstr ""
+
 msgid "Independent support layer height"
 msgstr "Независимая высота слоя поддержки"
 
-msgid "Support layer uses layer height independent with object layer. This is to support customizing Z-gap and save print time. This option will be invalid when the prime tower is enabled."
-msgstr "Слои поддержки будут иметь высоту слоя, отличную от высоты слоя модели. Это необходимо для настройки зазора между моделью и поддержкой для экономии времени печати. Опция неактивна, когда включена черновая башня."
+msgid "Support layer uses layer height independent with object layer. This is to support customizing Z-gap and save print time. With the prime tower enabled this option is invalid, except on printers whose extruders have different nozzle diameters: there tree supports keep independent heights aligned to the object layer grid (see Support layer height step) and classic supports print on the object's layers."
+msgstr ""
 
 msgid "Threshold angle"
 msgstr "Пороговый угол поддержки"
@@ -24018,10 +25029,8 @@ msgstr ""
 
 msgid ""
 "RepRap detected: Jerk in mm/s.\n"
-"OrcaSlicer will convert the values to mm/min when necessary."
+"Snapmaker Orca will convert the values to mm/min when necessary."
 msgstr ""
-" \n"
-"Внимание: рывки для RepRap заданы в мм/с и будут пересчитаны в мм/мин по необходимости."
 
 #, c-format, boost-format
 msgid ""
@@ -37479,10 +38488,6 @@ msgstr ""
 msgid "Warning:%1%mm High Flow nozzles are not recommended for %2%"
 msgstr ""
 
-#, boost-format
-msgid "These filaments cannot be printed with the %1%mm high flow nozzle: %2%"
-msgstr ""
-
 msgid "Download completed successfully!"
 msgstr ""
 
@@ -38073,6 +39078,31 @@ msgid ""
 "Avoid warping\n"
 "Did you know that when printing materials that are prone to warping such as ABS, appropriately increasing the heatbed temperature can reduce the probability of warping."
 msgstr ""
+
+#~ msgid "Line width too small"
+#~ msgstr "Слишком маленькая ширина линии"
+
+#~ msgid "Line width too large"
+#~ msgstr "Слишком большая ширина линии"
+
+#~ msgid "Bridge line width must not exceed nozzle diameter"
+#~ msgstr "Ширина линии моста не может превышать диаметр сопла"
+
+#~ msgid "This is the height for each layer. Smaller layer heights give greater accuracy but longer printing time."
+#~ msgstr "Высота каждого слоя. Чем меньше, тем выше качество поверхности и затраты времени (и наоборот)."
+
+#~ msgid "The lowest printable layer height for the extruder. Used to limit the minimum layer height when enable adaptive layer height."
+#~ msgstr "Минимальная высота слоя для печати этим экструдером. Используется в качестве ограничения при использовании адаптивной высоты слоя."
+
+#~ msgid "Support layer uses layer height independent with object layer. This is to support customizing Z-gap and save print time. This option will be invalid when the prime tower is enabled."
+#~ msgstr "Слои поддержки будут иметь высоту слоя, отличную от высоты слоя модели. Это необходимо для настройки зазора между моделью и поддержкой для экономии времени печати. Опция неактивна, когда включена черновая башня."
+
+#~ msgid ""
+#~ "RepRap detected: Jerk in mm/s.\n"
+#~ "OrcaSlicer will convert the values to mm/min when necessary."
+#~ msgstr ""
+#~ " \n"
+#~ "Внимание: рывки для RepRap заданы в мм/с и будут пересчитаны в мм/мин по необходимости."
 
 #~ msgid "The selected file"
 #~ msgstr "В выбранном файле"

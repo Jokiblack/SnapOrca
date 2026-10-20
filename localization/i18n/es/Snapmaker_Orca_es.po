@@ -3,7 +3,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Snapmaker Orca\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-20 13:58+0200\n"
+"POT-Creation-Date: 2026-10-20 21:31+0200\n"
 "PO-Revision-Date: \n"
 "Last-Translator: Carlos Fco. Caruncho Serrano <puzzlero@gmail.com>\n"
 "Language-Team: \n"
@@ -2702,6 +2702,7 @@ msgstr "Soportes"
 msgid "Flush options"
 msgstr "Opciones de purgado de filamento"
 
+#. TRN Prefix of a speed, acceleration or jerk setting in the list of values set for a tool head ("Speed: Outer wall")
 msgid "Speed"
 msgstr "Velocidad"
 
@@ -3911,6 +3912,7 @@ msgstr "La temperatura mínima no debe ser inferior a %d"
 msgid "Type to filter..."
 msgstr "Escribe para filtrar..."
 
+#. TRN The first entry of the speed selector on the Process tab, in a narrow sidebar (short for "All extruders")
 msgid "All"
 msgstr "Todas"
 
@@ -5211,6 +5213,26 @@ msgstr "Radio de las orejas de borde"
 msgid "Brim width"
 msgstr "Ancho del borde de adherencia"
 
+# AI Translated
+# Needs human review: Título de sección: se ha interpretado "Support" como estructuras de soporte (no como "compatibilidad"); confirme en el diálogo.
+msgid "Support for mixed nozzle sizes"
+msgstr "Soportes con tamaños de boquilla mixtos"
+
+# AI Translated
+msgid "This printer uses different nozzle sizes. Select the nozzle size that prints the support, and the filament types used for the raft and the support interface."
+msgstr "Esta impresora usa boquillas de distintos tamaños. Seleccione el tamaño de boquilla que imprime los soportes y los tipos de filamento usados para la balsa y la interfaz de soporte."
+
+# AI Translated
+msgid "Support nozzle size"
+msgstr "Tamaño de boquilla de soporte"
+
+# AI Translated
+msgid "Raft and support base"
+msgstr "Balsa y base de soporte"
+
+msgid "Support interface"
+msgstr "Interfaz de soporte"
+
 msgid "Spiral mode only works when wall loops is 1, support is disabled, clumping detection by probing is disabled, top shell layers is 0, sparse infill density is 0 and timelapse type is traditional."
 msgstr "El modo espiral solo funciona cuando los bucles de perímetro son 1, el soporte está desactivado, la detección de agrupamientos mediante sondeo está desactivada, las capas superiores de la carcasa son 0, la densidad de relleno es 0 y el tipo de lapso de tiempo es tradicional."
 
@@ -5228,6 +5250,236 @@ msgstr ""
 
 msgid "N/A"
 msgstr "N/A"
+
+# AI Translated
+#. TRN Tooltip of a disabled Flow row. %1% is the nozzle size of this tool head, e.g. 0.2
+#, boost-format
+msgid "Flow type of this nozzle. Snapmaker Orca has no High Flow values for %1% mm nozzles, so this nozzle prints with the Standard values."
+msgstr "Tipo de flujo de esta boquilla. Snapmaker Orca no tiene valores de flujo alto para boquillas de %1% mm, por lo que esta boquilla imprime con los valores estándar."
+
+# AI Translated
+msgid "Flow type of this nozzle. A High Flow nozzle prints with the High Flow values of the filament and process presets."
+msgstr "Tipo de flujo de esta boquilla. Una boquilla de flujo alto imprime con los valores de flujo alto de los perfiles de filamento y de proceso."
+
+# AI Translated
+#. TRN Why a tool head prints with a process preset. %1% is a layer height in mm
+#, boost-format
+msgid "Automatic: the nearest layer height to the preferred %1% mm."
+msgstr "Automático: la altura de capa más cercana a la preferida de %1% mm."
+
+# AI Translated
+#. TRN Why a tool head prints with a process preset. %1% is a layer height in mm
+#, boost-format
+msgid "Automatic: the nearest layer height to the plate's %1% mm."
+msgstr "Automático: la altura de capa más cercana a la de la cama, de %1% mm."
+
+# AI Translated
+#. TRN Why a tool head prints with a process preset. %1% is a quality class ("Standard"), %2% a layer height in mm
+#, boost-format
+msgid "Automatic: the plate's quality (%1%), nearest to the preferred layer height %2% mm."
+msgstr "Automático: la calidad de la cama (%1%), con la altura de capa más cercana a la preferida de %2% mm."
+
+# AI Translated
+#. TRN Why a tool head prints with a process preset. %1% is a quality class ("Standard"), %2% a layer height in mm
+#, boost-format
+msgid "Automatic: the plate's quality (%1%), nearest to the plate's layer height %2% mm."
+msgstr "Automático: la calidad de la cama (%1%), con la altura de capa más cercana a la de la cama, de %2% mm."
+
+# AI Translated
+#. TRN Why a tool head prints with a process preset. %1% is a quality class ("Standard"), %2% a layer height in mm
+#, boost-format
+msgid "Automatic: %1%, nearest to the preferred layer height %2% mm."
+msgstr "Automático: %1%, con la altura de capa más cercana a la preferida de %2% mm."
+
+# AI Translated
+#. TRN Why a tool head prints with a process preset. %1% is a quality class ("Standard"), %2% a layer height in mm
+#, boost-format
+msgid "Automatic: %1%, nearest to the plate's layer height %2% mm."
+msgstr "Automático: %1%, con la altura de capa más cercana a la de la cama, de %2% mm."
+
+# AI Translated
+#. TRN Why a tool head prints with a process preset. %1% is the plate's quality class ("High Quality"), %2% a nozzle size, %3% the class used instead ("Standard"), %4% a layer height in mm
+#, boost-format
+msgid "Automatic: no %1% preset exists for a %2% mm nozzle, so %3%, nearest to the preferred layer height %4% mm."
+msgstr "Automático: no existe ningún perfil %1% para una boquilla de %2% mm, así que se usa %3%, con la altura de capa más cercana a la preferida de %4% mm."
+
+# AI Translated
+#. TRN Why a tool head prints with a process preset. %1% is the plate's quality class ("High Quality"), %2% a nozzle size, %3% the class used instead ("Standard"), %4% a layer height in mm
+#, boost-format
+msgid "Automatic: no %1% preset exists for a %2% mm nozzle, so %3%, nearest to the plate's layer height %4% mm."
+msgstr "Automático: no existe ningún perfil %1% para una boquilla de %2% mm, así que se usa %3%, con la altura de capa más cercana a la de la cama, de %4% mm."
+
+# AI Translated
+#. TRN Why a tool head prints with a process preset. %1% is a nozzle size
+#, boost-format
+msgid "Automatic: the default preset of a %1% mm nozzle."
+msgstr "Automático: el perfil predeterminado de una boquilla de %1% mm."
+
+# AI Translated
+#. TRN Why a tool head prints with a process preset. %1% is a nozzle size
+#, boost-format
+msgid "Automatic: the first preset installed for a %1% mm nozzle."
+msgstr "Automático: el primer perfil instalado para una boquilla de %1% mm."
+
+# AI Translated
+#. TRN Line on the Speed page under a selected High Flow tool head that prints the Standard speeds by choice. %1% the tool head, %2% its nozzle size
+#, boost-format
+msgid "Extruder %1%, %2% mm nozzle, High Flow, printing the Standard speeds (chosen)."
+msgstr "Extrusor %1%, boquilla de %2% mm, flujo alto, imprimiendo las velocidades estándar (elegido)."
+
+# AI Translated
+#. TRN Line on the Speed page under a selected tool head. %1% the tool head, %2% its nozzle size, %3% its flow type ("Standard")
+#, boost-format
+msgid "Extruder %1%, %2% mm nozzle, %3%."
+msgstr "Extrusor %1%, boquilla de %2% mm, %3%."
+
+# AI Translated
+#. TRN Tooltip of an entry of the speed selector: a High Flow tool head that prints the Standard speeds by choice. %1% the tool head, %2% its nozzle size
+#, boost-format
+msgid "Extruder %1% (sidebar: Nozzle %1%), %2% mm nozzle, High Flow, printing the Standard speeds (chosen)."
+msgstr "Extrusor %1% (barra lateral: Boquilla %1%), boquilla de %2% mm, flujo alto, imprimiendo las velocidades estándar (elegido)."
+
+# AI Translated
+#. TRN Tooltip of an entry of the speed selector. %1% the tool head, %2% its nozzle size, %3% its flow type ("Standard")
+#, boost-format
+msgid "Extruder %1% (sidebar: Nozzle %1%), %2% mm nozzle, %3%."
+msgstr "Extrusor %1% (barra lateral: Boquilla %1%), boquilla de %2% mm, %3%."
+
+# AI Translated
+# Needs human review: "sparse" (velocidad de relleno de baja densidad) se ha abreviado a "relleno" y "accel" a "acel." para la línea corta de la barra lateral; compruebe que cabe y se entiende.
+#. TRN Line under the rows of a nozzle tab in the sidebar. %1% is a process preset ("0.20mm Standard") whose High Flow column the tool head prints with, %2% "(automatic)" or "(chosen)", %3%..%5% the outer wall speed, sparse infill speed and acceleration
+#, boost-format
+msgid "Preset: %1%, High Flow %2% · speeds: outer wall %3%, sparse %4%, accel %5%"
+msgstr "Perfil: %1%, flujo alto %2% · velocidades: perímetro externo %3%, relleno %4%, acel. %5%"
+
+# AI Translated
+# Needs human review: "sparse" se ha abreviado a "relleno" y "accel" a "acel."; compruebe en la barra lateral.
+#. TRN Line under the rows of a nozzle tab in the sidebar. %1% is a process preset with its state ("0.20mm High Quality", "0.18mm Standard (automatic)") whose Standard speeds the High Flow tool head prints by choice, %2%..%4% the outer wall speed, sparse infill speed and acceleration
+#, boost-format
+msgid "Preset: %1%, Standard (chosen for this High Flow nozzle) · speeds: outer wall %2%, sparse %3%, accel %4%"
+msgstr "Perfil: %1%, estándar (elegido para esta boquilla de flujo alto) · velocidades: perímetro externo %2%, relleno %3%, acel. %4%"
+
+# AI Translated
+# Needs human review: %2% se sustituye por "(automático)"/"(elegido)" traducidos aparte; compruebe la concordancia de género con el nombre del perfil.
+#. TRN Line under the rows of a nozzle tab in the sidebar. %1% is a process preset ("0.12mm Standard"), %2% "(automatic)" or "(chosen)", %3%..%5% the outer wall speed, sparse infill speed and acceleration the tool head prints with
+#, boost-format
+msgid "Preset: %1% %2% · speeds: outer wall %3%, sparse %4%, accel %5%"
+msgstr "Perfil: %1% %2% · velocidades: perímetro externo %3%, relleno %4%, acel. %5%"
+
+# AI Translated
+msgid "This extruder carries a High Flow nozzle and prints the Standard speeds, accelerations and jerk, chosen with the toggle of the Speed page; its filament settings stay those of a High Flow nozzle."
+msgstr "Este extrusor lleva una boquilla de flujo alto e imprime las velocidades, aceleraciones y jerk estándar, elegidos con el interruptor de la página Velocidad; sus ajustes de filamento siguen siendo los de una boquilla de flujo alto."
+
+# AI Translated
+#. TRN Line on the Quality page of the process settings when every tool head prints the widths of another preset. %1% lists tool heads with their nozzle sizes ("1 (0.2 mm), 3 (0.6 mm)"), %2% process presets
+#, boost-format
+msgid "Extruders %1% print with the line widths of %2%. The line widths below apply to every extruder for the widths you changed; every other setting on this page applies to every extruder."
+msgstr "Los extrusores %1% imprimen con los anchos de línea de %2%. Los anchos de línea de abajo se aplican a todos los extrusores para los anchos que ha cambiado; todos los demás ajustes de esta página se aplican a todos los extrusores."
+
+# AI Translated
+#. TRN Line on the Quality page of the process settings. %1% lists tool heads with their nozzle sizes ("1 (0.2 mm), 3 (0.6 mm)"), %2% process presets, %3% the other tool heads ("2")
+#, boost-format
+msgid "Extruders %1% print with the line widths of %2%. The line widths below apply to extruders %3%, and to every extruder for the widths you changed; every other setting on this page applies to every extruder."
+msgstr "Los extrusores %1% imprimen con los anchos de línea de %2%. Los anchos de línea de abajo se aplican a los extrusores %3% y, para los anchos que ha cambiado, a todos los extrusores; todos los demás ajustes de esta página se aplican a todos los extrusores."
+
+# AI Translated
+#. TRN Line on the Quality page of the process settings. %1% is a tool head with its nozzle size ("3 (0.6 mm)"), %2% a process preset, %3% the other tool heads ("1, 2, 4")
+#, boost-format
+msgid "Extruder %1% prints with the line widths of %2%. The line widths below apply to extruders %3%, and to every extruder for the widths you changed; every other setting on this page applies to every extruder."
+msgstr "El extrusor %1% imprime con los anchos de línea de %2%. Los anchos de línea de abajo se aplican a los extrusores %3% y, para los anchos que ha cambiado, a todos los extrusores; todos los demás ajustes de esta página se aplican a todos los extrusores."
+
+# AI Translated
+#. TRN Line under the picker of the process preset of a tool head, on the Quality / Speed page of the process settings
+msgid "Its line widths print on this extruder; so do its speeds (Speed page)."
+msgstr "Sus anchos de línea se imprimen en este extrusor; también sus velocidades (página Velocidad)."
+
+# AI Translated
+msgid "Its speeds, accelerations and jerk print on this extruder; so do its line widths (Quality page)."
+msgstr "Sus velocidades, aceleraciones y jerk se imprimen en este extrusor; también sus anchos de línea (página Calidad)."
+
+# AI Translated
+#. TRN Under a selected tool head on the Quality page. %1% a layer height in mm, %2% the nozzle in the sidebar
+#, boost-format
+msgid "This extruder prints %1% mm layers (preferred layer height, nozzle %2% in the sidebar)."
+msgstr "Este extrusor imprime capas de %1% mm (altura de capa preferida, boquilla %2% en la barra lateral)."
+
+# AI Translated
+# Needs human review: %1% es la etiqueta de un ajuste y %2% su valor; frase compuesta por piezas, compruebe en la página Calidad.
+#. TRN Under a selected tool head on the Quality page. %1% a line width setting ("Inner wall"), %2% its value under All tool heads ("110%"), %3% the process preset the tool head takes its widths from, %4% that preset's value
+#, boost-format
+msgid "%1% %2% from All extruders (%3% has %4%)."
+msgstr "%1% %2% de Todos los extrusores (%3% tiene %4%)."
+
+# AI Translated
+#. TRN A count of line widths set for a tool head, in a list like "1 line width, 3 speeds"
+#, boost-format
+msgid "%1% line width"
+msgid_plural "%1% line widths"
+msgstr[0] "%1% ancho de línea"
+msgstr[1] "%1% anchos de línea"
+
+# AI Translated
+#. TRN A count of speeds, accelerations and jerk values set for a tool head, in a list like "1 line width, 3 speeds"
+#, boost-format
+msgid "%1% speed"
+msgid_plural "%1% speeds"
+msgstr[0] "%1% velocidad"
+msgstr[1] "%1% velocidades"
+
+# AI Translated
+#. TRN Under a selected tool head on the Quality page. %1% the number of line widths set for it
+#, boost-format
+msgid "%1% line width set for this extruder."
+msgid_plural "%1% line widths set for this extruder."
+msgstr[0] "%1% ancho de línea establecido para este extrusor."
+msgstr[1] "%1% anchos de línea establecidos para este extrusor."
+
+# AI Translated
+#. TRN Under a selected tool head on the Speed page. %1% the number of speeds, accelerations and jerk values set for it
+#, boost-format
+msgid "%1% speed set for this extruder."
+msgid_plural "%1% speeds set for this extruder."
+msgstr[0] "%1% velocidad establecida para este extrusor."
+msgstr[1] "%1% velocidades establecidas para este extrusor."
+
+# AI Translated
+msgid "Greyed settings are shared by every extruder; the layer height of an extruder is set in the sidebar."
+msgstr "Los ajustes en gris son comunes a todos los extrusores; la altura de capa de un extrusor se establece en la barra lateral."
+
+# AI Translated
+#. TRN Link under a selected tool head of the Quality / Speed page of the process settings
+msgid "Clear the line widths set for this extruder"
+msgstr "Borrar los anchos de línea establecidos para este extrusor"
+
+# AI Translated
+msgid "Clear the speeds set for this extruder"
+msgstr "Borrar las velocidades establecidas para este extrusor"
+
+# AI Translated
+#. TRN Under a selected tool head on the Quality page: a line width set for it has the other unit than the value under All tool heads. %1% the setting ("Default"), %2% the value an older version reads ("0.42 %")
+#, boost-format
+msgid "Older versions of Snapmaker Orca read this preset's %1% as %2%; use the same unit for every extruder."
+msgstr "Las versiones anteriores de Snapmaker Orca leen el valor %1% de este perfil como %2%; use la misma unidad para todos los extrusores."
+
+# AI Translated
+# Needs human review: Se mantiene "auto" como valor abreviado de un ancho de línea cero en un tooltip.
+#. TRN A line width of zero in a tooltip: the width follows the nozzle
+msgid "auto"
+msgstr "auto"
+
+# AI Translated
+#. TRN The last tool head of a list: "1, 3 and 4"
+#, boost-format
+msgid "%1% and %2%"
+msgstr "%1% y %2%"
+
+# AI Translated
+#. TRN Notice of the object list once "Add settings" added a line width to an object printed by several tool heads. %1% the tool heads that printed it with another line width ("1 and 4")
+#, boost-format
+msgid "Line widths added to an object apply on every extruder that prints it; extruder %1% printed it with the line widths of its own nozzle size."
+msgid_plural "Line widths added to an object apply on every extruder that prints it; extruders %1% printed it with the line widths of their own nozzle size."
+msgstr[0] "Los anchos de línea añadidos a un objeto se aplican en todos los extrusores que lo imprimen; el extrusor %1% lo imprimía con los anchos de línea de su propio tamaño de boquilla."
+msgstr[1] "Los anchos de línea añadidos a un objeto se aplican en todos los extrusores que lo imprimen; los extrusores %1% lo imprimían con los anchos de línea de su propio tamaño de boquilla."
 
 msgid "Printing"
 msgstr "Imprimiendo"
@@ -5802,9 +6054,6 @@ msgstr "Relleno de huecos"
 
 msgid "Skirt"
 msgstr "Falda"
-
-msgid "Support interface"
-msgstr "Interfaz de soporte"
 
 msgid "Prime tower"
 msgstr "Torre de Purga"
@@ -7586,6 +7835,7 @@ msgstr "Capa: N/A"
 msgid "Click to view thermal preconditioning explanation"
 msgstr "Haga clic para ver la explicación del preacondicionamiento térmico"
 
+#. TRN Hypertext of the notice: clears the line widths set for the tool head
 msgid "Clear"
 msgstr "Vaciar"
 
@@ -9018,14 +9268,6 @@ msgid "No nozzle information detected. Please go to the printer settings to conf
 msgstr "No se ha detectado información de la boquilla. Vaya a los ajustes de la impresora para configurar la boquilla."
 
 # AI Translated
-msgid "Note: Inconsistent nozzle diameters. Current version does not support mixed diameter printing. Please select one nozzle for this print."
-msgstr "Nota: los diámetros de boquilla no coinciden. La versión actual no admite imprimir con diámetros mezclados. Seleccione una sola boquilla para esta impresión."
-
-# AI Translated
-msgid "Set Nozzle Diameter"
-msgstr "Establecer el diámetro de la boquilla"
-
-# AI Translated
 msgid "Nozzle settings synchronized successfully"
 msgstr "Ajustes de la boquilla sincronizados correctamente"
 
@@ -9355,12 +9597,216 @@ msgid "Filament types and colors have been successfully synced from the printer.
 msgstr "Los tipos y colores de filamento se han sincronizado correctamente desde la impresora."
 
 # AI Translated
-msgid "Note: Changing this will sync all other nozzles to the same diameter."
-msgstr "Nota: si cambia esto, todas las demás boquillas se sincronizarán al mismo diámetro."
+#. TRN Warning under the preferred layer height of a nozzle tab. %1% the entered height, %2% the height it prints at, %3% the object layer height, all in mm
+#, boost-format
+msgid "%1% mm is not on this plate's layer grid and prints at %2% mm (object layer height %3% mm)."
+msgstr "%1% mm no está en la rejilla de capas de esta cama y se imprime a %2% mm (altura de capa del objeto %3% mm)."
 
 # AI Translated
-msgid "Don't show this again"
-msgstr "No volver a mostrar"
+#. TRN Under the preferred layer height Default of a nozzle tab. %1% the height it prints at, %2% the object layer height, in mm
+#, boost-format
+msgid "Default: prints %1% mm layers (object layer height %2% mm)."
+msgstr "Por defecto: imprime capas de %1% mm (altura de capa del objeto %2% mm)."
+
+# AI Translated
+#. TRN Under the preferred layer height of a nozzle tab. %1% the height it prints at, %2% the object layer height, in mm
+#, boost-format
+msgid "Prints %1% mm layers (object layer height %2% mm)."
+msgstr "Imprime capas de %1% mm (altura de capa del objeto %2% mm)."
+
+# AI Translated
+#, boost-format
+msgid "Nozzle %1%: layer height limits set to %2%-%3% mm, from \"%4%\"."
+msgstr "Boquilla %1%: límites de altura de capa fijados en %2%-%3% mm, de \"%4%\"."
+
+# AI Translated
+#, boost-format
+msgid "Nozzle %1%: %2%, from \"%3%\"."
+msgstr "Boquilla %1%: %2%, de \"%3%\"."
+
+# AI Translated
+#, boost-format
+msgid "This printer has no profile for a %1% mm nozzle. Please review the layer height limits of nozzle %2% in the printer settings."
+msgstr "Esta impresora no tiene perfil para una boquilla de %1% mm. Revise los límites de altura de capa de la boquilla %2% en los ajustes de la impresora."
+
+# AI Translated
+#, boost-format
+msgid "The preferred layer height of nozzle %1% no longer fits through it and was reset to Default."
+msgstr "La altura de capa preferida de la boquilla %1% ya no es válida para ella y se ha restablecido a Por defecto."
+
+# AI Translated
+#, boost-format
+msgid "Filament %1% of nozzle %2% has no value of its own for some of these settings and prints with the printer's."
+msgstr "El filamento %1% de la boquilla %2% no tiene un valor propio para algunos de estos ajustes e imprime con los de la impresora."
+
+# AI Translated
+#. TRN %1% the tool head, %2% the number of values set for it on the Speed and Quality pages of the process settings
+#, boost-format
+msgid "Extruder %1% keeps %2% values set for it (Speed and Quality pages)."
+msgstr "El extrusor %1% conserva %2% valores establecidos para él (páginas Velocidad y Calidad)."
+
+# AI Translated
+#. TRN %1% the tool head, %2% a line width in mm set for it, %3% the nozzle size it had, %4% the new nozzle size
+#, boost-format
+msgid "Extruder %1% keeps a line width of %2% mm set for a %3% mm nozzle; it now has %4% mm."
+msgstr "El extrusor %1% conserva un ancho de línea de %2% mm establecido para una boquilla de %3% mm; ahora tiene %4% mm."
+
+# AI Translated
+#. TRN %1% the tool head, %2% line widths in mm set for it ("0.45, 0.5"), %3% the nozzle size it had, %4% the new nozzle size
+#, boost-format
+msgid "Extruder %1% keeps line widths of %2% mm set for a %3% mm nozzle; it now has %4% mm."
+msgstr "El extrusor %1% conserva anchos de línea de %2% mm establecidos para una boquilla de %3% mm; ahora tiene %4% mm."
+
+# AI Translated
+# Needs human review: Fragmento que se inserta en otra frase en tiempo de ejecución; compruebe la concordancia.
+msgid "the selected preset"
+msgstr "el perfil seleccionado"
+
+# AI Translated
+#. TRN %1% the nozzle, %2% the process preset chosen for its tool head, %3% the nozzle size the preset is made for, %4% the new size, %5% the preset the head prints with now
+#, boost-format
+msgid "Nozzle %1%: %2%, chosen for this extruder in this project, is made for a %3% mm nozzle and does not apply while the nozzle is %4% mm; the extruder uses %5% (automatic)."
+msgstr "Boquilla %1%: %2%, elegido para este extrusor en este proyecto, está hecho para una boquilla de %3% mm y no se aplica mientras la boquilla sea de %4% mm; el extrusor usa %5% (automático)."
+
+# AI Translated
+#. TRN %1% the nozzle, %2% the process preset chosen for its tool head, %3% the new size, %4% the preset the head prints with now
+#, boost-format
+msgid "Nozzle %1%: %2%, chosen for this extruder in this project, is not made for a %3% mm nozzle and does not apply; the extruder uses %4% (automatic)."
+msgstr "Boquilla %1%: %2%, elegido para este extrusor en este proyecto, no está hecho para una boquilla de %3% mm y no se aplica; el extrusor usa %4% (automático)."
+
+# AI Translated
+#. TRN %1% the nozzle, %2% the process preset chosen for its tool head
+#, boost-format
+msgid "Nozzle %1%: %2%, chosen for this extruder in this project, applies again."
+msgstr "Boquilla %1%: %2%, elegido para este extrusor en este proyecto, vuelve a aplicarse."
+
+# AI Translated
+#. TRN Hypertext of the notice: opens the picker of the tool head's preset
+msgid "Choose preset"
+msgstr "Elegir perfil"
+
+# AI Translated
+msgid "Diameter of this nozzle. This printer has presets for one nozzle diameter only."
+msgstr "Diámetro de esta boquilla. Esta impresora solo tiene perfiles para un diámetro de boquilla."
+
+# AI Translated
+msgid "Diameter of this nozzle. Its layer height limits and the filament presets it prints follow the diameter."
+msgstr "Diámetro de esta boquilla. Sus límites de altura de capa y los perfiles de filamento que imprime dependen del diámetro."
+
+# AI Translated
+msgid "Preferred layer height"
+msgstr "Altura de capa preferida"
+
+# AI Translated
+msgid "Layer height this nozzle should print with. Pick a listed height, which prints as listed, or enter any height in mm; Default prints the object layer height. For slicing, the object layer height is chosen so that every preferred layer height is a whole multiple of it; the line below names the height the extruder prints when it differs."
+msgstr "Altura de capa con la que debe imprimir esta boquilla. Elija una altura de la lista, que se imprime tal cual, o introduzca cualquier altura en mm; Por defecto imprime la altura de capa del objeto. Para laminar, la altura de capa del objeto se elige de modo que cada altura de capa preferida sea un múltiplo entero de ella; la línea de abajo indica la altura que imprime el extrusor cuando es distinta."
+
+# AI Translated
+#, boost-format
+msgid "\"%1%\" is not a valid layer height for extruder %2%. Enter a height in mm, or Default."
+msgstr "\"%1%\" no es una altura de capa válida para el extrusor %2%. Introduzca una altura en mm o Por defecto."
+
+# AI Translated
+#, boost-format
+msgid "The layer height of extruder %1% cannot exceed its nozzle diameter (%2% mm)."
+msgstr "La altura de capa del extrusor %1% no puede superar el diámetro de su boquilla (%2% mm)."
+
+# AI Translated
+#. TRN Link under the warning of a preferred layer height off the layer grid; turns on "Exact preferred layer heights"
+msgid "Print exact heights"
+msgstr "Imprimir alturas exactas"
+
+# AI Translated
+msgid "Turns on \"Exact preferred layer heights\" in the printer settings: every preferred layer height prints as entered, and the object layer height becomes the coarsest height they are all whole multiples of, which can mean many more layers."
+msgstr "Activa \"Alturas de capa preferidas exactas\" en los ajustes de la impresora: cada altura de capa preferida se imprime tal como se introdujo, y la altura de capa del objeto pasa a ser la altura más gruesa de la que todas son múltiplos enteros, lo que puede suponer muchas más capas."
+
+# AI Translated
+# Needs human review: Se ha usado masculino ("elegido") porque califica a un perfil; compruebe dónde aparece.
+#. TRN The state of the process preset a tool head prints with: given by the rule; empty for the selected preset itself
+#. TRN Marks a process preset a tool head takes its speeds from by the user's choice
+msgid "(chosen)"
+msgstr "(elegido)"
+
+# AI Translated
+msgid "(automatic)"
+msgstr "(automático)"
+
+# AI Translated
+#. TRN Tooltip of the line under a nozzle tab. %1% is the process preset the user chose for the tool head, %2% the default line width it prints ("110 % (0.22 mm)"), %3% a list of settings or "none"
+#, boost-format
+msgid "This extruder takes its speeds, accelerations, jerk and line widths from %1%, chosen in this project. Line width %2%. Every other setting comes from the selected process preset. Values you changed in the selected preset are kept: %3%."
+msgstr "Este extrusor toma sus velocidades, aceleraciones, jerk y anchos de línea de %1%, elegido en este proyecto. Ancho de línea %2%. Todos los demás ajustes proceden del perfil de proceso seleccionado. Se conservan los valores que ha cambiado en el perfil seleccionado: %3%."
+
+# AI Translated
+msgid "none"
+msgstr "ninguno"
+
+# AI Translated
+#, boost-format
+msgid "%1% has no High Flow values; the extruder prints its Standard values."
+msgstr "%1% no tiene valores de flujo alto; el extrusor imprime sus valores estándar."
+
+# AI Translated
+#. TRN Tooltip of the line under a nozzle tab. %1% is a process preset, %2% the preset the tool head's line widths come from, %3% a list of settings or "none"
+#, boost-format
+msgid "This extruder carries a High Flow nozzle and the selected process preset has no High Flow speeds. Its speeds, accelerations and jerk come from the High Flow column of %1%, the process preset of its nozzle size that has one. Its line widths are those of %2%. Every other setting comes from the selected process preset. Values you changed in the selected preset are kept: %3%."
+msgstr "Este extrusor lleva una boquilla de flujo alto y el perfil de proceso seleccionado no tiene velocidades de flujo alto. Sus velocidades, aceleraciones y jerk proceden de la columna de flujo alto de %1%, el perfil de proceso de su tamaño de boquilla que la tiene. Sus anchos de línea son los de %2%. Todos los demás ajustes proceden del perfil de proceso seleccionado. Se conservan los valores que ha cambiado en el perfil seleccionado: %3%."
+
+# AI Translated
+# Needs human review: Fragmento que se inserta en otra frase en tiempo de ejecución; compruebe la concordancia.
+msgid "the selected process preset"
+msgstr "el perfil de proceso seleccionado"
+
+# AI Translated
+#. TRN Tooltip of the line under a nozzle tab. %1% is a process preset, %2% a sentence that says why the rule chose it, %3% the default line width the tool head prints ("110 % (0.22 mm)"), %4% a list of settings or "none"
+#, boost-format
+msgid "This extruder has another nozzle size than the printer preset. Its speeds, accelerations, jerk and line widths come from %1%. %2% Line width %3%. Every other setting comes from the selected process preset. Values you changed in the selected preset are kept: %4%."
+msgstr "Este extrusor tiene un tamaño de boquilla distinto al del perfil de impresora. Sus velocidades, aceleraciones, jerk y anchos de línea proceden de %1%. %2% Ancho de línea %3%. Todos los demás ajustes proceden del perfil de proceso seleccionado. Se conservan los valores que ha cambiado en el perfil seleccionado: %4%."
+
+# AI Translated
+#, boost-format
+msgid "Its High Flow speeds are those of the selected process preset, as %1% has no High Flow values."
+msgstr "Sus velocidades de flujo alto son las del perfil de proceso seleccionado, ya que %1% no tiene valores de flujo alto."
+
+# AI Translated
+# Needs human review: "sparse" se ha abreviado a "relleno" y "accel" a "acel."; compruebe en la barra lateral.
+#. TRN Line under the rows of a nozzle tab in the sidebar. %1% the number of values set for the tool head on the Speed and Quality pages, %2%..%4% the outer wall speed, sparse infill speed and acceleration it prints with
+#, boost-format
+msgid "Values set for this extruder: %1% (outer wall %2%, sparse %3%, accel %4%)"
+msgstr "Valores establecidos para este extrusor: %1% (perímetro externo %2%, relleno %3%, acel. %4%)"
+
+# AI Translated
+# Needs human review: "sparse" se ha abreviado a "relleno" y "accel" a "acel."; compruebe en la barra lateral.
+#. TRN Line under the rows of a nozzle tab in the sidebar. %1% is a process preset chosen for the tool head that does not apply now, %2%..%4% the outer wall speed, sparse infill speed and acceleration the tool head prints with
+#, boost-format
+msgid "Preset: %1% (inactive) · speeds: outer wall %2%, sparse %3%, accel %4%"
+msgstr "Perfil: %1% (inactivo) · velocidades: perímetro externo %2%, relleno %3%, acel. %4%"
+
+# AI Translated
+msgid "The process preset chosen for this extruder in this project does not apply now; the extruder prints with the selected process preset."
+msgstr "El perfil de proceso elegido para este extrusor en este proyecto no se aplica ahora; el extrusor imprime con el perfil de proceso seleccionado."
+
+# AI Translated
+#. TRN Tooltip of the line under a nozzle tab. %1% is a process preset chosen for the tool head that does not apply now
+#, boost-format
+msgid "%1%, chosen in this project for this extruder, does not apply now."
+msgstr "%1%, elegido en este proyecto para este extrusor, no se aplica ahora."
+
+# AI Translated
+#. TRN Tooltip of the line under a nozzle tab. %1% lists the settings set for the tool head on the Speed and Quality pages of the process settings
+#, boost-format
+msgid "Values set for this extruder: %1%."
+msgstr "Valores establecidos para este extrusor: %1%."
+
+# AI Translated
+msgid "Click to choose the preset of this extruder."
+msgstr "Haga clic para elegir el perfil de este extrusor."
+
+# AI Translated
+#. TRN Line under the disabled Flow row of a nozzle tab in the sidebar. %1% is the nozzle size of this tool head, e.g. 0.2
+#, boost-format
+msgid "High Flow is not available for a %1% mm nozzle."
+msgstr "El flujo alto no está disponible para una boquilla de %1% mm."
 
 #, boost-format
 msgid "Do you want to save changes to \"%1%\"?"
@@ -9601,6 +10047,38 @@ msgid "Object with floating parts was detected"
 msgstr "Se ha detectado un objeto con partes flotantes"
 
 # AI Translated
+msgid "Slicing would take very long:"
+msgstr "El laminado tardaría mucho:"
+
+# AI Translated
+#, boost-format
+msgid "Plate %1%: "
+msgstr "Cama %1%: "
+
+# AI Translated
+#, boost-format
+msgid "\"%1%\" would be sliced into about %2% layers at a layer height of %3% mm."
+msgstr "\"%1%\" se laminaría en unas %2% capas con una altura de capa de %3% mm."
+
+# AI Translated
+#, boost-format
+msgid "The object layer height follows the finest preferred layer height (extruder %1%). A coarser preferred layer height there gives a much faster slice."
+msgstr "La altura de capa del objeto sigue la altura de capa preferida más fina (extrusor %1%). Una altura de capa preferida más gruesa en ese extrusor hace que el laminado sea mucho más rápido."
+
+# AI Translated
+msgid "Do you want to proceed?"
+msgstr "¿Desea continuar?"
+
+# AI Translated
+#, boost-format
+msgid "Automatic slicing skipped: \"%1%\" would be sliced into about %2% layers at a layer height of %3% mm, which takes very long. Use Slice to slice anyway."
+msgstr "Laminado automático omitido: \"%1%\" se laminaría en unas %2% capas con una altura de capa de %3% mm, lo que tarda mucho. Use Laminar para laminar de todos modos."
+
+# AI Translated
+msgid "Set for this extruder"
+msgstr "Establecido para este extrusor"
+
+# AI Translated
 msgid "(unknown)"
 msgstr "(desconocido)"
 
@@ -9704,6 +10182,18 @@ msgstr "Error durante la recarga"
 
 msgid "Reload all"
 msgstr "Recargar todo"
+
+# AI Translated
+#. TRN After a switch of the process preset. %1% a tool head, %2% the preset chosen for it, %3% the new process preset
+#, boost-format
+msgid "Extruder %1% keeps %2%, chosen in this project; the other extruders follow %3%."
+msgstr "El extrusor %1% conserva %2%, elegido en este proyecto; los demás extrusores siguen %3%."
+
+# AI Translated
+#. TRN After a switch of the process preset. %1% tool heads ("1, 4"), %2% the presets chosen for them, %3% the new process preset
+#, boost-format
+msgid "Extruders %1% keep %2%, chosen in this project; the other extruders follow %3%."
+msgstr "Los extrusores %1% conservan %2%, elegidos en este proyecto; los demás extrusores siguen %3%."
 
 msgid "There are warnings after slicing models:"
 msgstr "Hay alertas después de laminar los modelos:"
@@ -10140,8 +10630,16 @@ msgid "Printing by object with caution. This function may cause the print head t
 msgstr "Use la impresión por objeto con precaución. Esta función puede hacer que el cabezal choque con las piezas impresas al cambiar de objeto."
 
 # AI Translated
+msgid "Slicing was not started because you aborted the very long slice. Use Slice to slice anyway."
+msgstr "No se ha iniciado el laminado porque ha abortado el laminado muy largo. Use Laminar para laminar de todos modos."
+
+# AI Translated
 msgid "Confirm slicing"
 msgstr "Confirmar laminado"
+
+# AI Translated
+msgid "Abort slicing"
+msgstr "Abortar laminado"
 
 msgid "Send G-code"
 msgstr "Enviar G-Code"
@@ -10260,6 +10758,154 @@ msgstr "Utiliza «Reparar modelo» para arreglar la malla."
 #, c-format, boost-format
 msgid "Plate %d: %s is not suggested for use printing filament %s (%s). If you still want to do this print job, please set this filament's bed temperature to a number that is not zero."
 msgstr "Cama %d: %s no es recomendable ser usada para imprimir el filamento %s(%s). Si desea imprimir de todos modos, por favor, indique una temperatura de cama distinta a 0 en la configuración del filamento."
+
+# AI Translated
+#, boost-format
+msgid "Extruder %1% was set back to a Standard nozzle: there are no High Flow values for a nozzle of its size with this printer preset."
+msgstr "El extrusor %1% se ha restablecido a una boquilla estándar: no hay valores de flujo alto para una boquilla de su tamaño con este perfil de impresora."
+
+# AI Translated
+#, boost-format
+msgid "%1% (filament %2%)"
+msgstr "%1% (filamento %2%)"
+
+# AI Translated
+#, boost-format
+msgid "Filament %1% keeps the user preset \"%2%\", made for a %3% mm nozzle, on the %4% mm nozzle."
+msgstr "El filamento %1% conserva el perfil de usuario \"%2%\", hecho para una boquilla de %3% mm, en la boquilla de %4% mm."
+
+# AI Translated
+#, boost-format
+msgid "Filament %1% keeps the user preset \"%2%\" on the %3% mm nozzle."
+msgstr "El filamento %1% conserva el perfil de usuario \"%2%\" en la boquilla de %3% mm."
+
+# AI Translated
+#, boost-format
+msgid "The preset for that size is \"%1%\"."
+msgstr "El perfil para ese tamaño es \"%1%\"."
+
+# AI Translated
+#, boost-format
+msgid "Filament %1% keeps \"%2%\" and its unsaved changes. Save or discard them, then choose the preset for the %3% mm nozzle."
+msgstr "El filamento %1% conserva \"%2%\" y sus cambios sin guardar. Guárdelos o descártelos y, a continuación, elija el perfil para la boquilla de %3% mm."
+
+# AI Translated
+#, boost-format
+msgid "Filament %1% uses \"%2%\", which is not made for a particular nozzle size. Check its maximum volumetric speed for the %3% mm nozzle."
+msgstr "El filamento %1% usa \"%2%\", que no está hecho para un tamaño de boquilla concreto. Compruebe su velocidad volumétrica máxima para la boquilla de %3% mm."
+
+# AI Translated
+#, boost-format
+msgid "Filament %1% now uses \"%2%\", the preset for a %3% mm nozzle."
+msgstr "El filamento %1% usa ahora \"%2%\", el perfil para una boquilla de %3% mm."
+
+# AI Translated
+#, boost-format
+msgid "Filaments %1% now use the presets for the size of their nozzles."
+msgstr "Los filamentos %1% usan ahora los perfiles para el tamaño de sus boquillas."
+
+# AI Translated
+#, boost-format
+msgid "No %1% mm preset exists for: %2%. The presets of the printer's nozzle size are used; check flow ratio, pressure advance and maximum volumetric speed."
+msgstr "No existe ningún perfil de %1% mm para: %2%. Se usan los perfiles del tamaño de boquilla de la impresora; compruebe el factor de flujo, el Pressure Advance y la velocidad volumétrica máxima."
+
+# AI Translated
+#, boost-format
+msgid "Filament %1% uses a preset made for another nozzle size than the nozzle that prints it."
+msgstr "El filamento %1% usa un perfil hecho para un tamaño de boquilla distinto al de la boquilla que lo imprime."
+
+# AI Translated
+#, boost-format
+msgid "Filaments %1% use presets made for another nozzle size than the nozzle that prints them."
+msgstr "Los filamentos %1% usan perfiles hechos para un tamaño de boquilla distinto al de la boquilla que los imprime."
+
+# AI Translated
+#, boost-format
+msgid "On this plate filament %1% is printed by nozzle %2% (%3% mm), while its preset follows the printer preset (%4% mm)."
+msgstr "En esta cama, el filamento %1% lo imprime la boquilla %2% (%3% mm), mientras que su perfil sigue al perfil de impresora (%4% mm)."
+
+# AI Translated
+#, boost-format
+msgid "On this plate filament %1% is printed by nozzle %2% (%3% mm), while its preset follows nozzle %4% (%5% mm)."
+msgstr "En esta cama, el filamento %1% lo imprime la boquilla %2% (%3% mm), mientras que su perfil sigue a la boquilla %4% (%5% mm)."
+
+# AI Translated
+msgid "Use the preset for this nozzle"
+msgstr "Usar el perfil para esta boquilla"
+
+# AI Translated
+msgid "Use the presets for these nozzles"
+msgstr "Usar los perfiles para estas boquillas"
+
+# AI Translated
+#, boost-format
+msgid "Extruder %1% (%2% mm) printed with %3% when this project was saved; it now prints with %4%."
+msgstr "El extrusor %1% (%2% mm) imprimía con %3% cuando se guardó este proyecto; ahora imprime con %4%."
+
+# AI Translated
+msgid "The preset is not installed."
+msgstr "El perfil no está instalado."
+
+# AI Translated
+msgid "The option \"Process speeds and line widths follow the nozzle size\" is off."
+msgstr "La opción \"Las velocidades y anchos de línea del proceso siguen el tamaño de la boquilla\" está desactivada."
+
+# AI Translated
+msgid "The nozzle size of the extruder changed."
+msgstr "El tamaño de boquilla del extrusor ha cambiado."
+
+# AI Translated
+msgid "The quality rule of Snapmaker Orca changed."
+msgstr "La regla de calidad de Snapmaker Orca ha cambiado."
+
+# AI Translated
+msgid "A filament is printed with the flow type of its extruder. Choose Standard or High Flow for every extruder in the Flow row of the nozzle tabs, then slice again."
+msgstr "Cada filamento se imprime con el tipo de flujo de su extrusor. Elija Estándar o Flujo alto para cada extrusor en la fila Flujo de las pestañas de boquilla y vuelva a laminar."
+
+# AI Translated
+#, boost-format
+msgid "%1%mm High Flow nozzles are not recommended for %2%"
+msgstr "No se recomiendan las boquillas de flujo alto de %1%mm para %2%"
+
+# AI Translated
+# Needs human review: "Create High Flow values" parece el nombre de una acción de la interfaz, pero no existe como cadena en el código; se ha traducido como "Crear valores de flujo alto". Ajústelo al nombre real si existe.
+#. TRN N3: %1% is a filament preset name, %2% an extruder number
+#, boost-format
+msgid "%1% has no High Flow values; its Standard values are used on extruder %2%. Open it from the filament slot of extruder %2% and change a High Flow value, or use Create High Flow values."
+msgstr "%1% no tiene valores de flujo alto; se usan sus valores estándar en el extrusor %2%. Ábralo desde la ranura de filamento del extrusor %2% y cambie un valor de flujo alto, o use Crear valores de flujo alto."
+
+# AI Translated
+#, boost-format
+msgid "The process preset has no High Flow speeds; extruder %1% prints at Standard speeds."
+msgstr "El perfil de proceso no tiene velocidades de flujo alto; el extrusor %1% imprime a velocidades estándar."
+
+# AI Translated
+#. TRN N7: %1% is a filament preset name, %2% an extruder number, %3% the name of the system preset %1% was made from
+#, boost-format
+msgid "%1% changes Standard values that its High Flow column does not follow; extruder %2% prints with the High Flow values of %3%."
+msgstr "%1% cambia valores estándar que su columna de flujo alto no sigue; el extrusor %2% imprime con los valores de flujo alto de %3%."
+
+# AI Translated
+#. TRN N7: %1% is a filament preset name, %2% an extruder number
+#, boost-format
+msgid "%1% changes Standard values that its High Flow column does not follow; extruder %2% prints the earlier High Flow values."
+msgstr "%1% cambia valores estándar que su columna de flujo alto no sigue; el extrusor %2% imprime los valores de flujo alto anteriores."
+
+# AI Translated
+#. TRN N7: %1% is a list of tool head numbers, %2% the name of the system process preset
+#, boost-format
+msgid "The process preset changes Standard speeds that its High Flow column does not follow; extruder %1% prints with the High Flow speeds of %2%."
+msgstr "El perfil de proceso cambia velocidades estándar que su columna de flujo alto no sigue; el extrusor %1% imprime con las velocidades de flujo alto de %2%."
+
+# AI Translated
+#, boost-format
+msgid "These filaments cannot be printed with the %1%mm high flow nozzle: %2%"
+msgstr "Estos filamentos no se pueden imprimir con la boquilla de flujo alto de %1%mm: %2%"
+
+# AI Translated
+#, boost-format
+msgid "Load another filament or set extruder %1% to a Standard nozzle."
+msgstr "Cargue otro filamento o configure el extrusor %1% con una boquilla estándar."
 
 msgid "Currently, the object configuration form cannot be used with a multiple-extruder printer."
 msgstr "Actualmente, el formulario de configuración del objeto no se puede usar con una impresora de múltiples extrusores."
@@ -10599,6 +11245,22 @@ msgstr "Recordar la configuración de la impresora"
 
 msgid "If enabled, Orca will remember and switch filament/process configuration for each printer automatically."
 msgstr "Si está activada, Orca recordará y cambiará la configuración de archivos/procesos para cada impresora automáticamente."
+
+# AI Translated
+msgid "Filament presets follow the nozzle size"
+msgstr "Los perfiles de filamento siguen el tamaño de la boquilla"
+
+# AI Translated
+msgid "If enabled, each filament gets the preset made for the size of the nozzle that prints it. User presets are kept unless exactly one counterpart for the other size exists. Line widths given in percent follow each nozzle."
+msgstr "Si se activa, cada filamento recibe el perfil hecho para el tamaño de la boquilla que lo imprime. Los perfiles de usuario se conservan salvo que exista exactamente un equivalente para el otro tamaño. Los anchos de línea expresados en porcentaje siguen a cada boquilla."
+
+# AI Translated
+msgid "Process speeds and line widths follow the nozzle size"
+msgstr "Las velocidades y anchos de línea del proceso siguen el tamaño de la boquilla"
+
+# AI Translated
+msgid "If enabled, an extruder whose nozzle size differs from the printer preset prints with the speeds, accelerations, jerk and line widths of the process preset of the same quality as the selected preset made for its size, at the nearest layer height. Walls, infill and every other setting stay those of the selected process preset, and values you changed in it are kept on every extruder. Values set for one extruder on the Speed or Quality page, and a process preset chosen for an extruder there, apply to that extruder whether this is on or off."
+msgstr "Si se activa, un extrusor cuyo tamaño de boquilla difiere del perfil de impresora imprime con las velocidades, aceleraciones, jerk y anchos de línea del perfil de proceso hecho para su tamaño con la misma calidad que el perfil seleccionado, a la altura de capa más cercana. Los perímetros, el relleno y todos los demás ajustes siguen siendo los del perfil de proceso seleccionado, y los valores que ha cambiado en él se conservan en todos los extrusores. Los valores establecidos para un extrusor en las páginas Velocidad o Calidad, y un perfil de proceso elegido allí para un extrusor, se aplican a ese extrusor tanto si esta opción está activada como si no."
 
 msgid "Group user filament presets"
 msgstr "Agrupar perfiles de filamento del usuario"
@@ -11349,6 +12011,25 @@ msgstr "¡Los ajustes de depuración se han guardado con éxito!"
 msgid "Cloud environment switched; please login again!"
 msgstr "¡Cambiado a entorno de nube, Por favor vuelva a autenticarse!"
 
+# AI Translated
+# Needs human review: Fragmento de lista en el tooltip del combo de proceso; %2% es el nombre del perfil.
+#. TRN One tool head in the tooltip of the process combo. %1% the tool head, %2% the process preset it prints with
+#, boost-format
+msgid "extruder %1% %2%"
+msgstr "extrusor %1% %2%"
+
+# AI Translated
+#. TRN Tooltip of the process combo of the sidebar. %1% lists tool heads with the process preset each prints with
+#, boost-format
+msgid "Extruders of other nozzle sizes print with presets of this quality for their size: %1%."
+msgstr "Los extrusores de otros tamaños de boquilla imprimen con perfiles de esta calidad para su tamaño: %1%."
+
+# AI Translated
+#. TRN: the nozzle size a filament preset is made for, in front of its name in the filament list. %1% is a number like 0.2.
+#, boost-format
+msgid "%1% mm"
+msgstr "%1% mm"
+
 msgid "System presets"
 msgstr "Perfiles del sistema"
 
@@ -11387,6 +12068,12 @@ msgstr "Editar ajuste"
 
 msgid "Change extruder color"
 msgstr "Cambiar color del extrusor"
+
+# AI Translated
+#. TRN: separator in the filament list of a tool head, above the materials that have no preset for its nozzle size. %1% is a number like 0.6.
+#, boost-format
+msgid "No %1% mm version:"
+msgstr "Sin versión de %1% mm:"
 
 msgid "Unspecified"
 msgstr "No especificado"
@@ -12676,6 +13363,7 @@ msgstr "nombre completo perfil"
 msgid "symbolic profile name"
 msgstr "nombre perfil simbólico"
 
+#. TRN Prefix of a line width setting in the list of values set for a tool head ("Line width: Outer wall")
 msgid "Line width"
 msgstr "Ancho de linea"
 
@@ -12730,6 +13418,10 @@ msgstr "Balsa/capa base de impresión"
 msgid "Filament for Supports"
 msgstr "Filamento de soporte"
 
+# AI Translated
+msgid "Show legacy filament selection"
+msgstr "Mostrar la selección de filamento heredada"
+
 msgid "Support ironing"
 msgstr "Alisado de soportes"
 
@@ -12772,6 +13464,216 @@ msgstr "Configuración del plugin"
 
 msgid "Notes"
 msgstr "Anotaciones"
+
+# AI Translated
+#. TRN %1% a tool head, %2% the values set for it by kind ("1 line width, 3 speeds")
+#. TRN %1% a tool head, %2% the value set for it
+#, boost-format
+msgid "Extruder %1%: %2%"
+msgstr "Extrusor %1%: %2%"
+
+# AI Translated
+#. TRN Line on the Speed and Quality pages. %1% lists tool heads with the values set for each ("Extruder 2: 3 speeds, Extruder 4: 1 line width, 2 speeds")
+#, boost-format
+msgid "Values set per extruder: %1%."
+msgstr "Valores establecidos por extrusor: %1%."
+
+# AI Translated
+msgid "Clear the values set per extruder..."
+msgstr "Borrar los valores establecidos por extrusor..."
+
+# AI Translated
+# Needs human review: "override" traducido como "ajuste añadido a una pieza"; confirme el sentido en la lista de objetos.
+msgid "An override on a part applies on every extruder that prints it."
+msgstr "Un ajuste añadido a una pieza se aplica en todos los extrusores que la imprimen."
+
+# AI Translated
+#. TRN Line on the Speed page of the process settings. %1% is a tool head with its nozzle size ("2 (0.2 mm)"), %2% a process preset, %3% the other tool heads ("1, 3, 4")
+#, boost-format
+msgid "Extruder %1% prints with the speeds of %2%. The values below apply to extruders %3%, and to every extruder for the settings you changed."
+msgstr "El extrusor %1% imprime con las velocidades de %2%. Los valores de abajo se aplican a los extrusores %3% y, para los ajustes que ha cambiado, a todos los extrusores."
+
+# AI Translated
+#. TRN Line on the Speed page of the process settings. %1% lists tool heads with their nozzle sizes ("2 (0.2 mm), 3 (0.6 mm)"), %2% process presets, %3% the other tool heads ("1, 4")
+#, boost-format
+msgid "Extruders %1% print with the speeds of %2%. The values below apply to extruders %3%, and to every extruder for the settings you changed."
+msgstr "Los extrusores %1% imprimen con las velocidades de %2%. Los valores de abajo se aplican a los extrusores %3% y, para los ajustes que ha cambiado, a todos los extrusores."
+
+# AI Translated
+msgid "Set per extruder:"
+msgstr "Establecido por extrusor:"
+
+# AI Translated
+#. TRN Label of the picker on the Speed and Quality pages: the process preset a tool head takes its speeds and line widths from
+msgid "Extruder preset:"
+msgstr "Perfil del extrusor:"
+
+# AI Translated
+#. TRN Tooltip of the button beside the speed picker that clears the process preset chosen for the tool head
+msgid "Use the automatic preset again"
+msgstr "Volver a usar el perfil automático"
+
+# AI Translated
+#. TRN The first item of the speed picker. %1% is a process preset ("0.24mm Standard")
+#, boost-format
+msgid "%1% (automatic)"
+msgstr "%1% (automático)"
+
+# AI Translated
+msgid "Selected preset (automatic)"
+msgstr "Perfil seleccionado (automático)"
+
+# AI Translated
+#. TRN An item of the speed picker: the chosen process preset is not installed
+#, boost-format
+msgid "%1% (not installed)"
+msgstr "%1% (no instalado)"
+
+# AI Translated
+#. TRN An item of the speed picker: the chosen process preset does not apply to this tool head now
+#, boost-format
+msgid "%1% (inactive)"
+msgstr "%1% (inactivo)"
+
+# AI Translated
+#. TRN Header in the speed picker above the vendor's process presets of a nozzle size. %1% is the size ("0.8")
+#, boost-format
+msgid "System presets · %1% mm nozzle"
+msgstr "Perfiles del sistema · boquilla de %1% mm"
+
+# AI Translated
+# Needs human review: Frase poco clara en inglés ("travel with the project only where they are installed"); confirme el sentido.
+msgid "Chosen user presets travel with the project only where they are installed."
+msgstr "Los perfiles de usuario elegidos solo acompañan al proyecto allí donde estén instalados."
+
+# AI Translated
+#. TRN Header in the speed picker above the process presets embedded in the project
+msgid "Project presets"
+msgstr "Perfiles del proyecto"
+
+# AI Translated
+#. TRN Second line of an item tooltip of the picker on the Quality page: the line widths this tool head would print from the preset ("110 % (0.22 mm)")
+#, boost-format
+msgid "default %1%, outer wall %2%, first layer %3%"
+msgstr "por defecto %1%, perímetro externo %2%, primera capa %3%"
+
+# AI Translated
+# Needs human review: "sparse" se ha abreviado a "relleno" y "accel" a "acel."; compruebe en el tooltip.
+#. TRN Second line of an item tooltip of the speed picker: the values this tool head would print from the preset
+#, boost-format
+msgid "outer wall %1%, sparse %2%, accel %3%"
+msgstr "perímetro externo %1%, relleno %2%, acel. %3%"
+
+# AI Translated
+msgid "Standard values only; this extruder is at High Flow."
+msgstr "Solo valores estándar; este extrusor está en flujo alto."
+
+# AI Translated
+msgid "Line widths differ from the automatic preset."
+msgstr "Los anchos de línea difieren de los del perfil automático."
+
+# AI Translated
+#. TRN Item tooltip of the speed picker. %1% the layer height the preset is made for, %2% the one the tool head prints
+#, boost-format
+msgid "Made for %1% mm layers; this extruder prints %2% mm layers."
+msgstr "Hecho para capas de %1% mm; este extrusor imprime capas de %2% mm."
+
+# AI Translated
+msgid "Also the automatic choice today. Choosing it by name keeps this preset for the extruder when the plate's quality changes; automatic follows the quality."
+msgstr "También es la elección automática actual. Elegirlo por su nombre mantiene este perfil para el extrusor cuando cambia la calidad de la cama; la opción automática sigue a la calidad."
+
+# AI Translated
+msgid "The selected process preset. Choosing it by name keeps it for the extruder when the plate's preset changes."
+msgstr "El perfil de proceso seleccionado. Elegirlo por su nombre lo mantiene para el extrusor cuando cambia el perfil de la cama."
+
+# AI Translated
+msgid "Speeds, accelerations, jerk and line widths come from this preset; every other setting stays the plate's."
+msgstr "Las velocidades, aceleraciones, jerk y anchos de línea proceden de este perfil; todos los demás ajustes siguen siendo los de la cama."
+
+# AI Translated
+msgid "The process preset this extruder takes its speeds, accelerations, jerk and line widths from. Every other setting stays the plate's."
+msgstr "El perfil de proceso del que este extrusor toma sus velocidades, aceleraciones, jerk y anchos de línea. Todos los demás ajustes siguen siendo los de la cama."
+
+# AI Translated
+msgid "The process preset is detached from its system preset, so the speeds and line widths of other presets cannot be combined with it."
+msgstr "El perfil de proceso está separado de su perfil del sistema, por lo que no se pueden combinar con él las velocidades y anchos de línea de otros perfiles."
+
+# AI Translated
+#. TRN Tooltip of the disabled speed picker. %1% is a nozzle size
+#. TRN %1% is a nozzle size
+#, boost-format
+msgid "No process preset for a %1% mm nozzle is installed; the extruder prints with the speeds and line widths of the selected preset."
+msgstr "No hay instalado ningún perfil de proceso para una boquilla de %1% mm; el extrusor imprime con las velocidades y anchos de línea del perfil seleccionado."
+
+# AI Translated
+#. TRN Under a tool head whose process preset was chosen in the picker. %1% is the preset the rule would give it
+#, boost-format
+msgid "Chosen in this project; automatic would be %1%."
+msgstr "Elegido en este proyecto; el automático sería %1%."
+
+# AI Translated
+msgid "Chosen in this project; automatic would be the selected preset."
+msgstr "Elegido en este proyecto; el automático sería el perfil seleccionado."
+
+# AI Translated
+msgid "Chosen in this project; the same as the selected process preset, so the extruder keeps it when the plate's preset changes."
+msgstr "Elegido en este proyecto; es el mismo que el perfil de proceso seleccionado, por lo que el extrusor lo mantiene cuando cambia el perfil de la cama."
+
+# AI Translated
+#. TRN %1% the chosen process preset, %2% the preset the tool head prints with instead
+#, boost-format
+msgid "%1%, chosen in this project, is not installed; the extruder uses %2% (automatic)."
+msgstr "%1%, elegido en este proyecto, no está instalado; el extrusor usa %2% (automático)."
+
+# AI Translated
+#. TRN %1% the chosen process preset, %2% the nozzle size it is made for, %3% the size of the tool head, %4% the preset the tool head prints with instead
+#, boost-format
+msgid "%1%, chosen in this project, is made for a %2% mm nozzle and does not apply while the nozzle is %3% mm; the extruder uses %4% (automatic)."
+msgstr "%1%, elegido en este proyecto, está hecho para una boquilla de %2% mm y no se aplica mientras la boquilla sea de %3% mm; el extrusor usa %4% (automático)."
+
+# AI Translated
+#. TRN %1% the chosen process preset, %2% the size of the tool head, %3% the preset the tool head prints with instead
+#, boost-format
+msgid "%1%, chosen in this project, is not made for a %2% mm nozzle and does not apply; the extruder uses %3% (automatic)."
+msgstr "%1%, elegido en este proyecto, no está hecho para una boquilla de %2% mm y no se aplica; el extrusor usa %3% (automático)."
+
+# AI Translated
+#. TRN %1% the chosen process preset
+#, boost-format
+msgid "%1%, chosen in this project, does not apply: the process preset is detached from its system preset, so the speeds and line widths of other presets cannot be combined with it."
+msgstr "%1%, elegido en este proyecto, no se aplica: el perfil de proceso está separado de su perfil del sistema, por lo que no se pueden combinar con él las velocidades y anchos de línea de otros perfiles."
+
+# AI Translated
+msgid "\"Process speeds and line widths follow the nozzle size\" is off in Preferences, so the extruder prints with the selected process preset; a preset chosen here still applies."
+msgstr "\"Las velocidades y anchos de línea del proceso siguen el tamaño de la boquilla\" está desactivada en Preferencias, por lo que el extrusor imprime con el perfil de proceso seleccionado; un perfil elegido aquí sigue aplicándose."
+
+# AI Translated
+msgid "This extruder has the nozzle size of the printer preset and prints with the selected process preset."
+msgstr "Este extrusor tiene el tamaño de boquilla del perfil de impresora e imprime con el perfil de proceso seleccionado."
+
+# AI Translated
+#. TRN Under a High Flow tool head. %1% is the process preset whose High Flow speeds it prints, %2% the preset its line widths come from
+#, boost-format
+msgid "Automatic: %1%, the preset of this nozzle size with High Flow speeds; the selected preset has none. Line widths stay those of %2%."
+msgstr "Automático: %1%, el perfil de este tamaño de boquilla con velocidades de flujo alto; el seleccionado no las tiene. Los anchos de línea siguen siendo los de %2%."
+
+# AI Translated
+# Needs human review: Recuento sin forma plural en el código fuente; con 1 se leerá "Los 1 ajustes".
+#. TRN %1% the number of settings changed under All tool heads
+#, boost-format
+msgid "%1% settings changed under All extruders apply here too."
+msgstr "Los %1% ajustes cambiados en Todos los extrusores también se aplican aquí."
+
+# AI Translated
+# Needs human review: Recuento sin forma plural en el código fuente.
+#. TRN Confirmation before every value set per tool head is cleared. %1% the number of values, %2% the tool heads ("2, 4")
+#, boost-format
+msgid "This clears %1% values set for extruders %2%. They will follow All extruders again."
+msgstr "Esto borra %1% valores establecidos para los extrusores %2%. Volverán a seguir Todos los extrusores."
+
+# AI Translated
+msgid "Clear the values set per extruder"
+msgstr "Borrar los valores establecidos por extrusor"
 
 msgid "Frequent"
 msgstr "Frecuente"
@@ -12945,6 +13847,10 @@ msgstr "Cama PEI Lisa"
 msgid "Printable space"
 msgstr "Espacio imprimible"
 
+# AI Translated
+msgid "Per-extruder layer heights"
+msgstr "Alturas de capa por extrusor"
+
 msgid "Select the network agent implementation for printer communication. Available agents are registered at startup."
 msgstr "Seleccione la implementación del agente de red para la comunicación con la impresora. Los agentes disponibles se registran al iniciar el sistema."
 
@@ -13093,6 +13999,14 @@ msgstr "Muestra un cuadro de diálogo de advertencia antes de laminar si se dete
 msgid "Modes"
 msgstr "Modos"
 
+# AI Translated
+msgid "Nozzle flow"
+msgstr "Flujo de boquilla"
+
+# AI Translated
+msgid "The choice belongs to the project and does not change the printer preset."
+msgstr "La elección pertenece al proyecto y no cambia el perfil de impresora."
+
 msgid "This is a single extruder multi-material printer, diameters of all extruders will be set to the new value. Do you want to proceed?"
 msgstr "Esta es una impresora multimaterial de un solo extrusor, los diámetros de todos los extrusores se ajustarán al nuevo valor. ¿Desea continuar?"
 
@@ -13129,6 +14043,35 @@ msgstr ""
 
 msgid "Firmware Retraction"
 msgstr "Retracción de firmware"
+
+# AI Translated
+msgid ""
+"Exact preferred layer heights are experimental. The object layer height becomes the coarsest height every preferred layer height is a whole multiple of, which can be very fine: extruders left at Default, supports, the first layers and the areas that cannot follow an extruder's height then print at that grid, and slicing and printing can take much longer.\n"
+"\n"
+"Continue?"
+msgstr ""
+"Las alturas de capa preferidas exactas son experimentales. La altura de capa del objeto pasa a ser la altura más gruesa de la que todas las alturas de capa preferidas son múltiplos enteros, que puede ser muy fina: los extrusores dejados en Por defecto, los soportes, las primeras capas y las zonas que no pueden seguir la altura de un extrusor se imprimen entonces en esa rejilla, y el laminado y la impresión pueden tardar mucho más.\n"
+"\n"
+"¿Continuar?"
+
+# AI Translated
+msgid "Exact preferred layer heights"
+msgstr "Alturas de capa preferidas exactas"
+
+# AI Translated
+# Needs human review: "slab" (capa de la torre de purga por cambio de herramienta) traducido como "bloque" y "bridges the layers between them" como "salva las capas intermedias"; confirme la terminología.
+msgid ""
+"The prime tower prints one slab per tool change on the object layer grid and bridges the layers between them, in either mode. A coarse extruder that purges on a slab of a fine grid extrudes below its minimum layer height there; the finer grid of exact preferred layer heights makes this more likely. Slicing reports the affected slabs per extruder.\n"
+"\n"
+"Keep exact preferred layer heights together with the prime tower?"
+msgstr ""
+"La torre de purga imprime un bloque por cada cambio de herramienta en la rejilla de capas del objeto y salva las capas intermedias, en cualquiera de los dos modos. Un extrusor grueso que purga sobre un bloque de una rejilla fina extruye ahí por debajo de su altura de capa mínima; la rejilla más fina de las alturas de capa preferidas exactas lo hace más probable. El laminado informa de los bloques afectados por extrusor.\n"
+"\n"
+"¿Mantener las alturas de capa preferidas exactas junto con la torre de purga?"
+
+# AI Translated
+msgid "Prime tower layer height"
+msgstr "Altura de capa de la torre de purga"
 
 msgid "Switching to a printer with different extruder types or numbers will discard or reset changes to extruder or multi-nozzle-related parameters."
 msgstr "Cambiar a una impresora con diferentes tipos o números de extrusores descartará o restablecerá los cambios en parámetros relacionados con el extrusor o multi-boquilla."
@@ -13187,6 +14130,12 @@ msgstr ""
 msgid "Are you sure you want to delete the selected preset?"
 msgstr "¿Está seguro de borrar el perfil seleccionado?"
 
+# AI Translated
+#. TRN Notice after a process preset chosen for a tool head was deleted. %1% the preset, %2% the tool head, %3% the preset the head prints with now
+#, boost-format
+msgid "%1% supplied the speeds and line widths of extruder %2% in this project; the extruder uses %3% (automatic) until another preset is chosen."
+msgstr "%1% proporcionaba las velocidades y anchos de línea del extrusor %2% en este proyecto; el extrusor usa %3% (automático) hasta que se elija otro perfil."
+
 msgid "Select printers"
 msgstr "Seleccionar impresoras"
 
@@ -13239,6 +14188,40 @@ msgid "Don't warn again for this preset"
 msgstr "No volver a avisar para este perfil"
 
 # AI Translated
+msgid "The values below apply to every extruder that has no value of its own for them."
+msgstr "Los valores de abajo se aplican a todos los extrusores que no tienen un valor propio para ellos."
+
+# AI Translated
+#. TRN %1% is the process preset the user chose for the tool head (its speeds and line widths)
+#, boost-format
+msgid "Preset %1% (chosen in this project)."
+msgstr "Perfil %1% (elegido en este proyecto)."
+
+# AI Translated
+#. TRN %1% is a process preset whose High Flow column the tool head prints with by the automatic rule
+#, boost-format
+msgid "Preset %1%, High Flow (automatic)."
+msgstr "Perfil %1%, flujo alto (automático)."
+
+# AI Translated
+#. TRN %1% is a process preset the tool head prints with by the automatic rule
+#, boost-format
+msgid "Preset %1% (automatic)."
+msgstr "Perfil %1% (automático)."
+
+# AI Translated
+#. TRN %1% is a process preset chosen for the tool head that cannot apply now (not installed, another nozzle size)
+#, boost-format
+msgid "%1%, chosen in this project, does not apply now."
+msgstr "%1%, elegido en este proyecto, no se aplica ahora."
+
+# AI Translated
+#. TRN %1% the number of values set for the tool head, %2% their names
+#, boost-format
+msgid "%1% values set for this extruder: %2%."
+msgstr "%1% valores establecidos para este extrusor: %2%."
+
+# AI Translated
 # Needs human review: Short tag for Standard flow; kept as the English abbreviation used on nozzle labels. Check whether a Spanish abbreviation is preferred.
 #. TRN Short tag for the Standard nozzle flow type.
 msgctxt "Nozzle flow type"
@@ -13272,6 +14255,34 @@ msgstr "E3D HF"
 msgctxt "Nozzle flow type"
 msgid "XHF"
 msgstr "XHF"
+
+# AI Translated
+msgid "All extruders"
+msgstr "Todos los extrusores"
+
+# AI Translated
+#. TRN An entry of the speed selector on the Process tab: the tool head and its nozzle size ("Extruder 2 · 0.2")
+#, boost-format
+msgid "Extruder %1% · %2%"
+msgstr "Extrusor %1% · %2%"
+
+# AI Translated
+#. TRN An entry of the speed selector in a narrow sidebar: the tool head and its nozzle size ("E2 · 0.2")
+#, boost-format
+msgid "E%1% · %2%"
+msgstr "E%1% · %2%"
+
+# AI Translated
+#. TRN An entry of the speed selector on the Process tab
+#, boost-format
+msgid "Extruder %1%"
+msgstr "Extrusor %1%"
+
+# AI Translated
+#. TRN An entry of the speed selector in a narrow sidebar (short for "Extruder 2")
+#, boost-format
+msgid "E%1%"
+msgstr "E%1%"
 
 msgid "No modifications need to be copied."
 msgstr "No hay modificaciones que copiar."
@@ -14313,6 +15324,10 @@ msgid "request to server update preset resource fail with body:%s,error:%s,statu
 msgstr "la solicitud de actualización de recursos de perfiles al servidor ha fallado con cuerpo:%s,error:%s,estado:%d"
 
 # AI Translated
+msgid "This profile package was built by an earlier Snapmaker Orca and does not carry every setting of this version; a package built for this version is needed."
+msgstr "Este paquete de perfiles se creó con una versión anterior de Snapmaker Orca y no incluye todos los ajustes de esta versión; se necesita un paquete creado para esta versión."
+
+# AI Translated
 #, boost-format
 msgid "Snapmaker Orca %1% needed, but current version is %2%"
 msgstr "Se necesita Snapmaker Orca %1%, pero la versión actual es %2%"
@@ -14899,6 +15914,10 @@ msgstr "La altura de capa adaptativa no es compatible con los soportes orgánico
 msgid "The wipe tower filament cannot be a mixed filament."
 msgstr "El filamento de la torre de purga no puede ser un filamento mixto."
 
+# AI Translated
+msgid "Different filament diameters may not work well when the prime tower is enabled: the tower purges every filament with one filament area."
+msgstr "Los diámetros de filamento distintos pueden no funcionar bien con la torre de purga activada: la torre purga todos los filamentos con una única sección de filamento."
+
 msgid "Different nozzle diameters and different filament diameters may not work well when the prime tower is enabled. It's very experimental, so please proceed with caution."
 msgstr "Diámetros de boquillas y diámetros de filamento diferentes pueden no funcionar correctamente cuando la torre de purga está activada. Esta función es experimental, así que proceda con cautela."
 
@@ -14920,6 +15939,10 @@ msgstr "La torre de purga no es compatible cuando la altura de capa adaptativa e
 msgid "A prime tower requires any “support gap” to be a multiple of layer height."
 msgstr "La torre de purga requiere que el \"hueco de apoyo\" sea múltiplo de la altura de la capa."
 
+# AI Translated
+msgid "A prime tower with printing by object is not supported together with the dynamic filament map. Print by layer, or disable the dynamic filament map."
+msgstr "Una torre de purga con impresión por objeto no es compatible con la asignación dinámica de filamentos. Imprima por capa o desactive la asignación dinámica de filamentos."
+
 msgid "A prime tower requires that all objects have the same layer height."
 msgstr "La torre de purga requiere que todos los objetos tengan la misma altura de capa."
 
@@ -14938,17 +15961,53 @@ msgstr "La torre de purga sólo se admite si todos los objetos tienen la misma a
 msgid "One or more object were assigned an extruder that the printer does not have."
 msgstr "A uno o más objetos se les asignó un extrusor que la impresora no tiene."
 
-msgid "Line width too small"
-msgstr "Ancho de línea demasiado pequeño"
+# AI Translated
+#, boost-format
+msgid "Line width too small on extruder %1%"
+msgstr "Ancho de línea demasiado pequeño en el extrusor %1%"
 
-msgid "Line width too large"
-msgstr "Ancho de línea demasiado grande"
+# AI Translated
+#, boost-format
+msgid "Line width too large on extruder %1%"
+msgstr "Ancho de línea demasiado grande en el extrusor %1%"
 
 msgid "Printing with multiple extruders of differing nozzle diameters. If support is to be printed with the current filament (support_filament == 0 or support_interface_filament == 0), all nozzles have to be of the same diameter."
 msgstr "Impresión con múltiples extrusores de diámetros de boquilla diferentes. Si el soporte se va a imprimir con el filamento actual (support_filament == 0 o support_interface_filament == 0), todas las boquillas deben tener el mismo diámetro."
 
 msgid "A prime tower requires that support has the same layer height as the object."
 msgstr "La torre de purga requiere que el soporte tenga la misma altura de capa que el objeto."
+
+# AI Translated
+msgid "No extruder has a nozzle matching the support nozzle diameter."
+msgstr "Ningún extrusor tiene una boquilla que coincida con el diámetro de boquilla de soporte."
+
+# AI Translated
+msgid "The support/raft base filament prints with a nozzle that does not match the support nozzle diameter."
+msgstr "El filamento de la base de soporte/balsa se imprime con una boquilla que no coincide con el diámetro de boquilla de soporte."
+
+# AI Translated
+msgid "The support/raft interface filament prints with a nozzle that does not match the support nozzle diameter."
+msgstr "El filamento de la interfaz de soporte/balsa se imprime con una boquilla que no coincide con el diámetro de boquilla de soporte."
+
+# AI Translated
+msgid "Support may print with extruders of differing nozzle diameters. Set the support nozzle diameter (or explicit support and interface filaments) to keep the support on one nozzle size."
+msgstr "Los soportes pueden imprimirse con extrusores de diámetros de boquilla distintos. Establezca el diámetro de boquilla de soporte (o filamentos de soporte e interfaz explícitos) para mantener los soportes en un único tamaño de boquilla."
+
+# AI Translated
+msgid "No loaded filament matches the support/raft interface material (and the support nozzle diameter)."
+msgstr "Ningún filamento cargado coincide con el material de la interfaz de soporte/balsa (y con el diámetro de boquilla de soporte)."
+
+# AI Translated
+msgid "No loaded filament matches the support/raft base material (and the support nozzle diameter)."
+msgstr "Ningún filamento cargado coincide con el material de la base de soporte/balsa (y con el diámetro de boquilla de soporte)."
+
+# AI Translated
+msgid "The support/raft interface filament is not of the support/raft interface material."
+msgstr "El filamento de la interfaz de soporte/balsa no es del material de la interfaz de soporte/balsa."
+
+# AI Translated
+msgid "The support/raft base filament is not of the support/raft base material."
+msgstr "El filamento de la base de soporte/balsa no es del material de la base de soporte/balsa."
 
 msgid "For Organic supports, two walls are supported only with the Hollow/Default base pattern."
 msgstr "En el caso de soportes Orgánicos, dos paredes se sostienen únicamente con el patrón base hueco/predeterminado."
@@ -14974,8 +16033,103 @@ msgstr "Se utilizan las herramientas de forzado de soporte pero los soportes no 
 msgid "Layer height cannot exceed nozzle diameter."
 msgstr "La altura de la capa no puede superar el diámetro de la boquilla"
 
-msgid "Bridge line width must not exceed nozzle diameter"
-msgstr "El ancho de la línea del puente no debe superar el diámetro de la boquilla"
+# AI Translated
+msgid "Line widths set per extruder are not supported on this printer; set one value under All extruders."
+msgstr "Esta impresora no admite anchos de línea establecidos por extrusor; establezca un único valor en Todos los extrusores."
+
+# AI Translated
+#, boost-format
+msgid "Extruder %1% (%2% mm nozzle) prints %3% at %4% mm, a value changed under All extruders."
+msgstr "El extrusor %1% (boquilla de %2% mm) imprime %3% a %4% mm, un valor cambiado en Todos los extrusores."
+
+# AI Translated
+#, boost-format
+msgid "The maximum width of a segmented region (%1% mm) is narrower than the outer wall of filament %2% (%3% mm): painted regions of that filament print nothing where the cut leaves less than one wall, and the base filament shows instead. Use at least the widest painted outer wall (more on slopes printed in thick runs), or 0 for no limit."
+msgstr "El ancho máximo de una región segmentada (%1% mm) es menor que el perímetro externo del filamento %2% (%3% mm): las regiones pintadas de ese filamento no imprimen nada donde el corte deja menos de un perímetro, y en su lugar se ve el filamento base. Use al menos el perímetro externo pintado más ancho (más en las pendientes impresas en tramos gruesos), o 0 para no tener límite."
+
+# AI Translated
+#, boost-format
+msgid "The layer height of extruder %1% (%2% mm) is ignored for some object parts: it must be an integer multiple of the object layer height (%3% mm), not below it, and must not exceed the extruder's nozzle diameter."
+msgstr "La altura de capa del extrusor %1% (%2% mm) se ignora en algunas piezas del objeto: debe ser un múltiplo entero de la altura de capa del objeto (%3% mm), no inferior a ella, y no debe superar el diámetro de la boquilla del extrusor."
+
+# AI Translated
+#, boost-format
+msgid "The preferred layer height of extruder %1% (%2% mm) is not a whole multiple of the object layer height (%3% mm). Set the object layer height (for this object: its own layer height in the object settings) to %4% mm, the object layer height derived from the preferred layer heights of the extruders in use, or change the preferred layer heights."
+msgstr "La altura de capa preferida del extrusor %1% (%2% mm) no es un múltiplo entero de la altura de capa del objeto (%3% mm). Establezca la altura de capa del objeto (para este objeto: su propia altura de capa en los ajustes del objeto) en %4% mm, la altura de capa del objeto derivada de las alturas de capa preferidas de los extrusores en uso, o cambie las alturas de capa preferidas."
+
+# AI Translated
+#, boost-format
+msgid "The layer height of extruder %1% (%2% mm) cannot exceed its nozzle diameter."
+msgstr "La altura de capa del extrusor %1% (%2% mm) no puede superar el diámetro de su boquilla."
+
+# AI Translated
+#, boost-format
+msgid "Some object parts prefer %1% mm layers, but the nozzle of wall filament %2% is too small to extrude that height. Outer and inner walls print together, so these walls keep the object layer height. Assign both wall features to filaments with large enough nozzles."
+msgstr "Algunas piezas del objeto prefieren capas de %1% mm, pero la boquilla del filamento de perímetro %2% es demasiado pequeña para extruir esa altura. Los perímetros externos e internos se imprimen juntos, por lo que estos perímetros mantienen la altura de capa del objeto. Asigne ambos tipos de línea de perímetro a filamentos con boquillas lo bastante grandes."
+
+# AI Translated
+#, boost-format
+msgid "Some object parts prefer %1% mm layers, but the nozzle of filament %2% printing other features of the part is too small to extrude that height. These parts print with the object layer height instead."
+msgstr "Algunas piezas del objeto prefieren capas de %1% mm, pero la boquilla del filamento %2%, que imprime otros tipos de línea de la pieza, es demasiado pequeña para extruir esa altura. Estas piezas se imprimen con la altura de capa del objeto."
+
+# AI Translated
+#, boost-format
+msgid "The wall layer height of filament %1% was adjusted from the preferred %2% mm to %3% mm so the outer and inner walls can print at compatible layer heights (\"Adjust wall layer height\"). Only this filament's walls print the adjusted height; its other features keep the preferred one."
+msgstr "La altura de capa de perímetro del filamento %1% se ha ajustado de los %2% mm preferidos a %3% mm para que los perímetros externos e internos puedan imprimirse a alturas de capa compatibles (\"Ajustar altura de capa de perímetro\"). Solo los perímetros de este filamento imprimen la altura ajustada; sus demás tipos de línea mantienen la preferida."
+
+# AI Translated
+#, boost-format
+msgid "The wall filaments of some object parts prefer different layer heights. Outer and inner walls print together, so these walls print with the lower height (%1% mm)."
+msgstr "Los filamentos de perímetro de algunas piezas del objeto prefieren alturas de capa distintas. Los perímetros externos e internos se imprimen juntos, por lo que estos perímetros se imprimen con la altura más baja (%1% mm)."
+
+# AI Translated
+msgid "The wall filaments of some object parts prefer different layer heights. Outer and inner walls print together, so these walls keep the object layer height. Assign both wall features to filaments preferring the same height to print thicker walls."
+msgstr "Los filamentos de perímetro de algunas piezas del objeto prefieren alturas de capa distintas. Los perímetros externos e internos se imprimen juntos, por lo que estos perímetros mantienen la altura de capa del objeto. Asigne ambos tipos de línea de perímetro a filamentos que prefieran la misma altura para imprimir perímetros más gruesos."
+
+# AI Translated
+#, boost-format
+msgid "Some object parts print %1% mm layers with filament %2% whose maximum layer height is %3% mm. Assign the part's features to filaments of the coarser nozzle, raise the filament's maximum layer height, or accept printing above it."
+msgstr "Algunas piezas del objeto imprimen capas de %1% mm con el filamento %2%, cuya altura de capa máxima es %3% mm. Asigne los tipos de línea de la pieza a filamentos de la boquilla más gruesa, aumente la altura de capa máxima del filamento o acepte imprimir por encima de ella."
+
+# AI Translated
+#, boost-format
+msgid "The %1% mm infill line width is too small for infill combined to %2% mm high layers. Increase the line width or lower the preferred layer height of the infill filament."
+msgstr "El ancho de línea de relleno de %1% mm es demasiado pequeño para un relleno combinado en capas de %2% mm de altura. Aumente el ancho de línea o reduzca la altura de capa preferida del filamento de relleno."
+
+# AI Translated
+#, boost-format
+msgid "Some object parts print %1% mm layers with filament %2% whose minimum layer height is %3% mm. Raise the object layer height (with preferred layer heights: choose heights that share a coarser common divisor), use a filament with a finer nozzle for these features, or accept printing below the extruder's minimum."
+msgstr "Algunas piezas del objeto imprimen capas de %1% mm con el filamento %2%, cuya altura de capa mínima es %3% mm. Aumente la altura de capa del objeto (con alturas de capa preferidas: elija alturas que compartan un divisor común más grueso), use un filamento con una boquilla más fina para estos tipos de línea o acepte imprimir por debajo del mínimo del extrusor."
+
+# AI Translated
+msgid "Some object parts use filaments whose preferred layer heights cannot all be honored: a part prints its features with one layer pitch (set by its wall filaments, or by the other features' agreement when no wall filament has a preference); the walls, the top surfaces and the infill can each combine to their own height when the rest of the part cannot follow them, but the remaining features print with the part's pitch."
+msgstr "Algunas piezas del objeto usan filamentos cuyas alturas de capa preferidas no pueden respetarse todas: una pieza imprime sus tipos de línea con un único paso de capa (fijado por sus filamentos de perímetro o, cuando ningún filamento de perímetro tiene preferencia, por el acuerdo de los demás tipos de línea); los perímetros, las superficies superiores y el relleno pueden combinarse cada uno a su propia altura cuando el resto de la pieza no puede seguirlos, pero los demás tipos de línea se imprimen con el paso de la pieza."
+
+# AI Translated
+#, boost-format
+msgid "The %1% mm line width is too small for the %2% mm layer height of its extruder. Increase the line width or lower the extruder layer height."
+msgstr "El ancho de línea de %1% mm es demasiado pequeño para la altura de capa de %2% mm de su extrusor. Aumente el ancho de línea o reduzca la altura de capa del extrusor."
+
+# AI Translated
+msgid "Per-extruder layer heights are not supported in spiral vase mode."
+msgstr "Las alturas de capa por extrusor no son compatibles con el modo vaso en espiral."
+
+# AI Translated
+msgid "Per-extruder layer heights are not supported together with interface shells."
+msgstr "Las alturas de capa por extrusor no son compatibles con los perímetros de interfaz."
+
+# AI Translated
+msgid "Per-extruder layer heights are not supported together with interlocking beams. Disable the interlocking beams or set the extruders' preferred layer heights to Default."
+msgstr "Las alturas de capa por extrusor no son compatibles con el entrelazado de vigas. Desactive el entrelazado de vigas o establezca las alturas de capa preferidas de los extrusores en Por defecto."
+
+# AI Translated
+msgid "Per-extruder layer heights are not supported together with variable layer height or height range modifiers that change the layer height. Remove them for this object or set the extruders' preferred layer heights to Default."
+msgstr "Las alturas de capa por extrusor no son compatibles con la altura de capa variable ni con modificadores de rango de altura que cambien la altura de capa. Elimínelos de este objeto o establezca las alturas de capa preferidas de los extrusores en Por defecto."
+
+# AI Translated
+#, boost-format
+msgid "Bridge line width must not exceed the nozzle diameter of extruder %1%"
+msgstr "El ancho de línea del puente no debe superar el diámetro de la boquilla del extrusor %1%"
 
 msgid "\"G92 E0\" was found in before_layer_change_gcode, but the G or E are not uppercase. Please change them to the exact uppercase \"G92 E0\"."
 msgstr "Se ha encontrado «G92 E0» en «before_layer_change_gcode», pero las letras G y E no están en mayúsculas. Por favor, cámbialas por «G92 E0» en mayúsculas."
@@ -15061,6 +16215,18 @@ msgid "Generating G-code"
 msgstr "Generando G-Code"
 
 # AI Translated
+# Needs human review: "slab" traducido como "bloque"; "slabs down to %3% mm" se ha reformulado como "el más fino de %3% mm".
+#, boost-format
+msgid "extruder %1%: %2% slabs down to %3% mm, minimum layer height %4% mm"
+msgstr "extrusor %1%: %2% bloques, el más fino de %3% mm, altura de capa mínima %4% mm"
+
+# AI Translated
+# Needs human review: "slab" traducido como "bloque".
+#, boost-format
+msgid "The prime tower prints %1% slabs on the object layer grid, some thinner than the minimum layer height of an extruder that purges on them (%2%). Preferred layer heights that share a coarser grid, or fewer tool changes per layer, reduce them."
+msgstr "La torre de purga imprime %1% bloques en la rejilla de capas del objeto, algunos más finos que la altura de capa mínima de un extrusor que purga sobre ellos (%2%). Unas alturas de capa preferidas que compartan una rejilla más gruesa, o menos cambios de herramienta por capa, los reducen."
+
+# AI Translated
 #. TRN %1% is a file path.
 #, boost-format
 msgid "Failed to process the G-code file %1% from the previous 3MF file."
@@ -15137,8 +16303,13 @@ msgstr ""
 "Se establece el valor inicial para la segunda capa.\n"
 "Las capas posteriores se vuelven linealmente más densas en la altura especificada en elefant_foot_compensation_layers."
 
-msgid "This is the height for each layer. Smaller layer heights give greater accuracy but longer printing time."
-msgstr "Altura de laminado para cada capa. Una altura de capa más pequeña significa más precisión y más tiempo de impresión."
+# AI Translated
+msgid ""
+"This is the height for each layer. Smaller layer heights give greater accuracy but longer printing time.\n"
+"While a preferred layer height is set for any extruder (printer settings), the object layer height is derived from the preferred layer heights - the finest one - and the global value is locked here."
+msgstr ""
+"Altura de laminado para cada capa. Una altura de capa más pequeña significa más precisión y más tiempo de impresión.\n"
+"Mientras haya una altura de capa preferida establecida para algún extrusor (ajustes de la impresora), la altura de capa del objeto se deriva de las alturas de capa preferidas (la más fina) y el valor global queda bloqueado aquí."
 
 msgid "Printable height"
 msgstr "Altura imprimible"
@@ -16784,6 +17955,30 @@ msgstr "Auto para Coincidencia"
 
 msgid "Nozzle Manual"
 msgstr "Manual de la boquilla"
+
+# AI Translated
+msgid "Process preset per extruder"
+msgstr "Perfil de proceso por extrusor"
+
+# AI Translated
+msgid "The process preset each extruder printed with when this project was last sliced. An extruder whose nozzle size differs from the printer preset prints with the speeds of a process preset made for its size."
+msgstr "El perfil de proceso con el que imprimió cada extrusor la última vez que se laminó este proyecto. Un extrusor cuyo tamaño de boquilla difiere del perfil de impresora imprime con las velocidades de un perfil de proceso hecho para su tamaño."
+
+# AI Translated
+msgid "Process preset chosen per extruder"
+msgstr "Perfil de proceso elegido por extrusor"
+
+# AI Translated
+msgid "The process preset an extruder takes its speeds, accelerations, jerk and line widths from, chosen in this project. Empty: the preset of the selected process preset's quality made for the extruder's nozzle size."
+msgstr "El perfil de proceso del que un extrusor toma sus velocidades, aceleraciones, jerk y anchos de línea, elegido en este proyecto. Vacío: el perfil hecho para el tamaño de boquilla del extrusor con la calidad del perfil de proceso seleccionado."
+
+# AI Translated
+msgid "Speeds flow type chosen per extruder"
+msgstr "Tipo de flujo de velocidades elegido por extrusor"
+
+# AI Translated
+msgid "The flow type whose speeds, accelerations and jerk an extruder prints with, chosen in this project when it is not the flow type of its nozzle: a High Flow nozzle set to the Standard speeds. Empty: the nozzle's own flow type."
+msgstr "El tipo de flujo cuyas velocidades, aceleraciones y jerk imprime un extrusor, elegido en este proyecto cuando no es el tipo de flujo de su boquilla: una boquilla de flujo alto configurada con las velocidades estándar. Vacío: el tipo de flujo propio de la boquilla."
 
 msgid "Flush temperature"
 msgstr "Temperatura de descarga"
@@ -18709,8 +19904,18 @@ msgstr ""
 msgid "Special auxiliary cooling fan speed, effective only for the first x layers."
 msgstr "Velocidad especial del ventilador de refrigeración auxiliar, válida únicamente para las primeras x capas."
 
-msgid "The lowest printable layer height for the extruder. Used to limit the minimum layer height when enable adaptive layer height."
-msgstr "La altura mínima de capa imprimible para el extrusor. Se usa para limitar la altura mínima de capa cuando se habilita la altura de capa adaptable."
+# AI Translated
+msgid "The lowest printable layer height for the extruder. Used to limit the minimum layer height when enable adaptive layer height. Parts printed with a thicker preferred extruder layer height never fall back below this height either (the first layer excepted)."
+msgstr "La altura mínima de capa imprimible para el extrusor. Se usa para limitar la altura mínima de capa cuando se habilita la altura de capa adaptable. Las piezas impresas con una altura de capa preferida del extrusor más gruesa tampoco bajan nunca de esta altura (salvo la primera capa)."
+
+# AI Translated
+#, no-c-format, no-boost-format
+msgid "Layer height this extruder should print with, used for printers whose extruders have different nozzle sizes. Any value can be entered and is kept as entered. For slicing, the object layer height becomes the coarsest height on which every preferred layer height lands within 0.01 mm of a whole multiple (from the finest preferred height down to a quarter of it), and the preferred heights print rounded to those multiples; with \"Exact preferred layer heights\" enabled every entered value prints exactly instead. A part whose features all follow this extruder prints only on every Nth layer with correspondingly thicker extrusions, wherever its geometry allows it; elsewhere it falls back to the object layer height. When the rest of the part cannot follow, walls assigned to this extruder still combine to this height on their own, full-density top surfaces absorb the solid layers below them, and sparse or 100% dense infill combines to this height where the part prints every layer; inside a part printing on every Nth layer the infill follows that part's layers. 0 means to use the object layer height."
+msgstr "Altura de capa con la que debe imprimir este extrusor, usada en impresoras cuyos extrusores tienen boquillas de distintos tamaños. Se puede introducir cualquier valor y se conserva tal cual. Para laminar, la altura de capa del objeto pasa a ser la altura más gruesa en la que cada altura de capa preferida queda a menos de 0,01 mm de un múltiplo entero (desde la altura preferida más fina hasta una cuarta parte de ella), y las alturas preferidas se imprimen redondeadas a esos múltiplos; con \"Alturas de capa preferidas exactas\" activado, cada valor introducido se imprime exactamente. Una pieza cuyos tipos de línea siguen todos a este extrusor se imprime solo cada N capas con extrusiones proporcionalmente más gruesas, allí donde su geometría lo permite; en el resto vuelve a la altura de capa del objeto. Cuando el resto de la pieza no puede seguirla, los perímetros asignados a este extrusor se siguen combinando por sí solos a esta altura, las superficies superiores de densidad completa absorben las capas sólidas que hay debajo, y el relleno de baja densidad o al 100% se combina a esta altura donde la pieza imprime todas las capas; dentro de una pieza que imprime cada N capas, el relleno sigue las capas de esa pieza. 0 significa usar la altura de capa del objeto."
+
+# AI Translated
+msgid "Experimental. Keep every preferred layer height exactly as entered: the object layer height becomes the coarsest height all of them are whole multiples of, which can be very fine (0.13 and 0.37 mm share only 0.01 mm). Extruders left at Default, supports, the first layers and the areas that cannot follow an extruder's height print at that grid, so slicing and printing can take much longer. The prime tower prints one slab per tool change on that grid in either mode; a coarse extruder purging on a slab of a fine grid extrudes below its minimum layer height there, which slicing reports. Off: the preferred heights print rounded to the coarsest grid on which they land within 0.01 mm."
+msgstr "Experimental. Mantiene cada altura de capa preferida exactamente como se introdujo: la altura de capa del objeto pasa a ser la altura más gruesa de la que todas son múltiplos enteros, que puede ser muy fina (0,13 y 0,37 mm solo comparten 0,01 mm). Los extrusores dejados en Por defecto, los soportes, las primeras capas y las zonas que no pueden seguir la altura de un extrusor se imprimen en esa rejilla, por lo que el laminado y la impresión pueden tardar mucho más. La torre de purga imprime un bloque por cada cambio de herramienta en esa rejilla en cualquiera de los dos modos; un extrusor grueso que purga sobre un bloque de una rejilla fina extruye ahí por debajo de su altura de capa mínima, algo de lo que informa el laminado. Desactivado: las alturas preferidas se imprimen redondeadas a la rejilla más gruesa en la que quedan a menos de 0,01 mm."
 
 msgid "Min print speed"
 msgstr "Velocidad de impresión mínima"
@@ -18904,6 +20109,38 @@ msgid ""
 msgstr ""
 "Filamento para imprimir las paredes interiores.\n"
 "La opción «Predeterminado» utiliza el filamento del objeto o pieza activa."
+
+# AI Translated
+msgid "Adjust wall layer height"
+msgstr "Ajustar altura de capa de perímetro"
+
+# AI Translated
+msgid "Outer and inner walls automatically print at their own preferred layer heights when one height is an integer multiple of the other. When the heights do not divide evenly, this option adjusts the wall layer height of one of the two wall filaments (chosen below) to the nearest multiple or divisor of the other, so the walls can still split. The adjusted height only applies to that filament's walls; other features keep the preferred layer height. Adjustments never leave the filament's layer height limits: if no allowed height exists in the chosen direction, the walls print together at the lower height as usual."
+msgstr "Los perímetros externos e internos se imprimen automáticamente a sus propias alturas de capa preferidas cuando una altura es múltiplo entero de la otra. Cuando las alturas no son divisibles entre sí, esta opción ajusta la altura de capa de perímetro de uno de los dos filamentos de perímetro (elegido abajo) al múltiplo o divisor más cercano del otro, para que los perímetros puedan seguir separándose. La altura ajustada solo se aplica a los perímetros de ese filamento; los demás tipos de línea mantienen la altura de capa preferida. Los ajustes nunca salen de los límites de altura de capa del filamento: si no existe ninguna altura permitida en la dirección elegida, los perímetros se imprimen juntos a la altura más baja, como de costumbre."
+
+# AI Translated
+msgid "Adjusted walls"
+msgstr "Perímetros ajustados"
+
+# AI Translated
+msgid "Which of the two wall filaments gets its wall layer height adjusted when the preferred layer heights do not divide evenly."
+msgstr "Cuál de los dos filamentos de perímetro recibe el ajuste de su altura de capa de perímetro cuando las alturas de capa preferidas no son divisibles entre sí."
+
+# AI Translated
+msgid "Adjustment direction"
+msgstr "Dirección del ajuste"
+
+# AI Translated
+msgid "Whether the adjusted wall filament's wall layer height is decreased or increased to reach a height compatible with the other wall filament. Heights outside the adjusted filament's layer height limits are never used: if no allowed height exists in this direction, the walls print together at the lower height as usual."
+msgstr "Si la altura de capa de perímetro del filamento de perímetro ajustado se reduce o se aumenta para alcanzar una altura compatible con el otro filamento de perímetro. Nunca se usan alturas fuera de los límites de altura de capa del filamento ajustado: si no existe ninguna altura permitida en esta dirección, los perímetros se imprimen juntos a la altura más baja, como de costumbre."
+
+# AI Translated
+msgid "Decrease"
+msgstr "Reducir"
+
+# AI Translated
+msgid "Increase"
+msgstr "Aumentar"
 
 msgid "Line width of inner wall. If expressed as a %, it will be computed over the nozzle diameter."
 msgstr "Ancho de extrusión del perímetro interno. Si se expresa cómo %, se calculará en base al diámetro de la boquilla."
@@ -20271,6 +21508,30 @@ msgstr "Evitar usar filamento de interfaz para la base"
 msgid "Avoid using support interface filament to print support base if possible."
 msgstr "Evite utilizar filamento de interfaz de soporte para imprimir la base de soporte si es posible."
 
+# AI Translated
+msgid "Support nozzle diameter"
+msgstr "Diámetro de boquilla de soporte"
+
+# AI Translated
+msgid "On printers whose extruders have different nozzle diameters, only filaments of this nozzle diameter are used to print support, raft and support interface. This keeps filaments of other nozzle sizes - with their different line widths and layer height limits - out of the support. Support filaments set to a non-default value must match this diameter. Value 0 allows any filament to print support."
+msgstr "En impresoras cuyos extrusores tienen boquillas de distintos diámetros, solo se usan filamentos de este diámetro de boquilla para imprimir los soportes, la balsa y la interfaz de soporte. Así se mantienen fuera de los soportes los filamentos de otros tamaños de boquilla, con sus distintos anchos de línea y límites de altura de capa. Los filamentos de soporte con un valor distinto del predeterminado deben coincidir con este diámetro. El valor 0 permite que cualquier filamento imprima soportes."
+
+# AI Translated
+msgid "Support/raft base material"
+msgstr "Material de base de soporte/balsa"
+
+# AI Translated
+msgid "Print the support and raft base only with filaments of this material type; extruders loaded with other types are not used for it. Combines with the support nozzle diameter restriction. Leave empty for no restriction; an explicitly selected support/raft base filament still takes precedence."
+msgstr "Imprime la base del soporte y de la balsa solo con filamentos de este tipo de material; los extrusores cargados con otros tipos no se usan para ella. Se combina con la restricción del diámetro de boquilla de soporte. Déjelo vacío para no aplicar ninguna restricción; un filamento de base de soporte/balsa seleccionado explícitamente sigue teniendo prioridad."
+
+# AI Translated
+msgid "Support/raft interface material"
+msgstr "Material de interfaz de soporte/balsa"
+
+# AI Translated
+msgid "Print the support and raft interface only with filaments of this material type; extruders loaded with other types are not used for it. Combines with the support nozzle diameter restriction. Leave empty for no restriction; an explicitly selected support/raft interface filament still takes precedence."
+msgstr "Imprime la interfaz del soporte y de la balsa solo con filamentos de este tipo de material; los extrusores cargados con otros tipos no se usan para ella. Se combina con la restricción del diámetro de boquilla de soporte. Déjelo vacío para no aplicar ninguna restricción; un filamento de interfaz de soporte/balsa seleccionado explícitamente sigue teniendo prioridad."
+
 msgid "Line width of support. If expressed as a %, it will be computed over the nozzle diameter."
 msgstr "Ancho de línea de los soportes. Si se expresa como %, se calculará en base al diámetro de la boquilla."
 
@@ -20403,11 +21664,41 @@ msgstr "Árbol Fuerte"
 msgid "Tree Hybrid"
 msgstr "Árbol Híbrido"
 
+# AI Translated
+msgid "Support layer height step"
+msgstr "Paso de altura de capa de soporte"
+
+# AI Translated
+# Needs human review: Texto técnico largo; compruebe "distancia de soporte" (support gap) y "pasos de medio o de un cuarto" frente a las opciones del desplegable.
+msgid "Step granularity for independent tree support layer heights while the prime tower is enabled (classic supports print on the object's layers with the prime tower). Automatic picks the coarsest step whose multiples reach the tallest support layer the support nozzle allows (e.g. quarter steps for a 0.14 mm maximum on a 0.08 mm object layer height); every support layer under an overhang contact still ends exactly one support gap below it. Maximum uses the same step but lets every support layer be as tall as possible: the support top under each contact is then the nearest support layer, so the gap varies by up to half a support layer above the configured value. With whole layers, support layer heights are multiples of the object layer height. Half or quarter steps also allow multiples like 1.5x or 1.25x, which helps when the support nozzle's maximum layer height sits between two whole multiples. Support boundaries may then fall between object layers; such support-only layers print without a prime tower layer: the switch to the support filament happens directly (any residue ends up in the support) and the switch back purges on the next full prime tower layer. With smooth timelapse the sub-layer boundaries get their own prime tower layers instead and are only used where those stay at or above the nozzles' minimum layer height. Not used with single-extruder multi-material, which keeps whole layers."
+msgstr "Granularidad del paso para las alturas de capa independientes de los soportes de árbol mientras la torre de purga está activada (los soportes clásicos se imprimen en las capas del objeto con la torre de purga). Automático elige el paso más grueso cuyos múltiplos alcanzan la capa de soporte más alta que permite la boquilla de soporte (p. ej., pasos de un cuarto para un máximo de 0,14 mm con una altura de capa del objeto de 0,08 mm); cada capa de soporte bajo un contacto de voladizo sigue terminando exactamente una distancia de soporte por debajo de él. Máximo usa el mismo paso, pero permite que cada capa de soporte sea lo más alta posible: la parte superior del soporte bajo cada contacto es entonces la capa de soporte más cercana, por lo que la distancia varía hasta media capa de soporte por encima del valor configurado. Con capas enteras, las alturas de capa de soporte son múltiplos de la altura de capa del objeto. Los pasos de medio o de un cuarto también permiten múltiplos como 1,5x o 1,25x, lo que ayuda cuando la altura de capa máxima de la boquilla de soporte se sitúa entre dos múltiplos enteros. Los límites del soporte pueden caer entonces entre capas del objeto; esas capas solo de soporte se imprimen sin capa de torre de purga: el cambio al filamento de soporte se hace directamente (los restos acaban en el soporte) y el cambio de vuelta purga en la siguiente capa completa de la torre de purga. Con el timelapse en modo suave, los límites de subcapa obtienen en cambio sus propias capas de torre de purga y solo se usan donde estas se mantienen en la altura de capa mínima de las boquillas o por encima. No se usa con multimaterial de un único extrusor, que mantiene capas enteras."
+
+# AI Translated
+msgid "100% (whole layers)"
+msgstr "100% (capas enteras)"
+
+# AI Translated
+msgid "50%"
+msgstr "50%"
+
+# AI Translated
+msgid "25%"
+msgstr "25%"
+
+# AI Translated
+msgid "Automatic (exact gap)"
+msgstr "Automático (distancia exacta)"
+
+# AI Translated
+msgid "Maximum (gap rounded to support layers)"
+msgstr "Máximo (distancia redondeada a capas de soporte)"
+
 msgid "Independent support layer height"
 msgstr "Altura independiente de la capa de soporte  "
 
-msgid "Support layer uses layer height independent with object layer. This is to support customizing Z-gap and save print time. This option will be invalid when the prime tower is enabled."
-msgstr "La capa de soporte utiliza una altura de capa independiente de la capa del objeto. Esto permite la personalización de la distancia Z y ahorra tiempo de impresión. Esta opción es compatible con la torre de purga."
+# AI Translated
+msgid "Support layer uses layer height independent with object layer. This is to support customizing Z-gap and save print time. With the prime tower enabled this option is invalid, except on printers whose extruders have different nozzle diameters: there tree supports keep independent heights aligned to the object layer grid (see Support layer height step) and classic supports print on the object's layers."
+msgstr "La capa de soporte usa una altura de capa independiente de la capa del objeto. Esto permite personalizar la distancia Z y ahorrar tiempo de impresión. Con la torre de purga activada, esta opción no es válida, salvo en impresoras cuyos extrusores tienen boquillas de distintos diámetros: allí los soportes de árbol mantienen alturas independientes alineadas con la rejilla de capas del objeto (consulte Paso de altura de capa de soporte) y los soportes clásicos se imprimen en las capas del objeto."
 
 msgid "Threshold angle"
 msgstr "Pendiente máxima"
@@ -23771,12 +25062,13 @@ msgstr ""
 "Marlin 2 Jerk Clásico detectado:\n"
 "Para probar Junction Deviation, establezca 'Junction Deviation Maximo' en Capacidad de movimiento a un valor > 0."
 
+# AI Translated
 msgid ""
 "RepRap detected: Jerk in mm/s.\n"
-"OrcaSlicer will convert the values to mm/min when necessary."
+"Snapmaker Orca will convert the values to mm/min when necessary."
 msgstr ""
 "RepRap detectado: Jerk en mm/s.\n"
-"OrcaSlicer convertirá los valores a mm/min cuando sea necesario."
+"Snapmaker Orca convertirá los valores a mm/min cuando sea necesario."
 
 #, c-format, boost-format
 msgid ""
@@ -37158,11 +38450,6 @@ msgid "Warning:%1%mm High Flow nozzles are not recommended for %2%"
 msgstr "Aviso: no se recomiendan las boquillas de flujo alto de %1%mm para %2%"
 
 # AI Translated
-#, boost-format
-msgid "These filaments cannot be printed with the %1%mm high flow nozzle: %2%"
-msgstr "Estos filamentos no se pueden imprimir con la boquilla de flujo alto de %1%mm: %2%"
-
-# AI Translated
 msgid "Download completed successfully!"
 msgstr "¡Descarga completada correctamente!"
 
@@ -37869,6 +39156,47 @@ msgid ""
 msgstr ""
 "Evitar la deformación\n"
 "¿Sabía que, al imprimir materiales propensos a deformarse como el ABS, aumentar adecuadamente la temperatura de la cama puede reducir la probabilidad de deformación?"
+
+# AI Translated
+#~ msgid "Note: Inconsistent nozzle diameters. Current version does not support mixed diameter printing. Please select one nozzle for this print."
+#~ msgstr "Nota: los diámetros de boquilla no coinciden. La versión actual no admite imprimir con diámetros mezclados. Seleccione una sola boquilla para esta impresión."
+
+# AI Translated
+#~ msgid "Set Nozzle Diameter"
+#~ msgstr "Establecer el diámetro de la boquilla"
+
+# AI Translated
+#~ msgid "Note: Changing this will sync all other nozzles to the same diameter."
+#~ msgstr "Nota: si cambia esto, todas las demás boquillas se sincronizarán al mismo diámetro."
+
+# AI Translated
+#~ msgid "Don't show this again"
+#~ msgstr "No volver a mostrar"
+
+#~ msgid "Line width too small"
+#~ msgstr "Ancho de línea demasiado pequeño"
+
+#~ msgid "Line width too large"
+#~ msgstr "Ancho de línea demasiado grande"
+
+#~ msgid "Bridge line width must not exceed nozzle diameter"
+#~ msgstr "El ancho de la línea del puente no debe superar el diámetro de la boquilla"
+
+#~ msgid "This is the height for each layer. Smaller layer heights give greater accuracy but longer printing time."
+#~ msgstr "Altura de laminado para cada capa. Una altura de capa más pequeña significa más precisión y más tiempo de impresión."
+
+#~ msgid "The lowest printable layer height for the extruder. Used to limit the minimum layer height when enable adaptive layer height."
+#~ msgstr "La altura mínima de capa imprimible para el extrusor. Se usa para limitar la altura mínima de capa cuando se habilita la altura de capa adaptable."
+
+#~ msgid "Support layer uses layer height independent with object layer. This is to support customizing Z-gap and save print time. This option will be invalid when the prime tower is enabled."
+#~ msgstr "La capa de soporte utiliza una altura de capa independiente de la capa del objeto. Esto permite la personalización de la distancia Z y ahorra tiempo de impresión. Esta opción es compatible con la torre de purga."
+
+#~ msgid ""
+#~ "RepRap detected: Jerk in mm/s.\n"
+#~ "OrcaSlicer will convert the values to mm/min when necessary."
+#~ msgstr ""
+#~ "RepRap detectado: Jerk en mm/s.\n"
+#~ "OrcaSlicer convertirá los valores a mm/min cuando sea necesario."
 
 # AI Translated
 #~ msgid "Snapmaker Orca will terminate because of running out of memory.It may be a bug. It will be appreciated if you report the issue to our team."
