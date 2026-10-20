@@ -949,7 +949,9 @@ public:
     bool is_initialized() const { return m_initialized; }
 
     void set_context(wxGLContext* context) { m_context = context; }
-    void set_type(ECanvasType type) { m_canvas_type = type; }
+    // Also opts the canvas' volumes into the render LOD (not for the preview canvas). Called
+    // right after the construction of the canvas, before its first reload_scene().
+    void set_type(ECanvasType type);
     void set_studio_lighting(bool on) { m_studio_lighting = on; }
     ECanvasType get_canvas_type() { return m_canvas_type; }
 
@@ -997,6 +999,10 @@ public:
     void check_volumes_outside_state(GLVolumeCollection& volumes) const { check_volumes_outside_state(volumes, nullptr, false); }
     bool is_all_plates_selected() { return m_sel_plate_toolbar.m_all_plates_stats_item && m_sel_plate_toolbar.m_all_plates_stats_item->selected; }
     const float get_scale() const;
+    // Snapmaker Orca: the factor between the pixels the render LOD thresholds are given in and
+    // the pixels of the viewport. get_scale() under ENABLE_RETINA_GL; elsewhere the content scale
+    // factor of the canvas, where get_scale() is always 1 although the viewport is in device pixels.
+    float get_lod_pixel_scale() const;
 
 private:
     // returns true if all the volumes are completely contained in the print volume
@@ -1263,6 +1269,8 @@ public:
     void set_shell_transparence(float alpha = 0.2f);
     void load_shells(const Print& print, bool force_previewing = false);
     void reset_shells() { m_gcode_viewer.reset_shell(); }
+    // Snapmaker Orca: the render LOD preference changed, see GCodeViewer::on_render_lod_changed().
+    void on_render_lod_changed();
     void set_shells_on_previewing(bool is_preview) { m_gcode_viewer.set_shells_on_preview(is_preview); }
 
     //BBS: add only gcode mode
@@ -1519,11 +1527,18 @@ private:
     bool _is_scene_cacheable() const;
     bool _is_frame_skipping_enabled() const;
     void _render_fps_overlay(int fps) const;
+    // Snapmaker Orca: render LOD, the volumes per level of the last scene pass of this canvas.
+    const std::array<unsigned, 3>& _lod_stats() const;
     void _render_fxaa_pass(unsigned int width, unsigned int height);
     void _render_ssao_pass(unsigned int width, unsigned int height);
     // scene_dirty is false only for a frame that its requester knows to be overlay-only.
     void _render_frame(bool scene_dirty, bool only_init = false);
     void _render_scene(const Camera& camera, const Size& cnv_size);
+    // Snapmaker Orca: render LOD. False while something on screen needs the full meshes of
+    // volumes that are not selected; every volume is then drawn at full detail.
+    bool _is_lod_allowed() const;
+    // The lowest per extruder printable height of the edited printer, DBL_MAX when it has none.
+    double _lod_pin_above_z() const;
     // Request a frame that only rebuilds the overlay.
     void _set_overlay_as_dirty() { m_overlay_dirty = true; }
     // These read the hover state _picking_pass() sets.

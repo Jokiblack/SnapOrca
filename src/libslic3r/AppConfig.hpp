@@ -47,6 +47,8 @@
 #define SETTING_OPENGL_REALISTIC_SHADOWS "opengl_realistic_shadows"
 #define SETTING_OPENGL_PHONG_SSAO "opengl_phong_ssao"
 #define SETTING_OPENGL_PHONG_SMOOTH_NORMALS "opengl_phong_smooth_normals"
+// Snapmaker Orca: render LOD (objects small on screen are drawn from a reduced mesh), off by default
+#define SETTING_OPENGL_MESH_LOD "opengl_mesh_lod"
 #define SETTING_OPENGL_REALISTIC_PREVIEW "opengl_realistic_preview"
 
 #define SETTING_PLUGIN_PAGES_VISIBLE_COUNT "plugin_pages_visible_count"

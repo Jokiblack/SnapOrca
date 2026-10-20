@@ -395,6 +395,12 @@ public:
     void reset();
     //BBS: always load shell at preview
     void reset_shell();
+    // Snapmaker Orca: render LOD, the shells per level in their last draw, for the FPS overlay.
+    const std::array<unsigned, 3>& shells_lod_stats() const { return m_shells.volumes.lod_stats(); }
+    // Snapmaker Orca: the render LOD preference changed. Makes the next load_shells() rebuild the
+    // shells, which it otherwise skips for an unchanged print; with gl_current the reduced models
+    // are released at once.
+    void on_render_lod_changed(bool gl_current);
     void load_shells(const Print& print, bool initialized, bool force_previewing = false);
     void set_shells_on_preview(bool is_previewing) { m_shells.previewing = is_previewing; }
     //BBS: add all plates filament statistics

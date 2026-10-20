@@ -21,6 +21,7 @@
 #include "format.hpp"
 #include "GUI.hpp"
 #include "GLCanvas3D.hpp"
+#include "MeshLodCache.hpp"
 #include "FilamentGroupPopup.hpp"
 #include "GLToolbar.hpp"
 #include "libslic3r/BeltTransform.hpp"
@@ -1950,6 +1951,16 @@ void GCodeViewer::reset_shell()
     m_shell_bounding_box = BoundingBoxf3();
 }
 
+void GCodeViewer::on_render_lod_changed(bool gl_current)
+{
+    if (m_shells.volumes.volumes.empty())
+        return;
+    if (gl_current)
+        m_shells.volumes.release_lod();
+    // Not reset_shell(): the shells stay on screen until the preview loads them again.
+    m_shells.print_id = -1;
+}
+
 void GCodeViewer::reset()
 {
     //BBS: should also reset the result id
@@ -3140,6 +3151,10 @@ void GCodeViewer::load_shells(const Print& print, bool initialized, bool force_p
         // no shells, return
         return;
     }
+    // Snapmaker Orca: the shells draw reduced models like the plater does. Normally every mesh is
+    // a hit in the cache, because the plater holds the same object; the job of a modifier shell,
+    // which is deleted again below, is cancelled by its MeshLod.
+    m_shells.volumes.set_lod_enabled(true);
     // adds objects' volumes
     // BBS: fix the issue that object_idx is not assigned as index of Model.objects array
     int object_count = 0;
@@ -3436,6 +3451,10 @@ void GCodeViewer::render_shells(int canvas_width, int canvas_height)
     const Camera& camera = wxGetApp().plater()->get_camera();
     shader->set_uniform("z_far", camera.get_far_z());
     shader->set_uniform("z_near", camera.get_near_z());
+    // Snapmaker Orca: render LOD, the levels of the shells for this pass. No gizmo, section view
+    // or wireframe reaches the shells, so the preference alone decides.
+    const MeshLodCache* lod_cache = MeshLodCache::instance();
+    m_shells.volumes.update_lod(camera, lod_cache != nullptr && lod_cache->enabled(), wxGetApp().plater()->get_preview_canvas3D()->get_lod_pixel_scale());
     m_shells.volumes.render(GLVolumeCollection::ERenderType::Transparent, false, camera.get_view_matrix(), camera.get_projection_matrix(), {canvas_width, canvas_height});
     shader->set_uniform("emission_factor", 0.0f);
     shader->stop_using();

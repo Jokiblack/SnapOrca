@@ -342,6 +342,10 @@ void AppConfig::set_defaults()
     if (get(SETTING_OPENGL_SKIP_IDENTICAL_FRAMES).empty())
         set_bool(SETTING_OPENGL_SKIP_IDENTICAL_FRAMES, true);
 
+    // Snapmaker Orca: render LOD (LixNix fork) is opt-in here: off unless the user turns it on.
+    if (get(SETTING_OPENGL_MESH_LOD).empty())
+        set_bool(SETTING_OPENGL_MESH_LOD, false);
+
     // The getter already defaults, parses and clamps; write back what it resolves to.
     set(SETTING_PLUGIN_PAGES_VISIBLE_COUNT, std::to_string(get_plugin_pages_visible_count()));
 
@@ -682,6 +686,11 @@ void AppConfig::set_defaults()
 
     if (get("sync_system_preset").empty()) {
         set_bool("sync_system_preset", true);
+    }
+
+    // Snapmaker Orca: vendor profiles only through the Snapmaker OTA channel (LixNix); off by default.
+    if (get("vendor_profiles_snapmaker_ota_only").empty()) {
+        set_bool("vendor_profiles_snapmaker_ota_only", false);
     }
 
     if (get("backup_switch").empty() || get("version") < "01.06.00.00") {

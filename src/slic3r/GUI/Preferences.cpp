@@ -2070,6 +2070,18 @@ void PreferencesDialog::create_items()
     );
     g_sizer->Add(smooth_normals);
 
+    // Snapmaker Orca (LixNix fork): render LOD, off by default. GUI_App::open_preferences() applies
+    // a change when the dialog closes.
+    auto item_mesh_lod = create_item_checkbox(
+        _L("Simplify distant objects"),
+        _L("Draws objects that are small on screen from a reduced copy of their mesh, which speeds up large plates. "
+           "Selected objects, slicing, picking, measuring, thumbnails and exports always use the full mesh. "
+           "Not used while wireframe, a section view, layer height editing or one of the tools Simplify, Cut, "
+           "Mesh Boolean, Measure and Assemble is active. Takes effect immediately."),
+        SETTING_OPENGL_MESH_LOD
+    );
+    g_sizer->Add(item_mesh_lod);
+
     //// GRAPHICS > Realistic view
     g_sizer->Add(create_item_title(_L("Realistic View")), 1, wxEXPAND);
 
@@ -2175,7 +2187,8 @@ void PreferencesDialog::create_items()
         _L("Show FPS overlay"),
         _L("Displays rendering counts in the top-right corner of the viewport.") + "\n" +
         _L("FPS: frames presented to the screen per second.") + "\n" +
-        _L("3D: frames per second that redrew the 3D scene."),
+        _L("3D: frames per second that redrew the 3D scene.") + "\n" +
+        _L("LOD: objects drawn at full / medium / small detail, shown while Simplify distant objects is on."),
         SETTING_OPENGL_SHOW_FPS_OVERLAY
     );
     g_sizer->Add(item_fps_overlay);
@@ -2318,6 +2331,13 @@ void PreferencesDialog::create_items()
 
     auto item_system_sync      = create_item_checkbox(_L("Update built-in presets automatically."), "", "sync_system_preset");
     g_sizer->Add(item_system_sync);
+
+    // Snapmaker Orca (LixNix 75e34b1a8): off by default; on, PresetUpdater::check_vendor_update() skips the Orca profile CDN.
+    auto item_ota_only_profiles = create_item_checkbox(
+        _L("Vendor profile updates only through Snapmaker OTA"),
+        _L("Skips the OrcaSlicer profile server when checking for printer profile updates: the built-in profiles then only change with the Snapmaker preset package or with the application itself. The new version notice is not affected."),
+        "vendor_profiles_snapmaker_ota_only");
+    g_sizer->Add(item_ota_only_profiles);
 
     auto item_token_storage    = create_item_checkbox(_L("Use encrypted file for token storage"),
                                                       _L("Store authentication tokens in an encrypted file instead of the system keychain. (Requires restart)"),

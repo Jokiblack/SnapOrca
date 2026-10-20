@@ -207,6 +207,8 @@
 #include "MainFrame.hpp"
 #include "Plater.hpp"
 #include "GLCanvas3D.hpp"
+#include "MeshLodCache.hpp"
+#include "../Utils/CpuMemory.hpp"
 #include "EncodedFilament.hpp"
 #include "GeneratedConfig.hpp"
 
@@ -1455,6 +1457,11 @@ void GUI_App::shutdown(bool isRecreate)
     if (m_is_recreating_gui) return;
     stop_http_server();
     set_closing(true);
+    // Snapmaker Orca: cancel the render LOD jobs and join their workers while the application is
+    // still whole. Not on the early return above: recreating the GUI keeps the cache, and the jobs
+    // hold neither a window nor an OpenGL object.
+    if (m_mesh_lod_cache)
+        m_mesh_lod_cache->shutdown();
     Slic3r::PluginManager::instance().set_shutting_down();
 
     if (m_agent)
@@ -2692,6 +2699,10 @@ GUI_App::~GUI_App()
 
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__<< boost::format(": enter");
 
+    // Snapmaker Orca: a second time for the exits that never went through shutdown(); idempotent.
+    if (m_mesh_lod_cache)
+        m_mesh_lod_cache->shutdown();
+
     if (m_agent)
         m_agent->set_printer_agent(nullptr);
     NetworkAgentFactory::clear_printer_agent_cache();
@@ -3514,6 +3525,8 @@ bool GUI_App::on_init_inner()
     BOOST_LOG_TRIVIAL(info) << boost::format("gui mode, Current Snapmaker_Orca Version %1%")%Snapmaker_VERSION;
     GUI_App::log_version_info();
     BOOST_LOG_TRIVIAL(info) << get_system_info();
+    // Snapmaker Orca: the figure the render LOD admits its background jobs against (0 = unknown).
+    BOOST_LOG_TRIVIAL(info) << "available physical memory: " << (CpuMemory::available_bytes() >> 20) << " MiB";
 
 // initialize label colors and fonts
     init_label_colours();
@@ -3954,6 +3967,11 @@ bool GUI_App::on_init_inner()
         scrn->SetText(scrn_txt, 70);
         wxYield();
     }
+    // Snapmaker Orca: create the render LOD cache before the first canvas and enable it from the
+    // preference (default false); disabled, it has no worker pool.
+    if (!m_mesh_lod_cache)
+        m_mesh_lod_cache = std::make_shared<MeshLodCache>();
+    m_mesh_lod_cache->set_enabled(app_config->get_bool(SETTING_OPENGL_MESH_LOD));
     BOOST_LOG_TRIVIAL(info) << "create the main window";
     mainframe = new MainFrame();
     if (!m_updateDialog)
@@ -9969,6 +9987,8 @@ void GUI_App::open_preferences(PreferencesTab tab, const std::string& highlight_
     std::vector<std::string> previous_opengl_render_settings;
     for (const char* key : opengl_render_setting_keys)
         previous_opengl_render_settings.emplace_back(app_config->get(key));
+    // Snapmaker Orca: render LOD is not read per frame, a change is applied below.
+    const bool previous_mesh_lod = app_config->get_bool(SETTING_OPENGL_MESH_LOD);
 
     bool need_recreate_gui = false;
     std::string pending_language;
@@ -10015,6 +10035,24 @@ void GUI_App::open_preferences(PreferencesTab tab, const std::string& highlight_
     if (opengl_render_settings_changed && !need_recreate_gui && this->plater_ != nullptr) {
         this->plater_->set_current_canvas_as_dirty();
         this->plater_->get_current_canvas3D()->force_set_focus();
+    }
+
+    // Snapmaker Orca: apply the render LOD preference at once. Rebuilding the volumes acquires or
+    // drops GLVolume::m_lod (dropping cancels the jobs); preview shells drop their reduced models
+    // and render_shells() draws them at full detail until the next load_shells().
+    const bool mesh_lod = app_config->get_bool(SETTING_OPENGL_MESH_LOD);
+    if (mesh_lod != previous_mesh_lod && m_mesh_lod_cache) {
+        m_mesh_lod_cache->set_enabled(mesh_lod);
+        if (!need_recreate_gui && this->plater_ != nullptr) {
+            for (GLCanvas3D* canvas : { this->plater_->get_view3D_canvas3D(), this->plater_->get_assmeble_canvas3D() }) {
+                if (canvas == nullptr)
+                    continue;
+                canvas->reload_scene(true, true);
+                canvas->set_as_dirty();
+            }
+            if (GLCanvas3D* preview = this->plater_->get_preview_canvas3D(); preview != nullptr)
+                preview->on_render_lod_changed();
+        }
     }
 
     if (!pending_language.empty()) {

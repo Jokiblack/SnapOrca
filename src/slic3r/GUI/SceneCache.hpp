@@ -3,6 +3,7 @@
 #include "libslic3r/Point.hpp"
 
 #include <array>
+#include <cfloat>
 #include <vector>
 
 namespace Slic3r {
@@ -25,9 +26,17 @@ public:
         std::vector<int> hover_plate_icon_idxs;
         int gizmo_hover_id{ -1 };
         bool render_preview{ true };
+        // Arguments of GLVolumeCollection::update_lod() that can change without marking the scene
+        // dirty. A replay skips update_lod(), so keying on them makes it miss, not a stale frame.
+        bool   lod_allowed{ false };
+        float  lod_pixel_scale{ 1.f };
+        double lod_pin_above_z{ DBL_MAX };
 
         bool operator == (const Key& other) const {
             return size == other.size && render_preview == other.render_preview &&
+                   lod_allowed == other.lod_allowed &&
+                   lod_pixel_scale == other.lod_pixel_scale &&
+                   lod_pin_above_z == other.lod_pin_above_z &&
                    gizmo_hover_id == other.gizmo_hover_id &&
                    sinking_hover_volume_idxs == other.sinking_hover_volume_idxs &&
                    hover_plate_icon_idxs == other.hover_plate_icon_idxs &&

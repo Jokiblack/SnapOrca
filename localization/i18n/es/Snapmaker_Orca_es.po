@@ -39158,6 +39158,50 @@ msgstr ""
 "¿Sabía que, al imprimir materiales propensos a deformarse como el ABS, aumentar adecuadamente la temperatura de la cama puede reducir la probabilidad de deformación?"
 
 # AI Translated
+msgid "Simplify distant objects"
+msgstr "Simplificar los objetos lejanos"
+
+# AI Translated
+msgid "Vendor profile updates only through Snapmaker OTA"
+msgstr "Actualizar los perfiles de fabricante solo por OTA de Snapmaker"
+
+# AI Translated
+msgid ""
+"Skips the OrcaSlicer profile server when checking for printer profile "
+"updates: the built-in profiles then only change with the Snapmaker preset "
+"package or with the application itself. The new version notice is not "
+"affected."
+msgstr ""
+"Omite el servidor de perfiles de OrcaSlicer al buscar actualizaciones de los "
+"perfiles de impresora: los perfiles integrados solo cambian entonces con el "
+"paquete de preajustes de Snapmaker o con la propia aplicación. El aviso de "
+"versión nueva no se ve afectado."
+
+# AI Translated
+msgid ""
+"Draws objects that are small on screen from a reduced copy of their mesh, "
+"which speeds up large plates. Selected objects, slicing, picking, measuring, "
+"thumbnails and exports always use the full mesh. Not used while wireframe, a "
+"section view, layer height editing or one of the tools Simplify, Cut, Mesh "
+"Boolean, Measure and Assemble is active. Takes effect immediately."
+msgstr ""
+"Dibuja los objetos que se ven pequeños en pantalla a partir de una copia "
+"reducida de su malla, lo que acelera las bandejas grandes. Los objetos "
+"seleccionados, el laminado, la selección con el ratón, la medición, las "
+"miniaturas y las exportaciones usan siempre la malla completa. No se usa con "
+"el modo alámbrico, la vista en sección, la edición de altura de capa ni con "
+"las herramientas Simplificar, Cortar, Operación booleana, Medir y Ensamblar "
+"activas. Surte efecto de inmediato."
+
+# AI Translated
+msgid ""
+"LOD: objects drawn at full / medium / small detail, shown while Simplify "
+"distant objects is on."
+msgstr ""
+"LOD: objetos dibujados con detalle completo / medio / reducido; se muestra "
+"mientras Simplificar los objetos lejanos está activado."
+
+# AI Translated
 #~ msgid "Note: Inconsistent nozzle diameters. Current version does not support mixed diameter printing. Please select one nozzle for this print."
 #~ msgstr "Nota: los diámetros de boquilla no coinciden. La versión actual no admite imprimir con diámetros mezclados. Seleccione una sola boquilla para esta impresión."
 
