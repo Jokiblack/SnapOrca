@@ -81,6 +81,9 @@ Fill* Fill::new_from_type(const InfillPattern type)
     case ipCubic:               return new FillCubic();
     case ipQuarterCubic:        return new FillQuarterCubic();
     case ipArchimedeanChords:   return new FillArchimedeanChords();
+    // Same filler as ipArchimedeanChords; the ironing specific lead-in and center-out ordering are
+    // selected by FillParams::extrusion_role inside FillPlanePath::_fill_surface_single().
+    case ipIroningArchimedeanSpiral: return new FillArchimedeanChords();
     case ipHilbertCurve:        return new FillHilbertCurve();
     case ipOctagramSpiral:      return new FillOctagramSpiral();
     case ipAdaptiveCubic:       return new FillAdaptive::Filler();
