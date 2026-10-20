@@ -570,14 +570,18 @@ void AppConfig::set_defaults()
     // Snapmaker Orca: each filament gets the preset made for the nozzle size of the tool head
     // that prints it (libslic3r/NozzleFilamentPresets.hpp). Read by GUI_App into
     // PresetBundle::nozzle_filament_enabled; the command line never sets that member.
+    // Off by default: the rule also swaps a filament preset made for another size while every
+    // tool head carries the printer preset's size.
     if (get("filament_follows_nozzle").empty()) {
-        set_bool("filament_follows_nozzle", true);
+        set_bool("filament_follows_nozzle", false);
     }
 
     // Snapmaker Orca: a tool head of another nozzle size prints with the speeds of a process preset
     // for its size (PerHeadProcess.hpp). GUI_App copies it into PresetBundle::process_follows_nozzle.
+    // Off by default: its High Flow rule also re-picks the preset of a home-size head whose flow is
+    // High Flow, which would change the G-code of a U1 with four nozzles of one size.
     if (get("process_follows_nozzle").empty()) {
-        set_bool("process_follows_nozzle", true);
+        set_bool("process_follows_nozzle", false);
     }
 
     if (get("group_filament_presets").empty()) {
