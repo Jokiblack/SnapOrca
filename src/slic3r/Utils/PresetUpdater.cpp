@@ -155,6 +155,9 @@ struct Update
 	bool is_directory {false};
 	// Orca: a vendor update may be the cache-only form.
 	bool is_opc {false};
+	// The device printer configs (resources/printers -> <data_dir>/printers). Tagged "bbl"
+	// for the update dialog, but the directory holds no presets.
+	bool is_printer_config {false};
 
     bool can_install{true};
 
@@ -195,6 +198,13 @@ struct Update
                 if (vendor == "flutter_web") {
                     if (!fs::exists(staging / "version.json")) {
                         BOOST_LOG_TRIVIAL(error) << "Web resource staging is missing version.json";
+                        return false;
+                    }
+                    return true;
+                }
+                if (is_printer_config) {
+                    if (!fs::exists(staging / "version.txt")) {
+                        BOOST_LOG_TRIVIAL(error) << "Printer config staging is missing version.txt";
                         return false;
                     }
                     return true;
@@ -1717,6 +1727,7 @@ Updates PresetUpdater::priv::get_printer_config_updates(bool update) const
         } catch (...) {}
     }
     updates.updates.emplace_back(std::move(resc_folder), std::move(config_folder), version, "bbl", change_log, version.comment, false, true);
+    updates.updates.back().is_printer_config = true;
     return updates;
 }
 
