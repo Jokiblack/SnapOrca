@@ -1,6 +1,8 @@
 // Snapmaker Orca: render LOD, the GUI-less part (libslic3r/MeshLod). Pins the level rule and
 // error budgets: select_lod_level(), build_lod_meshes(), estimate_lod_job_bytes(), GUI-side rules.
 #include <catch2/catch_all.hpp>
+#include <catch2/matchers/catch_matchers.hpp>
+#include <catch2/matchers/catch_matchers_floating_point.hpp>
 
 #include <algorithm>
 #include <atomic>
