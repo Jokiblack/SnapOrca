@@ -581,6 +581,29 @@ private:
      */
     void draw_circles();
 
+    // a base support area carried by less than this fraction of itself is treated as floating and dropped
+    static constexpr double MIN_CARRIED_RATIO = 0.3;
+    // An interface layer is drawn as the whole overhang and bridges across the branch tips under it, so the
+    // fraction of itself it rests on is small by design and says nothing about whether it prints. Ask only
+    // that it be anchored at all. Pruning a region also takes away what the regions above it stood on, so
+    // holding an interface to the base threshold does not stay local: it takes the branch above it down too.
+    static constexpr double MIN_CARRIED_RATIO_INTERFACE = 0.02;
+
+    /*!
+     * \brief Removes support areas that nothing below them can carry.
+     *
+     * drop_nodes() may stop a branch without giving it a child (it ran into the model), and draw_circles()
+     * paints such a node anyway, so its area can end up hanging in mid-air. Walking the layers bottom up and
+     * dropping every region that is carried neither by the support underneath nor by the model catches those
+     * leftovers regardless of which code path produced them.
+     *
+     * A base region stacks on the one below and is held to MIN_CARRIED_RATIO, while an interface region
+     * bridges across the branch tips and only has to be anchored at all, hence MIN_CARRIED_RATIO_INTERFACE.
+     *
+     * Called from draw_circles() once the areas are final and before anything reads them back.
+     */
+    void prune_floating_supports();
+
     /*!
      * \brief Drops down the nodes of the tree support towards the build plate.
      *
