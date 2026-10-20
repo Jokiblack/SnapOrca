@@ -2744,14 +2744,17 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
             for (unsigned int ext : object->object_extruders())
                 if (ext < is_mixed.size() && is_mixed[ext])
                     return {L("Spiral (vase) mode does not work when an object contains more than one material."), nullptr, "spiral_mode"};
-        assert(m_objects.size() == 1);
-        const auto all_regions = m_objects.front()->all_regions();
-        if (all_regions.size() > 1) {
-            // Orca: make sure regions are not compatible
-            if (std::any_of(all_regions.begin() + 1, all_regions.end(), [this, ra = all_regions.front()](const auto rb) {
-                return !Layer::is_perimeter_compatible(*this, ra, rb);
-            })) {
-                return {L("Spiral (vase) mode does not work when an object contains more than one material."), nullptr, "spiral_mode"};
+        // BBS: check every object, not only the first one: with "By object" sequence several objects
+        // may be printed, and a height range modifier on any of them can split it into several regions.
+        for (const PrintObject *object : m_objects) {
+            const auto all_regions = object->all_regions();
+            if (all_regions.size() > 1) {
+                // Orca: make sure regions are not compatible
+                if (std::any_of(all_regions.begin() + 1, all_regions.end(), [this, ra = all_regions.front()](const auto rb) {
+                    return !Layer::is_perimeter_compatible(*this, ra, rb);
+                })) {
+                    return {L("Spiral (vase) mode does not work when an object contains regions with different print settings."), object, "spiral_mode"};
+                }
             }
         }
     }
