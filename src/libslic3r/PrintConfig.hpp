@@ -135,6 +135,8 @@ enum InfillPattern : int {
     ipCrossHatch, ipTpmsD, ipTpmsFK, ipGyroid,
     ipConcentric, ipSpiralInset, ipHilbertCurve, ipArchimedeanChords, ipOctagramSpiral,
     ipSupportBase, ipConcentricInternal,
+    // Ironing only: Archimedean spiral printed from the center outwards.
+    ipIroningArchimedeanSpiral,
     ipCount,
 };
 
