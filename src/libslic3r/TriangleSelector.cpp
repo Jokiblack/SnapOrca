@@ -19,9 +19,11 @@
 #include <cstdint>
 #include <cstdlib>
 #include <functional>
+#include <limits>
 #include <memory>
 #include <optional>
 #include <tbb/parallel_for.h>
+#include <type_traits>
 #include <utility>
 #include <vector>
 #include <queue>
@@ -1863,7 +1865,12 @@ void TriangleSelector::deserialize(const TriangleSplittingData  &data,
                 ++extension_count;
                 nibble = next_nibble();
             }
-            return EnforcerBlockerType(nibble + 15 * extension_count + 3);
+            // Decode as int and range-check before converting: a long 0b1111 run from a crafted 3MF
+            // would otherwise wrap the narrow EnforcerBlockerType negative and slip past the max_ebt check below.
+            const int state_i = nibble + 15 * extension_count + 3;
+            if (state_i > int(std::numeric_limits<std::underlying_type_t<EnforcerBlockerType>>::max()))
+                return EnforcerBlockerType::NONE;
+            return EnforcerBlockerType(state_i);
         };
 
         parents.clear();
