@@ -1369,6 +1369,7 @@ static std::vector<std::string> s_Preset_print_options{
     "overhang_reverse_internal_only",
     "wall_direction",
     "seam_position",
+    "seam_placement_away_from_overhangs",
     "staggered_inner_seams",
     "wall_sequence",
     "is_infill_first",
