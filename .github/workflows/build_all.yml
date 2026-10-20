@@ -229,6 +229,53 @@ jobs:
         run: |
           chmod +x validator-bin/Snapmaker_Orca_profile_validator
           ./validator-bin/Snapmaker_Orca_profile_validator -p "${{ github.workspace }}/resources/profiles" -s -l 2
+  # SnapOrca: G-code regression for the Snapmaker U1. Slices a fixed set of
+  # small models with the PR-built x86_64 AppImage and the shipped U1 profiles
+  # (4 x 0.4 mm heads, 0.20mm Standard, PLA Basic; plus a 0.4/0.6 mixed-nozzle
+  # variant) and diffs the normalized G-code against tests/gcode_regression/
+  # reference. Any difference fails the job and uploads the diffs and the
+  # generated G-code; a case with no reference yet (bootstrap) only uploads it.
+  gcode_regression_linux:
+    name: G-code regression (Linux x86_64)
+    needs: build_linux
+    if: ${{ !cancelled() && success() }}
+    runs-on: ${{ vars.SELF_HOSTED && 'orca-lnx-server' || 'ubuntu-24.04' }}
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v7
+      - name: Download AppImage
+        uses: actions/download-artifact@v8
+        with:
+          # "Upload artifacts Ubuntu" in build_orca.yml; the x86_64 leg has no
+          # arch suffix, the aarch64 one is Snapmaker_Orca_Linux_ubuntu_2404_aarch64_*.
+          pattern: Snapmaker_Orca_Linux_ubuntu_2404_[PV]*
+          path: appimage
+          merge-multiple: true
+      - name: Extract AppImage
+        run: |
+          set -e
+          APPIMAGE=$(find appimage -maxdepth 1 -name '*.AppImage' ! -name '*aarch64*' | head -1)
+          test -n "$APPIMAGE" || { echo "no x86_64 AppImage in the run's artifacts"; ls -R appimage; exit 1; }
+          chmod +x "$APPIMAGE"
+          (cd appimage && "../$APPIMAGE" --appimage-extract > /dev/null)
+          appimage/squashfs-root/AppRun --help | head -1
+      - name: Slice and compare
+        id: regression
+        timeout-minutes: 90
+        run: |
+          python3 -I tests/gcode_regression/gcode_regression.py \
+            --slicer appimage/squashfs-root --out gcode-regression-out --allow-missing
+      - name: Upload G-code and diffs
+        if: ${{ !cancelled() }}
+        uses: actions/upload-artifact@v7
+        with:
+          name: gcode-regression-diff
+          path: |
+            gcode-regression-out/gcode
+            gcode-regression-out/diff
+            gcode-regression-out/run/*.cmd
+            gcode-regression-out/run/*.log
+          if-no-files-found: warn
   publish_test_results:
     name: Publish Test Results
     needs: [unit_tests_linux_x86_64, unit_tests_linux_aarch64, unit_tests_windows_x64, unit_tests_windows_arm64, unit_tests_macos_arm64, unit_tests_flatpak_x86_64, unit_tests_flatpak_aarch64]

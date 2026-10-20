@@ -140,20 +140,6 @@ def check_mesh(v, t):
         raise RuntimeError("malla con las normales hacia dentro (volumen %g)" % vol)
 
 
-def write_stl_ascii(path, name, v, t):
-    lines = ["solid %s" % name]
-    for a, b, c in t:
-        lines.append("  facet normal %.6e %.6e %.6e" % normal(v[a], v[b], v[c]))
-        lines.append("    outer loop")
-        for i in (a, b, c):
-            lines.append("      vertex %.6e %.6e %.6e" % v[i])
-        lines.append("    endloop")
-        lines.append("  endfacet")
-    lines.append("endsolid %s" % name)
-    with open(path, "w", newline="\n") as f:
-        f.write("\n".join(lines) + "\n")
-
-
 # ----------------------------------------------------------------------------- 3mf
 
 def fmt(x):
@@ -274,9 +260,12 @@ def generate_models(models_dir):
     def obj(name, v, t, pos, extruder=1, paint=None):
         return dict(name=name, vertices=v, triangles=t, position=pos, extruder=extruder, paint=paint)
 
-    p = os.path.join(models_dir, "cube20.stl")
-    write_stl_ascii(p, "cube20", cv, ct)
-    paths["cube20.stl"] = p
+    # Todos los modelos son proyectos 3mf "propios" (tag Application): la CLI respeta las posiciones y
+    # no pasa por el arrange (need_arrange = false), que es otra ruta de código con sus propias
+    # estimaciones de torre de purga.
+    p = os.path.join(models_dir, "cube20.3mf")  # un cubo en el extrusor 1
+    write_3mf(p, [obj("cube_T1", cv, ct, CENTER, extruder=1)])
+    paths["cube20.3mf"] = p
 
     p = os.path.join(models_dir, "cube20_e2.3mf")  # un cubo en el extrusor 2 (cabezal de 0,6 mm al mezclar)
     write_3mf(p, [obj("cube_T2", cv, ct, CENTER, extruder=2)])
@@ -329,7 +318,7 @@ def build_cases():
         # Un filamento. Con boquillas mezcladas el cubo va al extrusor 2 (0,6 mm) con 2 filamentos
         # cargados, para que la boquilla distinta se use de verdad.
         if not mixed:
-            add("cube_1f", "cube20.stl", 1)
+            add("cube_1f", "cube20.3mf", 1)
         else:
             add("cube_1f_mixed", "cube20_e2.3mf", 2, mixed=True)
         add("cubes_4f_tower" + suffix, "cubes4.3mf", 4, {"enable_prime_tower": "1"}, mixed, colours=True)
