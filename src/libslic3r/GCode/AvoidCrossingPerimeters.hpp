@@ -15,6 +15,7 @@ namespace Slic3r {
 class GCode;
 class Layer;
 class Point;
+class Print;
 
 class AvoidCrossingPerimeters
 {
@@ -55,6 +56,18 @@ public:
         }
     };
 
+    // Cache of the external boundary polygons (see get_boundary_external()), valid for a single print height.
+    struct ExternalBoundaryCache {
+        struct Entry {
+            float    perimeter_spacing;
+            bool     is_support_layer;
+            Polygons boundary;
+        };
+        const Print       *print { nullptr };
+        coordf_t           print_z { -1. };
+        std::vector<Entry> entries;
+    };
+
 private:
     bool           m_use_external_mp { false };
     // just for the next travel move
@@ -72,6 +85,8 @@ private:
     Boundary m_internal;
     // Store all needed data for travels outside object
     Boundary m_external;
+    // External boundary polygons shared by all objects printed at the same height.
+    ExternalBoundaryCache m_external_boundary_cache;
 };
 
 } // namespace Slic3r
