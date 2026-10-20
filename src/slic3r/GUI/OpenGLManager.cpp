@@ -300,7 +300,7 @@ bool OpenGLManager::init_gl(bool popup_error)
             BOOST_LOG_TRIVIAL(warning) << "Found Framebuffer Type unknown!"<< std::endl;
         }
 
-        if (GLEW_VERSION_3_0 != 0)
+        if (GLAD_GL_VERSION_3_0 != 0)
         {
             _vertexArraysSupported = true;
             BOOST_LOG_TRIVIAL(info) << "Standard Vertex Array Object support enabled." << std::endl;
