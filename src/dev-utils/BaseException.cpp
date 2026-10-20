@@ -17,16 +17,27 @@
 #include <boost/nowide/fstream.hpp>
 #include <cstdarg>
 #include <cstddef>
+#include <csignal>
+#include <cstdint>
+#include <cstdlib>
 #include <ctime>
+#include <exception>
 #include <excpt.h>
+#include <dbghelp.h>
+#include <boost/nowide/convert.hpp>
+#include "libslic3r/Utils.hpp"
 
 static std::string g_log_folder;
 static std::atomic<int> g_crash_log_count = 0;
 static std::mutex g_dump_mutex;
+// Only the first fatal error of the process is reported: the others are its consequences.
+static bool g_crash_reported = false;
+static LPTOP_LEVEL_EXCEPTION_FILTER g_previous_filter = nullptr;
 
 CBaseException::CBaseException(HANDLE hProcess, WORD wPID, LPCTSTR lpSymbolPath, PEXCEPTION_POINTERS pEp):
 	CStackWalker(hProcess, wPID, lpSymbolPath)
 {
+	m_pEp = NULL;
 	if (NULL != pEp)
 	{
 		m_pEp = new EXCEPTION_POINTERS;
@@ -38,14 +49,13 @@ CBaseException::CBaseException(HANDLE hProcess, WORD wPID, LPCTSTR lpSymbolPath,
 	std::stringstream buf;
 
 	if (!g_log_folder.empty()) {
-		buf << std::put_time(now_time, "crash_%a_%b_%d_%H_%M_%S_") <<g_crash_log_count++ <<".log";
+		buf << std::put_time(now_time, "crash_%a_%b_%d_%H_%M_%S_") <<g_crash_log_count++;
 		auto log_folder = (boost::filesystem::path(g_log_folder) / "log").make_preferred();
 		if (!boost::filesystem::exists(log_folder)) {
 		    boost::filesystem::create_directory(log_folder);
 	    }
-		auto crash_log_path = boost::filesystem::path(log_folder / buf.str()).make_preferred();
-		std::string log_filename = crash_log_path.string();
-		output_file->open(log_filename, std::ios::out | std::ios::app);
+		m_report_path = boost::filesystem::path(log_folder / buf.str()).make_preferred().string();
+		output_file->open(m_report_path + ".log", std::ios::out | std::ios::app);
 
 		// Output app build info in crash log so we could look for the correct PDB files
         OutputString(_T("%s\n\n"), _T(SLIC3R_APP_NAME " " SoftFever_VERSION " Build " GIT_COMMIT_HASH GIT_COMMIT_SUFFIX));
@@ -276,22 +286,145 @@ void CBaseException::ShowExceptionResoult(DWORD dwExceptionCode)
 
 LONG WINAPI CBaseException::UnhandledExceptionFilter(PEXCEPTION_POINTERS pExceptionInfo )
 {
-	if (pExceptionInfo->ExceptionRecord->ExceptionCode < 0x80000000
+	if (pExceptionInfo->ExceptionRecord->ExceptionCode >= 0x80000000
 		//BBS: Load project on computers with SDC may trigger this exception (in ShowModal()),
 		//     It's not fatal and should be ignored, or there will be lots of meaningless crash logs
-		|| pExceptionInfo->ExceptionRecord->ExceptionCode==0xe0434352)
-		//BBS: ignore the exception when copy preset
-		//|| pExceptionInfo->ExceptionRecord->ExceptionCode==0xe06d7363)
-	{
-		//BOOST_LOG_TRIVIAL(warning) << __FUNCTION__ << boost::format(": got an ExceptionCode %1%, skip it!") % pExceptionInfo->ExceptionRecord->ExceptionCode;
-		return EXCEPTION_CONTINUE_SEARCH;
-	}
-    g_dump_mutex.lock();
-	CBaseException base(GetCurrentProcess(), GetCurrentProcessId(), NULL, pExceptionInfo);
-	base.ShowExceptionInformation();
-    g_dump_mutex.unlock();
+		&& pExceptionInfo->ExceptionRecord->ExceptionCode != 0xe0434352)
+		report_fatal(pExceptionInfo, "unhandled exception");
 
-	return EXCEPTION_CONTINUE_SEARCH;
+	// Hand over to the filter we replaced (the CRT's, which calls std::terminate() for a C++
+	// exception, or crashpad's when Sentry is on); without one the process dies through WER.
+	return g_previous_filter ? g_previous_filter(pExceptionInfo) : EXCEPTION_CONTINUE_SEARCH;
+}
+
+namespace {
+struct CrashReportJob
+{
+	PEXCEPTION_POINTERS ep;
+	HANDLE              thread;
+	DWORD               thread_id;
+	std::string         reason;
+};
+
+void on_terminate()
+{
+	std::string reason = "std::terminate() was called";
+	if (std::exception_ptr ex = std::current_exception()) {
+		try {
+			std::rethrow_exception(ex);
+		} catch (const std::exception &e) {
+			reason += std::string(" on an uncaught exception: ") + e.what();
+		} catch (...) {
+			reason += " on an uncaught exception of a non-standard type";
+		}
+	}
+	// Logged even when the unhandled exception filter already wrote the report, which lacks what().
+	BOOST_LOG_TRIVIAL(fatal) << reason;
+	Slic3r::flush_logs();
+	CBaseException::report_fatal(nullptr, reason);
+	std::abort();
+}
+
+void on_abort(int) { CBaseException::report_fatal(nullptr, "abort() was called"); }
+
+void on_invalid_parameter(const wchar_t *, const wchar_t *, const wchar_t *, unsigned int, uintptr_t)
+{
+	CBaseException::report_fatal(nullptr, "invalid parameter passed to a C runtime function");
+	std::abort();
+}
+
+void on_purecall()
+{
+	CBaseException::report_fatal(nullptr, "pure virtual function call");
+	std::abort();
+}
+} // namespace
+
+void CBaseException::install_crash_handlers()
+{
+	g_previous_filter = SetUnhandledExceptionFilter(CBaseException::UnhandledExceptionFilter);
+	// The terminate handler is per thread in the UCRT; other threads' uncaught C++ exceptions
+	// reach the unhandled exception filter above instead.
+	std::set_terminate(on_terminate);
+	// abort(), invalid CRT parameters and pure calls fail fast, skipping the filter.
+	std::signal(SIGABRT, on_abort);
+	_set_invalid_parameter_handler(on_invalid_parameter);
+	_set_purecall_handler(on_purecall);
+}
+
+void CBaseException::report_fatal(PEXCEPTION_POINTERS pEp, const std::string& reason)
+{
+	// Static: the crashed thread may have almost no stack left, and a worker that outlives the
+	// wait below must not read a dead frame.
+	static CONTEXT          context;
+	static EXCEPTION_RECORD record;
+	static EXCEPTION_POINTERS pointers;
+	static CrashReportJob   job;
+
+	// Threads crashing together wait here for the first report instead of dying half-way.
+	std::lock_guard<std::mutex> lock(g_dump_mutex);
+	if (g_crash_reported)
+		return;
+	g_crash_reported = true;
+
+	if (pEp == nullptr) {
+		// No exception: describe the calling thread as it stands.
+		RtlCaptureContext(&context);
+		record.ExceptionCode = 0x40000015; // STATUS_FATAL_APP_EXIT, what abort() reports
+#if defined(_M_X64)
+		record.ExceptionAddress = reinterpret_cast<PVOID>(context.Rip);
+#elif defined(_M_ARM64)
+		record.ExceptionAddress = reinterpret_cast<PVOID>(context.Pc);
+#elif defined(_M_IX86)
+		record.ExceptionAddress = reinterpret_cast<PVOID>(context.Eip);
+#endif
+		pointers = { &record, &context };
+		pEp = &pointers;
+	}
+	job = { pEp, NULL, GetCurrentThreadId(), reason };
+	DuplicateHandle(GetCurrentProcess(), GetCurrentThread(), GetCurrentProcess(), &job.thread, 0, FALSE, DUPLICATE_SAME_ACCESS);
+
+	// Report from a fresh thread: the crashed one may be out of stack, and MiniDumpWriteDump
+	// records another thread more reliably than its caller. The wait is bounded so that a lock
+	// held by the crashed thread delays the exit instead of hanging the process.
+	if (HANDLE worker = CreateThread(NULL, 0, CrashReportThread, &job, 0, NULL)) {
+		WaitForSingleObject(worker, 60 * 1000);
+		CloseHandle(worker);
+	}
+}
+
+DWORD WINAPI CBaseException::CrashReportThread(LPVOID param)
+{
+	const CrashReportJob *job = static_cast<const CrashReportJob *>(param);
+	CBaseException base(GetCurrentProcess(), GetCurrentProcessId(), NULL, job->ep);
+	// Minidump first: it needs no symbols and survives whatever goes wrong afterwards.
+	base.WriteMiniDump(job->thread_id);
+	*base.output_file << "Reason: " << job->reason << "\n";
+	base.ShowExceptionInformation(job->thread != NULL ? job->thread : GetCurrentThread());
+	// Last, as the logger may be what crashed.
+	BOOST_LOG_TRIVIAL(fatal) << "Fatal error (" << job->reason << "), crash report: " << base.m_report_path << ".log/.dmp";
+	Slic3r::flush_logs();
+	return 0;
+}
+
+void CBaseException::WriteMiniDump(DWORD dwThreadId)
+{
+	if (m_report_path.empty() || m_pEp == NULL)
+		return;
+	const std::string dump_path = m_report_path + ".dmp";
+	HANDLE file = CreateFileW(boost::nowide::widen(dump_path).c_str(), GENERIC_WRITE, 0, NULL, CREATE_ALWAYS, FILE_ATTRIBUTE_NORMAL, NULL);
+	if (file == INVALID_HANDLE_VALUE) {
+		*output_file << "Minidump: cannot create " << dump_path << "\n";
+		return;
+	}
+	MINIDUMP_EXCEPTION_INFORMATION exception_info = { dwThreadId, m_pEp, FALSE };
+	// Stacks plus the memory they point to: enough to inspect locals, a few MB instead of a full dump.
+	const MINIDUMP_TYPE type = MINIDUMP_TYPE(MiniDumpWithIndirectlyReferencedMemory | MiniDumpWithThreadInfo |
+	                                         MiniDumpWithUnloadedModules | MiniDumpWithHandleData);
+	const BOOL ok = MiniDumpWriteDump(GetCurrentProcess(), GetCurrentProcessId(), file, type, &exception_info, NULL, NULL);
+	CloseHandle(file);
+	*output_file << "Minidump: " << dump_path << (ok ? "" : " (failed)") << "\n\n";
+	output_file->flush();
 }
 
 LONG WINAPI CBaseException::UnhandledExceptionFilter2(PEXCEPTION_POINTERS pExceptionInfo )
@@ -383,8 +516,10 @@ void CBaseException::STF(unsigned int ui,  PEXCEPTION_POINTERS pEp)
 	throw base;
 }
 
-void CBaseException::ShowExceptionInformation()
+void CBaseException::ShowExceptionInformation(HANDLE hThread)
 {
+	if (m_pEp == NULL)
+		return;
 	OutputString(_T("Exceptions:\r\n"));
 	ShowExceptionResoult(m_pEp->ExceptionRecord->ExceptionCode);
 
@@ -408,5 +543,5 @@ void CBaseException::ShowExceptionInformation()
 
 	ShowRegistorInformation(m_pEp->ContextRecord);
 
-	ShowCallstack(GetCurrentThread(), m_pEp->ContextRecord);
+	ShowCallstack(hThread, m_pEp->ContextRecord);
 }
