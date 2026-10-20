@@ -1710,6 +1710,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionInt, ghost_lines_gap_after_wall))
     ((ConfigOptionInt, ghost_lines_bond_layers))
     ((ConfigOptionBool, ghost_lines_extra_wall))
+    ((ConfigOptionBool, ghost_lines_outer_wall_first))
     ((ConfigOptionFloatsOrPercentsNullable, top_surface_line_width))
     ((ConfigOptionInt, top_shell_layers))
     ((ConfigOptionFloat, top_shell_thickness))

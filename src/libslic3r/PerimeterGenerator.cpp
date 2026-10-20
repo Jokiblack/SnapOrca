@@ -1903,7 +1903,9 @@ void PerimeterGenerator::process_classic()
             // if brim will be printed, reverse the order of perimeters so that
             // we continue inwards after having finished the brim
             // TODO: add test for perimeter order
-            bool is_outer_wall_first = this->config->wall_sequence == WallSequence::OuterInner;
+            // SnapOrca: ghost lines, the outer wall goes first where an internal feature joins it.
+            const bool ghost_lines_outer_first = this->ghost_lines_layer && this->config->ghost_lines_outer_wall_first;
+            bool is_outer_wall_first = this->config->wall_sequence == WallSequence::OuterInner || ghost_lines_outer_first;
             if (is_outer_wall_first ||
                 //BBS: always print outer wall first when there indeed has brim.
                 // btLeadingEdgeOnly is an outer brim too (a belt brim at the part's first contact).
@@ -2860,6 +2862,9 @@ void PerimeterGenerator::process_arachne()
         	is_outer_wall_first =
             	this->config->wall_sequence == WallSequence::OuterInner;
         }
+        // SnapOrca: ghost lines, the outer wall goes first where an internal feature joins it.
+        if (this->ghost_lines_layer && this->config->ghost_lines_outer_wall_first)
+            is_outer_wall_first = true;
         if (is_outer_wall_first) {
             start_perimeter = 0;
             end_perimeter = int(perimeters.size());
@@ -2946,7 +2951,8 @@ void PerimeterGenerator::process_arachne()
         }
 
        // printf("New Layer: Layer ID %d\n",layer_id); //debug - new layer
-        if (this->config->wall_sequence == WallSequence::InnerOuterInner) {
+        if (this->config->wall_sequence == WallSequence::InnerOuterInner &&
+            ! (this->ghost_lines_layer && this->config->ghost_lines_outer_wall_first)) {
             if (ordered_extrusions.size() > 2) { // 3 walls minimum needed to do inner outer inner ordering
                 int position = 0; // index to run the re-ordering for multiple external perimeters in a single island.
                 int arr_i, arr_j = 0;    // indexes to run through the walls in the for loops

@@ -8944,6 +8944,15 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def = this->add("ghost_lines_outer_wall_first", coBool);
+    def->label = L("Outer wall first");
+    def->category = L("Quality");
+    def->tooltip = L("Print the outer wall before the inner walls on the treated layers, so that it has cooled and set "
+                     "before the internal feature is printed against it. The other layers keep the wall printing order "
+                     "of the profile.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("detect_thin_wall", coBool);
     def->label = L("Detect thin walls");
     def->category = L("Strength");
