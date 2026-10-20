@@ -14,6 +14,7 @@
   "purge_in_prime_tower": "0",
   "enable_filament_ramming": "0",
   "nozzle_volume": "0",
+  "machine_max_junction_deviation": ["0"],
   "cooling_tube_retraction": "0",
   "cooling_tube_length": "0",
   "parking_pos_retraction": "0",

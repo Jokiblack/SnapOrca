@@ -2,5 +2,6 @@
   "type": "filament",
   "from": "system",
   "instantiation": "false",
-  "name": "fdm_filament_common"
+  "name": "fdm_filament_common",
+  "filament_adhesiveness_category": ["100"]
 }

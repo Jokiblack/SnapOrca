@@ -10670,6 +10670,9 @@ void PrintConfigDef::handle_legacy(t_config_option_key &opt_key, std::string &va
         "internal_bridge_support_thickness", "top_area_threshold", "reduce_wall_solid_infill","filament_load_time","filament_unload_time",
         "smooth_coefficient", "overhang_totally_speed", "silent_mode",
         "overhang_speed_classic",
+        // Snapmaker Orca 2.4.1 process key that never reached the support generator (GUI and
+        // invalidation only); its presets and 3MFs still carry it.
+        "tree_support_adaptive_layer_height",
         "anisotropic_surfaces", // superseded by top_surface_fill_order / bottom_surface_fill_order
         // Belt printer keys retired before the first release: the global-mode and
         // back-transform switches are presumed on, and the pre-slice axis remap, the
