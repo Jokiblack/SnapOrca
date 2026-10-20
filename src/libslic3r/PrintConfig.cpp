@@ -8953,6 +8953,18 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def = this->add("ghost_lines_outer_wall_flow", coPercent);
+    def->label = L("Outer wall flow");
+    def->category = L("Quality");
+    def->tooltip = L("Flow of the outer wall on the treated layers, as a percentage of its normal flow. A little more "
+                     "material (102-105%) fills the slight dip the internal feature pulls into the outer wall. Set to 0 "
+                     "to leave the flow unchanged.");
+    def->sidetext = "%";
+    def->min = 0;
+    def->max = 200;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionPercent(0));
+
     def = this->add("detect_thin_wall", coBool);
     def->label = L("Detect thin walls");
     def->category = L("Strength");

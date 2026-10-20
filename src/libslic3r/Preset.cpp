@@ -1370,6 +1370,7 @@ static std::vector<std::string> s_Preset_print_options{
     "ghost_lines_bond_layers",
     "ghost_lines_extra_wall",
     "ghost_lines_outer_wall_first",
+    "ghost_lines_outer_wall_flow",
     "detect_overhang_wall",
     "unsupported_wall_last",
     "overhang_reverse",

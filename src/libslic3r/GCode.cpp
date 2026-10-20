@@ -11468,6 +11468,12 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &path_d
         _mm3_per_mm *= m_config.scarf_joint_flow_ratio;
     }
 
+    // SnapOrca: ghost lines, outer wall flow on the layers where an internal feature joins the outer wall.
+    const bool ghost_lines_outer_wall = path.role() == erExternalPerimeter && m_layer != nullptr && m_layer->ghost_lines &&
+                                        m_config.ghost_lines_enable.value;
+    if (ghost_lines_outer_wall && m_config.ghost_lines_outer_wall_flow.value > 0.)
+        _mm3_per_mm *= m_config.ghost_lines_outer_wall_flow.get_abs_value(1.);
+
     if (m_config.set_other_flow_ratios) {
         if (path.role() == erExternalPerimeter) {
             _mm3_per_mm *= m_config.outer_wall_flow_ratio;
