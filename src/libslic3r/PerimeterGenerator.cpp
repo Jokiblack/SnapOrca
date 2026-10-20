@@ -1558,6 +1558,9 @@ void PerimeterGenerator::process_classic()
         int sparse_infill_density = this->config->sparse_infill_density.value;
         if (this->config->alternate_extra_wall && this->layer_id % 2 == 1 && !m_spiral_vase && sparse_infill_density > 0) // add alternating extra wall
             loop_number++;
+        // SnapOrca: ghost lines, one more wall where an internal feature joins the outer wall.
+        if (this->ghost_lines_layer && this->config->ghost_lines_extra_wall && !m_spiral_vase)
+            loop_number++;
         if (this->layer_id == object_config->raft_layers && only_one_wall_first_layer)
             loop_number = 0;
         // Set the topmost layer to be one wall
@@ -2653,6 +2656,9 @@ void PerimeterGenerator::process_arachne()
         int loop_number = this->config->wall_loops + surface.extra_perimeters - 1; // 0-indexed loops
         int sparse_infill_density = this->config->sparse_infill_density.value;
         if (this->config->alternate_extra_wall && this->layer_id % 2 == 1 && !m_spiral_vase && sparse_infill_density > 0) // add alternating extra wall
+            loop_number++;
+        // SnapOrca: ghost lines, one more wall where an internal feature joins the outer wall.
+        if (this->ghost_lines_layer && this->config->ghost_lines_extra_wall && !m_spiral_vase)
             loop_number++;
 
         // Set the bottommost layer to be one wall

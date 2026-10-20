@@ -8936,6 +8936,14 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(0));
 
+    def = this->add("ghost_lines_extra_wall", coBool);
+    def->label = L("Extra wall");
+    def->category = L("Quality");
+    def->tooltip = L("Print one more wall loop on the treated layers, so that the outer wall has more material behind it "
+                     "to resist the pull of the internal feature.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("detect_thin_wall", coBool);
     def->label = L("Detect thin walls");
     def->category = L("Strength");

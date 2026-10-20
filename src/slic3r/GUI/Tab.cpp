@@ -3532,6 +3532,7 @@ void TabPrint::build()
         optgroup->append_single_option_line("ghost_lines_air_gap");
         optgroup->append_single_option_line("ghost_lines_gap_after_wall");
         optgroup->append_single_option_line("ghost_lines_bond_layers");
+        optgroup->append_single_option_line("ghost_lines_extra_wall");
 
         optgroup = page->new_optgroup(L("Precision"), L"param_precision");
         optgroup->append_single_option_line("slice_closing_radius", "quality_settings_precision#slice-gap-closing-radius");

@@ -39202,6 +39202,14 @@ msgid "Print every Nth layer without the air gap, so that the outer wall stays b
 msgstr "Imprime una de cada N capas sin cámara de aire, para que la pared exterior quede unida al interior de la pieza a alturas regulares. Ponga 0 para dejar la cámara en todas las capas tratadas."
 
 # AI Translated
+msgid "Extra wall"
+msgstr "Perímetro adicional"
+
+# AI Translated
+msgid "Print one more wall loop on the treated layers, so that the outer wall has more material behind it to resist the pull of the internal feature."
+msgstr "Imprime un perímetro más en las capas tratadas, para que la pared exterior tenga más material detrás con el que resistir el tirón del elemento interno."
+
+# AI Translated
 msgid "Leave an air gap of this width between the outer wall and the walls and infill behind it, so that the internal feature does not pull on the outer wall when it shrinks. This is what is done in CAD to hide ghost lines, without changing the model. The gap moves the walls behind it inwards and takes the place of infill or gap fill, never of a wall: where the model has no room for it, it is left out. The outer wall stays joined to the rest of the part on the layers without the gap. The gap is never left on the first or the last layer, where it would be exposed by a top or bottom surface, or in spiral vase mode. Classic wall generator only. Set to 0 to disable."
 msgstr "Deja una cámara de aire de este ancho entre la pared exterior y los perímetros y el relleno que hay detrás, para que el elemento interno no tire de la pared exterior al contraerse. Es lo que se hace en CAD para ocultar las líneas fantasma, sin cambiar el modelo. La cámara desplaza hacia dentro los perímetros que hay detrás y ocupa el lugar del relleno o del relleno de huecos, nunca el de un perímetro: donde el modelo no tiene sitio para ella, no se deja. La pared exterior sigue unida al resto de la pieza en las capas sin cámara. La cámara nunca se deja en la primera ni en la última capa, donde la dejaría al descubierto una superficie superior o inferior, ni en modo jarrón. Solo con el generador de perímetros clásico. Ponga 0 para desactivarla."
 
