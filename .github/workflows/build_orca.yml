@@ -230,7 +230,11 @@ jobs:
           if-no-files-found: error
 
       - name: Build system preset cache (macOS)
-        if: runner.os == 'macOS' && !inputs.macos-combine-only
+        # SnapOrca: Snapmaker code reads vendor JSONs straight from resources/profiles
+        # (filament allow list, hot bed/nozzle rules, colour codes, Snapmaker.json), and
+        # shipping the caches prunes those JSONs. Kept off unless the repo variable
+        # SNAPORCA_PRESET_CACHE is 'true'.
+        if: runner.os == 'macOS' && !inputs.macos-combine-only && vars.SNAPORCA_PRESET_CACHE == 'true'
         working-directory: ${{ github.workspace }}
         shell: bash
         # The bundle was already packed from resources/, so the caches have to be
@@ -507,7 +511,11 @@ jobs:
         shell: pwsh
 
       - name: Build system preset cache (Windows)
-        if: runner.os == 'Windows'
+        # SnapOrca: Snapmaker code reads vendor JSONs straight from resources/profiles
+        # (filament allow list, hot bed/nozzle rules, colour codes, Snapmaker.json), and
+        # shipping the caches prunes those JSONs. Kept off unless the repo variable
+        # SNAPORCA_PRESET_CACHE is 'true'.
+        if: runner.os == 'Windows' && vars.SNAPORCA_PRESET_CACHE == 'true'
         shell: cmd
         # Shipped into both the already-installed tree (portable zip, MSIX) and
         # the checkout cpack re-installs from when it builds the NSIS installer.
@@ -637,7 +645,8 @@ jobs:
           if-no-files-found: error
 
       - name: Build system preset cache (Linux)
-        if: runner.os == 'Linux'
+        # SnapOrca: off by default, see the Windows step.
+        if: runner.os == 'Linux' && vars.SNAPORCA_PRESET_CACHE == 'true'
         shell: bash
         run: |
           # Both were packed from resources/ before the caches existed, so the
