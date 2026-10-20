@@ -337,6 +337,16 @@ static ExtrusionPaths thick_polyline_to_extrusion_paths_2(const ThickPolyline& t
     return paths;
 }
 
+void remove_duplicate_gap_fill_loops(ThickPolylines& polylines)
+{
+    ThickPolylines kept;
+    kept.reserve(polylines.size());
+    for (ThickPolyline& polyline : polylines)
+        if (std::none_of(kept.begin(), kept.end(), [&polyline](const ThickPolyline& k) { return are_near_duplicate_closed_gap_fill_loops(polyline, k); }))
+            kept.emplace_back(std::move(polyline));
+    polylines = std::move(kept);
+}
+
 void variable_width(const ThickPolylines& polylines, ExtrusionRole role, const Flow& flow, std::vector<ExtrusionEntity*>& out)
 {
     // This value determines granularity of adaptive width, as G-code does not allow
