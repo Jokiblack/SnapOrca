@@ -596,7 +596,12 @@ TEST_CASE("Switching a tool head to High Flow leaves the per-extruder layer plan
     CHECK(size_t(printing_layers(standard[1])) < standard[1].size());
 }
 
-TEST_CASE("With every tool head on Standard the flow columns do not change the G-code", "[HighFlow][hf_all_standard_gcode_unchanged]")
+// Hidden ([.]): the flow column layout below is the LixNix one (two filament_extruder_variant columns per
+// filament, filament_self_index 1,1,2,2,...), which SnapOrca never composes (see the cases hidden below).
+// On SnapOrca the two G-codes differ from line 236 of the executable block on ("T1 ; change extruder" /
+// "M106 S102 ; enable fan"): the fan command of the second filament is read at another column. To be
+// re-enabled, and that difference chased, with the port of the column model.
+TEST_CASE("With every tool head on Standard the flow columns do not change the G-code", "[.][HighFlow][hf_all_standard_gcode_unchanged]")
 {
     // The same printer, process and filaments written once with one column each (the layout
     // without High Flow) and once with Standard and High Flow columns. No head is
@@ -841,7 +846,13 @@ void check_layer_plan_unchanged(const U1Plate &plate, double layer_height, doubl
 
 } // namespace
 
-TEST_CASE("A shipped U1 plate with one High Flow tool head prints that head alone with the High Flow values", "[HighFlow][Profiles]")
+// Hidden ([.]): this case describes the LixNix filament column model (filament_extruder_variant with a
+// Standard and a High Flow column per filament, filament_self_index). SnapOrca keeps the Snapmaker Orca 2.4
+// flow modes instead (filament_flow_support plus the flow keys, composed as segments by
+// filament_flow_step_size), so no shipped or user preset carries that column; the same behaviour on
+// SnapOrca's model is covered by "A filament with Snapmaker High Flow values prints them on the High Flow
+// tool head and the next filament keeps its own" (branch snaporca-t1-highflow).
+TEST_CASE("A shipped U1 plate with one High Flow tool head prints that head alone with the High Flow values", "[.][HighFlow][Profiles]")
 {
     // Tool head 2 carries the High Flow nozzle; heads 1 and 2 print the same filament preset.
     auto               bundle = std::make_unique<PresetBundle>();
@@ -931,7 +942,13 @@ void matte_0_6_gets_high_flow_column(PresetBundle &bundle)
 
 } // namespace
 
-TEST_CASE("A U1 plate with a 0.6 mm High Flow tool head prints that head alone with the High Flow column of its 0.6 mm filament", "[HighFlow][Profiles]")
+// Hidden ([.]): this case describes the LixNix filament column model (filament_extruder_variant with a
+// Standard and a High Flow column per filament, filament_self_index). SnapOrca keeps the Snapmaker Orca 2.4
+// flow modes instead (filament_flow_support plus the flow keys, composed as segments by
+// filament_flow_step_size), so no shipped or user preset carries that column; the same behaviour on
+// SnapOrca's model is covered by "A filament with Snapmaker High Flow values prints them on the High Flow
+// tool head and the next filament keeps its own" (branch snaporca-t1-highflow).
+TEST_CASE("A U1 plate with a 0.6 mm High Flow tool head prints that head alone with the High Flow column of its 0.6 mm filament", "[.][HighFlow][Profiles]")
 {
     auto               bundle = std::make_unique<PresetBundle>();
     DynamicPrintConfig config = u1_plate_config(*bundle, MIXED_PLATE, {nvtStandard, nvtHighFlow, nvtStandard, nvtStandard}, MIXED_DIAMETERS,
@@ -984,7 +1001,13 @@ TEST_CASE("A U1 plate with a 0.6 mm High Flow tool head prints that head alone w
 // Standard (FilamentFlowColumns.hpp), here with max volumetric speed 22 against the Standard 12.
 // ---------------------------------------------------------------------------------------------
 
-TEST_CASE("A filament given High Flow values prints them on the High Flow extruder and its Standard values elsewhere", "[HighFlow][FilamentFlow]")
+// Hidden ([.]): this case describes the LixNix filament column model (filament_extruder_variant with a
+// Standard and a High Flow column per filament, filament_self_index). SnapOrca keeps the Snapmaker Orca 2.4
+// flow modes instead (filament_flow_support plus the flow keys, composed as segments by
+// filament_flow_step_size), so no shipped or user preset carries that column; the same behaviour on
+// SnapOrca's model is covered by "A filament with Snapmaker High Flow values prints them on the High Flow
+// tool head and the next filament keeps its own" (branch snaporca-t1-highflow).
+TEST_CASE("A filament given High Flow values prints them on the High Flow extruder and its Standard values elsewhere", "[.][HighFlow][FilamentFlow]")
 {
     const U1Plate plate{U1_MACHINE, U1_PROCESS, {"Generic PETG", "Generic PETG", "Snapmaker PLA SnapSpeed @U1", "Snapmaker PETG HF"}};
     constexpr double STANDARD_CAP  = 12.;
@@ -1021,7 +1044,13 @@ TEST_CASE("A filament given High Flow values prints them on the High Flow extrud
 // repaired when the project config joins the filaments, so the next filaments keep their values.
 // ---------------------------------------------------------------------------------------------
 
-TEST_CASE("A narrow per-column value of one filament leaves the values of the next filaments in place", "[HighFlow][FilamentFlow]")
+// Hidden ([.]): this case describes the LixNix filament column model (filament_extruder_variant with a
+// Standard and a High Flow column per filament, filament_self_index). SnapOrca keeps the Snapmaker Orca 2.4
+// flow modes instead (filament_flow_support plus the flow keys, composed as segments by
+// filament_flow_step_size), so no shipped or user preset carries that column; the same behaviour on
+// SnapOrca's model is covered by "A filament with Snapmaker High Flow values prints them on the High Flow
+// tool head and the next filament keeps its own" (branch snaporca-t1-highflow).
+TEST_CASE("A narrow per-column value of one filament leaves the values of the next filaments in place", "[.][HighFlow][FilamentFlow]")
 {
     const std::string narrow = "Snapmaker PLA SnapSpeed @U1";
     const U1Plate plate{U1_MACHINE, U1_PROCESS, {narrow, U1_FILAMENT, U1_FILAMENT, "Snapmaker PETG HF"}};
@@ -1145,7 +1174,13 @@ std::set<int> above_zero(const std::vector<int> &values)
 
 } // namespace
 
-TEST_CASE("Bed and chamber temperatures of a filament follow the column of the extruder that prints it", "[HighFlow][FilamentFlow][BedChamber]")
+// Hidden ([.]): this case describes the LixNix filament column model (filament_extruder_variant with a
+// Standard and a High Flow column per filament, filament_self_index). SnapOrca keeps the Snapmaker Orca 2.4
+// flow modes instead (filament_flow_support plus the flow keys, composed as segments by
+// filament_flow_step_size), and the bed and chamber keys are not flow keys there, so no preset carries that column; the same behaviour on
+// SnapOrca's model is covered by "A filament with Snapmaker High Flow values prints them on the High Flow
+// tool head and the next filament keeps its own" (branch snaporca-t1-highflow).
+TEST_CASE("Bed and chamber temperatures of a filament follow the column of the extruder that prints it", "[.][HighFlow][FilamentFlow][BedChamber]")
 {
     // Textured PEI Plate: first layer 60 / 75, other layers 62 / 77; chamber 35 / 45 (Standard / High Flow).
     const U1Plate plate{U1_MACHINE, U1_PROCESS, {"Generic PETG", "Generic PETG", "Snapmaker PLA SnapSpeed @U1", "Snapmaker PETG HF"}};

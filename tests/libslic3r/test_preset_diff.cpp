@@ -108,7 +108,13 @@ TEST_CASE("A High Flow edit of a filament preset marks the High Flow column only
 
 // Snapmaker Orca: a filament preset given High Flow values in the Filament tab is compared with its
 // reference widened by the High Flow column (filament_reference_in_layout_of).
-TEST_CASE("An added High Flow column makes a filament preset dirty on its own", "[PresetDiff][FilamentFlow]")
+// Hidden ([.]): this case describes the LixNix filament column model (filament_extruder_variant with a
+// Standard and a High Flow column per filament, filament_self_index). SnapOrca keeps the Snapmaker Orca 2.4
+// flow modes instead (filament_flow_support plus the flow keys, composed as segments by
+// filament_flow_step_size), so no shipped or user preset carries that column; the added flow mode on
+// SnapOrca's model is covered by "A filament given the High Flow mode gets a copy of its Standard values in the
+// new column" (branch snaporca-t1-highflow).
+TEST_CASE("An added High Flow column makes a filament preset dirty on its own", "[.][PresetDiff][FilamentFlow]")
 {
     Preset reference(Preset::TYPE_FILAMENT, "ref");
     reference.config.set_key_value("filament_extruder_variant", new ConfigOptionStrings{"Direct Drive Standard"});
@@ -125,7 +131,8 @@ TEST_CASE("An added High Flow column makes a filament preset dirty on its own", 
     }
 }
 
-TEST_CASE("A High Flow value equal to the Standard value of a one-column reference is no change", "[PresetDiff][FilamentFlow]")
+// Hidden ([.]) with the case above.
+TEST_CASE("A High Flow value equal to the Standard value of a one-column reference is no change", "[.][PresetDiff][FilamentFlow]")
 {
     Preset reference(Preset::TYPE_FILAMENT, "ref");
     reference.config.set_key_value("filament_extruder_variant", new ConfigOptionStrings{"Direct Drive Standard"});
