@@ -1079,6 +1079,11 @@ static void generic_exception_handle()
         flush_logs();
         wxLogError(format_wxstr(_L("OrcaSlicer got an unhandled exception: %1%"), ex.what()));
         throw;
+    } catch (...) {
+        // Not an std::exception: nothing to show, but leave a trace before it takes the app down.
+        BOOST_LOG_TRIVIAL(fatal) << "Uncaught exception of a non-standard type in an event handler";
+        flush_logs();
+        throw;
     }
 //#endif
 }
