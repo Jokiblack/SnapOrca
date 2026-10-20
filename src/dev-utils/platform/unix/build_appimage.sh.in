@@ -36,11 +36,10 @@ mkdir -p usr/share/applications
 cp io.github.Snapmaker.Snapmaker_Orca.desktop usr/share/applications/
 
 mkdir -p usr/share/metainfo
-# The Snapmaker metainfo was dropped in the 2.5 merge; ship upstream's AppStream file.
-META_SRC="${REPO_ROOT}/scripts/flatpak/com.orcaslicer.OrcaSlicer.metainfo.xml"
+# The AppStream id must match the desktop file id, or appimagetool's validation fails.
+META_SRC="${REPO_ROOT}/scripts/flatpak/io.github.Snapmaker.Snapmaker_Orca.metainfo.xml"
 if [[ -f "${META_SRC}" ]]; then
     cp "${META_SRC}" usr/share/metainfo/io.github.Snapmaker.Snapmaker_Orca.metainfo.xml
-    cp "${META_SRC}" usr/share/metainfo/io.github.Snapmaker.Snapmaker_Orca.appdata.xml
 else
     echo "Warning: missing ${META_SRC}; AppImage will ship without AppStream metadata"
 fi
