@@ -562,12 +562,14 @@ msgstr "Intro"
 msgid "Shortcut Key %d"
 msgstr "Tecla de acceso directo %d"
 
+# AI Translated
 msgid "Selected filament"
-msgstr ""
+msgstr "Filamento seleccionado"
 
+# AI Translated
 #, c-format, boost-format
 msgid "/ %d"
-msgstr ""
+msgstr "/ %d"
 
 msgid "Triangle"
 msgstr "Triángulo"
@@ -2137,8 +2139,9 @@ msgstr "Archivos SLA enmascarados"
 msgid "Draco files"
 msgstr "Archivos Draco"
 
+# AI Translated
 msgid "Snapmaker Orca will terminate because of running out of memory.It may be a bug. It will be appreciated if you report the issue to our team."
-msgstr ""
+msgstr "Snapmaker Orca se cerrará porque se ha quedado sin memoria. Puede ser un error. Le agradeceremos que informe del problema a nuestro equipo."
 
 msgid "Fatal error"
 msgstr "Error fatal"
@@ -2187,20 +2190,28 @@ msgstr ""
 msgid "WebView2 Runtime"
 msgstr "WebView2 Runtime"
 
+# AI Translated
 #, boost-format
 msgid ""
 "The Microsoft WebView2 Runtime could not be installed.\n"
 "Some features, including the setup wizard, may appear blank until it is installed.\n"
 "Please install it manually from %1% and restart Snapmaker Orca."
 msgstr ""
+"No se ha podido instalar Microsoft WebView2 Runtime.\n"
+"Algunas funciones, como el asistente de configuración, pueden aparecer en blanco hasta que se instale.\n"
+"Instálelo manualmente desde %1% y reinicie Snapmaker Orca."
 
+# AI Translated
 msgid ""
 "Failed to install Web UI resources. Some features may not work correctly.\n"
 "Please check disk space and file permissions, then restart the application."
 msgstr ""
+"No se han podido instalar los recursos de la interfaz web. Es posible que algunas funciones no funcionen correctamente.\n"
+"Compruebe el espacio en disco y los permisos de los archivos y reinicie la aplicación."
 
+# AI Translated
 msgid "Failed to update Web UI resources. The application will continue using the previous version."
-msgstr ""
+msgstr "No se han podido actualizar los recursos de la interfaz web. La aplicación seguirá usando la versión anterior."
 
 #, c-format, boost-format
 msgid "Resources path does not exist or is not a directory: %s"
@@ -2221,8 +2232,9 @@ msgstr "Recordar mi selección"
 msgid "Click to download new version in default browser: %s"
 msgstr "Haga clic para descargar la nueva versión en el navegador por defecto: %s"
 
+# AI Translated
 msgid "Snapmaker Orca needs an update"
-msgstr ""
+msgstr "Snapmaker Orca necesita una actualización"
 
 msgid "This is the newest version."
 msgstr "Esta es la versión más reciente."
@@ -2292,8 +2304,9 @@ msgstr "Escoja un archivo (GCODE/3MF):"
 msgid "Ext"
 msgstr "Ext"
 
+# AI Translated
 msgid "import failed!"
-msgstr ""
+msgstr "¡la importación ha fallado!"
 
 msgid "Some presets are modified."
 msgstr "Algunos perfiles fueron modificados."
@@ -2319,8 +2332,9 @@ msgstr "¡crear o abrir un archivo de proyecto nuevo no está permitido durante 
 msgid "Open Project"
 msgstr "Abrir proyecto"
 
+# AI Translated
 msgid "The version of Snapmaker Orca is too low and needs to be updated to the latest version before it can be used normally"
-msgstr ""
+msgstr "La versión de Snapmaker Orca es demasiado antigua y debe actualizarse a la última versión para poder usarla con normalidad"
 
 msgid "Cloud sync conflict:"
 msgstr "Conflicto de sincronización con la nube:"
@@ -2387,9 +2401,10 @@ msgstr "Obteniendo plugins…"
 msgid "Loading user presets…"
 msgstr "Cargando perfiles de usuario…"
 
+# AI Translated
 #, c-format, boost-format
 msgid "request to server update soft fail with body:%s,error:%s,status:%d"
-msgstr ""
+msgstr "la solicitud de actualización del programa al servidor ha fallado con cuerpo:%s,error:%s,estado:%d"
 
 msgid "Retrieving printer information, please try again later."
 msgstr "Recuperando información de la impresora, por favor, inténtelo de nuevo más tarde."
@@ -2557,9 +2572,10 @@ msgstr "Hay una actualización disponible. Abra el cuadro de diálogo del paquet
 msgid "%s has been removed."
 msgstr "Se ha eliminado %s."
 
+# AI Translated
 #, c-format, boost-format
 msgid "Switching Snapmaker Orca to language %s failed."
-msgstr ""
+msgstr "No se ha podido cambiar el idioma de Snapmaker Orca a %s."
 
 msgid ""
 "\n"
@@ -2572,8 +2588,9 @@ msgstr ""
 msgid "Application will close."
 msgstr "La aplicación se cerrará."
 
+# AI Translated
 msgid "Snapmaker Orca - Switching language failed"
-msgstr ""
+msgstr "Snapmaker Orca - Error al cambiar de idioma"
 
 msgid "*"
 msgstr "*"
@@ -2665,9 +2682,10 @@ msgstr "Por defecto"
 msgid "Filament %d"
 msgstr "Filamento %d"
 
+# AI Translated
 #, c-format, boost-format
 msgid "Mixed Filament %d"
-msgstr ""
+msgstr "Filamento mixto %d"
 
 msgid "Quality"
 msgstr "Calidad"
@@ -2699,8 +2717,10 @@ msgstr "Espesor mínimo de la cubierta superior"
 msgid "Top Surface Density"
 msgstr "Densidad de superficie superior"
 
+# AI Translated
+# Needs human review: Penetración de la pintura de color en capas: comprobar que se entiende como el número de capas hacia dentro que recibe el color pintado en la cara superior.
 msgid "Top Paint Penetration Layers"
-msgstr ""
+msgstr "Capas de penetración de la pintura superior"
 
 msgid "Bottom solid layers"
 msgstr "Capas sólidas inferiores"
@@ -2711,8 +2731,10 @@ msgstr "Espesor mínimo de la cubierta inferior"
 msgid "Bottom Surface Density"
 msgstr "Densidad de superficie inferior"
 
+# AI Translated
+# Needs human review: Igual que 'Capas de penetración de la pintura superior', para la cara inferior.
 msgid "Bottom Paint Penetration Layers"
-msgstr ""
+msgstr "Capas de penetración de la pintura inferior"
 
 msgid "Ironing"
 msgstr "Alisado"
@@ -4360,8 +4382,9 @@ msgstr "Snapmaker Orca está licenciada sobre"
 msgid "GNU Affero General Public License, version 3"
 msgstr "GNU Affero General Public License, versión 3"
 
+# AI Translated
 msgid "Snapmaker Orca is Based on Orca Slicer"
-msgstr ""
+msgstr "Snapmaker Orca se basa en Orca Slicer"
 
 msgid "Libraries"
 msgstr "Librerías"
@@ -4373,26 +4396,33 @@ msgstr "Este software utiliza componentes de código abierto cuyos derechos de a
 msgid "About %s"
 msgstr "Acerca de %s"
 
+# AI Translated
 msgid "Snapmaker Orca "
-msgstr ""
+msgstr "Snapmaker Orca "
 
+# AI Translated
 msgid "Note: The firmware version of SnapmakerU1 should be no less than"
-msgstr ""
+msgstr "Nota: la versión del firmware de la SnapmakerU1 no debe ser inferior a"
 
+# AI Translated
 msgid "Snapmaker Orca is forked from Orca Slicer by SoftFever."
-msgstr ""
+msgstr "Snapmaker Orca es una bifurcación de Orca Slicer, de SoftFever."
 
+# AI Translated
 msgid "OrcaSlicer is forked from Bambu Studio by Bambu Lab."
-msgstr ""
+msgstr "OrcaSlicer es una bifurcación de Bambu Studio, de Bambu Lab."
 
+# AI Translated
 msgid "Bambu Studio is forked from PrusaSlicer by Prusa Research, which is from Slic3r by Alessandro Ranellucci and the RepRap community. Orca Slicer incorporates a lot of features from SuperSlicer by @supermerill."
-msgstr ""
+msgstr "Bambu Studio es una bifurcación de PrusaSlicer, de Prusa Research, que a su vez proviene de Slic3r, de Alessandro Ranellucci y la comunidad RepRap. Orca Slicer incorpora muchas funciones de SuperSlicer, de @supermerill."
 
+# AI Translated
 msgid "Snapmaker Orca integrates some features from the 3D printing open-source community, with specific attributions provided in the code comments."
-msgstr ""
+msgstr "Snapmaker Orca integra algunas funciones de la comunidad de código abierto de impresión 3D, con las atribuciones correspondientes en los comentarios del código."
 
+# AI Translated
 msgid "Snapmaker Orca is licensed under the GNU Affero General Public License, version 3."
-msgstr ""
+msgstr "Snapmaker Orca se distribuye bajo la Licencia Pública General Affero de GNU, versión 3."
 
 msgid "Portions copyright"
 msgstr "Porciones del copyright"
@@ -5140,11 +5170,15 @@ msgstr ""
 msgid "%1% infill pattern doesn't support 100%% density."
 msgstr "El patrón de relleno %1% no soporta el 100%% de densidad."
 
+# AI Translated
 msgid ""
 "Switch to rectilinear pattern?\n"
 "Yes - switch to rectilinear pattern automatically\n"
 "No  - reset density to default non 100% value automatically"
 msgstr ""
+"¿Cambiar al patrón rectilíneo?\n"
+"Sí - cambiar automáticamente al patrón rectilíneo\n"
+"No - restablecer automáticamente la densidad al valor predeterminado distinto del 100%"
 
 msgid ""
 "seam_slope_start_height needs to be smaller than layer_height.\n"
@@ -6460,8 +6494,9 @@ msgid_plural "Filaments %s cannot be printed directly on the surface of this pla
 msgstr[0] "El filamento %s no puede imprimirse directamente en la superficie de esta cama."
 msgstr[1] "Los filamentos %s no pueden imprimirse directamente en la superficie de esta cama."
 
+# AI Translated
 msgid "Model too close to bed boundary. Disable spiral lifting or keep at least 3.5mm gap to avoid collision."
-msgstr ""
+msgstr "El modelo está demasiado cerca del límite de la cama. Desactive la elevación en espiral o deje al menos 3.5mm de separación para evitar colisiones."
 
 msgid "PLA and PETG filaments detected in the mixture. Adjust parameters according to the Wiki to ensure print quality."
 msgstr "Se han detectado filamentos PLA y PETG mezclados. Ajuste los parámetros según la Wiki para garantizar la calidad de impresión."
@@ -6642,11 +6677,13 @@ msgstr "Asistente de Configuración"
 msgid "Show Configuration Folder"
 msgstr "Mostrar Carpeta de Configuración"
 
+# AI Translated
 msgid "Export Logs"
-msgstr ""
+msgstr "Exportar registros"
 
+# AI Translated
 msgid "Export application logs as ZIP file"
-msgstr ""
+msgstr "Exportar los registros de la aplicación como archivo ZIP"
 
 # AI Translated
 msgid "Bring back filament presets that a profile update removed from printers they were made for"
@@ -6672,17 +6709,21 @@ msgstr "Mostrar Consejo Diario"
 msgid "Check for Updates"
 msgstr "Buscar actualizaciones"
 
+# AI Translated
 msgid "Check for Process Preset Updates"
-msgstr ""
+msgstr "Buscar actualizaciones de perfiles de proceso"
 
+# AI Translated
 msgid "Check for Web Resource Updates"
-msgstr ""
+msgstr "Buscar actualizaciones de recursos web"
 
+# AI Translated
 msgid "Import Profile"
-msgstr ""
+msgstr "Importar perfil"
 
+# AI Translated
 msgid "Import Web Resource"
-msgstr ""
+msgstr "Importar recurso web"
 
 #, c-format, boost-format
 msgid "&About %s"
@@ -6720,8 +6761,9 @@ msgstr "Vista izquierda"
 msgid "Right View"
 msgstr "Vista derecha"
 
+# AI Translated
 msgid "Fit in all view"
-msgstr ""
+msgstr "Ajustar todo a la vista"
 
 msgid "Start a new window"
 msgstr "Abrir nueva ventana"
@@ -7105,28 +7147,35 @@ msgstr "Falta el archivo"
 msgid "The project is no longer available."
 msgstr "El proyecto ya no está disponible."
 
+# AI Translated
 msgid "downloading the model"
-msgstr ""
+msgstr "descargando el modelo"
 
+# AI Translated
 #, c-format, boost-format
 msgid "The downloaded file '%s' is not a valid 3MF project file."
-msgstr ""
+msgstr "El archivo descargado '%s' no es un archivo de proyecto 3MF válido."
 
+# AI Translated
 msgid "Invalid File"
-msgstr ""
+msgstr "Archivo no válido"
 
+# AI Translated
 msgid "No logs found."
-msgstr ""
+msgstr "No se han encontrado registros."
 
+# AI Translated
 msgid "Save logs as ZIP file"
-msgstr ""
+msgstr "Guardar los registros como archivo ZIP"
 
+# AI Translated
 msgid "Logs exported successfully."
-msgstr ""
+msgstr "Registros exportados correctamente."
 
+# AI Translated
 #, c-format, boost-format
 msgid "Failed to export logs: %s"
-msgstr ""
+msgstr "No se han podido exportar los registros: %s"
 
 msgid ""
 "Do you want to synchronize your personal data from Orca Cloud?\n"
@@ -7325,8 +7374,9 @@ msgstr "No se pudo recuperar la información del modelo de la impresora."
 msgid "Failed to parse model information."
 msgstr "No se pudo analizar la información del modelo."
 
+# AI Translated
 msgid "The .gcode.3mf file contains no G-code data. Please slice it with Snapmaker Orca and export a new .gcode.3mf file."
-msgstr ""
+msgstr "El archivo .gcode.3mf no contiene datos de G-code. Lamínelo con Snapmaker Orca y exporte un nuevo archivo .gcode.3mf."
 
 #, c-format, boost-format
 msgid "File '%s' was lost! Please download it again."
@@ -7864,8 +7914,9 @@ msgstr "%s información"
 msgid "Newer 3MF version"
 msgstr "Nueva versión 3MF"
 
+# AI Translated
 msgid "The 3MF file version is in Beta and it is newer than the current Snapmaker Orca version."
-msgstr ""
+msgstr "La versión del archivo 3MF es Beta y es más reciente que la versión actual de Snapmaker Orca."
 
 msgid "If you would like to try Snapmaker Orca Beta, you may click to"
 msgstr "Si desea probar Snapmaker Orca Beta, puede hacer clic para"
@@ -7873,11 +7924,13 @@ msgstr "Si desea probar Snapmaker Orca Beta, puede hacer clic para"
 msgid "Download Beta Version"
 msgstr "Descargar la versión beta"
 
+# AI Translated
 msgid "The 3MF file version is newer than the current Snapmaker Orca version."
-msgstr ""
+msgstr "La versión del archivo 3MF es más reciente que la versión actual de Snapmaker Orca."
 
+# AI Translated
 msgid "Updating your Snapmaker Orca could enable all functionality in the 3MF file."
-msgstr ""
+msgstr "Actualizar Snapmaker Orca podría habilitar todas las funciones del archivo 3MF."
 
 msgid "Current Version: "
 msgstr "Versión actual: "
@@ -8299,11 +8352,13 @@ msgstr "Error:"
 msgid "WARNING:"
 msgstr "AVISO:"
 
+# AI Translated
 msgid "Jump to: Support on build plate only"
-msgstr ""
+msgstr "Ir a: Soportes solo en la cama"
 
+# AI Translated
 msgid "Jump to: Support"
-msgstr ""
+msgstr "Ir a: Soportes"
 
 msgid "Warning:"
 msgstr "Advertencia:"
@@ -8794,19 +8849,23 @@ msgstr "%1% con %2%\n"
 msgid "Slicing plate %1%: %2%"
 msgstr "Laminando cama %1%: %2%"
 
+# AI Translated
 msgid "The current version of Snapmaker Orca cannot fully load this 3MF file. Please update to the latest version and try again."
-msgstr ""
+msgstr "La versión actual de Snapmaker Orca no puede cargar por completo este archivo 3MF. Actualice a la última versión e inténtelo de nuevo."
 
+# AI Translated
 msgid "Loading 3MF"
-msgstr ""
+msgstr "Cargando 3MF"
 
+# AI Translated
 #, boost-format
 msgid "The Cool Steel Plate is not recommended for %1%. To continue printing, set the bed temperature above 0°C for this filament."
-msgstr ""
+msgstr "No se recomienda la Cama de Acero Fría para %1%. Para seguir imprimiendo, ajuste la temperatura de la cama de este filamento por encima de 0°C."
 
+# AI Translated
 #, boost-format
 msgid "The Cool Steel Plate is not recommended for %1%. It may be hard to remove. Use a textured PEI plate or heat the bed."
-msgstr ""
+msgstr "No se recomienda la Cama de Acero Fría para %1%. Puede ser difícil de retirar. Use una Cama PEI Texturizada o caliente la cama."
 
 msgid "Nozzle"
 msgstr "Boquilla"
@@ -8832,59 +8891,78 @@ msgstr "Materiales usados"
 msgid "Estimated time"
 msgstr "Tiempo estimado"
 
+# AI Translated
 msgid "Add Color"
-msgstr ""
+msgstr "Añadir color"
 
+# AI Translated
 msgid "Pick from the current filament gamut. The dialog previews the closest 2-color, 3-color, or 4-color FilamentMixer recipe before it is added."
-msgstr ""
+msgstr "Elija dentro de la gama de los filamentos actuales. El cuadro de diálogo muestra la receta de FilamentMixer de 2, 3 o 4 colores más cercana antes de añadirla."
 
+# AI Translated
 msgid "Hex"
-msgstr ""
+msgstr "Hex"
 
+# AI Translated
 msgid "Enter a hex color like #00FF88. The picker will snap to the closest supported FilamentMixer color."
-msgstr ""
+msgstr "Introduzca un color hexadecimal como #00FF88. El selector se ajustará al color de FilamentMixer admitido más cercano."
 
+# AI Translated
 msgid "Classic color picker. The result will snap to the closest supported FilamentMixer color."
-msgstr ""
+msgstr "Selector de color clásico. El resultado se ajustará al color de FilamentMixer admitido más cercano."
 
+# AI Translated
 msgid "Minimum percent for each participating color. Higher values block highly skewed mixes."
-msgstr ""
+msgstr "Porcentaje mínimo de cada color participante. Los valores más altos impiden las mezclas muy desequilibradas."
 
+# AI Translated
 msgid "Requested"
-msgstr ""
+msgstr "Solicitado"
 
+# AI Translated
+# Needs human review: Etiqueta de una fila de resumen en el diálogo de añadir color (Plater.cpp): 'Solicitado' / 'Crea'; comprobar que se lee bien junto al valor.
 msgid "Creates"
-msgstr ""
+msgstr "Crea"
 
+# AI Translated
+# Needs human review: Aquí 'preset' son mezclas predefinidas del selector de color, no un perfil; se ha usado 'predefinidas' en lugar de 'Perfil'.
 msgid "Exact preset mixes"
-msgstr ""
+msgstr "Mezclas exactas predefinidas"
 
+# AI Translated
 msgid "Matching closest supported mix..."
-msgstr ""
+msgstr "Buscando la mezcla admitida más cercana..."
 
+# AI Translated
 msgid "Calculating closest supported mix..."
-msgstr ""
+msgstr "Calculando la mezcla admitida más cercana..."
 
+# AI Translated
 #, c-format, boost-format
 msgid "%d%% min"
-msgstr ""
+msgstr "%d%% mín"
 
+# AI Translated
 msgid "Use a valid hex color like #00FF88."
-msgstr ""
+msgstr "Use un color hexadecimal válido como #00FF88."
 
+# AI Translated
 msgid "No supported 2-color, 3-color, or 4-color recipe found."
-msgstr ""
+msgstr "No se ha encontrado ninguna receta admitida de 2, 3 o 4 colores."
 
+# AI Translated
 #, c-format, boost-format
 msgid "Matching %s..."
-msgstr ""
+msgstr "Buscando coincidencia para %s..."
 
+# AI Translated
 #, c-format, boost-format
 msgid "Requested %s, closest recipe delta: %.2f"
-msgstr ""
+msgstr "Solicitado %s, diferencia con la receta más cercana: %.2f"
 
+# AI Translated
 msgid "Unable to create a color mix from the current physical filament colors within the selected range."
-msgstr ""
+msgstr "No se puede crear una mezcla de color con los colores de los filamentos físicos actuales dentro del rango seleccionado."
 
 msgid "Set the number of AMS installed on the nozzle."
 msgstr "Configure el número de AMS instalados en la boquilla."
@@ -8926,26 +9004,33 @@ msgstr "Hay tipos de boquilla no configurados. Configure los tipos de boquilla d
 msgid "Sync extruder infomation"
 msgstr "Sincronizar información del extrusor"
 
+# AI Translated
 msgid "Synchronize nozzle information"
-msgstr ""
+msgstr "Sincronizar la información de la boquilla"
 
+# AI Translated
 msgid "Printer not connected. Please go to the home page or the device page to connect the printer."
-msgstr ""
+msgstr "Impresora no conectada. Vaya a la página de inicio o a la página del dispositivo para conectar la impresora."
 
+# AI Translated
 msgid "Note"
-msgstr ""
+msgstr "Nota"
 
+# AI Translated
 msgid "No nozzle information detected. Please go to the printer settings to configure the nozzle."
-msgstr ""
+msgstr "No se ha detectado información de la boquilla. Vaya a los ajustes de la impresora para configurar la boquilla."
 
+# AI Translated
 msgid "Note: Inconsistent nozzle diameters. Current version does not support mixed diameter printing. Please select one nozzle for this print."
-msgstr ""
+msgstr "Nota: los diámetros de boquilla no coinciden. La versión actual no admite imprimir con diámetros mezclados. Seleccione una sola boquilla para esta impresión."
 
+# AI Translated
 msgid "Set Nozzle Diameter"
-msgstr ""
+msgstr "Establecer el diámetro de la boquilla"
 
+# AI Translated
 msgid "Nozzle settings synchronized successfully"
-msgstr ""
+msgstr "Ajustes de la boquilla sincronizados correctamente"
 
 msgid "Connection"
 msgstr "Conexión"
@@ -8956,19 +9041,22 @@ msgstr "Sincronizar información de la boquilla y el número de AMS"
 msgid "Click to edit preset"
 msgstr "Click para cambiar el ajuste inicial"
 
+# AI Translated
 msgid "Connect to printer"
-msgstr ""
+msgstr "Conectar con la impresora"
 
+# AI Translated
 msgid "The machine has been connected and is currently in working mode"
-msgstr ""
+msgstr "La máquina está conectada y actualmente está en modo de trabajo"
 
 # AI Translated
 #. TRN Sidebar label of the printer variant (nozzle) selector; picking one switches the printer preset.
 msgid "Variant"
 msgstr "Variante"
 
+# AI Translated
 msgid "Filament Management"
-msgstr ""
+msgstr "Gestión de filamentos"
 
 msgid "Purge mode"
 msgstr "Modo de purga"
@@ -8976,27 +9064,37 @@ msgstr "Modo de purga"
 msgid "Flushing volumes"
 msgstr "Volúmenes de limpieza"
 
+# AI Translated
 msgid "Color Mixing Match"
-msgstr ""
+msgstr "Ajuste de mezcla de colores"
 
+# AI Translated
 msgid ""
 "Automatically calculate the color mixing scheme that best matches the original model colors and complete color mapping.\n"
 "Note:\n"
 "1. Color mixing match is based on the official recommended filaments. The matched colors may differ from the original model.\n"
 "2. The order of the Color Mapping list may differ from that of the Color Mixing list."
 msgstr ""
+"Calcula automáticamente el esquema de mezcla de colores que mejor se ajusta a los colores originales del modelo y completa la asignación de colores.\n"
+"Nota:\n"
+"1. El ajuste de mezcla de colores se basa en los filamentos oficiales recomendados. Los colores obtenidos pueden diferir del modelo original.\n"
+"2. El orden de la lista de asignación de colores puede diferir del de la lista de mezcla de colores."
 
+# AI Translated
 msgid "No model detected. Import a multi-color model to continue."
-msgstr ""
+msgstr "No se ha detectado ningún modelo. Importe un modelo multicolor para continuar."
 
+# AI Translated
 msgid "Got it"
-msgstr ""
+msgstr "Entendido"
 
+# AI Translated
 msgid "Color Mixing Match is unavailable when only one filament is added to Filament Management."
-msgstr ""
+msgstr "El ajuste de mezcla de colores no está disponible cuando solo hay un filamento en la gestión de filamentos."
 
+# AI Translated
 msgid "Updating the Filaments and Color Mixing list..."
-msgstr ""
+msgstr "Actualizando la lista de filamentos y de mezcla de colores..."
 
 msgid "Synchronize filament list from AMS"
 msgstr "Sicronizar filamentos de la lista AMS"
@@ -9004,8 +9102,9 @@ msgstr "Sicronizar filamentos de la lista AMS"
 msgid "Set filaments to use"
 msgstr "Elegir filamentos para usar"
 
+# AI Translated
 msgid "Sync Filament Information"
-msgstr ""
+msgstr "Sincronizar información de filamento"
 
 msgid "Remove last filament"
 msgstr "Borrar último filamento"
@@ -9032,23 +9131,28 @@ msgstr "Añadir filamento mixto"
 msgid "Mixed filament has invalid or mismatched components. Please re-edit affected entries."
 msgstr "El filamento mixto tiene componentes no válidos o incoherentes. Vuelva a editar las entradas afectadas."
 
+# AI Translated
 msgid "Mixed Filaments"
-msgstr ""
+msgstr "Filamentos mixtos"
 
+# AI Translated
 msgid "Add Gradient"
-msgstr ""
+msgstr "Añadir gradiente"
 
+# AI Translated
 msgid "Add Pattern"
-msgstr ""
+msgstr "Añadir patrón"
 
+# AI Translated
 msgid "Unable to create a color match from the current physical filament colors."
-msgstr ""
+msgstr "No se puede crear un ajuste de color con los colores de los filamentos físicos actuales."
 
 msgid "Search plate, object and part."
 msgstr "Buscar bandeja, objeto y parte."
 
+# AI Translated
 msgid "Pellet Configuration"
-msgstr ""
+msgstr "Configuración de pellets"
 
 msgid "Mixed filament has broken component references"
 msgstr "El filamento mixto tiene referencias de componentes rotas"
@@ -9063,25 +9167,32 @@ msgid_plural "Remove all %1% mixed filaments?"
 msgstr[0] "¿Eliminar %1% filamento mixto?"
 msgstr[1] "¿Eliminar todos los %1% filamentos mixtos?"
 
+# AI Translated
 msgid "Gradient Mix Weights"
-msgstr ""
+msgstr "Pesos de la mezcla en gradiente"
 
+# AI Translated
 msgid "Pick a point in the gradient map to control multi-filament mix."
-msgstr ""
+msgstr "Elija un punto del mapa de gradiente para controlar la mezcla de varios filamentos."
 
+# AI Translated
 msgid "Click to choose a physical filament color"
-msgstr ""
+msgstr "Haga clic para elegir el color de un filamento físico"
 
 msgid "Pattern"
 msgstr "Patrón"
 
+# AI Translated
 msgid "Manual repeating pattern. Digits 1-9 for filament IDs 1-9. Use [N] for IDs >= 10 (e.g. [12]). Use commas to define per-perimeter groups, e.g. 12,21. Example: 11112222, 12,21, or 1234."
-msgstr ""
+msgstr "Patrón de repetición manual. Dígitos 1-9 para los ID de filamento 1-9. Use [N] para los ID >= 10 (p. ej. [12]). Use comas para definir grupos por perímetro, p. ej. 12,21. Ejemplo: 11112222, 12,21 o 1234."
 
+# AI Translated
 #, c-format, boost-format
 msgid "Append filament %d to pattern"
-msgstr ""
+msgstr "Añadir el filamento %d al patrón"
 
+# AI Translated
+# Needs human review: Término 'Bias' (Sesgo) y 'dithering' (tramado) de filamento mixto: confirmar terminología.
 msgid ""
 "Positive bias recesses the second filament in the pair; negative bias recesses the first filament.\n"
 "\n"
@@ -9089,85 +9200,118 @@ msgid ""
 "\n"
 "Grouped wall patterns and Local-Z dithering ignore it."
 msgstr ""
+"Un sesgo positivo hunde el segundo filamento del par; uno negativo hunde el primero.\n"
+"\n"
+"La muestra de color indica a qué filamento afecta el valor actual.\n"
+"\n"
+"Los patrones de perímetro agrupados y el tramado Local-Z lo ignoran."
 
+# AI Translated
+# Needs human review: Control por fila de filamento mixto que hunde ligeramente uno de los dos filamentos; confirmar el término.
 msgid "Bias"
-msgstr ""
+msgstr "Sesgo"
 
+# AI Translated
 msgid "Limit Local-Z"
-msgstr ""
+msgstr "Limitar Local-Z"
 
+# AI Translated
 msgid "Store a per-color Local-Z cadence cap. It applies when Local-Z dithering mode is enabled in print settings."
-msgstr ""
+msgstr "Guarda un límite de cadencia Local-Z por color. Se aplica cuando el modo de tramado Local-Z está activado en los ajustes de impresión."
 
+# AI Translated
 msgid "Max sublayers"
-msgstr ""
+msgstr "Subcapas máximas"
 
+# AI Translated
 msgid "Maximum number of Local-Z sublayers this color may use before its cadence repeats."
-msgstr ""
+msgstr "Número máximo de subcapas Local-Z que puede usar este color antes de que se repita su cadencia."
 
+# AI Translated
 #, c-format, boost-format
 msgid "%d-color layer cycle"
-msgstr ""
+msgstr "Ciclo de capas de %d colores"
 
+# AI Translated
 #, c-format, boost-format
 msgid "Simple %d%%/%d%%"
-msgstr ""
+msgstr "Simple %d%%/%d%%"
 
+# AI Translated
 #, c-format, boost-format
 msgid "%d%%/%d%%"
-msgstr ""
+msgstr "%d%%/%d%%"
 
+# AI Translated
 msgid "None (Selected)"
-msgstr ""
+msgstr "Ninguno (seleccionado)"
 
+# AI Translated
 msgid "Color Mixing"
-msgstr ""
+msgstr "Mezcla de colores"
 
+# AI Translated
 msgid "No mixed filaments yet. Use Add Gradient, Add Pattern, or Add Color to create one."
-msgstr ""
+msgstr "Aún no hay filamentos mixtos. Use Añadir gradiente, Añadir patrón o Añadir color para crear uno."
 
+# AI Translated
 msgid "(Pattern)"
-msgstr ""
+msgstr "(Patrón)"
 
+# AI Translated
 msgid "(Color)"
-msgstr ""
+msgstr "(Color)"
 
+# AI Translated
 msgid "Drag to reorder mixed filaments in this panel."
-msgstr ""
+msgstr "Arrastre para reordenar los filamentos mixtos de este panel."
 
 msgid "Enabled"
 msgstr "Activado"
 
+# AI Translated
 msgid "Delete mixed filament"
-msgstr ""
+msgstr "Eliminar filamento mixto"
 
+# AI Translated
 msgid "Click to edit automatic mixed filament settings (saved as custom)."
-msgstr ""
+msgstr "Haga clic para editar los ajustes automáticos del filamento mixto (se guardan como personalizados)."
 
+# AI Translated
 msgid "Click to expand/retract mixed filament settings"
-msgstr ""
+msgstr "Haga clic para expandir/contraer los ajustes del filamento mixto"
 
 msgid "The target mixed filament uses this physical filament as a component. Merging will remove this physical filament and may invalidate the mixed filament. Continue?"
 msgstr "El filamento mixto de destino usa este filamento físico como componente. Al fusionarlos se eliminará este filamento físico y el filamento mixto puede quedar no válido. ¿Continuar?"
 
+# AI Translated
 msgid ""
 "This filament is used in the following mixed filament configurations:\n"
 "\n"
 msgstr ""
+"Este filamento se usa en las siguientes configuraciones de filamento mixto:\n"
+"\n"
 
+# AI Translated
 #, c-format, boost-format
 msgid "• Mixed Filament %d\n"
-msgstr ""
+msgstr "• Filamento mixto %d\n"
 
+# AI Translated
 msgid ""
 "\n"
 "Merging this filament will invalidate these mixed filament configurations. Continue?"
 msgstr ""
+"\n"
+"Fusionar este filamento invalidará estas configuraciones de filamento mixto. ¿Continuar?"
 
+# AI Translated
 msgid ""
 "\n"
 "Deleting this filament will invalidate these mixed filament configurations. Continue?"
 msgstr ""
+"\n"
+"Eliminar este filamento invalidará estas configuraciones de filamento mixto. ¿Continuar?"
 
 #, c-format, boost-format
 msgid "After completing your operation, %s project will be closed and create a new project."
@@ -9179,10 +9323,13 @@ msgstr "No hay filamentos compatibles, y no se ha realizado la sincronización."
 msgid "Sync filaments with AMS"
 msgstr "Sincronizar filamentos con AMS"
 
+# AI Translated
 msgid ""
 "There are some unknown or incompatible filaments mapped to generic preset.\n"
 "Please update Snapmaker Orca or restart Snapmaker Orca to check if there is an update to system presets."
 msgstr ""
+"Hay filamentos desconocidos o incompatibles asignados a un perfil genérico.\n"
+"Actualice o reinicie Snapmaker Orca para comprobar si hay una actualización de los perfiles del sistema."
 
 msgid "Only filament color information has been synchronized from printer."
 msgstr "Solo la información del color del filamento se ha sincronizado desde la impresora."
@@ -9190,26 +9337,33 @@ msgstr "Solo la información del color del filamento se ha sincronizado desde la
 msgid "Filament type and color information have been synchronized, but slot information is not included."
 msgstr "Se han sincronizado el tipo y el color del filamento, pero la información de las ranuras no está incluida."
 
+# AI Translated
 msgid "No printer is connected. Please connect your U1 from the Device page before syncing."
-msgstr ""
+msgstr "No hay ninguna impresora conectada. Conecte su U1 desde la página Dispositivo antes de sincronizar."
 
+# AI Translated
 msgid "Connect Now"
-msgstr ""
+msgstr "Conectar ahora"
 
+# AI Translated
 msgid "The connected printer is not U1. Unable to sync filament information. Please switch to U1 and try again."
-msgstr ""
+msgstr "La impresora conectada no es una U1. No se puede sincronizar la información de los filamentos. Cambie a una U1 e inténtelo de nuevo."
 
+# AI Translated
 msgid "No filaments detected on the printer. Please preload the filaments before syncing."
-msgstr ""
+msgstr "No se han detectado filamentos en la impresora. Precargue los filamentos antes de sincronizar."
 
+# AI Translated
 msgid "Filament types and colors have been successfully synced from the printer."
-msgstr ""
+msgstr "Los tipos y colores de filamento se han sincronizado correctamente desde la impresora."
 
+# AI Translated
 msgid "Note: Changing this will sync all other nozzles to the same diameter."
-msgstr ""
+msgstr "Nota: si cambia esto, todas las demás boquillas se sincronizarán al mismo diámetro."
 
+# AI Translated
 msgid "Don't show this again"
-msgstr ""
+msgstr "No volver a mostrar"
 
 #, boost-format
 msgid "Do you want to save changes to \"%1%\"?"
@@ -9449,24 +9603,31 @@ msgstr "¿Desactivar la caída automática para mantener la posición en el eje 
 msgid "Object with floating parts was detected"
 msgstr "Se ha detectado un objeto con partes flotantes"
 
+# AI Translated
 msgid "(unknown)"
-msgstr ""
+msgstr "(desconocido)"
 
+# AI Translated
+# Needs human review: El segundo %s es el tipo de boquilla (p. ej. estándar/flujo alto); comprobar concordancia del adjetivo.
 #, c-format, boost-format
 msgid "Note: Using a %s mm %s nozzle for %s is not recommended."
-msgstr ""
+msgstr "Nota: no se recomienda usar una boquilla de %s mm %s para %s."
 
+# AI Translated
 msgid "Note: Filament may not adhere well to the smooth PEI plate on the first layer. Apply glue before printing."
-msgstr ""
+msgstr "Nota: puede que el filamento no se adhiera bien a la Cama PEI Lisa en la primera capa. Aplique pegamento antes de imprimir."
 
+# AI Translated
 msgid "Note: Filament may stick too strongly to the smooth PEI plate. Apply glue to protect the plate and ease part removal."
-msgstr ""
+msgstr "Nota: el filamento puede adherirse con demasiada fuerza a la Cama PEI Lisa. Aplique pegamento para proteger la cama y facilitar la retirada de la pieza."
 
+# AI Translated
 msgid "Note: Low adhesion to the graphic effect plate may cause failure. Use a different filament instead."
-msgstr ""
+msgstr "Nota: la baja adherencia a la Cama de Efecto Gráfico puede provocar fallos. Use otro filamento."
 
+# AI Translated
 msgid "Mixed filaments contain incompatible material types. Please correct the mixed filaments settings before slicing."
-msgstr ""
+msgstr "Los filamentos mixtos contienen tipos de material incompatibles. Corrija los ajustes de los filamentos mixtos antes de laminar."
 
 # AI Translated
 msgid "Cannot slice: an object overlaps an area reserved for IDEX/IQEX parallel printing (a secondary zone, or a carriage clearance strip inside the primary zone)."
@@ -9603,14 +9764,18 @@ msgstr ""
 "Se han detectado los siguientes problemas del modo paralelo IDEX/IQEX:\n"
 "\n"
 
+# AI Translated
 #, c-format, boost-format
 msgid ""
 "Using %d physical filaments will create %d auto-generated gradients.\n"
 "Do you want to create them now?"
 msgstr ""
+"Usar %d filamentos físicos creará %d gradientes generados automáticamente.\n"
+"¿Desea crearlos ahora?"
 
+# AI Translated
 msgid "Auto gradients"
-msgstr ""
+msgstr "Gradientes automáticos"
 
 msgid "Network plug-in switched successfully."
 msgstr "Plugin de red cambiado con éxito."
@@ -9643,8 +9808,9 @@ msgstr ""
 msgid "Sync now"
 msgstr "Sincronizar ahora"
 
+# AI Translated
 msgid "Cannot enable both Variable Layer Height and Subdivide Mix Layer."
-msgstr ""
+msgstr "No se pueden activar a la vez la altura de capa variable y Subdividir capa de mezcla."
 
 # AI Translated
 msgid "Cannot undo or redo while an operation is running. Stop the operation, or wait for it to finish and then retry."
@@ -9792,8 +9958,9 @@ msgstr "Importar archivo SLA"
 msgid "The selected file"
 msgstr "El archivo seleccionado"
 
+# AI Translated
 msgid "does not exist."
-msgstr ""
+msgstr "no existe."
 
 msgid "Error occurs while loading G-code file"
 msgstr "Se produce un error al cargar el archivo de G-Code"
@@ -9924,26 +10091,33 @@ msgstr "Razón: \"%1%\" y otra parte no tienen intersección."
 msgid "Unable to perform boolean operation on model meshes. Only positive parts will be exported."
 msgstr "No se pueden realizar operaciones booleanas en las mallas del modelo. Solo se exportarán las partes positivas."
 
+# AI Translated
 msgid "Available system memory is critically low during slicing. Continuing may cause the application to freeze or crash."
-msgstr ""
+msgstr "La memoria disponible del sistema es críticamente baja durante el laminado. Continuar puede hacer que la aplicación se bloquee o se cierre."
 
+# AI Translated
 msgid "Do you want to continue slicing?"
-msgstr ""
+msgstr "¿Desea continuar con el laminado?"
 
+# AI Translated
 msgid "Select \"Yes\" to attempt slicing, but the software may lag or freeze."
-msgstr ""
+msgstr "Seleccione \"Sí\" para intentar laminar, aunque el programa puede ralentizarse o bloquearse."
 
+# AI Translated
 msgid "Select \"No\" to terminate the slicing task immediately."
-msgstr ""
+msgstr "Seleccione \"No\" para detener el laminado inmediatamente."
 
+# AI Translated
 msgid "Memory Usage Warning"
-msgstr ""
+msgstr "Aviso de uso de memoria"
 
+# AI Translated
 msgid "Yes, Continue"
-msgstr ""
+msgstr "Sí, continuar"
 
+# AI Translated
 msgid "No, Stop"
-msgstr ""
+msgstr "No, detener"
 
 msgid "Flashforge host is not available."
 msgstr "El servidor de Flashforge no está disponible."
@@ -9960,11 +10134,13 @@ msgstr "Cargar e imprimir"
 msgid "Abnormal print file data. Please slice again"
 msgstr "Datos anormales del archivo de impresión. Por favor, lamine de nuevo"
 
+# AI Translated
 msgid "Printing by object with caution. This function may cause the print head to collide with printed parts during switching."
-msgstr ""
+msgstr "Use la impresión por objeto con precaución. Esta función puede hacer que el cabezal choque con las piezas impresas al cambiar de objeto."
 
+# AI Translated
 msgid "Confirm slicing"
-msgstr ""
+msgstr "Confirmar laminado"
 
 msgid "Send G-code"
 msgstr "Enviar G-Code"
@@ -10156,17 +10332,20 @@ msgctxt "Region"
 msgid "Others"
 msgstr "Otros"
 
+# AI Translated
 msgid "Changing the region will log out your account and restart.\n"
-msgstr ""
+msgstr "Cambiar la región cerrará la sesión de su cuenta y reiniciará la aplicación.\n"
 
 msgid "Region selection"
 msgstr "Selección de región"
 
+# AI Translated
 msgid "Change Region"
-msgstr ""
+msgstr "Cambiar región"
 
+# AI Translated
 msgid "Switching the region requires application restart.\n"
-msgstr ""
+msgstr "Cambiar la región requiere reiniciar la aplicación.\n"
 
 msgid "sec"
 msgstr "seg"
@@ -10239,10 +10418,11 @@ msgstr "Error al recargar"
 msgid "Associate %s://"
 msgstr "Asociar %s://"
 
+# AI Translated
 #. TRN The first %s is a URL scheme, for example "prusaslicer"; the second is a website name.
 #, c-format, boost-format
 msgid "Associate %s:// with Snapmaker Orca so that Orca can open models from %s"
-msgstr ""
+msgstr "Asociar %s:// con Snapmaker Orca para que Orca pueda abrir modelos desde %s"
 
 msgid "Current Association: "
 msgstr "Asociación actual:"
@@ -10514,8 +10694,9 @@ msgstr "Disposición automática de la placa tras la clonación"
 msgid "Auto slice after changes"
 msgstr "Laminar automáticamente tras cambios"
 
+# AI Translated
 msgid "If enabled, Snapmaker Orca will re-slice automatically whenever slicing-related settings change."
-msgstr ""
+msgstr "Si se activa, Snapmaker Orca volverá a laminar automáticamente cada vez que cambien los ajustes relacionados con el laminado."
 
 msgid "Delay in seconds before auto slicing starts, allowing multiple edits to be grouped. Use 0 to slice immediately."
 msgstr "Retraso en segundos antes de que comience el laminado automático, permitiendo agrupar varias ediciones. Use 0 para laminar inmediatamente."
@@ -10526,12 +10707,15 @@ msgstr "Eliminar restricción de temperaturas mixtas"
 msgid "With this option enabled, you can print materials with a large temperature difference together."
 msgstr "Con esta opción activada, puede imprimir materiales con una gran diferencia de temperatura juntos."
 
+# AI Translated
 msgid "Allow high/low temperature filament mixing"
-msgstr ""
+msgstr "Permitir mezclar filamentos de alta y baja temperatura"
 
+# AI Translated
 msgid "If enabled, allows printing with both high-temperature and low-temperature filaments simultaneously."
-msgstr ""
+msgstr "Si se activa, permite imprimir a la vez con filamentos de alta y de baja temperatura."
 
+# AI Translated
 msgid ""
 "Mixing materials with significantly different printing temperatures may result in:\n"
 "· Extruder clogging\n"
@@ -10540,16 +10724,24 @@ msgid ""
 "\n"
 "Do you want to enable this feature?"
 msgstr ""
+"Mezclar materiales con temperaturas de impresión muy distintas puede provocar:\n"
+"· Atascos en el extrusor\n"
+"· Daños en la boquilla\n"
+"· Problemas de adhesión entre capas\n"
+"\n"
+"¿Desea activar esta función?"
 
+# AI Translated
 msgid "High and Low Temperature Material Mixing Risk"
-msgstr ""
+msgstr "Riesgo al mezclar materiales de alta y baja temperatura"
 
 # AI Translated
 msgid "Remember last print action"
 msgstr "Recordar la última acción de impresión"
 
+# AI Translated
 msgid "If enabled, Snapmaker Orca will remember the last selected option in the print button's dropdown (e.g. Print, Export plate sliced file, Export G-code file) and use it as the default on next startup."
-msgstr ""
+msgstr "Si se activa, Snapmaker Orca recordará la última opción elegida en el desplegable del botón de impresión (p. ej. Imprimir, Exportar los objetos laminados de la cama a un archivo, Exportar archivo G-Code) y la usará por defecto en el siguiente inicio."
 
 msgid "Camera"
 msgstr "Cámara"
@@ -10920,11 +11112,13 @@ msgstr "Ocultar el panel lateral de inicio de sesión"
 msgid "Hide the login side panel on the home page."
 msgstr "Ocultar el panel lateral de inicio de sesión en la página de inicio."
 
+# AI Translated
 msgid "Join Customer Experience Improvement Program."
-msgstr ""
+msgstr "Unirse al Programa de Mejora de la Experiencia del Cliente."
 
+# AI Translated
 msgid "What data would be collected?"
-msgstr ""
+msgstr "¿Qué datos se recopilarían?"
 
 msgid "Network test"
 msgstr "Prueba de red"
@@ -10995,29 +11189,37 @@ msgstr "Las asociaciones de archivos para la versión de Microsoft Store se gest
 msgid "Open Windows Default Apps Settings"
 msgstr "Abrir la configuración de aplicaciones predeterminadas de Windows"
 
+# AI Translated
 msgid "Associate 3MF files to Snapmaker Orca"
-msgstr ""
+msgstr "Asociar archivos 3MF a Snapmaker Orca"
 
+# AI Translated
 msgid "If enabled, this sets Snapmaker Orca as the default application to open 3MF files."
-msgstr ""
+msgstr "Si se activa, Snapmaker Orca será la aplicación predeterminada para abrir archivos 3MF."
 
+# AI Translated
 msgid "Associate DRC files to Snapmaker Orca"
-msgstr ""
+msgstr "Asociar archivos DRC a Snapmaker Orca"
 
+# AI Translated
 msgid "If enabled, sets Snapmaker Orca as default application to open DRC files."
-msgstr ""
+msgstr "Si se activa, Snapmaker Orca será la aplicación predeterminada para abrir archivos DRC."
 
+# AI Translated
 msgid "Associate STL files to Snapmaker Orca"
-msgstr ""
+msgstr "Asociar archivos STL a Snapmaker Orca"
 
+# AI Translated
 msgid "If enabled, this sets Snapmaker Orca as the default application to open STL files."
-msgstr ""
+msgstr "Si se activa, Snapmaker Orca será la aplicación predeterminada para abrir archivos STL."
 
+# AI Translated
 msgid "Associate STEP files to Snapmaker Orca"
-msgstr ""
+msgstr "Asociar archivos STEP a Snapmaker Orca"
 
+# AI Translated
 msgid "If enabled, this sets Snapmaker Orca as the default application to open STEP files."
-msgstr ""
+msgstr "Si se activa, Snapmaker Orca será la aplicación predeterminada para abrir archivos STEP."
 
 msgid "Associate web links to Snapmaker Orca"
 msgstr "Asociar enlaces web a Snapmaker Orca"
@@ -11059,10 +11261,13 @@ msgstr ""
 msgid "Use printer agents instead of print hosts"
 msgstr "Usar agentes de impresora en lugar de hosts de impresión"
 
+# AI Translated
 msgid ""
 "Route print jobs for non-Bambu printers through printer plug-in agents instead of the classic print-host upload flow.\n"
 "When disabled, Snapmaker Orca uses the legacy print-host behavior."
 msgstr ""
+"Envía los trabajos de impresión de las impresoras que no son Bambu a través de agentes de impresora (plugins) en lugar del flujo clásico de carga al host de impresión.\n"
+"Si se desactiva, Snapmaker Orca usa el comportamiento anterior del host de impresión."
 
 msgid "Allow Abnormal Storage"
 msgstr "Permitir almacenamiento anómalo"
@@ -11185,8 +11390,9 @@ msgstr "Cambiar color del extrusor"
 msgid "Unspecified"
 msgstr "No especificado"
 
+# AI Translated
 msgid "Machine Filament"
-msgstr ""
+msgstr "Filamento de la máquina"
 
 msgid "Project-inside presets"
 msgstr "Perfiles internos del proyecto"
@@ -12118,8 +12324,9 @@ msgstr "La impresora seleccionada es incompatible con los perfiles seleccionados
 msgid "Storage needs to be inserted before send to printer."
 msgstr "Es necesario insertar el almacenamiento antes de enviarlo a la impresora."
 
+# AI Translated
 msgid "The printer is required to be on the same LAN as Snapmaker Orca."
-msgstr ""
+msgstr "La impresora debe estar en la misma LAN que Snapmaker Orca."
 
 msgid "The printer does not support sending to printer storage."
 msgstr "La impresora no admite enviar al almacenamiento de la impresora."
@@ -12268,41 +12475,52 @@ msgstr "Sincroniza la modificación de parámetros con los parámetros correspon
 msgid "Parameters with this icon can be configured per nozzle."
 msgstr "Los parámetros con este icono se pueden configurar por boquilla."
 
+# AI Translated
 msgid "[Standard flow]"
-msgstr ""
+msgstr "[Flujo estándar]"
 
+# AI Translated
 msgid "[High flow]"
-msgstr ""
+msgstr "[Flujo alto]"
 
 msgid "Click to reset all settings to the last saved preset."
 msgstr "Presionar para reiniciar todos los ajustes al perfil guardado por defecto."
 
+# AI Translated
 msgid ""
 "When using support material for the support interface, we recommend the following settings:\n"
 "0 top Z distance, 0 interface spacing, interlaced rectilinear pattern and disable independent support layer height"
 msgstr ""
+"Al usar material de soporte para la interfaz de soporte, se recomiendan los siguientes ajustes:\n"
+"distancia Z superior 0, espaciado de interfaz 0, patrón entrelazado rectilíneo y desactivar la altura independiente de la capa de soporte"
 
+# AI Translated
 #, c-format, boost-format
 msgid "Detected %s as support interface material for %s models. PLA and PETG do not bond together — we recommend adjusting the following parameters:"
-msgstr ""
+msgstr "Se ha detectado %s como material de la interfaz de soporte para modelos de %s. El PLA y el PETG no se adhieren entre sí; se recomienda ajustar los siguientes parámetros:"
 
+# AI Translated
 #, c-format, boost-format
 msgid "  • Top Z distance: %.2f → 0 mm\n"
-msgstr ""
+msgstr "  • Distancia Z superior: %.2f → 0 mm\n"
 
+# AI Translated
 msgid "  • Base pattern → Default\n"
-msgstr ""
+msgstr "  • Patrón de base → Predeterminado\n"
 
+# AI Translated
 #, c-format, boost-format
 msgid "  • Top interface layers: %d → 3\n"
-msgstr ""
+msgstr "  • Capas de la interfaz superior: %d → 3\n"
 
+# AI Translated
 msgid "  • Interface pattern → Rectilinear Interlaced\n"
-msgstr ""
+msgstr "  • Patrón de interfaz → Entrelazado rectilíneo\n"
 
+# AI Translated
 #, c-format, boost-format
 msgid "  • Interface spacing: %.2f → 0 mm\n"
-msgstr ""
+msgstr "  • Espaciado de interfaz: %.2f → 0 mm\n"
 
 msgid ""
 "Change these settings automatically?\n"
@@ -12313,11 +12531,13 @@ msgstr ""
 "Sí - Cambiar estos ajustes automáticamente\n"
 "No - No cambiar estos ajustes"
 
+# AI Translated
 msgid "The current layer height is 0.1 mm or below. Enabling Subdivide Mixing Layers may cause the subdivided layer height to fall outside the printer's supported range. This could affect print quality."
-msgstr ""
+msgstr "La altura de capa actual es de 0.1 mm o menos. Activar Subdividir capas de mezcla puede hacer que la altura de las capas subdivididas quede fuera del rango que admite la impresora. Esto podría afectar a la calidad de impresión."
 
+# AI Translated
 msgid "Configuration Conflict"
-msgstr ""
+msgstr "Conflicto de configuración"
 
 msgid "Prime tower is required for nozzle changing. There may be flaws on the model without prime tower. Are you sure you want to disable prime tower?"
 msgstr "Se requiere una torre de purga para el cambio de boquilla. Puede haber imperfecciones en el modelo sin la torre de purga. ¿Está seguro de que desea desactivar la torre de purga?"
@@ -12351,10 +12571,13 @@ msgstr "\"Sin capas de baja densidad\" no es compatible con el timelapse suave, 
 msgid "Still print by object?"
 msgstr "¿Seguir imprimiendo por objeto?"
 
+# AI Translated
 msgid ""
 "Non-soluble support materials are not recommended for support base.\n"
 "Are you sure to use them for support base?"
 msgstr ""
+"No se recomiendan materiales de soporte no solubles para la base del soporte.\n"
+"¿Seguro que desea usarlos para la base del soporte?"
 
 msgid "Enabling this option will modify the model's shape. If your print requires precise dimensions or is part of an assembly, it's important to double-check whether this change in geometry impacts the functionality of your print."
 msgstr "Al activar esta opción se modificará la forma del modelo. Si la impresión requiere dimensiones precisas o forma parte de un ensamblaje, es importante comprobar si este cambio en la geometría afecta a la funcionalidad de la impresión."
@@ -12365,8 +12588,9 @@ msgstr "¿Está seguro de que desea activar esta opción?"
 msgid "Infill patterns are typically designed to handle rotation automatically to ensure proper printing and achieve their intended effects (e.g., Gyroid, Cubic). Rotating the current sparse infill pattern may lead to insufficient support. Please proceed with caution and thoroughly check for any potential printing issues. Are you sure you want to enable this option?"
 msgstr "Los patrones de relleno suelen diseñarse para gestionar la rotación automáticamente y asegurar una impresión adecuada y lograr sus efectos previstos (p. ej., Giroide, Cúbico). Rotar el patrón de relleno actual puede provocar soporte insuficiente. Proceda con precaución y compruebe detenidamente posibles problemas de impresión. ¿Está seguro de que desea activar esta opción?"
 
+# AI Translated
 msgid "Subdivide Mixing Layers is enabled. At a layer height of 0.1 mm or below, the subdivided layer height may fall outside the printer's supported range. This could affect print quality."
-msgstr ""
+msgstr "Subdividir capas de mezcla está activado. Con una altura de capa de 0.1 mm o menos, la altura de las capas subdivididas puede quedar fuera del rango que admite la impresora. Esto podría afectar a la calidad de impresión."
 
 msgid "Experimental feature: Retracting and cutting off the filament at a greater distance during filament changes to minimize flush. Although it can notably reduce flush, it may also elevate the risk of nozzle clogs or other printing complications."
 msgstr "Característica experimental: Retraer y cortar el filamento a mayor distancia durante los cambios de filamento para minimizar el descarte. Aunque puede reducir notablemente el descarte, también puede elevar el riesgo de atascos de boquillas u otros problemas en la impresión."
@@ -12520,8 +12744,9 @@ msgstr "Filamento para Características"
 msgid "Ooze prevention"
 msgstr "Prevención de rezumado"
 
+# AI Translated
 msgid "Color Mixing (Experimental)"
-msgstr ""
+msgstr "Mezcla de colores (experimental)"
 
 msgid "Others"
 msgstr "Otros"
@@ -12550,8 +12775,9 @@ msgstr "Anotaciones"
 msgid "Frequent"
 msgstr "Frecuente"
 
+# AI Translated
 msgid "Modifier cycle"
-msgstr ""
+msgstr "Ciclo del modificador"
 
 #, c-format, boost-format
 msgid ""
@@ -12612,11 +12838,13 @@ msgstr "Temperatura de impresión"
 msgid "Nozzle temperature when printing"
 msgstr "Temperatura de la boquilla al imprimir"
 
+# AI Translated
 msgid "Cool Steel Plate"
-msgstr ""
+msgstr "Cama de Acero Fría"
 
+# AI Translated
 msgid "Bed temperature when this plate is installed. A value of 0 means the filament does not support printing on this plate."
-msgstr ""
+msgstr "Temperatura de la cama cuando está instalada esta cama. Un valor de 0 significa que el filamento no admite imprimir sobre esta cama."
 
 msgid "Cool Plate"
 msgstr "Bandeja Fría"
@@ -12642,8 +12870,9 @@ msgstr "Temperatura de la cama cuando está instalada la cama PEI lisa/ Cama de 
 msgid "This is the bed temperature when the Textured PEI Plate is installed. A value of 0 means the filament does not support printing on the Textured PEI Plate."
 msgstr "Temperatura de la cama cuando la Cama PEI Texturizada está instalada. El valor 0 significa que el filamento no es compatible para imprimir en la Cama PEI Texturizada."
 
+# AI Translated
 msgid "Graphic Effect Plate"
-msgstr ""
+msgstr "Cama de Efecto Gráfico"
 
 msgid "Volumetric speed limitation"
 msgstr "Limitación de la velocidad volumétrica"
@@ -12708,8 +12937,9 @@ msgstr "Impresoras compatibles"
 msgid "Compatible process profiles"
 msgstr "Perfiles de proceso compatibles"
 
+# AI Translated
 msgid "Smooth PEI Plate"
-msgstr ""
+msgstr "Cama PEI Lisa"
 
 msgid "Printable space"
 msgstr "Espacio imprimible"
@@ -13479,8 +13709,9 @@ msgstr "Moldeado total"
 msgid "Ramming line"
 msgstr "Línea de moldeado"
 
+# AI Translated
 msgid "Orca would re-calculate your flushing volumes everytime the filaments color changed or filaments changed. You could disable the auto-calculate in Snapmaker Orca > Preferences"
-msgstr ""
+msgstr "Orca recalculará los volúmenes de purga cada vez que cambie el color de los filamentos o los filamentos. Puede desactivar el cálculo automático en Snapmaker Orca > Preferencias"
 
 msgid "Flushing volume (mm³) for each filament pair."
 msgstr "Volumen de purgado (mm³) para cada par de filamentos."
@@ -13507,8 +13738,9 @@ msgstr "Volúmenes de purgado para el cambio de filamentos"
 msgid "from/to"
 msgstr "de/a"
 
+# AI Translated
 msgid "Cloud agent is not available. Please restart Snapmaker Orca and try again."
-msgstr ""
+msgstr "El agente de la nube no está disponible. Reinicie Snapmaker Orca e inténtelo de nuevo."
 
 msgid "Bambu Network plug-in not detected."
 msgstr "Plugin Red Bambu no detectado."
@@ -13534,11 +13766,13 @@ msgctxt "Printer vendor"
 msgid "Custom"
 msgstr "Personalizado"
 
+# AI Translated
 msgid "Welcome to Snapmaker Orca"
-msgstr ""
+msgstr "Bienvenido a Snapmaker Orca"
 
+# AI Translated
 msgid "Snapmaker Orca will be set up in several steps. Let's start!"
-msgstr ""
+msgstr "Snapmaker Orca se configurará en varios pasos. ¡Empecemos!"
 
 msgid "Get Started"
 msgstr "Comenzar"
@@ -13859,8 +14093,9 @@ msgstr "información de actualización de la versión %s:"
 msgid "Network plug-in update"
 msgstr "Actualizar plug-in de red"
 
+# AI Translated
 msgid "Click OK to update the Network plug-in now. If a file is in use, the update will be applied the next time Snapmaker Orca launches."
-msgstr ""
+msgstr "Haga clic en Aceptar para actualizar ahora el plugin de red. Si hay algún archivo en uso, la actualización se aplicará la próxima vez que se inicie Snapmaker Orca."
 
 msgid "A new Network plug-in is available. Do you want to install it?"
 msgstr "Hay disponible un nuevo plugin de red. ¿Desea instalarlo?"
@@ -13897,8 +14132,9 @@ msgstr "Conecte la impresora usando la IP y el Código de Acceso"
 msgid "Try the following methods to update the connection parameters and reconnect to the printer."
 msgstr "Pruebe los siguientes métodos para actualizar los parámetros de conexión y reconectar a la impresora."
 
+# AI Translated
 msgid "1. Please confirm Snapmaker Orca and your printer are in the same LAN."
-msgstr ""
+msgstr "1. Confirme que Snapmaker Orca y su impresora están en la misma LAN."
 
 msgid "2. If the IP and Access Code below are different from the actual values on your printer, please correct them."
 msgstr "2. Si la IP y el Código de Acceso que aparecen a continuación son diferentes a los valores reales en su impresora, corríjalos."
@@ -14055,24 +14291,30 @@ msgstr "Reparación terminada"
 msgid "Copying of file %1% to %2% failed: %3%"
 msgstr "La copia del archivo %1% a %2% falló: %3%"
 
+# AI Translated
 #, c-format, boost-format
 msgid "Flutter resource download failed: %s"
-msgstr ""
+msgstr "Error al descargar los recursos de Flutter: %s"
 
+# AI Translated
 #, c-format, boost-format
 msgid "Profiles resource download failed: %s"
-msgstr ""
+msgstr "Error al descargar los recursos de perfiles: %s"
 
+# AI Translated
 #, c-format, boost-format
 msgid "request to server update web resource fail with body:%s,error:%s,status:%d"
-msgstr ""
+msgstr "la solicitud de actualización de recursos web al servidor ha fallado con cuerpo:%s,error:%s,estado:%d"
 
+# AI Translated
 #, c-format, boost-format
 msgid "request to server update preset resource fail with body:%s,error:%s,status:%d"
-msgstr ""
+msgstr "la solicitud de actualización de recursos de perfiles al servidor ha fallado con cuerpo:%s,error:%s,estado:%d"
 
+# AI Translated
+# Needs human review: Fragmento concatenado en el código; se desconoce el texto que lo precede.
 msgid "needed, but current version is "
-msgstr ""
+msgstr "necesaria, pero la versión actual es "
 
 # AI Translated
 #. TRN %1% is a comma-separated list of vendor names.
@@ -14098,29 +14340,37 @@ msgstr[1] "No se pudieron descargar los perfiles de fabricante: %1%"
 msgid "Please check any unsaved changes before updating the configuration."
 msgstr "Es necesario comprobar los cambios no guardados antes de actualizar la configuración."
 
+# AI Translated
 msgid "Import Failed"
-msgstr ""
+msgstr "Error al importar"
 
+# AI Translated
 msgid "This web resouce could not be imported due to outdated versions."
-msgstr ""
+msgstr "Este recurso web no se ha podido importar porque su versión está desactualizada."
 
+# AI Translated
 msgid "Updating the web resources requires application restart."
-msgstr ""
+msgstr "Actualizar los recursos web requiere reiniciar la aplicación."
 
+# AI Translated
 msgid "Snapmaker Orca"
-msgstr ""
+msgstr "Snapmaker Orca"
 
+# AI Translated
 msgid "Update web resources"
-msgstr ""
+msgstr "Actualizar recursos web"
 
+# AI Translated
 msgid "Please choose a web resource package file:"
-msgstr ""
+msgstr "Elija un archivo de paquete de recursos web:"
 
+# AI Translated
 msgid "Please choose a system profile package file:"
-msgstr ""
+msgstr "Elija un archivo de paquete de perfiles del sistema:"
 
+# AI Translated
 msgid "The following profiles could not be imported due to outdated versions."
-msgstr ""
+msgstr "Los siguientes perfiles no se han podido importar porque sus versiones están desactualizadas."
 
 msgid "Open G-code file:"
 msgstr "Abrir archivo G-Code:"
@@ -14623,8 +14873,9 @@ msgstr "Seleccione la secuencia de impresión \"Por objeto\" para imprimir vario
 msgid "Spiral (vase) mode does not work when an object contains more than one material."
 msgstr "El modo de jarrón en espiral no funciona cuando un objeto contiene más de un material."
 
+# AI Translated
 msgid "Spiral (vase) mode does not work when an object contains regions with different print settings."
-msgstr ""
+msgstr "El modo vaso en espiral no funciona cuando un objeto contiene regiones con ajustes de impresión distintos."
 
 #, boost-format
 msgid "While the object %1% itself fits the build volume, it exceeds the maximum build volume height because of material shrinkage compensation."
@@ -15020,8 +15271,9 @@ msgstr "Esta es la temperatura de la cama para las capas excepto la inicial. Un 
 msgid "This is the bed temperature for layers except for the first one. A value of 0 means the filament does not support printing on the Textured PEI Plate."
 msgstr "Temperatura de cama para las capas excepto la inicial. El valor 0 significa que el filamento no es compatible para imprimir en la Cama PEI Texturizada."
 
+# AI Translated
 msgid "Bed temperature for layers except the initial one. A value of 0 means the filament does not support printing on this plate."
-msgstr ""
+msgstr "Temperatura de la cama para todas las capas excepto la inicial. Un valor de 0 significa que el filamento no admite imprimir sobre esta cama."
 
 msgid "First layer"
 msgstr "Capa inicial"
@@ -15053,8 +15305,9 @@ msgstr "Capa inicial"
 msgid "Initial layer bed temperature"
 msgstr "Temperatura de la cama durante la primera capa"
 
+# AI Translated
 msgid "Bed temperature of the initial layer. A value of 0 means the filament does not support printing on this plate."
-msgstr ""
+msgstr "Temperatura de la cama de la capa inicial. Un valor de 0 significa que el filamento no admite imprimir sobre esta cama."
 
 msgid "Plate types supported by the printer"
 msgstr "Tipos de cama que admite la impresora"
@@ -15092,11 +15345,14 @@ msgstr "Espesor mínimo de la cubierta inferior"
 msgid "The number of bottom solid layers is increased when slicing if the thickness calculated by bottom shell layers is thinner than this value. This can avoid having too thin a shell when layer height is small. 0 means that this setting is disabled and the thickness of the bottom shell is determined simply by the number of bottom shell layers."
 msgstr "El número de capas sólidas del fondo se incrementa al cortar si el grosor calculado por las capas de la cubierta es más fino que este valor. Esto puede evitar tener una capa demasiado fina cuando la altura de la capa es pequeña. 0 significa que este ajuste está desactivado y el grosor de la capa inferior está absolutamente determinado por las capas de la cubierta inferior."
 
+# AI Translated
+# Needs human review: Ver 'Bottom Paint Penetration Layers'.
 msgid "Bottom paint penetration layers"
-msgstr ""
+msgstr "Capas de penetración de la pintura inferior"
 
+# AI Translated
 msgid "This is the number of layers of bottom paint penetration."
-msgstr ""
+msgstr "Número de capas hasta las que penetra la pintura de la cara inferior."
 
 msgid "Apply gap fill"
 msgstr "Aplicar relleno de huecos"
@@ -16024,8 +16280,10 @@ msgstr "Monotónico"
 msgid "Monotonic line"
 msgstr "Líneas monotónicas"
 
+# AI Translated
+# Needs human review: Patrón de alisado/superficie de Bambu que ordena las líneas monotónicas en toda la capa; comprobar en el desplegable.
 msgid "Global monotonic line"
-msgstr ""
+msgstr "Línea Monotónica global"
 
 msgid "Rectilinear"
 msgstr "Rectilíneo"
@@ -16148,17 +16406,23 @@ msgstr "Patrón de relleno sólido interno"
 msgid "Line pattern of internal solid infill. if the detect narrow internal solid infill be enabled, the concentric pattern will be used for the small area."
 msgstr "Patrón lineal de relleno sólido interno. Si se activa la detección de relleno sólido interno delgado, se utilizará el patrón concéntrico para las áreas pequeñas."
 
+# AI Translated
+# Needs human review: Término nuevo 'sub-top surface' (capa sólida bajo la superficie superior); no está en el glosario.
 msgid "Separate sub-top surface"
-msgstr ""
+msgstr "Separar la superficie bajo la superior"
 
+# AI Translated
 msgid "Print the internal solid infill that supports a visible top surface with its own pattern, set in \"Sub-top surface pattern\". The lines of this layer can print through and mark the top surface."
-msgstr ""
+msgstr "Imprime con su propio patrón, definido en \"Patrón de la superficie bajo la superior\", el relleno sólido interno que sostiene una superficie superior visible. Las líneas de esta capa pueden transparentarse y marcar la superficie superior."
 
+# AI Translated
+# Needs human review: Término nuevo 'sub-top surface'; no está en el glosario.
 msgid "Sub-top surface pattern"
-msgstr ""
+msgstr "Patrón de la superficie bajo la superior"
 
+# AI Translated
 msgid "Line pattern of the solid layer that supports a visible top surface. Its lines can print through and mark the top, so a monotonic pattern gives the smoothest result. The whole solid area that a top surface reaches uses this pattern, not only the part directly beneath it."
-msgstr ""
+msgstr "Patrón de líneas de la capa sólida que sostiene una superficie superior visible. Sus líneas pueden transparentarse y marcar la superficie superior, por lo que un patrón monotónico da el resultado más liso. Toda la zona sólida a la que llega una superficie superior usa este patrón, no solo la parte justo debajo."
 
 msgid "Line width of outer wall. If expressed as a %, it will be computed over the nozzle diameter."
 msgstr "Ancho de línea del perímetro externo. Si se expresa cómo %, se calculará sobre el diámetro de la boquilla."
@@ -16292,8 +16556,9 @@ msgstr "Esta opción establece el punto mínimo para el área de malla de la cam
 msgid "Bed mesh max"
 msgstr "Punto máximo para el mallado de superficie"
 
+# AI Translated
 msgid "This option sets the max point for the allowed bed mesh area. Due to the probe's XY offset, most printers are unable to probe the entire bed. To ensure the probe point does not go outside the bed area, the minimum and maximum points of the bed mesh should be set appropriately. Snapmaker_Orca ensures that adaptive_bed_mesh_min/adaptive_bed_mesh_max values do not exceed these min/max points. This information can usually be obtained from your printer manufacturer. The default setting is (99999, 99999), which means there are no limits, thus allowing probing across the entire bed."
-msgstr ""
+msgstr "Esta opción establece el punto máximo del área permitida de la malla de la cama. Debido al desplazamiento XY de la sonda, la mayoría de impresoras no pueden sondear toda la cama. Para que el punto de sondeo no salga del área de la cama, los puntos mínimo y máximo de la malla de la cama deben ajustarse adecuadamente. Snapmaker_Orca garantiza que los valores adaptive_bed_mesh_min/adaptive_bed_mesh_max no superen estos puntos mínimo/máximo. Normalmente puede obtener esta información del fabricante de su impresora. El valor predeterminado es (99999, 99999), que significa que no hay límites y permite sondear toda la cama."
 
 msgid "Probe point distance"
 msgstr "Distancia entre puntos de medición"
@@ -16460,29 +16725,37 @@ msgstr ""
 "Color predeterminado del filamento.\n"
 "Haga clic con el botón derecho para restablecer el valor predeterminado del sistema."
 
+# AI Translated
 msgid "Filament multi colors"
-msgstr ""
+msgstr "Colores múltiples del filamento"
 
+# AI Translated
 msgid "Serialized filament color sequence. Multiple colors are separated by '|'."
-msgstr ""
+msgstr "Secuencia serializada de colores del filamento. Los colores se separan con '|'."
 
+# AI Translated
 msgid "Filament color display mode"
-msgstr ""
+msgstr "Modo de visualización del color del filamento"
 
+# AI Translated
 msgid "Filament color display mode: 0 for split colors, 1 for vertical gradient."
-msgstr ""
+msgstr "Modo de visualización del color del filamento: 0 para colores divididos, 1 para gradiente vertical."
 
+# AI Translated
 msgid "small thumb"
-msgstr ""
+msgstr "miniatura pequeña"
 
+# AI Translated
 msgid "first small thumb"
-msgstr ""
+msgstr "primera miniatura pequeña"
 
+# AI Translated
 msgid "big thumb"
-msgstr ""
+msgstr "miniatura grande"
 
+# AI Translated
 msgid "first big thumb"
-msgstr ""
+msgstr "primera miniatura grande"
 
 msgid "Filament notes"
 msgstr "Anotaciones de filamento"
@@ -16547,11 +16820,13 @@ msgstr "Tiempo de cambio de herramienta"
 msgid "Time taken to switch tools. It's usually applicable for tool changers or multi-tool machines. For single-extruder multi-material machines, it's typically 0. For statistics only."
 msgstr "Tiempo que se tarda en cambiar cabezal. Aplciable sólo a máquinas multi-herramientas. Para máquinas mono-herramientas, es 0. Sólo usado para elaborar estadísticas."
 
+# AI Translated
 msgid "Wait for the temperature when changing tools"
-msgstr ""
+msgstr "Esperar a la temperatura al cambiar de herramienta"
 
+# AI Translated
 msgid "It will use the M109 instead of M104 T[target] after changing tools if this is set to true"
-msgstr ""
+msgstr "Si se activa, se usará M109 en lugar de M104 T[target] después de cambiar de herramienta"
 
 msgid "Bed temperature type"
 msgstr "Tipo de temperatura de la cama"
@@ -16782,11 +17057,13 @@ msgstr "Material de soporte"
 msgid "Support material is commonly used to print supports and support interfaces."
 msgstr "El material de soporte se utiliza habitualmente para imprimir soportes y la interfaz de los soportes"
 
+# AI Translated
 msgid "Is high-temperature filament"
-msgstr ""
+msgstr "Es filamento de alta temperatura"
 
+# AI Translated
 msgid "Indicates whether this is a high-temperature filament that requires elevated printing temperatures."
-msgstr ""
+msgstr "Indica si es un filamento de alta temperatura que requiere temperaturas de impresión elevadas."
 
 msgid "Is mixed filament"
 msgstr "Es filamento mixto"
@@ -17158,8 +17435,9 @@ msgstr "Ancho de línea de la primera capa. Si se expresa como %, se calculará 
 msgid "First layer infill"
 msgstr "Relleno de la primera capa"
 
+# AI Translated
 msgid "Line width of the infill of the first layer, including sparse infill, solid infill and top surface. Walls, support and everything else on the first layer keep using the first layer line width. If expressed as a %, it will be computed over the nozzle diameter. Zero means to use the first layer line width."
-msgstr ""
+msgstr "Ancho de línea del relleno de la primera capa, incluidos el relleno de baja densidad, el relleno sólido y la superficie superior. Los perímetros, los soportes y todo lo demás de la primera capa siguen usando el ancho de línea de la primera capa. Si se expresa en %, se calculará sobre el diámetro de la boquilla. Cero significa usar el ancho de línea de la primera capa."
 
 msgid "First layer height"
 msgstr "Altura de la primera capa"
@@ -17848,11 +18126,13 @@ msgstr ""
 msgid "0 (Simple connect)"
 msgstr "0 (Conexión simple)"
 
+# AI Translated
 msgid "Acceleration of travel moves on the first layer. If expressed as a percentage it will be calculated based on the travel acceleration. A value of 0 means the printer will use its firmware default."
-msgstr ""
+msgstr "Aceleración de los desplazamientos en la primera capa. Si se expresa en porcentaje, se calculará sobre la aceleración de desplazamiento. Un valor de 0 significa que la impresora usará el valor predeterminado de su firmware."
 
+# AI Translated
 msgid "Jerk of travel moves on the first layer. If expressed as a percentage it will be calculated based on the travel jerk. A value of 0 means the printer will use its firmware default."
-msgstr ""
+msgstr "Jerk de los desplazamientos en la primera capa. Si se expresa en porcentaje, se calculará sobre el jerk de desplazamiento. Un valor de 0 significa que la impresora usará el valor predeterminado de su firmware."
 
 # AI Translated
 msgid ""
@@ -18458,47 +18738,61 @@ msgstr "Volumen de la boquilla"
 msgid "Volume of nozzle between the filament cutter and the end of the nozzle"
 msgstr "Volumen de la boquilla entre el cortador y el extremo de la boquilla"
 
+# AI Translated
 msgid "Filament volume type"
-msgstr ""
+msgstr "Tipo de volumen del filamento"
 
+# AI Translated
 msgid "Flow type of each filament (one entry per filament, e.g. standard / high_flow). The GUI writes its filament-to-flow-type mapping here; flow-variant array options are read at the index the filament's flow type resolves to in the corresponding *_flow_support list."
-msgstr ""
+msgstr "Tipo de flujo de cada filamento (una entrada por filamento, p. ej. standard / high_flow). La interfaz guarda aquí la asignación de filamento a tipo de flujo; las opciones de lista por variante de flujo se leen en el índice que corresponde al tipo de flujo del filamento en la lista *_flow_support correspondiente."
 
+# AI Translated
 msgid "Project schema version"
-msgstr ""
+msgstr "Versión del esquema del proyecto"
 
+# AI Translated
 msgid "Version of the project configuration schema stored in the 3MF project."
-msgstr ""
+msgstr "Versión del esquema de configuración del proyecto guardada en el proyecto 3MF."
 
+# AI Translated
 msgid "Filament flow support"
-msgstr ""
+msgstr "Variantes de flujo del filamento"
 
+# AI Translated
 msgid "Flow variants this filament preset provides values for. Multi-valued filament options are ordered accordingly, the first value belongs to the standard mode."
-msgstr ""
+msgstr "Variantes de flujo para las que este perfil de filamento ofrece valores. Las opciones de filamento con varios valores siguen este orden; el primer valor corresponde al modo estándar."
 
+# AI Translated
 msgid "Process flow support"
-msgstr ""
+msgstr "Variantes de flujo del proceso"
 
+# AI Translated
 msgid "Flow variants this process preset provides values for. Multi-valued process options are ordered accordingly, the first value belongs to the standard mode."
-msgstr ""
+msgstr "Variantes de flujo para las que este perfil de proceso ofrece valores. Las opciones de proceso con varios valores siguen este orden; el primer valor corresponde al modo estándar."
 
+# AI Translated
 msgid "Printer flow support"
-msgstr ""
+msgstr "Variantes de flujo de la impresora"
 
+# AI Translated
 msgid "Flow variants this printer preset provides values for. Multi-valued printer options are ordered accordingly, the first value belongs to the standard mode."
-msgstr ""
+msgstr "Variantes de flujo para las que este perfil de impresora ofrece valores. Las opciones de impresora con varios valores siguen este orden; el primer valor corresponde al modo estándar."
 
+# AI Translated
 msgid "Filament grouping mode"
-msgstr ""
+msgstr "Modo de agrupación de filamentos"
 
+# AI Translated
 msgid "Slicing mode chosen from the slice-button hover popup: standard keeps every filament on standard flow; custom uses the mapping from the custom filament grouping dialog."
-msgstr ""
+msgstr "Modo de laminado elegido en la ventana emergente del botón Laminar: estándar mantiene todos los filamentos en flujo estándar; personalizado usa la asignación del cuadro de diálogo de agrupación personalizada de filamentos."
 
+# AI Translated
 msgid "Filament flow step size"
-msgstr ""
+msgstr "Tamaño de paso de flujo del filamento"
 
+# AI Translated
 msgid "Segment length (number of declared flow variants) of each filament inside the interleaved filament arrays of a composed config. Filament i owns the segment starting at the sum of the preceding step sizes. Generated when the full config is composed, not part of any preset."
-msgstr ""
+msgstr "Longitud del segmento (número de variantes de flujo declaradas) de cada filamento dentro de las listas intercaladas de filamentos de una configuración compuesta. El filamento i ocupa el segmento que empieza en la suma de los tamaños de paso anteriores. Se genera al componer la configuración completa; no forma parte de ningún perfil."
 
 msgid "Cooling tube position"
 msgstr "Posición del tubo de refrigeración"
@@ -18635,72 +18929,100 @@ msgstr ""
 "\n"
 "No se recomienda utilizar el relleno rayo junto con esta opción, ya que el hay una cantidad limitada de relleno donde anclar los perímetros adicionales."
 
+# AI Translated
 msgid "Periodic modifier"
-msgstr ""
+msgstr "Modificador periódico"
 
+# AI Translated
 msgid "Apply this modifier on a repeating layer cycle. On skipped layers it is ignored, as if this modifier were not there."
-msgstr ""
+msgstr "Aplica este modificador en un ciclo de capas que se repite. En las capas omitidas se ignora, como si el modificador no existiera."
 
+# AI Translated
 msgid "Skip for"
-msgstr ""
+msgstr "Omitir durante"
 
+# AI Translated
 msgid "Periodic modifier skip layers"
-msgstr ""
+msgstr "Capas omitidas del modificador periódico"
 
+# AI Translated
 msgid "Number of consecutive layers on which this modifier is not applied. 0 means the modifier is applied on every layer."
-msgstr ""
+msgstr "Número de capas consecutivas en las que no se aplica este modificador. 0 significa que el modificador se aplica en todas las capas."
 
+# AI Translated
 msgid "Apply for"
-msgstr ""
+msgstr "Aplicar durante"
 
+# AI Translated
 msgid "Periodic modifier apply layers"
-msgstr ""
+msgstr "Capas aplicadas del modificador periódico"
 
+# AI Translated
 msgid "Number of consecutive layers in each cycle on which this modifier is fully applied. The cycle starts at layer 0: first \"Apply for\", then \"Skip for\"."
-msgstr ""
+msgstr "Número de capas consecutivas de cada ciclo en las que este modificador se aplica por completo. El ciclo empieza en la capa 0: primero \"Aplicar durante\" y después \"Omitir durante\"."
 
+# AI Translated
 msgid "Ignore infill settings"
-msgstr ""
+msgstr "Ignorar ajustes de relleno"
 
+# AI Translated
 msgid "Modifier ignores infill settings"
-msgstr ""
+msgstr "El modificador ignora los ajustes de relleno"
 
+# AI Translated
 msgid "Do not apply this modifier's internal infill settings (pattern, density, and related options). Walls and other overrides still apply. Infill is taken from the parent region."
-msgstr ""
+msgstr "No aplica los ajustes de relleno interno de este modificador (patrón, densidad y opciones relacionadas). Los perímetros y el resto de ajustes sí se aplican. El relleno se toma de la región padre."
 
 msgid "If you want to process the output G-code through custom scripts, just list their absolute paths here. Separate multiple scripts with a semicolon. Scripts will be passed the absolute path to the G-code file as the first argument, and they can access the Snapmaker Orca config settings by reading environment variables."
 msgstr "Si desea procesar el G-Code de salida a través de scripts personalizados, simplemente enumere sus rutas absolutas aquí. Separe diferentes scripts con punto y coma. A los scripts se les pasará la ruta absoluta al archivo G-Code como primer argumento, y pueden acceder a los ajustes de configuración de Snapmaker Orca leyendo variables de entorno."
 
+# AI Translated
 msgid "Dithering cadence height A"
-msgstr ""
+msgstr "Altura de cadencia de tramado A"
 
+# AI Translated
 msgid ""
 "Layer height contribution of component A for dithering virtual filaments. Set to 0 to use normal 1-layer A / 1-layer B alternation.\n"
 "\n"
 "Detailed mixed filament setting explanations will be published once the project wiki is available."
 msgstr ""
+"Aportación del componente A a la altura de capa en los filamentos virtuales con tramado. Ajústelo a 0 para usar la alternancia normal de 1 capa A / 1 capa B.\n"
+"\n"
+"Las explicaciones detalladas de los ajustes de filamento mixto se publicarán cuando la wiki del proyecto esté disponible."
 
+# AI Translated
 msgid "Dithering cadence height B"
-msgstr ""
+msgstr "Altura de cadencia de tramado B"
 
+# AI Translated
 msgid ""
 "Layer height contribution of component B for dithering virtual filaments. Set to 0 to use normal 1-layer A / 1-layer B alternation.\n"
 "\n"
 "Detailed mixed filament setting explanations will be published once the project wiki is available."
 msgstr ""
+"Aportación del componente B a la altura de capa en los filamentos virtuales con tramado. Ajústelo a 0 para usar la alternancia normal de 1 capa A / 1 capa B.\n"
+"\n"
+"Las explicaciones detalladas de los ajustes de filamento mixto se publicarán cuando la wiki del proyecto esté disponible."
 
+# AI Translated
 msgid "Height-weighted cadence"
-msgstr ""
+msgstr "Cadencia ponderada por altura"
 
+# AI Translated
 msgid ""
 "Enable height-weighted cadence for mixed filaments. Limitation: only one height-weighted mixed color should be present at a given Z plane, because independent per-color layer heights are not supported and the resulting layer height applies to the whole plane. When disabled, layer-cycle cadence is used.\n"
 "\n"
 "Detailed mixed filament setting explanations will be published once the project wiki is available."
 msgstr ""
+"Activa la cadencia ponderada por altura para los filamentos mixtos. Limitación: en un mismo plano Z solo debe haber un color mixto ponderado por altura, porque no se admiten alturas de capa independientes por color y la altura de capa resultante se aplica a todo el plano. Si se desactiva, se usa la cadencia por ciclo de capas.\n"
+"\n"
+"Las explicaciones detalladas de los ajustes de filamento mixto se publicarán cuando la wiki del proyecto esté disponible."
 
+# AI Translated
 msgid "Local-Z lower height bound"
-msgstr ""
+msgstr "Límite inferior de altura Local-Z"
 
+# AI Translated
 msgid ""
 "Lower bound used when Local-Z mixed-filament dithering chooses per-color sublayer heights.\n"
 "\n"
@@ -18708,10 +19030,17 @@ msgid ""
 "\n"
 "Detailed mixed filament setting explanations will be published once the project wiki is available."
 msgstr ""
+"Límite inferior que se usa cuando el tramado Local-Z del filamento mixto elige las alturas de subcapa de cada color.\n"
+"\n"
+"Los valores más pequeños permiten que Local-Z use subcapas más finas para un color cuando sea necesario.\n"
+"\n"
+"Las explicaciones detalladas de los ajustes de filamento mixto se publicarán cuando la wiki del proyecto esté disponible."
 
+# AI Translated
 msgid "Local-Z upper height bound"
-msgstr ""
+msgstr "Límite superior de altura Local-Z"
 
+# AI Translated
 msgid ""
 "Upper bound used when Local-Z mixed-filament dithering chooses per-color sublayer heights.\n"
 "\n"
@@ -18719,10 +19048,17 @@ msgid ""
 "\n"
 "Detailed mixed filament setting explanations will be published once the project wiki is available."
 msgstr ""
+"Límite superior que se usa cuando el tramado Local-Z del filamento mixto elige las alturas de subcapa de cada color.\n"
+"\n"
+"Los valores más grandes permiten que Local-Z use subcapas más gruesas para un color cuando sea necesario.\n"
+"\n"
+"Las explicaciones detalladas de los ajustes de filamento mixto se publicarán cuando la wiki del proyecto esté disponible."
 
+# AI Translated
 msgid "Advanced dithering"
-msgstr ""
+msgstr "Tramado avanzado"
 
+# AI Translated
 msgid ""
 "Distribute mixed filament layer-cycle cadence using an advanced ordered dithering pattern instead of a simple contiguous A-then-B run. This can reduce visible striping for some hues.\n"
 "\n"
@@ -18730,28 +19066,45 @@ msgid ""
 "\n"
 "Detailed mixed filament setting explanations will be published once the project wiki is available."
 msgstr ""
+"Distribuye la cadencia por ciclo de capas del filamento mixto con un patrón de tramado ordenado avanzado en lugar de una secuencia continua simple de A y luego B. Puede reducir las franjas visibles en algunos tonos.\n"
+"\n"
+"Es un modo aún más experimental y el color percibido puede diferir del tramado normal con el mismo par de filamentos y la misma proporción.\n"
+"\n"
+"Las explicaciones detalladas de los ajustes de filamento mixto se publicarán cuando la wiki del proyecto esté disponible."
 
+# AI Translated
 msgid "Pointillisme pixel size"
-msgstr ""
+msgstr "Tamaño de píxel del puntillismo"
 
+# AI Translated
 msgid ""
 "Length of one pointillisme segment along an extrusion path for same-layer pointillisme mode. Set to 0 to use automatic nozzle-based sizing.\n"
 "\n"
 "Warning: Same-layer pointillisme is extremely experimental and may produce unusable results."
 msgstr ""
+"Longitud de un segmento de puntillismo a lo largo de una trayectoria de extrusión en el modo de puntillismo en la misma capa. Ajústelo a 0 para usar un tamaño automático basado en la boquilla.\n"
+"\n"
+"Aviso: el puntillismo en la misma capa es extremadamente experimental y puede dar resultados inservibles."
 
+# AI Translated
 msgid "Pointillisme line gap"
-msgstr ""
+msgstr "Separación de líneas del puntillismo"
 
+# AI Translated
 msgid ""
 "Optional non-extruded spacing between adjacent pointillisme segments. Increase carefully to improve separation and print quality.\n"
 "\n"
 "Warning: Same-layer pointillisme is extremely experimental and may produce unusable results."
 msgstr ""
+"Separación opcional sin extruir entre segmentos de puntillismo contiguos. Auméntela con cuidado para mejorar la separación y la calidad de impresión.\n"
+"\n"
+"Aviso: el puntillismo en la misma capa es extremadamente experimental y puede dar resultados inservibles."
 
+# AI Translated
 msgid "Enable mixed filament bias"
-msgstr ""
+msgstr "Activar el sesgo del filamento mixto"
 
+# AI Translated
 msgid ""
 "Show and apply the per-row mixed filament Bias control.\n"
 "\n"
@@ -18759,10 +19112,17 @@ msgid ""
 "\n"
 "Bias is ignored for grouped wall patterns, same-layer pointillisme, and Local Z dithering."
 msgstr ""
+"Muestra y aplica el control de sesgo por fila del filamento mixto.\n"
+"\n"
+"Si se activa, el filamento seleccionado de un par mixto se hunde ligeramente para que el otro componente sea más visible.\n"
+"\n"
+"El sesgo se ignora en los patrones de perímetro agrupados, el puntillismo en la misma capa y el tramado Local Z."
 
+# AI Translated
 msgid "Selective Expansion contraction"
-msgstr ""
+msgstr "Expansión/contracción selectiva"
 
+# AI Translated
 msgid ""
 "XY offset applied to mixed-filament painted regions before region assignment.\n"
 "\n"
@@ -18770,10 +19130,17 @@ msgid ""
 "\n"
 "This applies to mixed filament usage in layer cadence, height cadence, same-layer pointillisme, and local Z dithering."
 msgstr ""
+"Desplazamiento XY aplicado a las regiones pintadas con filamento mixto antes de asignar las regiones.\n"
+"\n"
+"Los valores positivos contraen la zona mixta hacia dentro. Los negativos la expanden hacia fuera.\n"
+"\n"
+"Se aplica al uso de filamento mixto en la cadencia por capas, la cadencia por altura, el puntillismo en la misma capa y el tramado Local Z."
 
+# AI Translated
 msgid "Collapse same-color mixed regions"
-msgstr ""
+msgstr "Unificar regiones mixtas del mismo color"
 
+# AI Translated
 msgid ""
 "Merge ordinary mixed-filament painted regions into a single area when they resolve to the same physical filament on a layer.\n"
 "\n"
@@ -18781,43 +19148,67 @@ msgid ""
 "\n"
 "Subdivide Mix Layer disables this behavior, and gradient mixed regions also bypass it because they use the Local-Z pipeline."
 msgstr ""
+"Fusiona en una sola zona las regiones normales pintadas con filamento mixto que en una capa dan como resultado el mismo filamento físico.\n"
+"\n"
+"Mejora la continuidad de las zonas contiguas del mismo color.\n"
+"\n"
+"Subdividir capa de mezcla desactiva este comportamiento, y las regiones mixtas con gradiente tampoco lo usan porque pasan por el proceso Local-Z."
 
+# AI Translated
 msgid "Mixed filament custom definitions"
-msgstr ""
+msgstr "Definiciones personalizadas de filamento mixto"
 
+# AI Translated
 msgid ""
 "Serialized custom mixed filament rows.\n"
 "\n"
 "Detailed mixed filament setting explanations will be published once the project wiki is available."
 msgstr ""
+"Filas serializadas de filamentos mixtos personalizados.\n"
+"\n"
+"Las explicaciones detalladas de los ajustes de filamento mixto se publicarán cuando la wiki del proyecto esté disponible."
 
+# AI Translated
 msgid "Dithering Z step size"
-msgstr ""
+msgstr "Tamaño de paso Z del tramado"
 
+# AI Translated
 msgid ""
 "Layer height used in Z zones painted with dithering (mixed virtual filaments). Set to 0 to keep normal layer height in those zones.\n"
 "\n"
 "Detailed mixed filament setting explanations will be published once the project wiki is available."
 msgstr ""
+"Altura de capa usada en las zonas Z pintadas con tramado (filamentos virtuales mixtos). Ajústelo a 0 para mantener la altura de capa normal en esas zonas.\n"
+"\n"
+"Las explicaciones detalladas de los ajustes de filamento mixto se publicarán cuando la wiki del proyecto esté disponible."
 
+# AI Translated
 msgid "Subdivide Mix Layer"
-msgstr ""
+msgstr "Subdividir capa de mezcla"
 
+# AI Translated
 msgid "Enable \"Subdivide Mix Layer\" for mixing areas. Layer height will be subdivided for better color mixing results."
-msgstr ""
+msgstr "Activa \"Subdividir capa de mezcla\" en las zonas de mezcla. La altura de capa se subdividirá para mejorar la mezcla de colores."
 
+# AI Translated
 msgid "Full domain"
-msgstr ""
+msgstr "Dominio completo"
 
+# AI Translated
 msgid ""
 "Experimental. Apply Local-Z thinning across whole mixed-color regions instead of limiting the effect strictly to painted mixed masks.\n"
 "\n"
 "Only available when Subdivide Mix Layer is enabled."
 msgstr ""
+"Experimental. Aplica el adelgazamiento Local-Z a todas las regiones de color mezclado en lugar de limitarlo estrictamente a las máscaras mixtas pintadas.\n"
+"\n"
+"Solo disponible cuando Subdividir capa de mezcla está activado."
 
+# AI Translated
 msgid "Apply subdivision to infill"
-msgstr ""
+msgstr "Aplicar la subdivisión al relleno"
 
+# AI Translated
 msgid ""
 "Experimental. When Subdivide Mix Layer is enabled, also apply the same subdivision to infill inside mixed-color areas.\n"
 "\n"
@@ -18825,24 +19216,39 @@ msgid ""
 "\n"
 "It can improve internal color mixing, but may add toolchanges and affect infill behavior."
 msgstr ""
+"Experimental. Cuando Subdividir capa de mezcla está activado, aplica también la misma subdivisión al relleno dentro de las zonas de color mezclado.\n"
+"\n"
+"Se activa automáticamente con Subdividir capa de mezcla. Desactívelo para mantener el relleno con la altura de capa normal.\n"
+"\n"
+"Puede mejorar la mezcla interna de colores, pero puede añadir cambios de herramienta y afectar al relleno."
 
+# AI Translated
 msgid "Use direct multicolor Local-Z solver"
-msgstr ""
+msgstr "Usar el solucionador Local-Z multicolor directo"
 
+# AI Translated
 msgid ""
 "Experimental. For mixed rows with 3 or more physical filaments, allocate Local-Z sublayers directly across all components with carry-over error between layers instead of collapsing them into pair cadence.\n"
 "\n"
 "This can reduce visible banding in multicolor Local-Z blends at the cost of more toolchanges. It is ignored when explicit Local-Z A/B heights are set."
 msgstr ""
+"Experimental. En las filas mixtas con 3 o más filamentos físicos, reparte las subcapas Local-Z directamente entre todos los componentes, arrastrando el error entre capas, en lugar de reducirlas a una cadencia por pares.\n"
+"\n"
+"Puede reducir las bandas visibles en las mezclas Local-Z multicolor a costa de más cambios de herramienta. Se ignora cuando se definen alturas Local-Z A/B explícitas."
 
+# AI Translated
 msgid "Use step size in painted zones only"
-msgstr ""
+msgstr "Usar el tamaño de paso solo en zonas pintadas"
 
+# AI Translated
 msgid ""
 "When enabled, dithering Z step size is applied only where mixed filament is painted. Unpainted zones keep their original layer height.\n"
 "\n"
 "Detailed mixed filament setting explanations will be published once the project wiki is available."
 msgstr ""
+"Si se activa, el tamaño de paso Z del tramado solo se aplica donde se ha pintado filamento mixto. Las zonas sin pintar mantienen su altura de capa original.\n"
+"\n"
+"Las explicaciones detalladas de los ajustes de filamento mixto se publicarán cuando la wiki del proyecto esté disponible."
 
 msgid "Change extrusion role G-code (process)"
 msgstr "G-Code de cambio de rol de extrusión (proceso)"
@@ -18896,8 +19302,9 @@ msgstr "Densidad de la balsa (base de impresión) o capa de soporte."
 msgid "First layer expansion"
 msgstr "Expansión de la primera capa"
 
+# AI Translated
 msgid "Expand the first raft or support layer to improve bed plate adhesion, -1 means auto"
-msgstr ""
+msgstr "Expande la primera capa de la balsa o del soporte para mejorar la adherencia a la cama; -1 significa automático"
 
 msgid "Raft layers"
 msgstr "Capas de balsa (base de impresión)"
@@ -18999,8 +19406,9 @@ msgstr "Pendiente"
 msgid "Spiral"
 msgstr "Espiral"
 
+# AI Translated
 msgid "Z hop when moving to tower"
-msgstr ""
+msgstr "Salto Z al desplazarse a la torre"
 
 msgid "Traveling angle"
 msgstr "Ángulo de desplazamiento"
@@ -19452,11 +19860,13 @@ msgstr "Tiempo de Precalentamiento"
 msgid "To reduce the waiting time after tool change, Orca can preheat the next tool while the current tool is still in use. This setting specifies the time in seconds to preheat the next tool. Orca will insert a M104 command to preheat the tool in advance."
 msgstr "Para reducir el tiempo de espera tras el cambio de cabezal, Orca puede precalentar el siguiente cabezal mientras el cabezal actual todavía está en uso. Este ajuste especifica el tiempo en segundos para precalentar la siguiente herramienta. Orca insertará un comando M104 para precalentar el cabezal por adelantado."
 
+# AI Translated
 msgid "Preheat delta temperature"
-msgstr ""
+msgstr "Diferencia de temperatura de precalentamiento"
 
+# AI Translated
 msgid "Allow user to set the Preheat temperature. If target temperature is 220 and Preheat delta temperature is -30, then the preheat temperature will be 190"
-msgstr ""
+msgstr "Permite ajustar la temperatura de precalentamiento. Si la temperatura objetivo es 220 y la diferencia de temperatura de precalentamiento es -30, la temperatura de precalentamiento será 190"
 
 msgid "Preheat steps"
 msgstr "Pasos de precalentamiento"
@@ -19634,23 +20044,29 @@ msgstr "Purgar el filamento restante en una torre"
 msgid "Enable filament ramming"
 msgstr "Habilitar compactación de filamento"
 
+# AI Translated
 msgid "Ramming line width ratio"
-msgstr ""
+msgstr "Proporción del ancho de línea de moldeado"
 
+# AI Translated
 msgid "This is used to decide the line width of wipe tower when ramming, ramming line width = [this ratio] * extruder * 1.25"
-msgstr ""
+msgstr "Determina el ancho de línea de la torre de purga durante el moldeado: ancho de línea de moldeado = [esta proporción] * extrusor * 1.25"
 
+# AI Translated
 msgid "Enable change pressure advance when wiping"
-msgstr ""
+msgstr "Cambiar el Pressure Advance durante la purga"
 
+# AI Translated
 msgid "If it's set to false, the pressure advance value will not be changed."
-msgstr ""
+msgstr "Si se desactiva, el valor de Pressure Advance no se cambiará."
 
+# AI Translated
 msgid "Pressure advance value when ramming"
-msgstr ""
+msgstr "Valor de Pressure Advance durante el moldeado"
 
+# AI Translated
 msgid "Set_Pressure_advance [this value] when ramming on wipe tower"
-msgstr ""
+msgstr "Set_Pressure_advance [este valor] durante el moldeado en la torre de purga"
 
 msgid "Tool change on wipe tower"
 msgstr "Cambio de herramienta en la torre de purga"
@@ -19898,11 +20314,13 @@ msgstr ""
 "Espaciado de las líneas de interfaz. Cero significa interfaz sólida.\n"
 "Forzar el uso de interfaz sólida cuando el planchado de soportes esté activado."
 
+# AI Translated
 msgid "Minimum Support Contact Area"
-msgstr ""
+msgstr "Área mínima de contacto del soporte"
 
+# AI Translated
 msgid "Lower values generate more support contact surfaces."
-msgstr ""
+msgstr "Los valores más bajos generan más superficies de contacto del soporte."
 
 msgid "Bottom interface spacing"
 msgstr "Espaciado de la interfaz inferior"
@@ -20176,26 +20594,33 @@ msgstr "Ángulo de las rama de soporte Árbol"
 msgid "This setting determines the maximum overhang angle that the branches of tree support are allowed to make. If the angle is increased, the branches can be printed more horizontally, allowing them to reach farther."
 msgstr "Este ajuste determina el ángulo máximo de voladizo que pueden tener las ramas del soporte de Árbol. Si se aumenta el ángulo, las ramas pueden imprimirse más horizontalmente, permitiendo que lleguen más lejos."
 
+# AI Translated
 msgid "Tree support transition layers"
-msgstr ""
+msgstr "Capas de transición de los soportes de árbol"
 
+# AI Translated
 msgid "Number of transition layers between tree support interface and support body. 0 disables transition layers. Bambu Studio uses 1 layer by default; Snapmaker recommends 2 layers for better adhesion with high-shrinkage materials like ABS/PC/PA."
-msgstr ""
+msgstr "Número de capas de transición entre la interfaz de los soportes de árbol y el cuerpo del soporte. 0 desactiva las capas de transición. Bambu Studio usa 1 capa por defecto; Snapmaker recomienda 2 capas para mejorar la adherencia con materiales de alta contracción como ABS/PC/PA."
 
+# AI Translated
 msgid "Support transition perimeter"
-msgstr ""
+msgstr "Perímetro de transición del soporte"
 
+# AI Translated
 msgid "Generate a perimeter loop before transition layer infill for better surface connection. Recommended to keep enabled."
-msgstr ""
+msgstr "Genera un bucle de perímetro antes del relleno de la capa de transición para mejorar la unión de la superficie. Se recomienda mantenerlo activado."
 
+# AI Translated
 msgid "Support transition speed"
-msgstr ""
+msgstr "Velocidad de transición del soporte"
 
+# AI Translated
 msgid "Independent printing speed for support transition layers. Lower speed improves layer adhesion. Different from bridge_speed which is for bridging over gaps."
-msgstr ""
+msgstr "Velocidad de impresión independiente para las capas de transición del soporte. Una velocidad menor mejora la adhesión entre capas. Es distinta de bridge_speed, que se usa para tender puentes sobre huecos."
 
+# AI Translated
 msgid "Support transition flow ratio"
-msgstr ""
+msgstr "Factor de flujo de transición del soporte"
 
 #, c-format, boost-format
 msgid "Flow ratio for support transition layers relative to normal support flow. Slightly lower than interface flow for a more natural transition. 0.85 = 85% of normal support flow."
@@ -20368,11 +20793,14 @@ msgstr "Espesor mínimo de la cubierta superior"
 msgid "The number of top solid layers is increased when slicing if the thickness calculated by top shell layers is thinner than this value. This can avoid having too thin a shell when layer height is small. 0 means that this setting is disabled and thickness of top shell is determined simply by the number of top shell layers."
 msgstr "El número de capas sólidas superiores se incrementa al laminar si el espesor calculado por las capas de la cubierta es más delgado que este valor. Esto puede evitar tener una cubierta demasiado fina cuando la altura de la capa es pequeña. 0 significa que este ajuste está desactivado y el grosor de la capa superior está absolutamente determinado por las capas de la cubierta superior."
 
+# AI Translated
+# Needs human review: Ver 'Top Paint Penetration Layers'.
 msgid "Top paint penetration layers"
-msgstr ""
+msgstr "Capas de penetración de la pintura superior"
 
+# AI Translated
 msgid "This is  the number of layers of top paint penetration."
-msgstr ""
+msgstr "Número de capas hasta las que penetra la pintura de la cara superior."
 
 msgid "Separated infills"
 msgstr "Rellenos separados"
@@ -20497,17 +20925,21 @@ msgstr "Ángulo de rotación con respecto al eje X."
 msgid "Brim width of prime tower, negative number means auto calculated width based on the height of prime tower."
 msgstr "Anchura del borde de adherencia de la torre de purga; un número negativo significa que la anchura se calculará automáticamente en función de la altura de la torre de purga."
 
+# AI Translated
 msgid "Brim chamfer"
-msgstr ""
+msgstr "Chaflán del borde de adherencia"
 
+# AI Translated
 msgid "Enable gradual layer-by-layer reduction of the brim around the prime tower. This creates a chamfered/tapered effect, reducing material usage while maintaining first layer adhesion."
-msgstr ""
+msgstr "Reduce gradualmente, capa a capa, el borde de adherencia alrededor de la torre de purga. Crea un efecto de chaflán que reduce el material usado y mantiene la adherencia de la primera capa."
 
+# AI Translated
 msgid "Max chamfer width"
-msgstr ""
+msgstr "Ancho máximo del chaflán"
 
+# AI Translated
 msgid "Maximum width of the chamfer zone measured from the tower perimeter. The brim will reduce within this distance. Larger values create a more gradual taper but take more layers to complete."
-msgstr ""
+msgstr "Ancho máximo de la zona del chaflán medido desde el perímetro de la torre. El borde de adherencia se reducirá dentro de esta distancia. Los valores más altos crean un estrechamiento más gradual pero necesitan más capas."
 
 msgid "Stabilization cone apex angle"
 msgstr "Ángulo de vértice del cono de estabilización"
@@ -20584,11 +21016,13 @@ msgstr "La pared de la torre de purga se redondeará."
 msgid "The extruder to use when printing perimeter of the wipe tower. Set to 0 to use the one that is available (non-soluble would be preferred)."
 msgstr "Extrusor usado para imprimir el perímetro de la torre de purga. Ajuste a 0 para usar el único disponible (no soluble preferentemente)."
 
+# AI Translated
 msgid "Wall gap"
-msgstr ""
+msgstr "Hueco en el perímetro"
 
+# AI Translated
 msgid "Create small gaps in the wipe tower outer wall at tool change entry points. The first extrusion path after a filament change will enter through the gap, leaving the filament blob on the gap edge instead of on the outer wall surface."
-msgstr ""
+msgstr "Crea pequeños huecos en el perímetro externo de la torre de purga en los puntos de entrada tras un cambio de herramienta. La primera trayectoria de extrusión después de un cambio de filamento entrará por el hueco y dejará la gota de filamento en el borde del hueco en lugar de en la superficie del perímetro externo."
 
 msgid "Purging volumes - load/unload volumes"
 msgstr "Volúmenes de purga - carga/descarga de volúmenes"
@@ -20656,14 +21090,17 @@ msgstr "Caudal adicional para purgar"
 msgid "Extra flow used for the purging lines on the wipe tower. This makes the purging lines thicker than they normally would be. The spacing is adjusted automatically."
 msgstr "Flujo extra utilizado para las líneas de purga en la torre de purga. Esto hace que las líneas de purga sean más gruesas de lo normal. La separación se ajusta automáticamente."
 
+# AI Translated
 msgid "Local-Z mini wipe lines"
-msgstr ""
+msgstr "Minilíneas de purga Local-Z"
 
+# AI Translated
 msgid "Number of purge lines reserved for each runtime Local-Z wipe tower toolchange. Higher values improve cleanup but increase tower depth. Only used when Local-Z dithering and the prime tower are enabled."
-msgstr ""
+msgstr "Número de líneas de purga reservadas en la torre de purga para cada cambio de herramienta Local-Z. Los valores más altos mejoran la limpieza pero aumentan la profundidad de la torre. Solo se usa cuando el tramado Local-Z y la torre de purga están activados."
 
+# AI Translated
 msgid "lines"
-msgstr ""
+msgstr "líneas"
 
 msgid "Idle temperature"
 msgstr "Temperatura de Espera"
@@ -21582,11 +22019,13 @@ msgstr "Vector de temperaturas de la cama para cada extrusor/filamento."
 msgid "Vector of first layer bed temperatures for each extruder/filament. Provides the same value as first_layer_bed_temperature."
 msgstr "Vector de temperaturas de la cama de la primera capa para cada extrusor/filamento. Proporciona el mismo valor que first_layer_bed_temperature."
 
+# AI Translated
 msgid "First layer bed temperature (max of used filaments)"
-msgstr ""
+msgstr "Temperatura de la cama en la primera capa (máx. de los filamentos usados)"
 
+# AI Translated
 msgid "First layer bed temperature for a mixed print. This value is the maximum first layer bed temperature over all used extruders/filaments."
-msgstr ""
+msgstr "Temperatura de la cama en la primera capa para una impresión mixta. Es la temperatura máxima de la cama en la primera capa de todos los extrusores/filamentos usados."
 
 # AI Translated
 msgid "Vector of chamber temperatures for each extruder/filament."
@@ -21899,17 +22338,21 @@ msgstr "Longitud de purga 4"
 msgid "The fourth flush length."
 msgstr "La cuarta longitud de purga."
 
+# AI Translated
 msgid "Next wipe X"
-msgstr ""
+msgstr "X de la siguiente purga"
 
+# AI Translated
 msgid "For Snapmaker Artisan, next X after toolchange."
-msgstr ""
+msgstr "Para Snapmaker Artisan, siguiente X tras el cambio de herramienta."
 
+# AI Translated
 msgid "Next wipe Y"
-msgstr ""
+msgstr "Y de la siguiente purga"
 
+# AI Translated
 msgid "For Snapmaker Artisan, next Y after toolchange."
-msgstr ""
+msgstr "Para Snapmaker Artisan, siguiente Y tras el cambio de herramienta."
 
 # AI Translated
 msgid "Extrusion role"
@@ -21986,13 +22429,15 @@ msgstr "Generación de soportes"
 msgid "Optimizing toolpath"
 msgstr "Optimización de la trayectoria de cabezal"
 
+# AI Translated
 #, boost-format
 msgid "Unsupported overhangs were detected on object \"%1%\". Because \"Support on build plate only\" is enabled, supports cannot grow down to the build plate. Try turning this option off."
-msgstr ""
+msgstr "Se han detectado voladizos sin soporte en el objeto \"%1%\". Como \"Soportes solo en la cama\" está activado, los soportes no pueden llegar hasta la cama. Pruebe a desactivar esta opción."
 
+# AI Translated
 #, boost-format
 msgid "Unsupported overhangs were detected on object \"%1%\": some overhang regions could not get support. Try adjusting the support settings or re-orienting the object."
-msgstr ""
+msgstr "Se han detectado voladizos sin soporte en el objeto \"%1%\": algunas zonas en voladizo no han podido recibir soporte. Pruebe a ajustar los parámetros de soporte o a reorientar el objeto."
 
 msgid "Empty layers around bottom are replaced by nearest normal layers."
 msgstr "Las capas vacías del fondo se sustituyen por las capas normales más próximas."
@@ -23376,15 +23821,17 @@ msgstr "Enviar G-Code al host de impresión"
 msgid "Upload to Printer Host with the following filename:"
 msgstr "Subir al Host de Impresión con el siguiente nombre de archivo:"
 
+# AI Translated
 msgid "Please do not include the special characters #, *, ;, \\, /, :, \", <, >, or | in filenames."
-msgstr ""
+msgstr "No incluya los caracteres especiales #, *, ;, \\, /, :, \", <, > o | en los nombres de archivo."
 
 msgid "Upload to storage"
 msgstr "Subir a almacenamiento"
 
+# AI Translated
 #, c-format, boost-format
 msgid "The filename '%s' contains special characters (#, *, ;, \\, /, :, \", <, >, or |) which may cause issues.Do you wish to continue?"
-msgstr ""
+msgstr "El nombre de archivo '%s' contiene caracteres especiales (#, *, ;, \\, /, :, \", <, > o |) que pueden causar problemas. ¿Desea continuar?"
 
 #, c-format, boost-format
 msgid "Upload filename doesn't end with \"%s\". Do you wish to continue?"
@@ -23557,8 +24004,9 @@ msgstr "Iniciar Prueba Monotarea"
 msgid "Export Log"
 msgstr "Exportar Registro"
 
+# AI Translated
 msgid "Clear Log"
-msgstr ""
+msgstr "Borrar registro"
 
 msgid "Snapmaker Orca Version:"
 msgstr "Snapmaker Orca Versión:"
@@ -23569,11 +24017,13 @@ msgstr "Versión de Sistema:"
 msgid "DNS Server:"
 msgstr "Servidor DNS:"
 
+# AI Translated
 msgid "Test Snapmaker Orca(GitHub)"
-msgstr ""
+msgstr "Probar Snapmaker Orca (GitHub)"
 
+# AI Translated
 msgid "Test Snapmaker Orca(GitHub):"
-msgstr ""
+msgstr "Probar Snapmaker Orca (GitHub):"
 
 msgid "Test bing.com"
 msgstr "Prueba bing.com"
@@ -23581,47 +24031,60 @@ msgstr "Prueba bing.com"
 msgid "Test bing.com:"
 msgstr "Prueba Bing,.com:"
 
+# AI Translated
 msgid "Test LAN Device"
-msgstr ""
+msgstr "Probar dispositivo LAN"
 
+# AI Translated
 msgid "Test LAN Device:"
-msgstr ""
+msgstr "Probar dispositivo LAN:"
 
+# AI Translated
 msgid "Test Cloud Server"
-msgstr ""
+msgstr "Probar servidor en la nube"
 
+# AI Translated
 msgid "Test Cloud Server:"
-msgstr ""
+msgstr "Probar servidor en la nube:"
 
+# AI Translated
 msgid "Test Login API"
-msgstr ""
+msgstr "Probar API de inicio de sesión"
 
+# AI Translated
 msgid "Test Login API:"
-msgstr ""
+msgstr "Probar API de inicio de sesión:"
 
+# AI Translated
 msgid "Test Upload API"
-msgstr ""
+msgstr "Probar API de carga"
 
+# AI Translated
 msgid "Test Upload API:"
-msgstr ""
+msgstr "Probar API de carga:"
 
 msgid "Log Info"
 msgstr "Información de Registro"
 
+# AI Translated
 msgid "Network test started"
-msgstr ""
+msgstr "Prueba de red iniciada"
 
+# AI Translated
 msgid "Please enter the LAN device IP address for testing (leave empty to skip):"
-msgstr ""
+msgstr "Introduzca la dirección IP del dispositivo LAN para la prueba (déjela vacía para omitirla):"
 
+# AI Translated
 msgid "LAN Device Test - Sequence Mode"
-msgstr ""
+msgstr "Prueba de dispositivo LAN - Modo secuencial"
 
+# AI Translated
 msgid "Please enter the device IP address:"
-msgstr ""
+msgstr "Introduzca la dirección IP del dispositivo:"
 
+# AI Translated
 msgid "LAN Device Test"
-msgstr ""
+msgstr "Prueba de dispositivo LAN"
 
 msgid "Select filament preset"
 msgstr "Seleccionar perfil de filamento"
@@ -24883,8 +25346,9 @@ msgstr "Código de error: %1%"
 msgid "Upload failed"
 msgstr "Error al subir el archivo"
 
+# AI Translated
 msgid "Failed to calculate the upload file checksum."
-msgstr ""
+msgstr "No se ha podido calcular la suma de comprobación del archivo a cargar."
 
 msgid "The file has been transferred, but some unknown errors occurred. Please check the device page for the file and try to start printing again."
 msgstr "El archivo se ha transferido, pero se han producido algunos errores desconocidos. Comprueba la página del dispositivo donde se encuentra el archivo e intenta iniciar la impresión de nuevo."
@@ -25276,8 +25740,9 @@ msgstr "Error al realizar la integración en el escritorio: no se ha encontrado 
 msgid "Performing desktop integration failed because the application directory was not found."
 msgstr "No se ha podido realizar la integración en el escritorio porque no se ha encontrado el directorio de la aplicación."
 
+# AI Translated
 msgid "Performing desktop integration failed - could not create Gcodeviewer desktop file. Snapmaker Orca desktop file was probably created successfully."
-msgstr ""
+msgstr "Error en la integración con el escritorio: no se ha podido crear el archivo de escritorio de Gcodeviewer. Probablemente el archivo de escritorio de Snapmaker Orca se creó correctamente."
 
 msgid "Performing downloader desktop integration failed - boost::filesystem::canonical did not return appimage path."
 msgstr "Se ha producido un error al integrar el programa de descarga en el escritorio: boost::filesystem::canonical no ha devuelto la ruta de AppImage."
@@ -30767,11 +31232,13 @@ msgstr "OCCT no pudo escribir el STEP"
 msgid "Taking a configuration snapshot failed."
 msgstr "No se pudo tomar una instantánea de la configuración."
 
+# AI Translated
 msgid "Snapmaker Orca has encountered an error while taking a configuration snapshot."
-msgstr ""
+msgstr "Snapmaker Orca ha encontrado un error al tomar una instantánea de la configuración."
 
+# AI Translated
 msgid "Snapmaker Orca error"
-msgstr ""
+msgstr "Error de Snapmaker Orca"
 
 # AI Translated
 #. TRN Short labels of the external spool of the right and left nozzle
@@ -30931,8 +31398,9 @@ msgstr "RAL Classic"
 msgid "Gradients"
 msgstr "Gradientes"
 
+# AI Translated
 msgid "Solid"
-msgstr ""
+msgstr "Sólido"
 
 # AI Translated
 msgid "Gradient"
@@ -31429,8 +31897,9 @@ msgstr "Púrpura Rebecca"
 msgid "Medium violet red"
 msgstr "Rojo violeta medio"
 
+# AI Translated
 msgid "PaleV violet red"
-msgstr ""
+msgstr "Rojo violáceo pálido"
 
 # AI Translated
 msgid "Deep pink"
@@ -31648,8 +32117,10 @@ msgstr "Cielo sobre el arrecife"
 msgid "Shallow sky"
 msgstr "Cielo somero"
 
+# AI Translated
+# Needs human review: Nombre de color con errata en el original ('Electric bel', probablemente 'Electric blue').
 msgid "Electric bel"
-msgstr ""
+msgstr "Azul eléctrico"
 
 # AI Translated
 msgid "Dolphin"
@@ -31739,8 +32210,9 @@ msgstr "Amarillo miel"
 msgid "Maize yellow"
 msgstr "Amarillo maíz"
 
+# AI Translated
 msgid "Dalmatian yellow"
-msgstr ""
+msgstr "Amarillo dálmata"
 
 # AI Translated
 msgid "Brown beige"
@@ -32088,8 +32560,9 @@ msgstr "Azul tráfico"
 msgid "Turquoise blue"
 msgstr "Azul turquesa"
 
+# AI Translated
 msgid "Capsanthin violet"
-msgstr ""
+msgstr "Violeta capsantina"
 
 # AI Translated
 msgid "Ocean blue"
@@ -32240,8 +32713,9 @@ msgstr "Gris ardilla"
 msgid "Silver grey"
 msgstr "Gris plata"
 
+# AI Translated
 msgid "Olivestone"
-msgstr ""
+msgstr "Piedra oliva"
 
 # AI Translated
 msgid "Moss grey"
@@ -34233,65 +34707,85 @@ msgstr "Se ha alcanzado el número máximo de componentes"
 msgid "Remove the third material"
 msgstr "Eliminar el tercer material"
 
+# AI Translated
 msgid "Add Mix"
-msgstr ""
+msgstr "Añadir mezcla"
 
+# AI Translated
 msgid "Edit Mix"
-msgstr ""
+msgstr "Editar mezcla"
 
+# AI Translated
 msgid "Cycle"
-msgstr ""
+msgstr "Ciclo"
 
+# AI Translated
+# Needs human review: Modo del diálogo de filamento mixto (Proporción / Ciclo / Ajuste / Gradiente); comprobar.
 msgid "Match"
-msgstr ""
+msgstr "Ajuste"
 
+# AI Translated
 msgid "Please enter a valid 6-digit Hex value."
-msgstr ""
+msgstr "Introduzca un valor hexadecimal válido de 6 dígitos."
 
+# AI Translated
 msgid "Swap filaments"
-msgstr ""
+msgstr "Intercambiar filamentos"
 
+# AI Translated
 msgid "Mixing Ratio"
-msgstr ""
+msgstr "Proporción de mezcla"
 
+# AI Translated
 msgid "Mix Effect"
-msgstr ""
+msgstr "Efecto de la mezcla"
 
+# AI Translated
 msgid "Min Mix Ratio"
-msgstr ""
+msgstr "Proporción mínima de mezcla"
 
+# AI Translated
 msgid "Allowed Input: Only digits, square brackets ([ and ]), and commas (,)."
-msgstr ""
+msgstr "Entrada permitida: solo dígitos, corchetes ([ y ]) y comas (,)."
 
+# AI Translated
 #, c-format, boost-format
 msgid "Filament %d and Filament %d cannot be mixed. Please select filaments of the same type."
-msgstr ""
+msgstr "El filamento %d y el filamento %d no se pueden mezclar. Seleccione filamentos del mismo tipo."
 
+# AI Translated
 msgid "Different filament types cannot be mixed. Please correct the settings."
-msgstr ""
+msgstr "No se pueden mezclar tipos de filamento distintos. Corrija los ajustes."
 
+# AI Translated
 msgid "Same filament colors cannot produce new colors. Please select different colors for mixing."
-msgstr ""
+msgstr "Los filamentos del mismo color no pueden producir colores nuevos. Seleccione colores distintos para la mezcla."
 
+# AI Translated
 msgid "Excessive filaments in the mix may affect the result. Please use with caution."
-msgstr ""
+msgstr "Demasiados filamentos en la mezcla pueden afectar al resultado. Úselo con precaución."
 
+# AI Translated
 #, c-format, boost-format
 msgid "Filament %d ratio is too high. Mix may be affected."
-msgstr ""
+msgstr "La proporción del filamento %d es demasiado alta. La mezcla puede verse afectada."
 
+# AI Translated
 msgid "Leading or trailing commas are not allowed."
-msgstr ""
+msgstr "No se permiten comas al principio ni al final."
 
+# AI Translated
 msgid "Invalid characters found. Only digits, square brackets ([ and ]), and commas (,) are allowed."
-msgstr ""
+msgstr "Se han encontrado caracteres no válidos. Solo se permiten dígitos, corchetes ([ y ]) y comas (,)."
 
+# AI Translated
 msgid "Unrecognized pattern format. Please check the pattern syntax."
-msgstr ""
+msgstr "Formato de patrón no reconocido. Compruebe la sintaxis del patrón."
 
+# AI Translated
 #, c-format, boost-format
 msgid "Filament %d not recognized. Please re-enter."
-msgstr ""
+msgstr "Filamento %d no reconocido. Vuelva a introducirlo."
 
 msgid "3D Models"
 msgstr "Modelos 3D"
@@ -36475,9 +36969,10 @@ msgstr "El G-code personalizado informa de un z_retracted negativo."
 msgid "Custom G-code reports negative z_restart_extra."
 msgstr "El G-code personalizado informa de un z_restart_extra negativo."
 
+# AI Translated
 #, boost-format
 msgid "Copying directory %1% to %2% failed"
-msgstr ""
+msgstr "Error al copiar el directorio %1% en %2%"
 
 # AI Translated
 msgid "Authentication complete"
@@ -36620,122 +37115,161 @@ msgstr "Tiempo estimado:"
 msgid "Remaining time:"
 msgstr "Tiempo restante:"
 
+# AI Translated
 msgid "Other Colors"
-msgstr ""
+msgstr "Otros colores"
 
+# AI Translated
 msgid "Official Filaments"
-msgstr ""
+msgstr "Filamentos oficiales"
 
+# AI Translated
 msgid "Swap the two groups"
-msgstr ""
+msgstr "Intercambiar los dos grupos"
 
+# AI Translated
 msgid "Custom Filament Grouping"
-msgstr ""
+msgstr "Agrupación personalizada de filamentos"
 
+# AI Translated
 msgid "Slicing will follow the nozzle assignment below:"
-msgstr ""
+msgstr "El laminado seguirá la siguiente asignación de boquillas:"
 
+# AI Translated
 msgid "Standard Nozzle"
-msgstr ""
+msgstr "Boquilla estándar"
 
+# AI Translated
 msgid "High Flow Nozzle"
-msgstr ""
+msgstr "Boquilla de flujo alto"
 
+# AI Translated
 msgid "Tip: Drag and drop filaments to assign them to a different nozzle."
-msgstr ""
+msgstr "Consejo: arrastre y suelte los filamentos para asignarlos a otra boquilla."
 
+# AI Translated
 msgid "CF/GF filaments"
-msgstr ""
+msgstr "Filamentos CF/GF"
 
+# AI Translated
 #, boost-format
 msgid "Warning:%1%mm High Flow nozzles are not recommended for %2%"
-msgstr ""
+msgstr "Aviso: no se recomiendan las boquillas de flujo alto de %1%mm para %2%"
 
+# AI Translated
 #, boost-format
 msgid "These filaments cannot be printed with the %1%mm high flow nozzle: %2%"
-msgstr ""
+msgstr "Estos filamentos no se pueden imprimir con la boquilla de flujo alto de %1%mm: %2%"
 
+# AI Translated
 msgid "Download completed successfully!"
-msgstr ""
+msgstr "¡Descarga completada correctamente!"
 
+# AI Translated
+# Needs human review: Botón de cierre del panel de error de descarga; el original 'Determine' parece una mala traducción de 'OK'/'Confirmar'.
 msgid "Determine"
-msgstr ""
+msgstr "Aceptar"
 
+# AI Translated
 msgid "Preparing download..."
-msgstr ""
+msgstr "Preparando la descarga..."
 
+# AI Translated
 #, c-format, boost-format
 msgid "Downloading: %.1f MB / %.1f MB (%d%%)"
-msgstr ""
+msgstr "Descargando: %.1f MB / %.1f MB (%d%%)"
 
+# AI Translated
 #, c-format, boost-format
 msgid "Downloading: %.1f MB..."
-msgstr ""
+msgstr "Descargando: %.1f MB..."
 
+# AI Translated
 msgid "Donwload failed"
-msgstr ""
+msgstr "Error en la descarga"
 
+# AI Translated
 msgid "Legend:"
-msgstr ""
+msgstr "Leyenda:"
 
+# AI Translated
 #, c-format
 msgid "F%zu"
-msgstr ""
+msgstr "F%zu"
 
+# AI Translated
 msgid "Min ratio"
-msgstr ""
+msgstr "Proporción mínima"
 
+# AI Translated
 msgid "Minimum percent for each participating color."
-msgstr ""
+msgstr "Porcentaje mínimo de cada color participante."
 
+# AI Translated
 msgid "Enter a hex color like #00FF88."
-msgstr ""
+msgstr "Introduzca un color hexadecimal como #00FF88."
 
+# AI Translated
 msgid "Classic color picker."
-msgstr ""
+msgstr "Selector de color clásico."
 
+# AI Translated
 msgid "Blend result"
-msgstr ""
+msgstr "Resultado de la mezcla"
 
+# AI Translated
 msgid "Color preview"
-msgstr ""
+msgstr "Vista previa del color"
 
+# AI Translated
 #, c-format, boost-format
 msgid "%d%%"
-msgstr ""
+msgstr "%d%%"
 
+# AI Translated
+# Needs human review: Abreviatura en una cabecera de columna del diálogo de ajuste de mezcla de colores (probablemente Transmission Distance); se mantiene.
 msgid "TD"
-msgstr ""
+msgstr "TD"
 
+# AI Translated
 msgid "Filament color limit reached (64 colors). Colors over the limit have been removed."
-msgstr ""
+msgstr "Se ha alcanzado el límite de colores de filamento (64 colores). Se han eliminado los colores que superaban el límite."
 
+# AI Translated
 msgid "Match Mode"
-msgstr ""
+msgstr "Modo de ajuste"
 
+# AI Translated
 msgid "Start Matching"
-msgstr ""
+msgstr "Iniciar ajuste"
 
+# AI Translated
 msgid "Rematch"
-msgstr ""
+msgstr "Volver a ajustar"
 
+# AI Translated
 msgid "Filament Setup"
-msgstr ""
+msgstr "Configuración de filamentos"
 
+# AI Translated
 msgid "Remove filament"
-msgstr ""
+msgstr "Quitar filamento"
 
+# AI Translated
 msgid "Add filament"
-msgstr ""
+msgstr "Añadir filamento"
 
+# AI Translated
 msgid "Matched"
-msgstr ""
+msgstr "Ajustado"
 
+# AI Translated
 msgid "Isometric"
-msgstr ""
+msgstr "Isométrica"
 
+# AI Translated
 msgid "Top-Front"
-msgstr ""
+msgstr "Superior-frontal"
 
 msgid "Front"
 msgstr "Frontal"
@@ -36743,65 +37277,83 @@ msgstr "Frontal"
 msgid "Rear"
 msgstr "Trasera"
 
+# AI Translated
 msgid "Color Mapping"
-msgstr ""
+msgstr "Asignación de colores"
 
+# AI Translated
 msgid "Stop Matching"
-msgstr ""
+msgstr "Detener ajuste"
 
+# AI Translated
 msgid "Are you sure you want to discard this match? The current configuration will not be saved."
-msgstr ""
+msgstr "¿Seguro que desea descartar este ajuste? La configuración actual no se guardará."
 
+# AI Translated
 msgid "Discard Matching"
-msgstr ""
+msgstr "Descartar ajuste"
 
+# AI Translated
 msgid "Official Full Spectrum filaments are not configured. Configured filaments will be used instead. Once the official filaments are added, the previously selected filaments can be replaced in the filament list without affecting the color mixing match result."
-msgstr ""
+msgstr "Los filamentos oficiales Full Spectrum no están configurados. Se usarán los filamentos configurados. Cuando se añadan los filamentos oficiales, podrá sustituir los filamentos seleccionados en la lista de filamentos sin que cambie el resultado del ajuste de mezcla de colores."
 
+# AI Translated
 msgid "Manually select filaments from the current list for color mixing."
-msgstr ""
+msgstr "Seleccione manualmente filamentos de la lista actual para la mezcla de colores."
 
+# AI Translated
 msgid "Automatically select an official filament set for color mixing match. Mix ratio for each color: 0%–70%."
-msgstr ""
+msgstr "Selecciona automáticamente un conjunto de filamentos oficiales para el ajuste de mezcla de colores. Proporción de mezcla de cada color: 0%–70%."
 
+# AI Translated
 #, c-format, boost-format
 msgid "The mix ratios for %s in the Color Mapping list are outside the recommended %d%%–%d%% range. Adjust the mix ratios manually for better results."
-msgstr ""
+msgstr "Las proporciones de mezcla de %s en la lista de asignación de colores están fuera del rango recomendado %d%%–%d%%. Ajuste las proporciones manualmente para obtener mejores resultados."
 
+# AI Translated
 msgid "Color mapping list limit reached (max 64 colors). Excess colors will be removed."
-msgstr ""
+msgstr "Se ha alcanzado el límite de la lista de asignación de colores (máx. 64 colores). Se eliminarán los colores sobrantes."
 
+# AI Translated
 msgid "Automatic color mixing matching is not supported for the current nozzle diameter. Please use manual matching or replace with a smaller-size nozzle."
-msgstr ""
+msgstr "El ajuste automático de mezcla de colores no está disponible para el diámetro de boquilla actual. Use el ajuste manual o cambie a una boquilla más pequeña."
 
+# AI Translated
 msgid "Good"
-msgstr ""
+msgstr "Bueno"
 
+# AI Translated
 msgid "Fair"
-msgstr ""
+msgstr "Aceptable"
 
+# AI Translated
 msgid "Poor"
-msgstr ""
+msgstr "Malo"
 
+# AI Translated
 #, c-format, boost-format
 msgid "Color Difference: %s (ΔE=%.1f)"
-msgstr ""
+msgstr "Diferencia de color: %s (ΔE=%.1f)"
 
+# AI Translated
 msgid "Click to edit"
-msgstr ""
+msgstr "Haga clic para editar"
 
 msgid "Refresh Printers"
 msgstr "Refrescar Impresoras"
 
+# AI Translated
 msgid "Overwrite a system profile is not allowed"
-msgstr ""
+msgstr "No se permite sobrescribir un perfil del sistema"
 
+# AI Translated
 #, boost-format
 msgid "Preset \"%1%\" already exists and is incompatible with current printer."
-msgstr ""
+msgstr "El perfil \"%1%\" ya existe y no es compatible con la impresora actual."
 
+# AI Translated
 msgid "Please note that saving action will replace this preset"
-msgstr ""
+msgstr "Tenga en cuenta que al guardar se reemplazará este perfil"
 
 msgid "The name is not allowed to be empty."
 msgstr "No se permite que el nombre esté vacío."
@@ -36812,160 +37364,214 @@ msgstr "No se permite que el nombre comience con un espacio."
 msgid "The name is not allowed to end with space character."
 msgstr "No se permite que el nombre termine con un espacio."
 
+# AI Translated
 msgid " The target machine model has not been detected. Please bind manually. "
-msgstr ""
+msgstr " No se ha detectado el modelo de la máquina de destino. Vincúlela manualmente. "
 
+# AI Translated
 msgid "Machine Bind"
-msgstr ""
+msgstr "Vincular máquina"
 
+# AI Translated
+# Needs human review: Fragmento que se añade tras el nombre de la máquina (concatenación en SSWCP.cpp).
 msgid " connected sucessfully !\n"
-msgstr ""
+msgstr " se ha conectado correctamente.\n"
 
+# AI Translated
 msgid "Machine Connected"
-msgstr ""
+msgstr "Máquina conectada"
 
+# AI Translated
 msgid "select file"
-msgstr ""
+msgstr "seleccionar archivo"
 
 msgid " upload failed"
 msgstr " Carga fallida"
 
+# AI Translated
 msgid "UpLoad Failed"
-msgstr ""
+msgstr "Error en la carga"
 
+# AI Translated
+# Needs human review: Fragmento concatenado tras el nombre de archivo (SSWCP.cpp).
 msgid " has already been uploaded"
-msgstr ""
+msgstr " ya se ha cargado"
 
+# AI Translated
 msgid "UpLoad Successfully"
-msgstr ""
+msgstr "Carga correcta"
 
+# AI Translated
 msgid "Save file"
-msgstr ""
+msgstr "Guardar archivo"
 
+# AI Translated
+# Needs human review: Fragmento concatenado tras el nombre de archivo (SSWCP.cpp).
 msgid " download failed"
-msgstr ""
+msgstr " no se ha podido descargar"
 
+# AI Translated
 msgid "DownLoad Failed"
-msgstr ""
+msgstr "Error en la descarga"
 
+# AI Translated
+# Needs human review: Fragmento concatenado tras el nombre de archivo (SSWCP.cpp).
 msgid " has already been downloaded"
-msgstr ""
+msgstr " ya se ha descargado"
 
+# AI Translated
 msgid "DownLoad Successfully"
-msgstr ""
+msgstr "Descarga correcta"
 
+# AI Translated
 msgid "setting failed"
-msgstr ""
+msgstr "error en el ajuste"
 
+# AI Translated
 msgid "Print Job Setting"
-msgstr ""
+msgstr "Ajustes del trabajo de impresión"
 
+# AI Translated
 msgid "Create Failed"
-msgstr ""
+msgstr "Error al crear"
 
+# AI Translated
 msgid "Device disconnected."
-msgstr ""
+msgstr "Dispositivo desconectado."
 
+# AI Translated
 msgid "Failed to download the file. Please check your network and try again."
-msgstr ""
+msgstr "No se ha podido descargar el archivo. Compruebe su red e inténtelo de nuevo."
 
+# AI Translated
 msgid "Waiting for device to upload"
-msgstr ""
+msgstr "Esperando a que el dispositivo cargue el archivo"
 
+# AI Translated
 msgid "Connection has been disconnected and recovery attempt failed. Please reconnect."
-msgstr ""
+msgstr "Se ha perdido la conexión y no se ha podido recuperar. Vuelva a conectar."
 
+# AI Translated
 msgid "Machine Disconnected"
-msgstr ""
+msgstr "Máquina desconectada"
 
+# AI Translated
 msgid "Prioritize print quality"
-msgstr ""
+msgstr "Priorizar la calidad de impresión"
 
+# AI Translated
 msgid "Manually assign filaments to nozzles"
-msgstr ""
+msgstr "Asignar manualmente los filamentos a las boquillas"
 
+# AI Translated
 msgid "Downloaded"
-msgstr ""
+msgstr "Descargado"
 
+# AI Translated
 msgid "Download Cancelled"
-msgstr ""
+msgstr "Descarga cancelada"
 
+# AI Translated
 msgid "Download Failed"
-msgstr ""
+msgstr "Error en la descarga"
 
+# AI Translated
 msgid "Download Lists"
-msgstr ""
+msgstr "Lista de descargas"
 
+# AI Translated
 #, c-format, boost-format
 msgid "Download Lists (%d)"
-msgstr ""
+msgstr "Lista de descargas (%d)"
 
+# AI Translated
 msgid "Add Device"
-msgstr ""
+msgstr "Añadir dispositivo"
 
+# AI Translated
 msgid "Print preset"
-msgstr ""
+msgstr "Perfil de impresión"
 
+# AI Translated
 msgid "Pretreat the uploaded content"
-msgstr ""
+msgstr "Preprocesar el contenido cargado"
 
+# AI Translated
 msgid "Print Preprocessing"
-msgstr ""
+msgstr "Preprocesado de impresión"
 
+# AI Translated
 msgid "Log out"
-msgstr ""
+msgstr "Cerrar sesión"
 
+# AI Translated
 msgid "Log in"
-msgstr ""
+msgstr "Iniciar sesión"
 
+# AI Translated
 msgid "Are you sure you want to log in?"
-msgstr ""
+msgstr "¿Seguro que desea iniciar sesión?"
 
+# AI Translated
 msgid "Web View"
-msgstr ""
+msgstr "Vista web"
 
+# AI Translated
 msgid "Source Filament"
-msgstr ""
+msgstr "Filamento de origen"
 
+# AI Translated
 msgid "Printer Filament"
-msgstr ""
+msgstr "Filamento de la impresora"
 
+# AI Translated
 msgid "Original Model"
-msgstr ""
+msgstr "Modelo original"
 
+# AI Translated
 msgctxt "FilamentSync"
 msgid "Plate"
-msgstr ""
+msgstr "Cama"
 
+# AI Translated
 msgid "Mapped Model"
-msgstr ""
+msgstr "Modelo asignado"
 
+# AI Translated
 msgid "Match Mapping"
-msgstr ""
+msgstr "Asignación por coincidencia"
 
+# AI Translated
 msgid "Direct Override"
-msgstr ""
+msgstr "Sustitución directa"
 
+# AI Translated
 msgid "Note: Only filament types and colors are synchronized. Nozzle assignments are not included."
-msgstr ""
+msgstr "Nota: solo se sincronizan los tipos y colores de filamento. No se incluyen las asignaciones de boquillas."
 
+# AI Translated
 msgid "Add filaments from the remaining toolheads to the software filament list"
-msgstr ""
+msgstr "Añadir a la lista de filamentos del programa los filamentos de los cabezales restantes"
 
+# AI Translated
 msgid "Sync Now"
-msgstr ""
+msgstr "Sincronizar ahora"
 
+# AI Translated
 msgid "Some filaments used in color mixing will be replaced or removed. This will update the color mixing results. Continue?"
-msgstr ""
+msgstr "Se sustituirán o eliminarán algunos filamentos usados en la mezcla de colores. Esto actualizará los resultados de la mezcla. ¿Continuar?"
 
+# AI Translated
 msgid "Overridden Model"
-msgstr ""
+msgstr "Modelo sustituido"
 
+# AI Translated
 msgid "Connection to Moonraker works correctly."
-msgstr ""
+msgstr "La conexión con Moonraker funciona correctamente."
 
+# AI Translated
 msgid "Note: Moonraker version at least 1.1.0 is required."
-msgstr ""
+msgstr "Nota: se requiere Moonraker 1.1.0 o posterior."
 
 #: resources/data/hints.ini: [hint:Precise wall]
 msgid ""
@@ -37031,11 +37637,14 @@ msgstr ""
 "Cambiar de espacio de trabajo.\n"
 "Puede cambiar entre los espacios de trabajo <b>Preparar</b> y <b>Ver</b> pulsando la tecla <b>Tab</b>."
 
+# AI Translated
 #: resources/data/hints.ini: [hint:How to use keyboard shortcuts]
 msgid ""
 "How to use keyboard shortcuts\n"
 "Did you know that Snapmaker Orca offers a wide range of keyboard shortcuts and 3D scene operations."
 msgstr ""
+"Cómo usar los atajos de teclado\n"
+"¿Sabía que Snapmaker Orca ofrece una amplia variedad de atajos de teclado y operaciones en la escena 3D?"
 
 #: resources/data/hints.ini: [hint:Reverse on even]
 msgid ""
@@ -37069,17 +37678,23 @@ msgstr ""
 "Timelapse\n"
 "¿Sabías que puedes generar un vídeo timelapse durante cada impresión?"
 
+# AI Translated
 #: resources/data/hints.ini: [hint:Auto-Arrange]
 msgid ""
 "Auto-Arrange\n"
 "Did you know that you can auto-arrange all objects in your project?"
 msgstr ""
+"Organizar automáticamente\n"
+"¿Sabía que puede organizar automáticamente todos los objetos de su proyecto?"
 
+# AI Translated
 #: resources/data/hints.ini: [hint:Auto-Orient]
 msgid ""
 "Auto-Orient\n"
 "Did you know that you can rotate objects to an optimal orientation for printing by a simple click?"
 msgstr ""
+"Orientar automáticamente\n"
+"¿Sabía que puede girar los objetos a la orientación óptima para imprimir con un simple clic?"
 
 #: resources/data/hints.ini: [hint:Lay on Face]
 msgid ""
@@ -37097,11 +37712,14 @@ msgstr ""
 "Lista de objetos\n"
 "¿Sabías que puedes ver todos los objetos/piezas en una lista y cambiar los ajustes de cada objeto/pieza?"
 
+# AI Translated
 #: resources/data/hints.ini: [hint:Search Functionality]
 msgid ""
 "Search Functionality\n"
 "Did you know that you use the Search tool to quickly find a specific Snapmaker Orca setting?"
 msgstr ""
+"Funcionalidad de búsqueda\n"
+"¿Sabía que puede usar la herramienta de búsqueda para encontrar rápidamente un ajuste concreto de Snapmaker Orca?"
 
 #: resources/data/hints.ini: [hint:Simplify Model]
 msgid ""
@@ -37202,17 +37820,23 @@ msgstr ""
 "Impresión de filamento de seda\n"
 "¿Sabías que el filamento de seda necesita una configuración especial para imprimirlo con éxito? Se recomienda siempre una temperatura más alta y una velocidad más baja para obtener los mejores resultados."
 
+# AI Translated
 #: resources/data/hints.ini: [hint:Brim for better adhesion]
 msgid ""
 "Brim for better adhesion\n"
 "Did you know that when printing models have a small contact interface with the printing surface, it's recommended to use a brim?"
 msgstr ""
+"Borde de adherencia\n"
+"¿Sabía que, cuando los modelos tienen poca superficie de contacto con la superficie de impresión, se recomienda usar un borde de adherencia?"
 
+# AI Translated
 #: resources/data/hints.ini: [hint:Set parameters for multiple objects]
 msgid ""
 "Set parameters for multiple objects\n"
 "Did you know that you can set slicing parameters for all selected objects at one time?"
 msgstr ""
+"Ajustar parámetros de varios objetos\n"
+"¿Sabía que puede ajustar a la vez los parámetros de laminado de todos los objetos seleccionados?"
 
 #: resources/data/hints.ini: [hint:Stack objects]
 msgid ""
@@ -37247,8 +37871,11 @@ msgstr ""
 "¿Cuándo es necesario imprimir con la puerta de la impresora abierta?\n"
 "¿Sabías que la apertura de la puerta de la impresora puede reducir la probabilidad de obstrucción del extrusor/cabezal al imprimir filamento de baja temperatura con una temperatura más alta de la cubierta? Más información sobre esto en la Wiki."
 
+# AI Translated
 #: resources/data/hints.ini: [hint:Avoid warping]
 msgid ""
 "Avoid warping\n"
 "Did you know that when printing materials that are prone to warping such as ABS, appropriately increasing the heatbed temperature can reduce the probability of warping."
 msgstr ""
+"Evitar la deformación\n"
+"¿Sabía que, al imprimir materiales propensos a deformarse como el ABS, aumentar adecuadamente la temperatura de la cama puede reducir la probabilidad de deformación?"
