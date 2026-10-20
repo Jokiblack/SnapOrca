@@ -28,7 +28,6 @@
 #include "PrintHostDialogs.hpp"
 #include "../Utils/ASCIIFolding.hpp"
 #include "../Utils/PrintHost.hpp"
-#include "../Utils/FixModelByWin10.hpp"
 #include "../Utils/UndoRedo.hpp"
 #include "RemovableDriveManager.hpp"
 #include "BitmapCache.hpp"
@@ -57,7 +56,7 @@ SMPhysicalPrinterDialog::SMPhysicalPrinterDialog(wxWindow* parent) :
     Tab *tab = wxGetApp().get_tab(Preset::TYPE_PRINTER);
     m_presets = tab->get_presets();
     const Preset &sel_preset  = m_presets->get_selected_preset();
-    std::string suffix = _CTX_utf8(L_CONTEXT("Copy", "PresetName"), "PresetName");
+    std::string suffix = _u8L_CONTEXT("Copy", "PresetName");
     std::string   preset_name = sel_preset.is_default ? "Untitled" : sel_preset.is_system ? (boost::format(("%1% - %2%")) % sel_preset.name % suffix).str() : sel_preset.name;
 
     auto input_sizer = new wxBoxSizer(wxVERTICAL);
