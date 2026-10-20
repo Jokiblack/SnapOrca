@@ -6143,6 +6143,15 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def = this->add("retract_on_long_wall_travel", coBool);
+    def->label = L("Retract on long travel along walls");
+    def->tooltip = L("When \"Reduce infill retraction\" skips the retraction of a travel inside an infill area, still retract "
+                     "if the travel runs close to a wall (within one wall line width) for longer than the retraction minimum "
+                     "travel distance. This avoids stringing and oozing marks along the walls, especially when \"Avoid "
+                     "crossing walls\" routes the travel along them.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("ooze_prevention", coBool);
     def->label = L("Enable");
     def->tooltip = L("This option will drop the temperature of the inactive extruders to prevent oozing.");

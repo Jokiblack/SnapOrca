@@ -752,6 +752,7 @@ bool Print::invalidate_state_by_config_options(const ConfigOptionResolver & /* n
         "max_volumetric_extrusion_rate_slope_segment_length",
         "extrusion_rate_smoothing_external_perimeter_only",
         "reduce_infill_retraction",
+        "retract_on_long_wall_travel",
         "filename_format",
         "retraction_minimum_travel",
         "retract_before_wipe",

@@ -1413,6 +1413,7 @@ static std::vector<std::string> s_Preset_print_options{
     "separated_infills",
     "minimum_sparse_infill_area",
     "reduce_infill_retraction",
+    "retract_on_long_wall_travel",
     "internal_solid_infill_pattern",
     "detect_sub_top_surface",
     "sub_top_surface_pattern",
