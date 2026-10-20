@@ -276,15 +276,15 @@ double Flow::mm3_per_mm() const
 }
 
 // Nozzle diameter driving support / raft flows. A "default" (0) filament prints with the active extruder; the support_nozzle_diameter restriction defines which nozzle that may be.
-float support_material_nozzle_diameter(const PrintObject *object, int configured_filament)
+double support_material_nozzle_diameter(const PrintObject *object, int configured_filament)
 {
     if (configured_filament == 0 && object->config().support_nozzle_diameter.value > 0.)
-        return float(object->config().support_nozzle_diameter.value);
+        return object->config().support_nozzle_diameter.value;
     // for configured_filament == 0 (use the current extruder), get_at returns the 0th component.
-    return float(nozzle_diameter_for_filament(object->print()->config(), configured_filament, object->print()->is_BBL_printer()));
+    return nozzle_diameter_for_filament(object->print()->config(), configured_filament, object->print()->is_BBL_printer());
 }
 
-size_t support_head(const PrintObject *object, int configured, bool interface_role, float *nozzle)
+size_t support_head(const PrintObject *object, int configured, bool interface_role, double *nozzle)
 {
     const Print &print = *object->print();
     if (configured > 0) {
@@ -298,7 +298,7 @@ size_t support_head(const PrintObject *object, int configured, bool interface_ro
     // nozzle; otherwise head 1 with support_material_nozzle_diameter.
     if (const unsigned int resolved = object->resolved_default_support_filament(interface_role); resolved > 0) {
         if (nozzle != nullptr)
-            *nozzle = float(nozzle_diameter_for_filament(print.config(), int(resolved), print.is_BBL_printer()));
+            *nozzle = nozzle_diameter_for_filament(print.config(), int(resolved), print.is_BBL_printer());
         return print.width_slot(resolved);
     }
     if (nozzle != nullptr)
@@ -315,46 +315,46 @@ static ConfigOptionFloatOrPercent support_width(const PrintObject *object, size_
 
 Flow support_material_flow(const PrintObject *object, float layer_height)
 {
-    float        nozzle = 0.f;
+    double       nozzle = 0.;
     const size_t head   = support_head(object, object->config().support_filament, false, &nozzle);
     return Flow::new_from_config_width(
         frSupportMaterial,
         // The width parameter accepted by new_from_config_width is of type ConfigOptionFloatOrPercent, the Flow class takes care of the percent to value substitution.
         support_width(object, head),
-        nozzle,
+        float(nozzle),
         (layer_height > 0.f) ? layer_height : float(object->config().layer_height.value));
 }
 //BBS
 Flow support_transition_flow(const PrintObject* object)
 {
     //BBS: support transition of tree support is bridge flow
-    float dmr = support_material_nozzle_diameter(object, object->config().support_filament);
+    float dmr = float(support_material_nozzle_diameter(object, object->config().support_filament));
     return Flow::bridging_flow(dmr, dmr);
 }
 
 Flow support_material_1st_layer_flow(const PrintObject *object, float layer_height)
 {
     const PrintConfig &print_config = object->print()->config();
-    float              nozzle       = 0.f;
+    double             nozzle       = 0.;
     const size_t       head         = support_head(object, object->config().support_filament, false, &nozzle);
     const ConfigOptionFloatOrPercent initial_layer = Flow::width_at(print_config.initial_layer_line_width, head);
     return Flow::new_from_config_width(
         frSupportMaterial,
         // The width parameter accepted by new_from_config_width is of type ConfigOptionFloatOrPercent, the Flow class takes care of the percent to value substitution.
         (initial_layer.value > 0) ? initial_layer : support_width(object, head),
-        nozzle,
+        float(nozzle),
         (layer_height > 0.f) ? layer_height : float(print_config.initial_layer_print_height.value));
 }
 
 Flow support_material_interface_flow(const PrintObject *object, float layer_height)
 {
-    float        nozzle = 0.f;
+    double       nozzle = 0.;
     const size_t head   = support_head(object, object->config().support_interface_filament, true, &nozzle);
     return Flow::new_from_config_width(
         frSupportMaterialInterface,
         // The width parameter accepted by new_from_config_width is of type ConfigOptionFloatOrPercent, the Flow class takes care of the percent to value substitution.
         support_width(object, head),
-        nozzle,
+        float(nozzle),
         (layer_height > 0.f) ? layer_height : float(object->config().layer_height.value));
 }
 

@@ -255,10 +255,10 @@ static std::vector<std::pair<TreeSupportSettings, std::vector<size_t>>> group_me
     // calc the extrudable expolygons of each layer
     // SnapOrca: the width is a column per tool head, read at the support head, and may be a % of
     // that head's nozzle (the U1 profiles use one).
-    float          support_nozzle  = 0.f;
+    double         support_nozzle  = 0.;
     const size_t   width_head      = support_head(&print_object, config.support_filament, false, &support_nozzle);
-    if (support_nozzle <= 0.f)
-        support_nozzle = float(print_object.print()->config().nozzle_diameter.get_at(width_head));
+    if (support_nozzle <= 0.)
+        support_nozzle = print_object.print()->config().nozzle_diameter.get_at(width_head);
     const coordf_t extrusion_width = config.get_abs_value_at("line_width", width_head, support_nozzle);
     const coordf_t extrusion_width_scaled = scale_(extrusion_width);
     tbb::parallel_for(tbb::blocked_range<size_t>(0, print_object.layer_count()),

@@ -202,7 +202,7 @@ struct SupportParameters {
         // ORCA: honors the support nozzle diameter restriction for "default" support filaments.
         // Snapmaker Orca: the widths are columns per tool head, read at the interface head whose
         // nozzle resolves them here (the base width at the interface head is the pre-existing rule).
-        float          nozzle_diameter = 0.f;
+        double         nozzle_diameter = 0.;
         const size_t   width_head      = support_head(&object, object_config.support_interface_filament, true, &nozzle_diameter);
         const coordf_t extrusion_width = Flow::width_at(object_config.line_width, width_head).get_abs_value(nozzle_diameter);
         support_extrusion_width        = Flow::width_at(object_config.support_line_width, width_head).get_abs_value(nozzle_diameter);

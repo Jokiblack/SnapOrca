@@ -150,11 +150,11 @@ private:
 };
 
 // ORCA: nozzle driving support / raft flows: the configured filament's, or the support_nozzle_diameter restriction when the filament is left at "default" (0).
-extern float support_material_nozzle_diameter(const PrintObject *object, int configured_filament);
+extern double support_material_nozzle_diameter(const PrintObject *object, int configured_filament);
 // Snapmaker Orca: 0-based tool head (width column and nozzle index) the support of `object` prints with: the
 // head of `configured` (support filament, 0 = default), else of resolved_default_support_filament, else head 1.
 // `nozzle` receives that head's diameter, or support_nozzle_diameter when that restriction applies.
-extern size_t support_head(const PrintObject *object, int configured, bool interface_role, float *nozzle = nullptr);
+extern size_t support_head(const PrintObject *object, int configured, bool interface_role, double *nozzle = nullptr);
 extern Flow support_material_flow(const PrintObject* object, float layer_height = 0.f);
 extern Flow support_transition_flow(const PrintObject *object); //BBS
 extern Flow support_material_1st_layer_flow(const PrintObject *object, float layer_height = 0.f);
