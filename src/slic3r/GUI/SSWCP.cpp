@@ -8073,23 +8073,21 @@ void SSWCP::stop_machine_find() {
 // Handle webview deletion
 void SSWCP::on_webview_delete(wxWebView* view)
 {
-    // Mark all instances associated with this webview as invalid
-    std::vector<SSWCP_Instance*> instances_to_invalidate;
-
-    // Get all instances using this webview
-    for (const auto& instance : m_instance_list) {
-        if (instance.second->value->get_web_view() == view) {
-            instances_to_invalidate.push_back(instance.first);
-            instance.second->value->set_web_view(nullptr);
+    // Mark all instances of this webview as invalid. Walks a snapshot taken under the lock, since the
+    // TimeoutMap checker thread erases expiring entries concurrently; the copies keep the instances alive.
+    std::vector<std::shared_ptr<SSWCP_Instance>> instances_to_invalidate;
+    for (const auto& entry : m_instance_list.get_snapshot()) {
+        if (entry.second && entry.second->get_web_view() == view) {
+            entry.second->set_web_view(nullptr);
+            instances_to_invalidate.push_back(entry.second);
         }
     }
-
-    // Mark each instance as invalid
-    for (auto* instance : instances_to_invalidate) {
-        auto instance_ptr = m_instance_list.get(instance);
-        if (instance_ptr) {
-            (*instance_ptr)->set_Instance_illegal();
-        }
+    // An illegal instance answers nothing any more; the subscriptions of the view (add_infinite)
+    // would otherwise stay in the list for the life of the process, and a one-shot request of
+    // the view has nobody left to answer to.
+    for (const auto& instance : instances_to_invalidate) {
+        instance->set_Instance_illegal();
+        m_instance_list.remove(instance.get());
     }
 
     auto& device_map = wxGetApp().m_device_card_subscribers;
