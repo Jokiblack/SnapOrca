@@ -3013,6 +3013,39 @@ def topological_sort(profiles):
     return result
 
 
+# Snapmaker Orca: bundles whose index order is curated rather than canonical. The setup
+# wizard lists a vendor's printer models in machine_model_list order (WebGuideDialog;
+# resources/web/guide/21/common.js keeps it within a vendor), and Snapmaker lists the U1
+# first. update-index keeps the order such an index already has, as long as it puts every
+# parent before its children; it drops the entries whose file is gone or repeated and
+# appends the new files in canonical order.
+KEEP_INDEX_ORDER_VENDORS = {"Snapmaker"}
+
+
+def _keep_index_order(current, canonical):
+    """`canonical` (topologically sorted entries) in the order of `current` (the index
+    as it stands): the listed entries in their listed order, then the others in
+    canonical order. Falls back to `canonical` when that order would list a child
+    before its parent."""
+    by_key = {(e["name"], e["sub_path"]): e for e in canonical}
+    names = {e["name"] for e in canonical}
+    ordered, seen = [], set()
+    for entry in current or []:
+        sub_path = posixpath.normpath(str(entry.get("sub_path", "")).replace("\\", "/"))
+        key = (entry.get("name"), sub_path)
+        if key in by_key and key not in seen:
+            seen.add(key)
+            ordered.append(by_key[key])
+    ordered += [e for e in canonical if (e["name"], e["sub_path"]) not in seen]
+    placed = set()
+    for entry in ordered:
+        if any(parent in names and parent not in placed
+               for parent in profile_dependencies(entry)):
+            return canonical
+        placed.add(entry["name"])
+    return ordered
+
+
 def build_index_sections(profiles_dir, vendor, profile_types=None):
     """The *_list sections update-index would write for one bundle, from its own files.
 
@@ -3033,6 +3066,12 @@ def build_index_sections(profiles_dir, vendor, profile_types=None):
     problems = []
     unplaceable = {}
     by_name = defaultdict(list)
+    current = {}
+    if vendor in KEEP_INDEX_ORDER_VENDORS:
+        try:
+            current = load_json(os.path.join(profiles_dir, vendor + ".json"))
+        except (ValueError, OSError):
+            current = {}
     for profile_type in (profile_types or PROFILE_TYPES):
         entries = []
         for path in _walk_json(os.path.join(vendor_dir, _profile_subdir(profile_type))):
@@ -3065,9 +3104,12 @@ def build_index_sections(profiles_dir, vendor, profile_types=None):
             by_name[name].append(entry["sub_path"])
             entries.append(entry)
 
+        ordered = topological_sort(entries)
+        if vendor in KEEP_INDEX_ORDER_VENDORS:
+            ordered = _keep_index_order(current.get(profile_type + "_list"), ordered)
         # inherits/include were ordering input only; the index holds name and sub_path
         sections[profile_type + "_list"] = [{"name": e["name"], "sub_path": e["sub_path"]}
-                                            for e in topological_sort(entries)]
+                                            for e in ordered]
 
     for rel, found in sorted(unplaceable.items()):
         problems.append(f'{rel}: type {found!r} is not one of {list(PROFILE_TYPES)}, so it '

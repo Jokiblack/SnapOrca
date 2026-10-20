@@ -435,6 +435,31 @@ class TestUpdateIndex(TreeCase):
         for entry in self.t.read_index("V")["filament_list"]:
             self.assertEqual(sorted(entry), ["name", "sub_path"])
 
+    def test_a_curated_index_keeps_its_order(self):
+        # Snapmaker Orca: KEEP_INDEX_ORDER_VENDORS keep the order their index lists
+        # (the setup wizard shows the U1 first); gone and repeated entries are dropped,
+        # new files appended in canonical order.
+        for name in ("A250", "U1", "Z9"):
+            self.t.write("Snapmaker", f"machine/{name}.json",
+                         {"type": "machine_model", "name": name})
+        self.t.write("Snapmaker", "filament/base.json", {"type": "filament", "name": "base"})
+        self.t.write("Snapmaker", "filament/kid.json",
+                     {"type": "filament", "name": "kid", "inherits": "base"})
+        index = self.t.read_index("Snapmaker")
+        index["machine_model_list"] = [{"name": n, "sub_path": f"machine/{n}.json"}
+                                       for n in ("U1", "Gone", "A250", "U1")]
+        # A child before its parent cannot be kept: canonical order instead.
+        index["filament_list"] = [{"name": "kid", "sub_path": "filament/kid.json"},
+                                  {"name": "base", "sub_path": "filament/base.json"}]
+        self.t.write_index("Snapmaker", index)
+        rc, out = self.run_command("update-index")
+        self.assertEqual(rc, 0, out)
+        index = self.t.read_index("Snapmaker")
+        self.assertEqual([e["name"] for e in index["machine_model_list"]], ["U1", "A250", "Z9"])
+        self.assertEqual([e["name"] for e in index["filament_list"]], ["base", "kid"])
+        rc, out = self.run_command("update-index", "--dry-run")
+        self.assertIn("0 vendor index(es) would be rebuilt", out)
+
     def test_include_targets_are_listed_before_their_users(self):
         # The loader resolves include like inherits: in one pass over the list, so
         # a template must be listed before every preset that includes it - even
