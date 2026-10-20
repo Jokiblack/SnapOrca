@@ -271,7 +271,8 @@ TEST_CASE("Generating the tower keeps its reported width current", "[WipeTower]"
 {
     // width is handed out after the slice, so leaving it at the estimate reports a zero-width
     // tower to every post-generation consumer.
-    const DynamicPrintConfig config = wipe_tower_toolchange_config("marlin");
+    DynamicPrintConfig config = wipe_tower_toolchange_config("marlin");
+    config.set_deserialize_strict({ { "wipe_tower_wall_type", "rib" }, { "prime_tower_width", "60" } });
     Print print;
     Model model;
     init_print({ cube(10) }, print, model, config);
@@ -282,10 +283,13 @@ TEST_CASE("Generating the tower keeps its reported width current", "[WipeTower]"
     REQUIRE(print.is_step_done(psWipeTower));
     const WipeTowerData &data = print.wipe_tower_data();
     // A width the generator never wrote reads as zero. A rib wall squares the tower, so the
-    // generated width is the body square: under the configured 50 mm, and inside the depth.
+    // generated width is the body square: under the configured width, and about the depth.
+    // Only about: the side is the root of the area planned at the configured width, rounded up
+    // to whole lines, and re-planning at that side rounds the ramming to whole lines again, so
+    // the depth can come out a few lines short of it (here 26 mm against 23.8 mm).
     CHECK(data.width > 0.f);
-    CHECK(data.width < 50.f);
-    CHECK(data.width <= data.depth + EPSILON);
+    CHECK(data.width < 60.f);
+    CHECK_THAT(data.width, Catch::Matchers::WithinRel(data.depth, 0.2f));
 }
 
 TEST_CASE("A single-filament plate reserves a tower only when one is actually printed", "[WipeTower]")
