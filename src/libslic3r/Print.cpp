@@ -6252,6 +6252,16 @@ int Print::get_nozzle_config_index(int filament_id, int layer_id)
     return get_config_index(filament_id, layer_id, m_default_region_config.print_extruder_variant.values, m_default_region_config.print_extruder_id.values, m_nozzle_index_map);
 }
 
+size_t Print::process_slot_of_filament(unsigned int filament_id, int layer_id)
+{
+    // Without a grouping get_nozzle_config_index answers the filament id, which is not the tool
+    // head under a filament map that is not the identity; the table then has one slot per head.
+    if (!get_layered_nozzle_group_result())
+        return get_extruder_id(filament_id);
+    const int slot = get_nozzle_config_index(int(filament_id), layer_id);
+    return slot >= 0 ? size_t(slot) : get_extruder_id(filament_id);
+}
+
 int Print::get_config_index(int filament_id, int layer_id, const std::vector<std::string> &variant_list, const std::vector<int>& self_index_list, FilamentIndexMap *index_map)
 {
     const MultiNozzleUtils::LayeredNozzleGroupResult *group_result = m_layered_nozzle_group_result.get();
@@ -6684,6 +6694,17 @@ void Print::_make_wipe_tower()
         // wipe_tower.set_zhop();
 
         // Set the extruder & material properties at the wipe tower object.
+        // Snapmaker Orca: the slot each filament's travel, first layer, infill and inner wall speeds
+        // are read at (the column of its tool head); the tower has no layer dimension, so the slot
+        // of the first layer stands for the print. A flow-variant process preset keeps the tower's
+        // own flow-variant lookup.
+        if (m_config.process_flow_support.values.size() <= 1) {
+            std::vector<size_t> slots;
+            slots.reserve(number_of_extruders);
+            for (size_t i = 0; i < number_of_extruders; ++i)
+                slots.emplace_back(process_slot_of_filament((unsigned int) i, 0));
+            wipe_tower.set_filament_slots(slots);
+        }
         for (size_t i = 0; i < number_of_extruders; ++i)
             wipe_tower.set_extruder(i, m_config);
 

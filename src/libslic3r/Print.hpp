@@ -1560,6 +1560,11 @@ public:
     // pipeline's cooling stage, which runs concurrently with the generator stage filling it.
     int get_filament_config_indx(int filament_id, int layer_id, bool use_cache = true);
     int get_nozzle_config_index(int filament_id, int layer_id);
+    // Snapmaker Orca: the column of the process table (one per tool head, or per tool head x
+    // volume type) a filament's speeds, accelerations and line widths are read at on `layer_id`:
+    // get_nozzle_config_index() when a nozzle grouping is published, else the filament's tool head.
+    // Read by the G-code writer for the travel speeds and by the prime tower for its own speeds.
+    size_t process_slot_of_filament(unsigned int filament_id, int layer_id);
     // Changes with the grouping result and the filament maps, so a caller may reuse a resolved slot
     // until it changes.
     size_t config_index_generation() const { return m_config_index_generation; }
