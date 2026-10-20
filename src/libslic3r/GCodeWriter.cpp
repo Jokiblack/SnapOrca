@@ -1133,9 +1133,12 @@ std::string GCodeWriter::travel_to_xyz(const Vec3d &point, const std::string &co
         w.emit_f(final_travel_speed * 60.0);
         w.emit_comment(GCodeWriter::full_gcode_comment, comment);
         out_string = w.string();
-    } else if (!this->is_current_position_clear())
+    } else if (!this->is_current_position_clear() ||
+               (m_avoid_z_descent_travel && point_on_plate.z() < m_pos.z() - EPSILON))
     {
-        //force to move xy first then z after filament change
+        // Split XY + Z: required after a filament change (position unknown), or when a
+        // mixed-color sublayer has to descend in Z, to avoid a diagonal move that could
+        // scrape the surface just printed (BBS bf8d52c72).
         w.emit_xy(Vec2d(point_on_plate.x(), point_on_plate.y()));
         w.emit_f(final_travel_speed * 60.0);
         w.emit_comment(GCodeWriter::full_gcode_comment, comment);

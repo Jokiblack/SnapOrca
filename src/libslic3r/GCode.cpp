@@ -9878,6 +9878,11 @@ LayerResult GCode::process_layer(
             m_sub_layer_flow_ratio = default_sub_h / lh;
             m_sub_layer_height     = default_sub_h;
             m_nominal_z            = default_sub_z;
+            // While printing sublayers a travel may be asked to descend in Z (the next
+            // sublayer pass starts lower than where the previous one ended): force the
+            // writer to move XY first and descend afterwards instead of a diagonal G1 XYZ
+            // that could scrape the surface just printed.
+            m_writer.set_avoid_z_descent_travel(true);
 
             gcode += this->set_extruder(extruder_id, default_sub_z);
 
@@ -10154,6 +10159,7 @@ LayerResult GCode::process_layer(
 
             m_sub_layer_flow_ratio = 0.0;
             m_sub_layer_height     = 0.0;
+            m_writer.set_avoid_z_descent_travel(false);
         }
         // Flush any pending object end label before leaving the sublayer block, otherwise the
         // wipe tower's add_object_end_labels may consume it into a local temp string and the
