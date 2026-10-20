@@ -2092,6 +2092,12 @@ void PartPlate::render_logo_texture(GLTexture &logo_texture, GLModel& logo_buffe
 	if (logo_buffer.is_initialized()) {
 		GLShaderProgram* shader = wxGetApp().get_shader("printbed");
 		if (shader != nullptr) {
+			// PartPlate::render() does not keep "printbed" bound for its callees, so each
+			// textured pass binds it and sets the camera matrices itself.
+			shader->start_using();
+			const Camera &camera = wxGetApp().plater()->get_camera();
+			shader->set_uniform("view_model_matrix", camera.get_view_matrix());
+			shader->set_uniform("projection_matrix", camera.get_projection_matrix());
 			shader->set_uniform("transparent_background", 0);
 			shader->set_uniform("svg_source", 0);
 
@@ -2116,6 +2122,8 @@ void PartPlate::render_logo_texture(GLTexture &logo_texture, GLModel& logo_buffe
             glsafe(::glDisable(GL_BLEND));
 
 			glsafe(::glDepthMask(GL_TRUE));
+
+			shader->stop_using();
 		}
 	}
 }
@@ -2734,6 +2742,10 @@ void PartPlate::render_only_numbers(bool bottom)
 {
 	GLShaderProgram* shader = wxGetApp().get_shader("printbed");
 	if (shader != nullptr) {
+		shader->start_using();
+        const Camera &camera = wxGetApp().plater()->get_camera();
+        shader->set_uniform("view_model_matrix", camera.get_view_matrix());
+        shader->set_uniform("projection_matrix", camera.get_projection_matrix());
 		shader->set_uniform("transparent_background", bottom);
 		//shader->set_uniform("svg_source", boost::algorithm::iends_with(m_partplate_list->m_del_texture.get_source(), ".svg"));
 		shader->set_uniform("svg_source", 0);
@@ -2754,6 +2766,7 @@ void PartPlate::render_only_numbers(bool bottom)
         //    glsafe(::glFrontFace(GL_CCW));
 
         glsafe(::glDepthMask(GL_TRUE));
+        shader->stop_using();
     }
 }
 
@@ -5086,7 +5099,6 @@ void PartPlate::render(const Transform3d& view_matrix, const Transform3d& projec
 {
     glsafe(::glEnable(GL_DEPTH_TEST));
 
-    GLShaderProgram* printbedShader = wxGetApp().get_shader("printbed");
     GLShaderProgram *shader = wxGetApp().get_shader("flat");
     if (shader != nullptr) {
         shader->start_using();
@@ -5129,8 +5141,7 @@ void PartPlate::render(const Transform3d& view_matrix, const Transform3d& projec
         //	render_label(canvas);
         // }
 
-        if (printbedShader == nullptr)
-            shader->stop_using();
+        shader->stop_using();
     }
 
     if (wxGetApp().show_plate_gridlines() && show_grid) {

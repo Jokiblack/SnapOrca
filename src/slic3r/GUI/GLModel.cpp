@@ -712,7 +712,16 @@ void GLModel::render(const std::pair<size_t, size_t>& range, GLShaderProgram* sh
             return;
     }
 
-    if (OpenGLManager::VertexArraysSupported()) {
+    // Snapmaker's cached VAO (fixed attribute locations) is only for compatibility contexts.
+    // In a core profile or GLES, send_to_gpu() already creates m_render_data.vao_id without
+    // attribute pointers and RenderLegacy() sets them on every draw; taking the cached-VAO path
+    // there would bind that bare VAO and draw with no attributes and no index buffer.
+#if SLIC3R_OPENGL_ES
+    const bool use_cached_vao = false;
+#else
+    const bool use_cached_vao = OpenGLManager::VertexArraysSupported() && !OpenGLManager::get_gl_info().is_core_profile();
+#endif
+    if (use_cached_vao) {
         if (m_render_data.vao_id == 0)
             InitVao();
 

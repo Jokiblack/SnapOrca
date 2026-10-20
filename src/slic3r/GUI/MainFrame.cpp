@@ -1571,6 +1571,8 @@ void MainFrame::init_tabpanel() {
         wxWindow* panel = m_tabpanel->GetCurrentPage();
         //wxString page_text = m_tabpanel->GetPageText(sel);
         m_last_selected_tab = m_tabpanel->GetSelectedPageName();
+        // Warning level so the breadcrumb survives the default release log level.
+        BOOST_LOG_TRIVIAL(warning) << "[TAB] page changed to " << m_last_selected_tab.ToUTF8().data();
         if (panel == m_plater) {
             if (m_last_selected_tab == TAB_ID_PREPARE) {
                 wxPostEvent(m_plater, SimpleEvent(EVT_GLVIEWTOOLBAR_3D));
