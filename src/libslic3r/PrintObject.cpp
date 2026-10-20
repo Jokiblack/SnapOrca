@@ -1865,6 +1865,7 @@ bool PrintObject::invalidate_state_by_config_options(
             || opt_key == "ghost_lines_air_gap"
             || opt_key == "ghost_lines_gap_after_wall"
             || opt_key == "ghost_lines_bond_layers"
+            || opt_key == "ghost_lines_gap_taper_layers"
             || opt_key == "ghost_lines_extra_wall"
             || opt_key == "ghost_lines_outer_wall_first"
             || opt_key == "precise_outer_wall") {

@@ -1709,6 +1709,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloat, ghost_lines_air_gap))
     ((ConfigOptionInt, ghost_lines_gap_after_wall))
     ((ConfigOptionInt, ghost_lines_bond_layers))
+    ((ConfigOptionInt, ghost_lines_gap_taper_layers))
     ((ConfigOptionBool, ghost_lines_extra_wall))
     ((ConfigOptionBool, ghost_lines_outer_wall_first))
     ((ConfigOptionPercent, ghost_lines_outer_wall_flow))

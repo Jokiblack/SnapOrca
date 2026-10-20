@@ -8936,6 +8936,18 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(0));
 
+    def = this->add("ghost_lines_gap_taper_layers", coInt);
+    def->label = L("Air gap taper layers");
+    def->category = L("Quality");
+    def->tooltip = L("Close the air gap gradually over this many layers below the first and above the last layer of each "
+                     "internal feature, instead of opening it at once. Set to 0 to open the gap at full width on the "
+                     "first treated layer.");
+    def->sidetext = L("layers");
+    def->min = 0;
+    def->max = 100;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionInt(0));
+
     def = this->add("ghost_lines_extra_wall", coBool);
     def->label = L("Extra wall");
     def->category = L("Quality");

@@ -262,6 +262,14 @@ static void remove_wall_class(ExtrusionEntityCollection &collection, bool outer_
     }
 }
 
+// SnapOrca: the layer k layers above (k > 0) or below (k < 0) layer, or nullptr past the ends of the object.
+static const Layer *k_layer(const Layer *layer, int k)
+{
+    for (; layer != nullptr && k != 0; k += k > 0 ? -1 : 1)
+        layer = k > 0 ? layer->upper_layer : layer->lower_layer;
+    return layer;
+}
+
 void LayerRegion::make_perimeters(const SurfaceCollection &slices, const LayerRegionPtrs &compatible_regions, SurfaceCollection* fill_surfaces, ExPolygons* fill_no_overlap)
 {
     this->perimeters.clear();
@@ -352,6 +360,14 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, const LayerRe
                 this->layer()->object()->config().wall_generator.value == PerimeterGeneratorType::Classic) {
                 if (! area.empty())
                     ghost_lines_gaps.emplace_back(std::move(area), gap);
+                // Taper the gap of the treated layers up to taper layers above and below into this one, narrower
+                // with the distance. Where the areas overlap, the widest gap wins.
+                const int taper = perimeter_config.ghost_lines_gap_taper_layers.value;
+                for (int k = 1; k <= taper; ++ k)
+                    for (const Layer *other : { k_layer(this->layer(), -k), k_layer(this->layer(), k) })
+                        if (other != nullptr)
+                            if (ExPolygons other_area = ghost_lines_area(*other, perimeter_config, band_depth); ! other_area.empty())
+                                ghost_lines_gaps.emplace_back(std::move(other_area), coord_t(double(gap) * double(taper + 1 - k) / double(taper + 1)));
                 if (! ghost_lines_gaps.empty())
                     g.ghost_lines_gaps = &ghost_lines_gaps;
             }

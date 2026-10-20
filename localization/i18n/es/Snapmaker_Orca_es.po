@@ -39202,6 +39202,14 @@ msgid "Print every Nth layer without the air gap, so that the outer wall stays b
 msgstr "Imprime una de cada N capas sin cámara de aire, para que la pared exterior quede unida al interior de la pieza a alturas regulares. Ponga 0 para dejar la cámara en todas las capas tratadas."
 
 # AI Translated
+msgid "Air gap taper layers"
+msgstr "Capas de transición de la cámara de aire"
+
+# AI Translated
+msgid "Close the air gap gradually over this many layers below the first and above the last layer of each internal feature, instead of opening it at once. Set to 0 to open the gap at full width on the first treated layer."
+msgstr "Cierra la cámara de aire progresivamente a lo largo de este número de capas por debajo de la primera y por encima de la última capa de cada elemento interno, en lugar de abrirla de golpe. Ponga 0 para abrir la cámara a todo su ancho en la primera capa tratada."
+
+# AI Translated
 msgid "Extra wall"
 msgstr "Perímetro adicional"
 

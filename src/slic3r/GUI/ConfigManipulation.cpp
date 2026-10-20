@@ -1416,7 +1416,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
     toggle_line("ghost_lines_feature_depth", ghost_lines && config->opt_enum<GhostLinesScope>("ghost_lines_scope") == GhostLinesScope::InternalFeatures);
     toggle_line("ghost_lines_air_gap", ghost_lines);
     toggle_field("ghost_lines_air_gap", ghost_lines && !have_arachne && !config->opt_bool("spiral_mode"));
-    for (auto el : { "ghost_lines_gap_after_wall", "ghost_lines_bond_layers" })
+    for (auto el : { "ghost_lines_gap_after_wall", "ghost_lines_bond_layers", "ghost_lines_gap_taper_layers" })
         toggle_line(el, ghost_lines && config->opt_float("ghost_lines_air_gap") > 0.);
     for (auto el : { "ghost_lines_extra_wall", "ghost_lines_outer_wall_first", "ghost_lines_outer_wall_flow",
                      "ghost_lines_outer_wall_speed", "ghost_lines_fan", "ghost_lines_concentric_solid_infill" })
