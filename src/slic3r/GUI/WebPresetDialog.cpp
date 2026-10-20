@@ -38,13 +38,14 @@
 #include "ProfileLoadUtil.hpp"
 
 using namespace nlohmann;
+namespace fs = boost::filesystem;
 
 namespace Slic3r { namespace GUI {
 
 extern json m_ProfileJson;
 extern std::mutex m_ProfileJson_mutex;
 
-extern void StringReplace(string& strBase, string strSrc, string strDes);
+extern void StringReplace(std::string& strBase, std::string strSrc, std::string strDes);
 
 static wxString update_custom_filaments()
 {
@@ -1225,7 +1226,7 @@ int WebPresetDialog::LoadProfile()
         //} while (_findnext(handle, &findData) == 0); // ???????????
 
         // load BBL bundle from user data path
-        string                                targetPath = sm_bundle_path.make_preferred().string();
+        std::string                             targetPath = sm_bundle_path.make_preferred().string();
         boost::filesystem::path               myPath(targetPath);
         boost::filesystem::directory_iterator endIter;
         for (boost::filesystem::directory_iterator iter(myPath); iter != endIter; iter++) {
