@@ -10,7 +10,6 @@
 #include "I18N.hpp"
 #include "libslic3r/AppConfig.hpp"
 #include "libslic3r/Format/DRC.hpp"
-<<<<<<< snaporca-int
 #include <wx/gdicmn.h>
 #include <wx/arrstr.h>
 #include "slic3r/GUI/Widgets/Label.hpp"
@@ -47,19 +46,12 @@
 #include "slic3r/GUI/Field.hpp"
 #include <map>
 #include "slic3r/GUI/ReleaseNote.hpp"
-=======
-#ifdef SLIC3R_CAD
-// The CAD kernel headers (OCCT) are only on the include path when the Design tab is built.
-#include "libslic3r/CAD/SketchEngine.hpp"
-#endif
->>>>>>> lixnix/main
 #include <wx/language.h>
 #include "OG_CustomCtrl.hpp"
 #include "libslic3r_version.h"
 #include "wx/graphics.h"
 #include <wx/listimpl.cpp>
 #include <wx/display.h>
-<<<<<<< snaporca-int
 #include <wx/hyperlink.h>
 #include <map>
 #include <memory>
@@ -77,11 +69,6 @@
 #include <wx/treebase.h>
 #include <wx/types.h>
 #include <wx/timer.h>
-=======
-#include <map>
-#include <memory>
-
->>>>>>> lixnix/main
 #include "NetworkTestDialog.hpp"
 #include "SceneBenchmark.hpp"
 #include "Widgets/StaticLine.hpp"
@@ -91,10 +78,6 @@
 #include "slic3r/Utils/NetworkAgent.hpp"
 #include "NetworkPluginDialog.hpp"
 #include "DownloadProgressDialog.hpp"
-
-#include "sentry_wrapper/SentryWrapper.hpp"
-#include "SSWCP.hpp"
-#include "SnapLogWiring.hpp"
 
 #ifdef __WINDOWS__
 #ifdef _MSW_DARK_MODE
@@ -609,12 +592,8 @@ wxBoxSizer *PreferencesDialog::create_item_language_combobox(wxString title, wxS
 
 wxBoxSizer *PreferencesDialog::create_item_region_combobox(wxString title, wxString tooltip)
 {
-<<<<<<< snaporca-int
     // Snapmaker: the stored region key for China stays "Chinese Mainland" (used by the Snapmaker login / server selection).
     std::vector<wxString> Regions         = {_L("Asia-Pacific"), _L("Chinese Mainland"), _L("Europe"), _L("North America"), _L_CONTEXT("Others", "Region")};
-=======
-    std::vector<wxString> Regions       = {_L("Asia-Pacific"), _L("Chinese Mainland"), _L("Europe"), _L("North America"), _L("Others")};
->>>>>>> lixnix/main
     std::vector<wxString> local_regions = {"Asia-Pacific", "Chinese Mainland", "Europe", "North America", "Others"};
 
     auto vlist = Regions;
@@ -657,10 +636,6 @@ wxBoxSizer *PreferencesDialog::create_item_region_combobox(wxString title, wxStr
             MessageDialog msg_wingow(this, _L("Changing the region will log out your account and restart.\n") + "\n" + _L("Do you want to continue?"),
                                      L("Region selection"), wxICON_QUESTION | wxOK | wxCANCEL);
 
-<<<<<<< snaporca-int
-=======
-
->>>>>>> lixnix/main
             if (msg_wingow.ShowModal() == wxID_CANCEL) {
                 combobox->SetSelection(current_region);
                 return;
@@ -1078,11 +1053,7 @@ void PreferencesDialog::set_dark_mode()
 }
 
 wxBoxSizer *PreferencesDialog::create_item_checkbox(wxString title, wxString tooltip, std::string param, const wxString secondary_title, const wxString wiki_url,
-<<<<<<< snaporca-int
                                                   std::function<bool(bool new_val, bool old_val)> confirm_cb)
-=======
-                                                    std::function<bool(bool new_val, bool old_val)> confirm_cb)
->>>>>>> lixnix/main
 {
     auto tip = tooltip.IsEmpty() ? title : tooltip; // auto fill tooltips with title if its empty
 
@@ -1094,15 +1065,6 @@ wxBoxSizer *PreferencesDialog::create_item_checkbox(wxString title, wxString too
 
     if (param == "sync_user_preset") { m_sync_user_preset_checkbox = checkbox; }
     if (param == SETTING_OPENGL_SKIP_IDENTICAL_FRAMES) { m_skip_identical_frames_checkbox = checkbox; }
-    // Snapmaker Orca: the SnapLog upload only works while the programme is joined, so its box is
-    // greyed out without it. The stored value is kept and comes back with the programme.
-    if (param == "snaplog_upload") {
-        m_snaplog_upload_checkbox = checkbox;
-        checkbox->Enable(app_config->get_bool(PRIVACY_POLICY_FLAGS));
-    }
-    // Snapmaker Orca: AppConfig::set_defaults() forces this key true at every start, so the
-    // control is disabled and only shows the state.
-    if (param == "check_stable_update_only") { checkbox->Enable(false); }
 
     m_sizer->Add(checkbox, 0, wxALIGN_CENTER);
 
@@ -1144,7 +1106,6 @@ wxBoxSizer *PreferencesDialog::create_item_checkbox(wxString title, wxString too
             app_config->set("app", PRIVACY_POLICY_FLAGS, checkbox->GetValue());
                 BOOST_LOG_TRIVIAL(warning) <<"create_item_checkbox changed the privacy policy with: "<<(checkbox->GetValue()?"true" : "false");
                 wxGetApp().user_update_privacy_notify(checkbox->GetValue());
-<<<<<<< snaporca-int
             }
         // if (param == "staff_pick_switch") {
         //     bool pbool = app_config->get("staff_pick_switch") == "true";
@@ -1159,16 +1120,6 @@ wxBoxSizer *PreferencesDialog::create_item_checkbox(wxString title, wxString too
             Slic3r::set_backup_interval(pbool ? boost::lexical_cast<long>(backup_interval) : 0);
             if (m_backup_interval_textinput != nullptr) { m_backup_interval_textinput->Enable(pbool); }
         }
-=======
-                // Snapmaker Orca: at once, without reopening the dialog.
-                if (m_snaplog_upload_checkbox)
-                    m_snaplog_upload_checkbox->Enable(checkbox->GetValue());
-            }
-
-        // Snapmaker Orca: set_bool() and save() have run above; the client reads the stored values.
-        if (param == "snaplog_upload")
-            SnapLogWiring::apply_consent(*app_config);
->>>>>>> lixnix/main
 
         if (param == "sync_user_preset") {
             bool sync = app_config->get("sync_user_preset") == "true" ? true : false;
@@ -1630,11 +1581,7 @@ void PreferencesDialog::create()
     // set icon for dialog
     std::string icon_path = (boost::format("%1%/images/Snapmaker_OrcaTitle.ico") % resources_dir()).str();
     SetIcon(wxIcon(encode_path(icon_path.c_str()), wxBITMAP_TYPE_ICO));
-<<<<<<< snaporca-int
     SetSizeHints(wxDefaultSize, wxDefaultSize);
-=======
-
->>>>>>> lixnix/main
     m_parent = new MyscrolledWindow(this, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL);
     m_parent->SetScrollRate(0, FromDIP(20));
     m_parent->SetBackgroundColour(*wxWHITE);
@@ -1816,10 +1763,8 @@ void PreferencesDialog::create_items()
     g_sizer->Add(item_window_button_pos);
 #endif
 
-    // Snapmaker Orca: the "show_hints" key drives the hint notification pushed at startup
-    // (GUI_App::post_init) and is seeded false; this is its only switch outside the notification.
-    auto item_hints            = create_item_checkbox(_L("Show \"Tip of the day\" notification after start"), _L("If enabled, useful hints are displayed at startup."), "show_hints");
-    g_sizer->Add(item_hints);
+    //auto item_hints            = create_item_checkbox(_L("Show \"Daily Tips\" after start"), page, _L("If enabled, useful hints are displayed at startup."), "show_daily_tips");
+    //g_sizer->Add(item_hints);
 
     auto item_downloads        = create_item_downloads(_L("Downloads folder"), _L("Target folder for downloaded items"));
     g_sizer->Add(item_downloads);
@@ -1882,7 +1827,7 @@ void PreferencesDialog::create_items()
     //// GENERAL > Preset
     g_sizer->Add(create_item_title(_L("Preset")), 1, wxEXPAND);
 
-    auto item_remember_printer = create_item_checkbox(_L("Remember printer configuration"), _L("If enabled, Snapmaker Orca will remember and switch filament/process configuration for each printer automatically."), "remember_printer_config");
+    auto item_remember_printer = create_item_checkbox(_L("Remember printer configuration"), _L("If enabled, Orca will remember and switch filament/process configuration for each printer automatically."), "remember_printer_config");
     g_sizer->Add(item_remember_printer);
 
     // Snapmaker Orca: libslic3r/NozzleFilamentPresets.hpp. The handler of the checkbox hands the new value to the preset bundle.
@@ -2005,17 +1950,9 @@ void PreferencesDialog::create_items()
     auto item_mix_print_high_low_temperature = create_item_checkbox(_L("Remove mixed temperature restriction"), _L("With this option enabled, you can print materials with a large temperature difference together."), "enable_high_low_temp_mixed_printing");
     g_sizer->Add(item_mix_print_high_low_temperature);
 
-<<<<<<< snaporca-int
     // Snapmaker: allow mixing high / low temperature filaments (with a risk confirmation)
     auto item_allow_filament_temp_mixing = create_item_checkbox(_L("Allow high/low temperature filament mixing"),
         _L("If enabled, allows printing with both high-temperature and low-temperature filaments simultaneously."), "allow_filament_temp_mixing", "", "",
-=======
-    // Snapmaker: high/low temperature filament mixing, gated behind an explicit confirmation
-    auto allow_filament_temp_mixing = create_item_checkbox(
-        _L("Allow high/low temperature filament mixing"),
-        _L("If enabled, allows printing with both high-temperature and low-temperature filaments simultaneously."),
-        "allow_filament_temp_mixing", wxEmptyString, wxEmptyString,
->>>>>>> lixnix/main
         [this](bool new_val, bool old_val) -> bool {
             // Only confirm when turning ON; allow turning OFF without dialog.
             if (!new_val)
@@ -2031,11 +1968,7 @@ void PreferencesDialog::create_items()
             dlg.SetButtonLabel(wxID_CANCEL, _L("Cancel"));
             return dlg.ShowModal() == wxID_OK;
         });
-<<<<<<< snaporca-int
     g_sizer->Add(item_allow_filament_temp_mixing);
-=======
-    g_sizer->Add(allow_filament_temp_mixing);
->>>>>>> lixnix/main
 
     auto item_remember_print_action = create_item_checkbox(_L("Remember last print action"), _L("If enabled, Snapmaker Orca will remember the last selected option in the print button's dropdown (e.g. Print, Export plate sliced file, Export G-code file) and use it as the default on next startup."), "remember_print_action");
     g_sizer->Add(item_remember_print_action);
@@ -2136,18 +2069,6 @@ void PreferencesDialog::create_items()
         SETTING_OPENGL_PHONG_SMOOTH_NORMALS
     );
     g_sizer->Add(smooth_normals);
-
-    // Snapmaker Orca: render LOD. GUI_App::open_preferences() applies a change when the dialog closes.
-    // Under "General", next to the other setting of the drawn geometry, not under "FPS".
-    auto item_mesh_lod = create_item_checkbox(
-        _L("Simplify distant objects"),
-        _L("Draws objects that are small on screen from a reduced copy of their mesh, which speeds up large plates. "
-           "Selected objects, slicing, picking, measuring, thumbnails and exports always use the full mesh. "
-           "Not used while wireframe, a section view, layer height editing or one of the tools Simplify, Cut, "
-           "Mesh Boolean, Measure and Assemble is active. Takes effect immediately."),
-        SETTING_OPENGL_MESH_LOD
-    );
-    g_sizer->Add(item_mesh_lod);
 
     //// GRAPHICS > Realistic view
     g_sizer->Add(create_item_title(_L("Realistic View")), 1, wxEXPAND);
@@ -2254,8 +2175,7 @@ void PreferencesDialog::create_items()
         _L("Show FPS overlay"),
         _L("Displays rendering counts in the top-right corner of the viewport.") + "\n" +
         _L("FPS: frames presented to the screen per second.") + "\n" +
-        _L("3D: frames per second that redrew the 3D scene.") + "\n" +
-        _L("LOD: objects drawn at full / medium / small detail, see Simplify distant objects. (cached) marks a frame that reuses the 3D scene."),
+        _L("3D: frames per second that redrew the 3D scene."),
         SETTING_OPENGL_SHOW_FPS_OVERLAY
     );
     g_sizer->Add(item_fps_overlay);
@@ -2343,16 +2263,11 @@ void PreferencesDialog::create_items()
     //// ONLINE > Connection
     g_sizer->Add(create_item_title(_L("Connection")), 1, wxEXPAND);
 
-    // Snapmaker: the Bambu cloud / network plug-in stack is not shipped, so stealth mode stays on
-    // and the plug-in stays off, both forced in AppConfig::set_defaults(). Dropping that and
-    // un-commenting the items below exposes the upstream preferences again.
-
     auto item_region           = create_item_region_combobox(_L("Login region"), "");
     g_sizer->Add(item_region);
-
-    // Snapmaker: hidden, stealth mode is forced on in AppConfig::set_defaults().
-    // auto item_stealth_mode     = create_item_checkbox(_L("Stealth mode"), _L("This disables all cloud features, including Orca Cloud profile syncing. Users who prefer to work entirely offline can enable this option.\nNote: When Stealth Mode is enabled, your user profiles will not be backed up to Orca Cloud."), "stealth_mode");
-    // g_sizer->Add(item_stealth_mode);
+ 
+    auto item_stealth_mode     = create_item_checkbox(_L("Stealth mode"), _L("This disables all cloud features, including Orca Cloud profile syncing. Users who prefer to work entirely offline can enable this option.\nNote: When Stealth Mode is enabled, your user profiles will not be backed up to Orca Cloud."), "stealth_mode");
+    g_sizer->Add(item_stealth_mode);
 
     auto item_hide_login_side_panel = create_item_checkbox(_L("Hide login side panel"), _L("Hide the login side panel on the home page."), "hide_login_side_panel");
     g_sizer->Add(item_hide_login_side_panel);
@@ -2374,23 +2289,20 @@ void PreferencesDialog::create_items()
     });
     g_sizer->Add(item_network_test);
 
-    // Snapmaker: Bambu Cloud is not shipped in this fork.
-    // //// ONLINE > Cloud Providers
-    // g_sizer->Add(create_item_title(_L("Cloud Providers")), 1, wxEXPAND);
-    //
-    // auto item_bambu_cloud     = create_item_bambu_cloud(_L("Enable Bambu Cloud"), _L("Allow logging into Bambu Cloud alongside Orca Cloud. When enabled, a Bambu login section appears on the homepage."));
-    // g_sizer->Add(item_bambu_cloud);
+    //// ONLINE > Cloud Providers
+    g_sizer->Add(create_item_title(_L("Cloud Providers")), 1, wxEXPAND);
+
+    auto item_bambu_cloud     = create_item_bambu_cloud(_L("Enable Bambu Cloud"), _L("Allow logging into Bambu Cloud alongside Orca Cloud. When enabled, a Bambu login section appears on the homepage."));
+    g_sizer->Add(item_bambu_cloud);
 
     //// ONLINE > Update & sync
     g_sizer->Add(create_item_title(_L("Update & sync")), 1, wxEXPAND);
 
-    auto item_stable_updates   = create_item_checkbox(_L("Check for stable updates only"), _L("Snapmaker Orca checks for stable releases only. This setting cannot be changed."), "check_stable_update_only");
+    auto item_stable_updates   = create_item_checkbox(_L("Check for stable updates only"), "", "check_stable_update_only");
     g_sizer->Add(item_stable_updates);
 
-    // Snapmaker Orca: the Orca-cloud user-preset auto-sync is hidden; presets
-    // sync through the Snapmaker account.
-    // auto item_user_sync        = create_item_checkbox(_L("Auto sync user presets (Printer/Filament/Process)"), "", "sync_user_preset");
-    // g_sizer->Add(item_user_sync);
+    auto item_user_sync        = create_item_checkbox(_L("Auto sync user presets (Printer/Filament/Process)"), "", "sync_user_preset");
+    g_sizer->Add(item_user_sync);
 
     if (app_config->get_stealth_mode()) {
         if (m_bambu_cloud_checkbox)      m_bambu_cloud_checkbox->Enable(false);
@@ -2412,51 +2324,20 @@ void PreferencesDialog::create_items()
                                                       SETTING_USE_ENCRYPTED_TOKEN_FILE);
     g_sizer->Add(item_token_storage);
 
-    // Snapmaker: the Bambu network plug-in is not shipped in this fork (see the forced
-    // "installed_networking" = false in AppConfig::set_defaults()).
-    // //// ONLINE > Network plugin
-    // g_sizer->Add(create_item_title(_L("Bambu network plug-in")), 1, wxEXPAND);
-    //
-    // auto item_enable_plugin    = create_item_checkbox(_L("Enable Bambu network plug-in"), "", "installed_networking");
-    // g_sizer->Add(item_enable_plugin);
-    //
-    // auto item_plugin_version = create_item_network_plugin_version(_L("Network plug-in version"), _L("Select the network plug-in version to use"));
-    // g_sizer->Add(item_plugin_version);
+    //// ONLINE > Network plugin
+    g_sizer->Add(create_item_title(_L("Bambu network plug-in")), 1, wxEXPAND);
 
-    //// ONLINE > User Experience (Snapmaker)
-    g_sizer->Add(create_item_title(_L("User Experience")), 1, wxEXPAND);
+    auto item_enable_plugin    = create_item_checkbox(_L("Enable Bambu network plug-in"), "", "installed_networking");
+    g_sizer->Add(item_enable_plugin);
 
-    auto item_priv_policy      = create_item_checkbox(_L("Join Customer Experience Improvement Program."), "", PRIVACY_POLICY_FLAGS);
-    {
-        const std::string enUrl    = "https://www.snapmaker.com/privacy-policy";
-        const std::string cnUrl    = "https://www.snapmaker.cn/privacy-policy";
-        const std::string language = app_config->get("language");
-
-        auto hyperlink = new wxHyperlinkCtrl(m_parent, wxID_ANY, _L("What data would be collected?"),
-                                             (language.empty() || language != "zh_CN") ? enUrl : cnUrl);
-        hyperlink->SetFont(Label::Head_13);
-        item_priv_policy->Add(hyperlink, 0, wxALIGN_CENTER | wxLEFT, FromDIP(5));
-    }
-    g_sizer->Add(item_priv_policy);
-
-    // Snapmaker Orca: the SnapLog upload has a switch of its own, so the programme (crash reports)
-    // can stay joined without it. Not created in a build without SnapLog (-DSLIC3R_SNAPLOG=OFF).
-    if (SnapLogWiring::compiled_in()) {
-        auto item_snaplog_upload = create_item_checkbox(
-            _L("Upload usage events and diagnostic logs to Snapmaker"),
-            _L("Sends slicing results, printer connection steps and error messages to the Snapmaker cloud while signed in to a Snapmaker account. "
-               "Sent in readable form: the account ID, the MQTT client ID, and the printer's network address and MQTT topics. "
-               "Printer serial numbers and device IDs are sent as one-way hashes. "
-               "Only active while the Customer Experience Improvement Program is joined."),
-            "snaplog_upload");
-        g_sizer->Add(item_snaplog_upload);
-    }
+    auto item_plugin_version = create_item_network_plugin_version(_L("Network plug-in version"), _L("Select the network plug-in version to use"));
+    g_sizer->Add(item_plugin_version);
 
     g_sizer->AddSpacer(FromDIP(10));
     sizer_page->Add(g_sizer, 0, wxEXPAND);
 
     //////////////////////////
-    //// ASSOCIATE TAB
+    //// ASSOCIATE TAB 
     /////////////////////////////////////
 #ifdef _WIN32
     // MSIX: associations are declared in the package manifest and defaults are
@@ -2536,20 +2417,12 @@ void PreferencesDialog::create_items()
     auto item_show_unsupported = create_item_checkbox(_L("Show unsupported presets"), _L("Show incompatible/unsupported presets in the printer and filament dropdown lists. These presets cannot be selected."), "show_unsupported_presets");
     g_sizer->Add(item_show_unsupported);
 
-<<<<<<< snaporca-int
     auto item_export_statistics = create_item_checkbox(_L("Export statistics with G-code"),
                                                        _L("If enabled, exporting a G-code file also writes its statistics as JSON next to it, as <name>.statistics.json, "
                                                           "and an exported sliced 3MF file holds them inside: print time, filament and feature totals, "
                                                           "and the same per layer and per object."),
                                                        "export_statistics");
     g_sizer->Add(item_export_statistics);
-=======
-    auto item_plugin_printer_agents = create_item_checkbox(
-        _L("(Experimental) Use printer agents instead of print hosts"), _L(
-            "Route print jobs for non-Bambu printers through printer plug-in agents instead of the classic print-host upload flow.\nWhen disabled, Snapmaker Orca uses the legacy print-host behavior."),
-        "use_printer_agents");
-    g_sizer->Add(item_plugin_printer_agents);
->>>>>>> lixnix/main
 
     //// DEVELOPER > Experimental Features
     g_sizer->Add(create_item_title(_L("Experimental Features")), 1, wxEXPAND);
