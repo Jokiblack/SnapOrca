@@ -269,6 +269,13 @@ private:
     RightIconBatchKey _rightIconBatchKey;
     bool _rightIconBatchKeyValid{ false };
 
+    // CPU copies of the right-hand icon quads the batch is built from. A GLModel frees its vertex data
+    // once it is uploaded, so after the per-icon fallback has drawn an icon its geometry is gone and the
+    // batch could never be rebuilt from it; these copies keep the batch available.
+    enum RightIconSlot { RightIconClose, RightIconOrient, RightIconArrange, RightIconLock, RightIconPlateNameEdit,
+                         RightIconMoveFront, RightIconPlateSettings, RightIconCount };
+    std::array<GLModel::Geometry, RightIconCount> _rightIconSources;
+
     void init();
     bool valid_instance(int obj_id, int instance_id) const;
     void generate_print_polygon(ExPolygon &print_polygon);
@@ -317,9 +324,10 @@ private:
     void InvalidateRightIconBatch();
     RightIconBatchKey BuildRightIconBatchKey(int hoverId, bool hasPlateSettings) const;
     bool IsSameRightIconBatchKey(const RightIconBatchKey& key) const;
-    bool AppendRightIconBatchModel(GLModel::Geometry& geometry, const GLModel& model,
+    void CaptureRightIconSources();
+    bool AppendRightIconBatchModel(GLModel::Geometry& geometry, const GLModel::Geometry& sourceGeometry,
                                    const PartPlateIconAtlas::Region& region) const;
-    bool AppendRightIconBatchIcon(GLModel::Geometry& geometry, const GLModel& model,
+    bool AppendRightIconBatchIcon(GLModel::Geometry& geometry, RightIconSlot slot,
                                   PartPlateIconAtlas::IconType iconType) const;
     bool RebuildRightIconBatchModel(const RightIconBatchKey& key);
     bool RenderRightIconBatch(const RightIconBatchKey& key);

@@ -454,45 +454,6 @@ void GLModel::init_from(Geometry&& data)
             m_bounding_box.merge(Vec3f(position.x(), position.y(), 0.0f).cast<double>());
         }
     }
-
-    UpdateTexCoordBounds();
-}
-
-bool GLModel::GetTexCoordBounds(Vec2f& minCoord, Vec2f& maxCoord) const
-{
-    if (!m_render_data.texCoordBoundsValid)
-        return false;
-
-    minCoord = m_render_data.texCoordMin;
-    maxCoord = m_render_data.texCoordMax;
-    return true;
-}
-
-void GLModel::UpdateTexCoordBounds()
-{
-    m_render_data.texCoordBoundsValid = false;
-    m_render_data.texCoordMin = Vec2f(0.0f, 0.0f);
-    m_render_data.texCoordMax = Vec2f(0.0f, 0.0f);
-
-    Geometry& data = m_render_data.geometry;
-    if (data.vertices.empty() || !Geometry::has_tex_coord(data.format))
-        return;
-
-    const size_t vertexCount = data.vertices_count();
-    if (vertexCount == 0)
-        return;
-
-    Vec2f minCoord = data.extract_tex_coord_2(0);
-    Vec2f maxCoord = minCoord;
-    for (size_t vertexIndex = 1; vertexIndex < vertexCount; ++vertexIndex) {
-        const Vec2f texCoord = data.extract_tex_coord_2(vertexIndex);
-        minCoord = minCoord.cwiseMin(texCoord).eval();
-        maxCoord = maxCoord.cwiseMax(texCoord).eval();
-    }
-
-    m_render_data.texCoordMin = minCoord;
-    m_render_data.texCoordMax = maxCoord;
-    m_render_data.texCoordBoundsValid = true;
 }
 
 void GLModel::init_from(const TriangleMesh& mesh)
@@ -653,9 +614,6 @@ void GLModel::reset()
 
     m_render_data.vertices_count = 0;
     m_render_data.indices_count  = 0;
-    m_render_data.texCoordBoundsValid = false;
-    m_render_data.texCoordMin = Vec2f(0.0f, 0.0f);
-    m_render_data.texCoordMax = Vec2f(0.0f, 0.0f);
     m_render_data.geometry.vertices = std::vector<float>();
     m_render_data.geometry.indices  = std::vector<unsigned int>();
     m_bounding_box = BoundingBoxf3();

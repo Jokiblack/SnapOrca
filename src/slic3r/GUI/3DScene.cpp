@@ -41,6 +41,7 @@
 #include "libslic3r/Config.hpp"
 #include <memory>
 #include "slic3r/GUI/MeshUtils.hpp"
+#include "slic3r/Utils/Frustum.hpp"
 #include "libslic3r/TriangleMesh.hpp"
 #include <math.h>
 #include "libslic3r/ObjectID.hpp"
@@ -1260,7 +1261,15 @@ void GLVolumeCollection::render(GLVolumeCollection::ERenderType       type,
     // (config cannot change mid-render), so compute it once before the volume loop.
     const Vec3f up_direction = GUI::build_plate_tilt_up_direction().cast<float>();
 
+    // Volumes entirely outside the frustum of the matrices this pass draws with (camera, thumbnail,
+    // light) cannot produce any fragment; skipping them saves their uniform setup and draw calls, which
+    // add up with many objects or plates while zoomed in.
+    const Frustum frustum(projection_matrix.matrix() * view_matrix.matrix());
+
     for (GLVolumeWithIdAndZ& volume : to_render) {
+        const BoundingBoxf3& world_box = volume.first->transformed_bounding_box();
+        if (world_box.defined && !frustum.Intersects(world_box))
+            continue;
 #if ENABLE_MODIFIERS_ALWAYS_TRANSPARENT
         if (type == ERenderType::Transparent) {
             volume.first->force_transparent = true;

@@ -243,13 +243,20 @@ bool CopyAtlasTile(const RasterizedTile& tile, std::vector<unsigned char>& atlas
     return true;
 }
 
-bool CalcAtlasUvTransform(const GLModel& model, const PartPlateIconAtlas::Region& region,
+bool CalcAtlasUvTransform(const GLModel::Geometry& geometry, const PartPlateIconAtlas::Region& region,
                           std::array<float, 4>& uvTransform)
 {
-    Vec2f minCoord;
-    Vec2f maxCoord;
-    if (!model.GetTexCoordBounds(minCoord, maxCoord))
+    const size_t vertexCount = geometry.vertices_count();
+    if (vertexCount == 0)
         return false;
+
+    Vec2f minCoord = geometry.extract_tex_coord_2(0);
+    Vec2f maxCoord = minCoord;
+    for (size_t vertexIndex = 1; vertexIndex < vertexCount; ++vertexIndex) {
+        const Vec2f texCoord = geometry.extract_tex_coord_2(vertexIndex);
+        minCoord = minCoord.cwiseMin(texCoord).eval();
+        maxCoord = maxCoord.cwiseMax(texCoord).eval();
+    }
 
     const float sourceWidth = maxCoord.x() - minCoord.x();
     const float sourceHeight = maxCoord.y() - minCoord.y();
@@ -2395,10 +2402,38 @@ bool PartPlate::IsSameRightIconBatchKey(const RightIconBatchKey& key) const
         _rightIconBatchKey.atlasVersion == key.atlasVersion;
 }
 
-bool PartPlate::AppendRightIconBatchModel(GLModel::Geometry& geometry, const GLModel& model,
+void PartPlate::CaptureRightIconSources()
+{
+    const std::array<const GLModel*, RightIconCount> models = {
+        &m_del_icon.model,       &m_orient_icon.model,     &m_arrange_icon.model,         &m_lock_icon.model,
+        &m_plate_name_edit_icon.model, &m_move_front_icon.model, &m_plate_settings_icon.model };
+    bool changed = false;
+    for (size_t slot = 0; slot < models.size(); ++slot) {
+        const GLModel&     model  = *models[slot];
+        GLModel::Geometry& source = _rightIconSources[slot];
+        // A regenerated icon still holds its vertex data until its first individual draw; an icon that was
+        // reset and not regenerated holds nothing at all. Otherwise the copy taken earlier stays valid.
+        if (!model.get_geometry().is_empty()) {
+            const GLModel::Geometry& geometry = model.get_geometry();
+            if (source.format.type != geometry.format.type || source.format.vertex_layout != geometry.format.vertex_layout ||
+                source.vertices != geometry.vertices || source.indices != geometry.indices) {
+                source.format   = geometry.format;
+                source.vertices = geometry.vertices;
+                source.indices  = geometry.indices;
+                changed         = true;
+            }
+        } else if (!model.is_initialized() && !source.is_empty()) {
+            source  = GLModel::Geometry();
+            changed = true;
+        }
+    }
+    if (changed)
+        InvalidateRightIconBatch();
+}
+
+bool PartPlate::AppendRightIconBatchModel(GLModel::Geometry& geometry, const GLModel::Geometry& sourceGeometry,
                                           const PartPlateIconAtlas::Region& region) const
 {
-    const GLModel::Geometry& sourceGeometry = model.get_geometry();
     if (sourceGeometry.is_empty())
         return false;
 
@@ -2408,7 +2443,7 @@ bool PartPlate::AppendRightIconBatchModel(GLModel::Geometry& geometry, const GLM
         return false;
 
     std::array<float, 4> uvTransform;
-    if (!CalcAtlasUvTransform(model, region, uvTransform))
+    if (!CalcAtlasUvTransform(sourceGeometry, region, uvTransform))
         return false;
 
     const unsigned int vertexOffset = static_cast<unsigned int>(geometry.vertices_count());
@@ -2429,7 +2464,7 @@ bool PartPlate::AppendRightIconBatchModel(GLModel::Geometry& geometry, const GLM
     return true;
 }
 
-bool PartPlate::AppendRightIconBatchIcon(GLModel::Geometry& geometry, const GLModel& model,
+bool PartPlate::AppendRightIconBatchIcon(GLModel::Geometry& geometry, RightIconSlot slot,
                                          PartPlateIconAtlas::IconType iconType) const
 {
     if (m_partplate_list == nullptr || !m_partplate_list->m_iconAtlas.IsValid())
@@ -2439,7 +2474,7 @@ bool PartPlate::AppendRightIconBatchIcon(GLModel::Geometry& geometry, const GLMo
     if (!m_partplate_list->m_iconAtlas.GetRegion(iconType, region))
         return false;
 
-    return AppendRightIconBatchModel(geometry, model, region);
+    return AppendRightIconBatchModel(geometry, _rightIconSources[slot], region);
 }
 
 bool PartPlate::RebuildRightIconBatchModel(const RightIconBatchKey& key)
@@ -2449,15 +2484,15 @@ bool PartPlate::RebuildRightIconBatchModel(const RightIconBatchKey& key)
     GLModel::Geometry geometry;
     geometry.format = { GLModel::Geometry::EPrimitiveType::Triangles, GLModel::Geometry::EVertexLayout::P3T2 };
 
-    if (!AppendRightIconBatchIcon(geometry, m_del_icon.model, GetCloseIconType(key.hoverId)) ||
-        !AppendRightIconBatchIcon(geometry, m_orient_icon.model, GetOrientIconType(key.hoverId)) ||
-        !AppendRightIconBatchIcon(geometry, m_arrange_icon.model, GetArrangeIconType(key.hoverId)) ||
-        !AppendRightIconBatchIcon(geometry, m_lock_icon.model, GetLockIconType(key.hoverId, key.locked)) ||
-        !AppendRightIconBatchIcon(geometry, m_plate_name_edit_icon.model, GetPlateNameEditIconType(key.hoverId)) ||
-        !AppendRightIconBatchIcon(geometry, m_move_front_icon.model, GetMoveFrontIconType(key.hoverId)))
+    if (!AppendRightIconBatchIcon(geometry, RightIconClose, GetCloseIconType(key.hoverId)) ||
+        !AppendRightIconBatchIcon(geometry, RightIconOrient, GetOrientIconType(key.hoverId)) ||
+        !AppendRightIconBatchIcon(geometry, RightIconArrange, GetArrangeIconType(key.hoverId)) ||
+        !AppendRightIconBatchIcon(geometry, RightIconLock, GetLockIconType(key.hoverId, key.locked)) ||
+        !AppendRightIconBatchIcon(geometry, RightIconPlateNameEdit, GetPlateNameEditIconType(key.hoverId)) ||
+        !AppendRightIconBatchIcon(geometry, RightIconMoveFront, GetMoveFrontIconType(key.hoverId)))
         return false;
 
-    if (key.renderPlateSettings && !AppendRightIconBatchIcon(geometry, m_plate_settings_icon.model,
+    if (key.renderPlateSettings && !AppendRightIconBatchIcon(geometry, RightIconPlateSettings,
 									GetPlateSettingsIconType(key.hoverId, key.hasPlateSettings)))
         return false;
 
@@ -2571,6 +2606,8 @@ void PartPlate::render_icons(bool bottom, bool only_name, int hover_id)
             has_spiral_mode_config();
         if (!only_name) {
             bool rightIconsRendered = false;
+            // Before any icon below is drawn on its own, which would free its vertex data.
+            CaptureRightIconSources();
             if (useIconAtlas) {
                 const RightIconBatchKey key = BuildRightIconBatchKey(hover_id, hasPlateSettings);
                 rightIconsRendered = RenderRightIconBatch(key);
