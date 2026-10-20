@@ -843,7 +843,8 @@ void ObjectList::update_filament_values_for_items(const size_t filaments_count)
         }
         m_objects_model->SetExtruder(extruder, item);
 
-        static const char *keys[] = {"wall_filament", "sparse_infill_filament", "solid_infill_filament",
+        static const char *keys[] = {"outer_wall_filament_id", "inner_wall_filament_id", "sparse_infill_filament_id",
+                                     "internal_solid_filament_id", "top_surface_filament_id", "bottom_surface_filament_id",
                                      "support_filament", "support_interface_filament"};
         for (auto key : keys)
             if (object->config.has(key) && object->config.opt_int(key) > filaments_count)
@@ -1110,9 +1111,10 @@ void ObjectList::update_filament_values_for_items_when_delete_filament(const siz
                 if (!layer_item)
                     continue;
                 auto l_iter = object->layer_config_ranges.find(layer_node->GetLayerRange());
-                if (l_iter != object->layer_config_ranges.end()) {
+                // A range without its own "extruder" inherits the object's: nothing to renumber.
+                if (l_iter != object->layer_config_ranges.end() && l_iter->second.has("extruder")) {
                     auto& layer_range_item = *(l_iter);
-                    if (layer_range_item.second.has("extruder") && layer_range_item.second.option("extruder")->getInt() == filament_id + 1) {
+                    if (layer_range_item.second.option("extruder")->getInt() == filament_id + 1) {
                         int new_extruder = replace_id == -1 ? 0 : (replace_id + 1);
                         extruder         = wxString::Format("%d", new_extruder);
                         layer_range_item.second.set("extruder", new_extruder);

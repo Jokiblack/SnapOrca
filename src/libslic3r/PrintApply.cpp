@@ -1434,12 +1434,15 @@ void Print::update_shrinkage_compensation(size_t num_extruders, std::vector<int>
         return;
     }
 
+    // Snapmaker: features and parts may use mixed (virtual) filaments numbered after the physical ones;
+    // they are expanded to their physical components below, so accept them here.
+    const size_t num_slots = m_mixed_filament_mgr.total_filaments(num_extruders);
     std::vector<unsigned int> extruders;
-    const auto append_feature_extruders = [num_extruders, &extruders](const PrintRegionConfig &config) {
+    const auto append_feature_extruders = [num_slots, &extruders](const PrintRegionConfig &config) {
         for (int id : { config.outer_wall_filament_id.value, config.inner_wall_filament_id.value, config.sparse_infill_filament_id.value,
                         config.internal_solid_filament_id.value, config.top_surface_filament_id.value, config.bottom_surface_filament_id.value }) {
             const unsigned int i = (unsigned int)std::max(0, id - 1);
-            extruders.emplace_back(i >= num_extruders ? 0 : i);
+            extruders.emplace_back(i >= num_slots ? 0 : i);
         }
     };
     for (const ModelObject *model_object : m_model.objects) {
@@ -1450,13 +1453,13 @@ void Print::update_shrinkage_compensation(size_t num_extruders, std::vector<int>
         for (const ModelVolume *part : model_object->volumes) {
             if (! part->is_model_part())
                 continue;
-            std::vector<PrintRegionConfig> parents { region_config_from_model_volume(m_default_region_config, nullptr, *part, num_extruders, variant_index) };
+            std::vector<PrintRegionConfig> parents { region_config_from_model_volume(m_default_region_config, nullptr, *part, num_slots, variant_index) };
             for (const auto &[range, range_config] : model_object->layer_config_ranges)
-                parents.emplace_back(region_config_from_model_volume(m_default_region_config, &range_config.get(), *part, num_extruders, variant_index));
+                parents.emplace_back(region_config_from_model_volume(m_default_region_config, &range_config.get(), *part, num_slots, variant_index));
             for (const PrintRegionConfig &parent : parents) {
                 append_feature_extruders(parent);
                 for (const ModelVolume *modifier : modifiers)
-                    append_feature_extruders(region_config_from_model_volume(parent, nullptr, *modifier, num_extruders, variant_index));
+                    append_feature_extruders(region_config_from_model_volume(parent, nullptr, *modifier, num_slots, variant_index));
             }
         }
         append_model_object_extruders(*model_object, extruders);
@@ -1466,7 +1469,16 @@ void Print::update_shrinkage_compensation(size_t num_extruders, std::vector<int>
     }
     this->append_tool_change_extruders(extruders);
     // A mixed slot prints with its physical components.
-    const auto expand_and_sort = [this, &extruders]() {
+    const auto expand_and_sort = [this, num_extruders, &extruders]() {
+        std::vector<int> ids_1based;
+        ids_1based.reserve(extruders.size());
+        for (unsigned int extruder : extruders)
+            ids_1based.emplace_back(int(extruder) + 1);
+        m_mixed_filament_mgr.expand_virtual_extruder_ids(ids_1based, num_extruders);
+        extruders.clear();
+        for (int id : ids_1based)
+            if (id > 0)
+                extruders.emplace_back(unsigned(id - 1));
         extruders = expand_mixed_filaments(extruders, m_config.filament_is_mixed.values, m_config.filament_mixed_components.values);
     };
     expand_and_sort();

@@ -456,8 +456,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/NotificationManager.hpp
     GUI/OAuthDialog.cpp
     GUI/OAuthDialog.hpp
-    GUI/MixedFilamentDialog.cpp
-    GUI/MixedFilamentDialog.hpp
     GUI/MixedFilamentBatchDialog.cpp
     GUI/MixedFilamentBatchDialog.hpp
     GUI/MixedGradientSelector.hpp
