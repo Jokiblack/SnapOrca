@@ -5,6 +5,7 @@
 #include "libslic3r/PresetBundle.hpp"
 #include "libslic3r/LocalesUtils.hpp"
 #include "libslic3r/PerHeadProcess.hpp"
+#include "libslic3r/NozzleFilamentPresets.hpp"
 #include "libslic3r/Slicing.hpp"
 #include "libslic3r/PresetFlowVariant.hpp"
 #include "libslic3r/PrintConfig.hpp"
@@ -91,6 +92,8 @@
 #include <wx/wupdlock.h>
 
 #include "GUI_App.hpp"
+#include "FlowTypeHelper.hpp"
+#include "HighFlowCompat.hpp"
 #include "HighFlowNotices.hpp"
 #include "GUI_ObjectList.hpp"
 #include "slic3r/Utils/NetworkAgentFactory.hpp"
@@ -1201,6 +1204,11 @@ void Tab::register_flow_variant_view(ConfigFlowDomain domain,
             header_sizer->Detach(m_flow_variant_view->selector);
         m_flow_variant_view->selector->Destroy();
     }
+    if (m_flow_variant_view && m_flow_variant_view->create_button) {
+        if (auto* header_sizer = m_parent->get_page_header_sizer())
+            header_sizer->Detach(m_flow_variant_view->create_button);
+        m_flow_variant_view->create_button->Destroy();
+    }
     m_flow_variant_view = std::make_unique<FlowVariantView>();
     m_flow_variant_view->domain = domain;
     m_flow_variant_view->pages = pages;
@@ -1290,11 +1298,29 @@ void Tab::refresh_flow_variant_view()
             update_visibility();
             m_parent->Layout();
         });
+        // Snapmaker Orca: the button that gives a filament High Flow values stays after the selector.
+        if (m_flow_variant_view->create_button != nullptr) {
+            m_parent->get_page_header_sizer()->Detach(m_flow_variant_view->create_button);
+            m_parent->get_page_header_sizer()->Add(m_flow_variant_view->create_button, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
+        }
         m_parent->get_page_header()->Layout();
     }
     else
     {
         m_flow_variant_view->selector->setSelected(int(flow_variant_view_index()));
+    }
+
+    // Snapmaker Orca, Filament tab: "Create High Flow values" (create_high_flow_values), made once;
+    // update_flow_variant_view_visibility shows it while flow_mode_creation_offered().
+    if (m_flow_variant_view->domain == ConfigFlowDomain::Filament && m_flow_variant_view->create_button == nullptr) {
+        auto *button = new ::Button(m_parent->get_page_header(), _L("Create High Flow values"));
+        button->SetStyle(ButtonStyle::Regular, ButtonType::Parameter);
+        // TRN Tooltip of the "Create High Flow values" button of the Filament tab
+        button->SetToolTip(_L("Gives this filament its own High Flow values for the extruders set to High Flow, starting as a copy of the Standard values."));
+        button->Bind(wxEVT_BUTTON, [this](wxCommandEvent &) { create_high_flow_values(); });
+        button->Hide();
+        m_parent->get_page_header_sizer()->Add(button, 0, wxALIGN_CENTER_VERTICAL | wxLEFT | wxRIGHT, FromDIP(10));
+        m_flow_variant_view->create_button = button;
     }
 
     update_flow_variant_view_visibility();
@@ -1327,6 +1353,8 @@ void Tab::update_flow_variant_view_visibility()
     if (m_parent->get_current_tab() != this) {
         if (m_flow_variant_view && m_flow_variant_view->selector)
             m_flow_variant_view->selector->Hide();
+        if (m_flow_variant_view && m_flow_variant_view->create_button)
+            m_flow_variant_view->create_button->Hide();
         return;
     }
 
@@ -1336,18 +1364,60 @@ void Tab::update_flow_variant_view_visibility()
     // Snapmaker Orca: hidden while the speed selector shows a tool head, which prints the column of its own nozzle.
     const bool show = active_page_supports_flow_variants && m_flow_variant_view->selector
                       && m_flow_variant_view->modes.size() > 1 && !(m_head_selector && selected_head() >= 0);
+    // Snapmaker Orca: "Create High Flow values" takes the selector's place while the filament has one mode.
+    const bool show_create = active_page_supports_flow_variants && m_flow_variant_view->create_button
+                             && flow_mode_creation_offered() && !(m_head_selector && selected_head() >= 0);
 
-    if (m_flow_variant_view && m_flow_variant_view->selector) {
+    if (m_flow_variant_view && (m_flow_variant_view->selector || m_flow_variant_view->create_button)) {
         // Reveal only this tab's selector; hide any sibling selector left visible by
         // the other tab that shares this header.
-        if (show) {
+        if (show || show_create) {
             for (wxWindow* sibling : m_parent->get_page_header()->GetChildren())
-                if (sibling != m_flow_variant_view->selector)
+                if (sibling != m_flow_variant_view->selector && sibling != m_flow_variant_view->create_button)
                     sibling->Hide();
         }
-        m_flow_variant_view->selector->Show(show);
+        if (m_flow_variant_view->selector)
+            m_flow_variant_view->selector->Show(show);
+        if (m_flow_variant_view->create_button)
+            m_flow_variant_view->create_button->Show(show_create);
+        if (show || show_create)
+            m_parent->get_page_header()->Layout();
     }
-    m_parent->show_page_header(show);
+    m_parent->show_page_header(show || show_create);
+}
+
+bool Tab::flow_mode_creation_offered() const
+{
+    if (!m_flow_variant_view || m_flow_variant_view->domain != ConfigFlowDomain::Filament || m_config == nullptr || m_presets == nullptr)
+        return false;
+    if (filament_declares_flow_mode(*m_config, FLOW_MODE_HIGH_FLOW))
+        return false;
+    // An extruder of the project set to High Flow, on a printer that offers it.
+    if (!FlowType::printer_supports_high_flow() || !FlowType::any_nozzle_high_flow())
+        return false;
+    // A material that cannot be printed with a High Flow nozzle (TPU 85A, say), rated with the
+    // system preset it was made from.
+    const Preset &preset = m_presets->get_edited_preset();
+    std::string   filament_type;
+    if (const auto *type = m_config->option<ConfigOptionStrings>("filament_type"); type != nullptr && !type->values.empty())
+        filament_type = type->values.front();
+    const Preset *ancestor = NozzleFilament::system_ancestor(*m_presets, preset);
+    return HighFlowCompat::check(filament_type, preset.name, ancestor != nullptr ? ancestor->name : std::string()).level
+           != HighFlowCompat::CompatibilityLevel::Unsupported;
+}
+
+void Tab::create_high_flow_values()
+{
+    if (!flow_mode_creation_offered() || !filament_add_flow_mode(*m_config, FLOW_MODE_HIGH_FLOW))
+        return;
+    // The selector gains the High Flow entry; the fields show the new column, a copy of Standard.
+    m_flow_variant_view->selected_mode = FLOW_MODE_HIGH_FLOW;
+    refresh_flow_variant_view();
+    Tab::reload_config();
+    update_dirty();
+    toggle_options();
+    update_visibility();
+    m_parent->Layout();
 }
 
 void Tab::filter_diff_option(std::vector<std::string> &options)

@@ -10646,6 +10646,40 @@ bool is_filament_flow_variant_option(const std::string &key)
     return std::find(options.begin(), options.end(), key) != options.end();
 }
 
+std::vector<std::string> filament_flow_modes(const ConfigBase &config)
+{
+    const ConfigOptionStrings *support = strings_option(config, flow_support_key(ConfigFlowDomain::Filament));
+    if (support == nullptr || support->values.empty())
+        return { FLOW_MODE_STANDARD };
+    return support->values;
+}
+
+bool filament_declares_flow_mode(const ConfigBase &config, const std::string &mode)
+{
+    const std::vector<std::string> modes = filament_flow_modes(config);
+    return std::find(modes.begin(), modes.end(), mode) != modes.end();
+}
+
+bool filament_add_flow_mode(DynamicPrintConfig &config, const std::string &mode)
+{
+    if (mode.empty() || filament_declares_flow_mode(config, mode))
+        return false;
+    std::vector<std::string> modes = filament_flow_modes(config);
+    modes.emplace_back(mode);
+    config.option<ConfigOptionStrings>(flow_support_key(ConfigFlowDomain::Filament), true)->values = modes;
+    for (const std::string &key : filament_flow_variant_options()) {
+        ConfigOption *option = config.option(key, false);
+        if (option == nullptr || option->is_scalar())
+            continue;
+        auto *values = static_cast<ConfigOptionVectorBase *>(option);
+        // ConfigOptionVector::resize() pads a non-empty vector with its first value; the new
+        // column starts as a copy of the Standard one (an empty vector has no column to copy).
+        if (!values->empty() && values->size() < modes.size())
+            values->resize(modes.size(), option);
+    }
+    return true;
+}
+
 const std::vector<std::string>& process_flow_variant_options()
 {
     // Keys whose values are arrayed per declared flow variant (standard / high_flow / ...).
@@ -13692,7 +13726,15 @@ void DynamicPrintConfig::update_diff_values_to_child_config(DynamicPrintConfig& 
                 // Rather than throw (which is caught upstream and DELETES the user preset file), fall back to the
                 // child's explicit value, which is authoritative for its own extruder/variant layout.
                 if (opt_vec_src->size() != variant_index.size() * size_t(stride)) {
-                    opt_src->set(opt_target);
+                    // Snapmaker: a filament flow-variant key holds one value per flow mode of the preset
+                    // (filament_flow_support), not per extruder variant. The user file wrote "nil" for a
+                    // column equal to the parent's: that column keeps the parent's value.
+                    if (is_filament_flow_variant_option(opt) && opt_vec_dest->size() == opt_vec_src->size() && opt_target->nullable()) {
+                        for (size_t column = 0; column < opt_vec_src->size(); ++column)
+                            if (!opt_vec_dest->is_nil(column))
+                                opt_vec_src->set_at(opt_vec_dest, column, column);
+                    } else
+                        opt_src->set(opt_target);
                 }
                 else
                     opt_vec_src->set_only_diff(opt_vec_dest, variant_index, stride);

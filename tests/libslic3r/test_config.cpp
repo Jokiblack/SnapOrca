@@ -1861,3 +1861,57 @@ TEST_CASE("A column index past the loaded values keeps the base value", "[Config
     CHECK_THAT(base.values[0], Catch::Matchers::WithinAbs(22., 1e-9));
     CHECK_THAT(base.values[1], Catch::Matchers::WithinAbs(12., 1e-9));
 }
+
+// Snapmaker Orca: "Create High Flow values" of the Filament tab (filament_add_flow_mode). The
+// preset keeps the layout of the Snapmaker presets that ship High Flow values: one more entry in
+// filament_flow_support and one more value, a copy of the Standard one, in every flow-variant key.
+TEST_CASE("A filament given the High Flow mode gets a copy of its Standard values in the new column", "[Config][FilamentFlow]")
+{
+    Slic3r::DynamicPrintConfig config;
+    config.set_key_value("filament_diameter",            new Slic3r::ConfigOptionFloats({1.75}));
+    config.set_key_value("filament_flow_support",        new Slic3r::ConfigOptionStrings({Slic3r::FLOW_MODE_STANDARD}));
+    config.set_key_value("nozzle_temperature",           new Slic3r::ConfigOptionInts({255}));
+    config.set_key_value("filament_max_volumetric_speed", new Slic3r::ConfigOptionFloats({12.}));
+    config.set_key_value("filament_retraction_length",   new Slic3r::ConfigOptionFloatsNullable({Slic3r::ConfigOptionFloatsNullable::nil_value()}));
+    // A key outside the flow-variant set keeps one value.
+    config.set_key_value("filament_cost",                new Slic3r::ConfigOptionFloats({20.}));
+
+    REQUIRE_FALSE(Slic3r::filament_declares_flow_mode(config, Slic3r::FLOW_MODE_HIGH_FLOW));
+    REQUIRE(Slic3r::filament_add_flow_mode(config, Slic3r::FLOW_MODE_HIGH_FLOW));
+    CHECK(Slic3r::filament_flow_modes(config) == std::vector<std::string>({Slic3r::FLOW_MODE_STANDARD, Slic3r::FLOW_MODE_HIGH_FLOW}));
+    CHECK(config.option<Slic3r::ConfigOptionInts>("nozzle_temperature")->values == std::vector<int>({255, 255}));
+    CHECK_THAT(config.option<Slic3r::ConfigOptionFloats>("filament_max_volumetric_speed")->values, Catch::Matchers::Approx(std::vector<double>({12., 12.})));
+    const auto *retraction = config.option<Slic3r::ConfigOptionFloatsNullable>("filament_retraction_length");
+    REQUIRE(retraction->values.size() == 2);
+    CHECK(retraction->is_nil(0));
+    CHECK(retraction->is_nil(1));
+    CHECK(config.option<Slic3r::ConfigOptionFloats>("filament_cost")->values.size() == 1);
+
+    // A second request changes nothing.
+    CHECK_FALSE(Slic3r::filament_add_flow_mode(config, Slic3r::FLOW_MODE_HIGH_FLOW));
+    CHECK(Slic3r::filament_flow_modes(config).size() == 2);
+    // The preset loader keeps one value per mode.
+    Slic3r::Preset::normalize(config);
+    CHECK(config.option<Slic3r::ConfigOptionInts>("nozzle_temperature")->values.size() == 2);
+}
+
+TEST_CASE("The config length extension keeps one value per flow mode of a filament", "[Config][FilamentFlow]")
+{
+    // A user preset file: one extruder variant, two flow modes, the High Flow value after the Standard one.
+    Slic3r::DynamicPrintConfig config;
+    config.set_key_value("filament_extruder_variant",     new Slic3r::ConfigOptionStrings({"Direct Drive Standard"}));
+    config.set_key_value("filament_flow_support",         new Slic3r::ConfigOptionStrings({Slic3r::FLOW_MODE_STANDARD, Slic3r::FLOW_MODE_HIGH_FLOW}));
+    config.set_key_value("filament_max_volumetric_speed", new Slic3r::ConfigOptionFloats({22., 30.}));
+    config.set_key_value("filament_flush_temp",           new Slic3r::ConfigOptionInts({0}));
+    Slic3r::extend_default_config_length(config, false, {});
+    CHECK_THAT(config.option<Slic3r::ConfigOptionFloats>("filament_max_volumetric_speed")->values, Catch::Matchers::Approx(std::vector<double>({22., 30.})));
+    // A per-extruder-variant key outside the flow set follows the variant list.
+    CHECK(config.option<Slic3r::ConfigOptionInts>("filament_flush_temp")->values.size() == 1);
+
+    // Without a second flow mode nothing changes: the layout of every other filament preset.
+    Slic3r::DynamicPrintConfig plain;
+    plain.set_key_value("filament_extruder_variant",     new Slic3r::ConfigOptionStrings({"Direct Drive Standard"}));
+    plain.set_key_value("filament_max_volumetric_speed", new Slic3r::ConfigOptionFloats({22., 30.}));
+    Slic3r::extend_default_config_length(plain, false, {});
+    CHECK(plain.option<Slic3r::ConfigOptionFloats>("filament_max_volumetric_speed")->values.size() == 1);
+}

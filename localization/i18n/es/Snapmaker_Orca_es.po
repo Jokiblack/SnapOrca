@@ -13171,6 +13171,15 @@ msgstr "[Flujo estándar]"
 msgid "[High flow]"
 msgstr "[Flujo alto]"
 
+# AI Translated
+msgid "Create High Flow values"
+msgstr "Crear valores de flujo alto"
+
+# AI Translated
+#. TRN Tooltip of the "Create High Flow values" button of the Filament tab
+msgid "Gives this filament its own High Flow values for the extruders set to High Flow, starting as a copy of the Standard values."
+msgstr "Da a este filamento sus propios valores de flujo alto para los extrusores configurados en flujo alto, empezando como una copia de los valores estándar."
+
 msgid "Click to reset all settings to the last saved preset."
 msgstr "Presionar para reiniciar todos los ajustes al perfil guardado por defecto."
 
