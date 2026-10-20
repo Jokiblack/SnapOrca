@@ -15,24 +15,18 @@
 #include <utility>
 #include <algorithm>
 #include <array>
-<<<<<<< snaporca-int
 #include <unordered_map>
-=======
 #include <cmath>
 #include <cstdlib>
->>>>>>> lixnix/main
 #include <fstream>
 #include <iomanip>
 #include <limits>
 #include <numeric>
 #include <sstream>
-<<<<<<< snaporca-int
+
+#include <tbb/parallel_for.h>
 
 #include "BoundingBox.hpp"
-=======
-#include <unordered_map>
-#include <tbb/parallel_for.h>
->>>>>>> lixnix/main
 #include "ClipperUtils.hpp"
 #include "ElephantFootCompensation.hpp"
 #include "ExPolygon.hpp"
@@ -83,11 +77,8 @@ static void dump_surface_emboss_mixed_layer_state(
     const Layer                                 &layer,
     const PrintObjectRegions::LayerRangeRegions &layer_range,
     const std::vector<ExPolygons>               *segmentation_layer);
-<<<<<<< snaporca-int
-=======
 
 // Orca: Z Anti-Aliasing - the slicing plane of a layer is offset when any region enables ZAA.
->>>>>>> lixnix/main
 static coordf_t compute_slice_z(PrintObject* print_object, size_t i_layer, coordf_t lo, coordf_t hi)
 {
     bool zaa_active   = false;
@@ -406,6 +397,7 @@ static std::vector<std::vector<ExPolygons>> slices_to_regions(
                         if (!bbox_z_in_layer_frame || (region.bbox->min().z() <= z && region.bbox->max().z() >= z)) {
                             if (region.model_volume->is_model_part())
                                 printable_region_ids.push_back(idx_region);
+
                             if (idx_first_printable_region == -1 && region.model_volume->is_model_part()) {
                                 idx_first_printable_region = idx_region;
                             }
@@ -426,7 +418,6 @@ static std::vector<std::vector<ExPolygons>> slices_to_regions(
                     if (complex)
                         zs_complex.push_back({ z_idx, z });
                     else if (idx_first_printable_region >= 0) {
-                        // Every printable volume that is disjoint in XY at this z contributes its own slices (#15499).
                         for (int printable_region_id : printable_region_ids) {
                             const PrintObjectRegions::VolumeRegion &region = layer_range.volume_regions[printable_region_id];
                             append(slices_by_region[region.region->print_object_region_id()][z_idx], std::move(volume_slices_find_by_id(volume_slices, region.model_volume->id()).slices[z_idx]));
@@ -563,7 +554,8 @@ static std::vector<std::vector<ExPolygons>> slices_to_regions(
                                                 else
                                                     temp_slices[idx_region].expolygons = diff_ex(temp_slices[idx_region].expolygons, temp_slices[idx_region2].expolygons);
                                             } else {
-                                                // Same print region: the later volume carves the earlier one.
+                                                // Default path (same region, no region ptrs): simple diff_ex
+                                                // Preserves Bambu's #if 1 performance-safe behavior
                                                 temp_slices[idx_region2].expolygons = diff_ex(temp_slices[idx_region2].expolygons, temp_slices[idx_region].expolygons);
                                             }
                                         }
@@ -897,9 +889,14 @@ std::string fix_slicing_errors(PrintObject* object, LayerPtrs &layers, const std
     if(is_replaced)
         error_msg = L("Empty layers around bottom are replaced by nearest normal layers.");
 
-    // Leading layers that stay empty (no valid layer within 1 mm, i.e. an object floating above the
-    // bed) are kept, so G-code export reports the object's empty first layer instead of printing it
-    // in the air.
+    // remove empty layers from bottom
+    while (! layers.empty() && (layers.front()->lslices.empty() || layers.front()->empty())) {
+        delete layers.front();
+        layers.erase(layers.begin());
+        layers.front()->lower_layer = nullptr;
+        for (size_t i = 0; i < layers.size(); ++ i)
+            layers[i]->set_id(layers[i]->id() - 1);
+    }
 
     //BBS
     if(error_msg.empty() && !buggy_layers.empty())
@@ -5563,18 +5560,12 @@ static inline void apply_mm_segmentation(PrintObject &print_object, std::vector<
                     if (clamp_parent_to_geometry)
                         clamped_parent_expolygons = intersection_ex(parent_layer_region.slices.surfaces, layer_geometry_mask);
 
-                    // 1-based extruder ID whose painted target region IS the parent region; set only by
-                    // the alias branch below. Not the outer-wall filament: with an outer-wall override
-                    // its painted region differs from the parent and takes the area, so both would print it.
-                    int               self_extruder_id         = -1;
+                    int               self_extruder_id         = -1; // 1-based extruder ID
                     ExPolygons        explicit_self_expolygons;
                     ExPolygons        default_self_expolygons;
-<<<<<<< snaporca-int
                     if (const int cfg_wall = parent_print_region.config().outer_wall_filament_id.value;
                         cfg_wall >= 1 && cfg_wall <= int(by_extruder.size()))
                         self_extruder_id = cfg_wall;
-=======
->>>>>>> lixnix/main
                     if (clamp_parent_to_geometry && default_bbox.defined && parent_layer_region_bbox.overlap(default_bbox))
                         default_self_expolygons = intersection_ex(parent_layer_region.slices.surfaces, default_segmentation);
                     std::vector<bool> assigned_extruder(by_extruder.size(), false);

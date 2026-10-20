@@ -1050,7 +1050,6 @@ void PrintObject::estimate_curled_extrusions()
             any_region_enables(&PrintRegionConfig::slowdown_for_curled_perimeters)) {
 
             // Estimate curling of support material and add it to the malformaition lines of each layer
-            float support_flow_width = support_material_flow(this, this->config().layer_height).width();
             SupportSpotsGenerator::Params params{this->print()->m_config.filament_type.values,
                                                  /*float(this->print()->default_object_config().inner_wall_acceleration.getFloat()),*/
                                                  this->config().raft_layers.getInt(), this->config().brim_type.value,
@@ -1845,11 +1844,7 @@ bool PrintObject::invalidate_state_by_config_options(
             steps.emplace_back(posSupportMaterial);
             // Whole-object Local-Z masks and tool assignments are built during
             // slicing from the wall filament, not during perimeter generation.
-<<<<<<< snaporca-int
             if ((opt_key == "outer_wall_filament_id" || opt_key == "inner_wall_filament_id") && m_print->config().dithering_local_z_mode.value &&
-=======
-            if (opt_key == "outer_wall_filament_id" && m_print->config().dithering_local_z_mode.value &&
->>>>>>> lixnix/main
                 m_print->config().dithering_local_z_whole_objects.value)
                 steps.emplace_back(posSlice);
         } else if (opt_key == "bridge_flow" || opt_key == "internal_bridge_flow") {
@@ -1950,21 +1945,6 @@ bool PrintObject::invalidate_state_by_config_options(
     sort_remove_duplicates(steps);
     for (PrintObjectStep step : steps)
         invalidated |= this->invalidate_step(step);
-<<<<<<< snaporca-int
-
-    // Changing extruder-related filament options invalidates the local-z plan,
-    // because the plan depends on which extruders are used for each sublayer.
-    // Without this, stale local-z data referencing removed extruders can cause crashes.
-    for (const std::string &opt_key : opt_keys) {
-        if (opt_key == "extruder" || opt_key == "outer_wall_filament_id" || opt_key == "inner_wall_filament_id" ||
-            opt_key == "sparse_infill_filament_id" || opt_key == "internal_solid_filament_id" ||
-            opt_key == "top_surface_filament_id" || opt_key == "bottom_surface_filament_id") {
-            this->clear_local_z_plan();
-            break;
-        }
-    }
-=======
->>>>>>> lixnix/main
     return invalidated;
 }
 
@@ -4581,14 +4561,14 @@ bool PrintObject::region_prints_inner_walls(const PrintRegionConfig &config)
            config.extra_perimeters_on_overhangs.value;
 }
 
-// At 100% sparse infill density the solid interior belongs to the internal solid filament
-// (PrintRegion::extruder()), so a sparse infill selector that prints no other feature of the
-// region prints nothing at all.
+// Snapmaker: at 100% sparse infill density the solid interior prints with the sparse infill
+// filament (PrintRegion::extruder()), so an internal solid selector that prints no other feature
+// of the region prints nothing at all.
 bool PrintObject::region_filament_prints_nothing(const PrintRegionConfig &config, unsigned int filament)
 {
     return std::abs(config.sparse_infill_density.value - 100.) < EPSILON &&
-           filament == feature_filament_idx(config.sparse_infill_filament_id.value) &&
-           filament != feature_filament_idx(config.internal_solid_filament_id.value) &&
+           filament == feature_filament_idx(config.internal_solid_filament_id.value) &&
+           filament != feature_filament_idx(config.sparse_infill_filament_id.value) &&
            filament != feature_filament_idx(config.top_surface_filament_id.value) &&
            filament != feature_filament_idx(config.bottom_surface_filament_id.value) &&
            filament != feature_filament_idx(config.outer_wall_filament_id.value) &&
@@ -6052,11 +6032,10 @@ void PrintObject::combine_infill()
         if (this->region_layer_height_multiplier(region) > 1)
             continue;
         // At 100% density the combined surfaces are internal solid infill (see use_solid_infill
-        // below) and print with the internal solid filament (PrintRegion::extruder()), so that
-        // filament's preference and limits decide there; the sparse filament's below 100%.
+        // below); Snapmaker prints them with the sparse infill filament (PrintRegion::extruder()),
+        // so the sparse filament's preference and limits decide at every density.
         const bool combine_solid = std::abs(region.config().sparse_infill_density.value - 100.) < EPSILON;
-        const int combine_filament_id = std::max(1, combine_solid ? region.config().internal_solid_filament_id.value :
-                                                                    region.config().sparse_infill_filament_id.value);
+        const int combine_filament_id = std::max(1, region.config().sparse_infill_filament_id.value);
         const size_t combine_extruder_idx = this->print()->extruder_index_of((unsigned int)(combine_filament_id - 1));
         double preferred_infill_height = this->extruder_preferred_layer_height((unsigned int)combine_filament_id);
         if (preferred_infill_height <= m_config.layer_height.value + EPSILON)
@@ -6072,16 +6051,9 @@ void PrintObject::combine_infill()
 
         // Limit the number of combined layers to the maximum height allowed by this regions' nozzle.
         //FIXME limit the layer height to max_layer_height
-<<<<<<< snaporca-int
         double nozzle_diameter = std::min(
             nozzle_diameter_for_filament(this->print()->config(), region.config().sparse_infill_filament_id.value, this->print()->is_BBL_printer()),
             nozzle_diameter_for_filament(this->print()->config(), region.config().internal_solid_filament_id.value, this->print()->is_BBL_printer()));
-=======
-        double nozzle_diameter = this->print()->config().nozzle_diameter.get_at(region.config().outer_wall_filament_id.value - 1);
-        nozzle_diameter = std::min(nozzle_diameter, this->print()->config().nozzle_diameter.get_at(region.config().inner_wall_filament_id.value - 1));
-        nozzle_diameter = std::min(nozzle_diameter, this->print()->config().nozzle_diameter.get_at(region.config().sparse_infill_filament_id.value - 1));
-        nozzle_diameter = std::min(nozzle_diameter, this->print()->config().nozzle_diameter.get_at(region.config().internal_solid_filament_id.value - 1));
->>>>>>> lixnix/main
         
         //Orca: Limit combination of infill to up to infill_combination_max_layer_height
         const double infill_combination_max_layer_height = region.config().infill_combination_max_layer_height.get_abs_value(nozzle_diameter);

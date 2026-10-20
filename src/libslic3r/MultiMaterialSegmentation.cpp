@@ -39,7 +39,6 @@
 
 #include <boost/log/trivial.hpp>
 #include <tbb/parallel_for.h>
-#include <array>
 #include <mutex>
 #include <boost/thread/lock_guard.hpp>
 #include <vector>
@@ -1200,8 +1199,6 @@ static void cut_segmented_layers(const std::vector<ExPolygons>        &input_exp
                                  const std::function<void()>          &throw_on_cancel_callback)
 {
     BOOST_LOG_TRIVIAL(debug) << "Print object segmentation - cutting segmented layers in parallel - begin";
-<<<<<<< snaporca-int
-=======
     // The interlocking depth alternates with the cut width per row. ORCA: a colour printing runs
     // of N rows alternates per run on the run ladder (PrintObject::apply_extruder_layer_heights),
     // so a run keeps one cut and the interlock survives; other colours keep the row parity.
@@ -1213,7 +1210,6 @@ static void cut_segmented_layers(const std::vector<ExPolygons>        &input_exp
             parity_idx = layer_idx >= PrintObject::first_combined_layer_idx ? (layer_idx - PrintObject::first_combined_layer_idx) / n : 0;
         return parity_idx % 2 == 0 ? interlocking_depth : cut_width;
     };
->>>>>>> lixnix/main
     tbb::parallel_for(tbb::blocked_range<size_t>(0, segmented_regions.size()),
     [&segmented_regions, &input_expolygons, &interlocking_depth, &colour_cut_width, &throw_on_cancel_callback](const tbb::blocked_range<size_t> &range) {
         for (size_t layer_idx = range.begin(); layer_idx < range.end(); ++layer_idx) {
@@ -1308,8 +1304,6 @@ static inline std::vector<std::vector<ExPolygons>> segmentation_top_and_bottom_l
     const size_t num_layers    = input_expolygons.size();
     const ConstLayerPtrsAdaptor layers = print_object.layers();
 
-<<<<<<< snaporca-int
-=======
     // ORCA: per-extruder layer height. A painted colour whose region prints runs of N object
     // layers needs its projected top / bottom shell at least 2N-1 layers deep: then, whatever the
     // run phase, a whole run lies inside the shell and prints it. A thinner shell over another
@@ -1372,40 +1366,27 @@ static inline std::vector<std::vector<ExPolygons>> segmentation_top_and_bottom_l
         return row;
     };
 
-    // Maximum number of top / bottom layers accounts for maximum overlap of one thread group into a neighbor thread group.
->>>>>>> lixnix/main
     int max_top_layers = 0;
     int max_bottom_layers = 0;
     for (size_t i = 0; i < print_object.num_printing_regions(); ++ i) {
         const PrintRegionConfig &config = print_object.printing_region(i).config();
         // Snapmaker: color penetration layers drive the projection depth.
         // Clamp to >= 1: 0 means "surface layer only"; negatives would wrap to SIZE_MAX.
-<<<<<<< snaporca-int
-        const int top_penetration    = std::max(1, config.top_color_penetration_layers.value);
-        const int bottom_penetration = std::max(1, config.bottom_color_penetration_layers.value);
+        int top_penetration    = std::max(1, config.top_color_penetration_layers.value);
+        int bottom_penetration = std::max(1, config.bottom_color_penetration_layers.value);
+        for (size_t color_idx = 1; color_idx < num_facets_states; ++ color_idx) {
+            top_penetration    = shell_depth_for_color(color_idx, top_penetration);
+            bottom_penetration = shell_depth_for_color(color_idx, bottom_penetration);
+        }
         max_top_layers    = std::max(max_top_layers, top_penetration);
         max_bottom_layers = std::max(max_bottom_layers, bottom_penetration);
-=======
-        int top_layers    = std::max(1, config.top_color_penetration_layers.value);
-        int bottom_layers = std::max(1, config.bottom_color_penetration_layers.value);
-        for (size_t color_idx = 1; color_idx < num_facets_states; ++ color_idx) {
-            top_layers    = shell_depth_for_color(color_idx, top_layers);
-            bottom_layers = shell_depth_for_color(color_idx, bottom_layers);
-        }
-        max_top_layers    = std::max(max_top_layers, top_layers);
-        max_bottom_layers = std::max(max_bottom_layers, bottom_layers);
-        granularity       = std::max(granularity, std::max(top_layers, bottom_layers) - 1);
->>>>>>> lixnix/main
     }
 
     // Project upwards pointing painted triangles over top surfaces,
     // project downards pointing painted triangles over bottom surfaces.
     std::vector<std::vector<Polygons>> top_raw(num_facets_states), bottom_raw(num_facets_states);
     std::vector<float> zs = zs_from_layers(layers);
-<<<<<<< snaporca-int
     Transform3d        object_trafo = print_object.trafo_sliced();
-=======
-    Transform3d        object_trafo = print_object.trafo_centered();
     // ORCA: per row, the footprints of a run colour's painted up- and down-facing triangles
     // (see the exposed-face strips below). A triangle is filed on every row its z range meets.
     std::vector<std::vector<Polygons>> face_up(num_facets_states), face_down(num_facets_states);
@@ -1414,7 +1395,6 @@ static inline std::vector<std::vector<ExPolygons>> segmentation_top_and_bottom_l
         row_top[i]    = layers[i]->print_z;
         row_bottom[i] = layers[i]->print_z - layers[i]->height;
     }
->>>>>>> lixnix/main
 
 #ifdef MM_SEGMENTATION_DEBUG_TOP_BOTTOM
     static int iRun = 0;
@@ -1658,24 +1638,9 @@ static inline std::vector<std::vector<ExPolygons>> segmentation_top_and_bottom_l
         return out;
     };
 
-<<<<<<< snaporca-int
     tbb::parallel_for(tbb::blocked_range<size_t>(0, num_layers), [&num_layers, &num_facets_states, &layer_color_stat, &top_raw, &triangles_by_color_top,
                                                                   &throw_on_cancel_callback, &input_expolygons, &bottom_raw, &triangles_by_color_bottom,
-                                                                  &shell_triangles_by_color_top, &shell_triangles_by_color_bottom](const tbb::blocked_range<size_t> &range) {
-=======
-    // ORCA: the shell rows of a layer are appended to the rows below / above it, up to granularity - 1
-    // rows away. The two-halves scheme (layer_idx_offset) meant to keep neighbouring groups apart
-    // relies on the parallel ranges being aligned to whole groups, which the range splitting does
-    // not guarantee: adjacent ranges of the same parity then append to the same rows concurrently
-    // and lose polygons (with the deep shells of a colour printing in runs, whole rows of the
-    // projected face went missing). Serialize the appends per row.
-    std::array<std::mutex, 64> shell_mutexes;
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, num_layers, granularity), [&granularity, &num_layers, &num_facets_states, &layer_color_stat, &top_raw, &triangles_by_color_top,
-                                                                               &throw_on_cancel_callback, &input_expolygons, &bottom_raw, &triangles_by_color_bottom,
-                                                                               &shell_triangles_by_color_top, &shell_triangles_by_color_bottom, &pitch_shell_row, &shell_mutexes](const tbb::blocked_range<size_t> &range) {
-        size_t group_idx   = range.begin() / granularity;
-        size_t layer_idx_offset = (group_idx & 1) * num_layers;
->>>>>>> lixnix/main
+                                                                  &shell_triangles_by_color_top, &shell_triangles_by_color_bottom, &pitch_shell_row](const tbb::blocked_range<size_t> &range) {
         for (size_t layer_idx = range.begin(); layer_idx < range.end(); ++ layer_idx) {
             for (size_t color_idx = 0; color_idx < num_facets_states; ++color_idx) {
                 throw_on_cancel_callback();
@@ -1717,14 +1682,7 @@ static inline std::vector<std::vector<ExPolygons>> segmentation_top_and_bottom_l
                                     opening_ex(intersection_ex(top_ex, offset_ex(layer_slices_trimmed, offset)), stat.small_region_threshold);
                                 if (last.empty())
                                     break;
-<<<<<<< snaporca-int
                                 shell_triangles_by_color_top[color_idx][layer_idx].emplace_back(size_t(last_idx), std::move(last));
-=======
-                                {
-                                    std::lock_guard<std::mutex> lock(shell_mutexes[last_idx % shell_mutexes.size()]);
-                                    append(shell_triangles_by_color_top[color_idx][last_idx + layer_idx_offset], std::move(last));
-                                }
->>>>>>> lixnix/main
                             }
                         }
                     }
@@ -1751,14 +1709,7 @@ static inline std::vector<std::vector<ExPolygons>> segmentation_top_and_bottom_l
                                     opening_ex(intersection_ex(bottom_ex, offset_ex(layer_slices_trimmed, offset)), stat.small_region_threshold);
                                 if (last.empty())
                                     break;
-<<<<<<< snaporca-int
                                 shell_triangles_by_color_bottom[color_idx][layer_idx].emplace_back(last_idx, std::move(last));
-=======
-                                {
-                                    std::lock_guard<std::mutex> lock(shell_mutexes[last_idx % shell_mutexes.size()]);
-                                    append(shell_triangles_by_color_bottom[color_idx][last_idx + layer_idx_offset], std::move(last));
-                                }
->>>>>>> lixnix/main
                             }
                         }
                     }
@@ -1766,7 +1717,6 @@ static inline std::vector<std::vector<ExPolygons>> segmentation_top_and_bottom_l
         }
     });
 
-<<<<<<< snaporca-int
     // Gather the shell projections per target layer, walking the source layers in order.
     std::vector<std::vector<ExPolygons>> shell_top_by_layer(num_facets_states, std::vector<ExPolygons>(num_layers));
     std::vector<std::vector<ExPolygons>> shell_bottom_by_layer(num_facets_states, std::vector<ExPolygons>(num_layers));
@@ -1778,11 +1728,6 @@ static inline std::vector<std::vector<ExPolygons>> segmentation_top_and_bottom_l
                 append(shell_bottom_by_layer[color_idx][target], std::move(projection));
         }
 
-    std::vector<std::vector<ExPolygons>> triangles_by_color_merged(num_facets_states);
-    triangles_by_color_merged.assign(num_facets_states, std::vector<ExPolygons>(num_layers));
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, num_layers), [&triangles_by_color_merged, &triangles_by_color_bottom, &triangles_by_color_top, &throw_on_cancel_callback,
-                                                                  &shell_top_by_layer, &shell_bottom_by_layer](const tbb::blocked_range<size_t> &range) {
-=======
     // ORCA: a colour printing in runs of N layers commits the shape common to its N rows. With
     // the side regions cut to a ribbon of max_width along the outline, that common shape under
     // a sloped painted face is the ribbon minus the face's lateral advance over N-1 rows: less
@@ -1829,10 +1774,10 @@ static inline std::vector<std::vector<ExPolygons>> segmentation_top_and_bottom_l
                     };
                     for (size_t t = layer_idx + 1; t < std::min(layer_idx + size_t(n), num_layers); ++ t)
                         if (ExPolygons under = ribbon_under(top, t); ! under.empty())
-                            append(shell_triangles_by_color_top[color_idx][layer_idx], std::move(under));
+                            append(shell_top_by_layer[color_idx][layer_idx], std::move(under));
                     for (size_t t = layer_idx + 1 > size_t(n) ? layer_idx + 1 - size_t(n) : 0; t < layer_idx; ++ t)
                         if (ExPolygons under = ribbon_under(bottom, t); ! under.empty())
-                            append(shell_triangles_by_color_bottom[color_idx][layer_idx], std::move(under));
+                            append(shell_bottom_by_layer[color_idx][layer_idx], std::move(under));
                 }
             });
         }
@@ -1840,9 +1785,8 @@ static inline std::vector<std::vector<ExPolygons>> segmentation_top_and_bottom_l
 
     std::vector<std::vector<ExPolygons>> triangles_by_color_merged(num_facets_states);
     triangles_by_color_merged.assign(num_facets_states, std::vector<ExPolygons>(num_layers));
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, num_layers), [&triangles_by_color_merged, &triangles_by_color_bottom, &triangles_by_color_top, &num_layers, &throw_on_cancel_callback,
-                                                                  &shell_triangles_by_color_top, &shell_triangles_by_color_bottom, &layer_color_stat, max_width](const tbb::blocked_range<size_t> &range) {
->>>>>>> lixnix/main
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, num_layers), [&triangles_by_color_merged, &triangles_by_color_bottom, &triangles_by_color_top, &throw_on_cancel_callback,
+                                                                  &shell_top_by_layer, &shell_bottom_by_layer, &layer_color_stat, max_width](const tbb::blocked_range<size_t> &range) {
         for (size_t layer_idx = range.begin(); layer_idx < range.end(); ++ layer_idx) {
             throw_on_cancel_callback();
             ExPolygons painted_exploys;

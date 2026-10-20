@@ -14,11 +14,8 @@
 #include "Polygon.hpp"
 #include "Polyline.hpp"
 #include "Print.hpp"
-<<<<<<< snaporca-int
 #include "PrintConfig.hpp"
-=======
 #include "GCode/ToolOrdering.hpp"
->>>>>>> lixnix/main
 #include "Surface.hpp"
 #include "BoundingBox.hpp"
 #include "SVG.hpp"
@@ -115,14 +112,9 @@ unsigned int LayerRegion::extruder(FlowRole role) const
     unsigned int             filament_id = 0;
     if (role == frInfill)
         filament_id = config.sparse_infill_filament_id.value;
-<<<<<<< snaporca-int
     else if (role == frSolidInfill && std::abs(config.sparse_infill_density.value - 100.) < EPSILON)
         filament_id = config.sparse_infill_filament_id.value;
-=======
->>>>>>> lixnix/main
     else
-        // Internal solid infill resolves to the internal solid filament at every density,
-        // including the 100% dense interior (PrintRegion::extruder()).
         filament_id = this->region().extruder(role);
 
     return (role == frInfill || role == frSolidInfill) ?
@@ -190,20 +182,14 @@ Flow LayerRegion::bridging_flow(FlowRole role, bool thick_bridge, unsigned int f
     const PrintRegionConfig &region_config  = region.config();
     const PrintObject       &print_object   = *this->layer()->object();
     Flow bridge_flow;
-<<<<<<< snaporca-int
-    // Snapmaker: use the layer-effective filament (mixed filament / Local-Z) for the nozzle lookup.
-    auto nozzle_diameter = float(nozzle_diameter_for_filament(print_object.print()->config(), int(this->extruder(role)), print_object.print()->is_BBL_printer()));
-    const ConfigOptionFloatOrPercent& bridge_width_opt = region_config.bridge_line_width;
-=======
     // The nozzle resolves against the filament that actually prints (filament_id, when given), which may
-    // differ from the role's default filament mapping.
-    // Here this->extruder(role) - 1 may underflow to MAX_INT, but then the get_at() will fall back to zero'th element, so everything is all right.
+    // differ from the role's default filament mapping. Snapmaker: the role's filament is the
+    // layer-effective one (mixed filament / Local-Z).
     const unsigned int filament = filament_id > 0 ? filament_id : this->extruder(role);
-    auto nozzle_diameter = float(print_object.print()->config().nozzle_diameter.get_at(filament - 1));
+    auto nozzle_diameter = float(nozzle_diameter_for_filament(print_object.print()->config(), int(filament), print_object.print()->is_BBL_printer()));
     // Snapmaker Orca: the bridge line width is a column per tool head (Print::width_slot).
     const size_t column = print_object.print()->width_slot(filament);
     const ConfigOptionFloatOrPercent  bridge_width_opt  = Flow::width_at(region_config.bridge_line_width, column);
->>>>>>> lixnix/main
     const double                      bridge_width      = bridge_width_opt.get_abs_value(nozzle_diameter);
     const bool                        has_bridge_width  = bridge_width > 0.;
     const double                      bridge_flow_ratio = region_config.bridge_flow;
@@ -279,20 +265,11 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, const LayerRe
     const PrintRegionConfig &region_config = this->region().config();
     const PrintObjectConfig& object_config = this->layer()->object()->config();
     PrintRegionConfig        perimeter_config = region_config;
-<<<<<<< snaporca-int
     // Snapmaker: resolve mixed filament / Local-Z layer-effective filaments for every feature filament.
     for (ConfigOptionInt PrintRegionConfig::*opt : { &PrintRegionConfig::outer_wall_filament_id, &PrintRegionConfig::inner_wall_filament_id,
                                                      &PrintRegionConfig::sparse_infill_filament_id, &PrintRegionConfig::internal_solid_filament_id,
                                                      &PrintRegionConfig::top_surface_filament_id, &PrintRegionConfig::bottom_surface_filament_id })
         (perimeter_config.*opt).value = int(effective_layer_filament_id(*this->layer(), unsigned(std::max(0, (region_config.*opt).value))));
-=======
-    perimeter_config.outer_wall_filament_id.value = int(effective_layer_filament_id(*this->layer(), unsigned(std::max(0, region_config.outer_wall_filament_id.value))));
-    perimeter_config.inner_wall_filament_id.value = int(effective_layer_filament_id(*this->layer(), unsigned(std::max(0, region_config.inner_wall_filament_id.value))));
-    perimeter_config.sparse_infill_filament_id.value = int(effective_layer_filament_id(*this->layer(), unsigned(std::max(0, region_config.sparse_infill_filament_id.value))));
-    perimeter_config.internal_solid_filament_id.value = int(effective_layer_filament_id(*this->layer(), unsigned(std::max(0, region_config.internal_solid_filament_id.value))));
-    perimeter_config.top_surface_filament_id.value = int(effective_layer_filament_id(*this->layer(), unsigned(std::max(0, region_config.top_surface_filament_id.value))));
-    perimeter_config.bottom_surface_filament_id.value = int(effective_layer_filament_id(*this->layer(), unsigned(std::max(0, region_config.bottom_surface_filament_id.value))));
->>>>>>> lixnix/main
     // This needs to be in sync with PrintObject::_slice() slicing_mode_normal_below_layer!
     bool spiral_mode = print_config.spiral_mode &&
         //FIXME account for raft layers.

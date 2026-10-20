@@ -724,16 +724,17 @@ TreeSupport::TreeSupport(PrintObject& object, const SlicingParameters &slicing_p
 
 #define SUPPORT_SURFACES_OFFSET_PARAMETERS jtSquare, 0.
 
+// Ported from Bambu 976b5062c.
 // Adds an overhang to both loverhangs and loverhangs_with_type, tagging it with a type.
-static void add_overhang(Layer *layer, const ExPolygon &overhang, int type)
+void add_overhang(Layer *layer, const ExPolygon &overhang, int type)
 {
     layer->loverhangs_with_type.emplace_back(overhang, type);
     layer->loverhangs.emplace_back(overhang);
 }
 
-// Whether an overhang region is stable enough to become a polygon node: its second moment of area divided
-// by its height above the bed exceeds 3.
-static bool is_stable(float height, const ExPolygon &overhang, float /*strength_z*/)
+// Checks whether an overhang region is structurally stable enough to become an ePolygon node.
+// Uses second moment of area: moment / height > 3.0 means stable.
+bool is_stable(float height, const ExPolygon &overhang, float strength_z)
 {
     float  stability = 1. * height;
     double Ixx = 0, Iyy = 0;
@@ -1000,8 +1001,9 @@ void TreeSupport::detect_overhangs(bool check_support_necessity/* = false*/)
             }
         });
 
-    // Cumulative object outlines below each layer, used by the BigFlat/ThinPlate classification and the
-    // deep small-overhang check. Computed here because m_ts_data is not allocated yet.
+    // Pre-compute cumulative object outlines below each layer for BigFlat/ThinPlate classification.
+    // (Bambu has this in TreeSupportData constructor; here we compute it early because
+    //  m_ts_data is not yet allocated at detect_overhangs time — fixes "illegal access" crash.)
     std::vector<ExPolygons> layer_outlines_below;
     layer_outlines_below.reserve(m_object->layer_count());
     for (size_t layer_nr = 0; layer_nr < m_object->layer_count(); layer_nr++) {
@@ -1015,31 +1017,32 @@ void TreeSupport::detect_overhangs(bool check_support_necessity/* = false*/)
             layer_outlines_below.push_back(union_ex(layer_outlines_below[layer_nr - 1], outline));
     }
 
-    // Enforcers and blockers are sliced before overhang detection so that enforcer overhangs join the
-    // normal overhang stream and go through the cross-layer OverhangCluster merge.
+    typedef std::chrono::high_resolution_clock clock_;
+    typedef std::chrono::duration<double, std::ratio<1> > second_;
+    std::chrono::time_point<clock_> t0{ clock_::now() };
+    // Slice enforcers/blockers BEFORE the parallel loop so that enforcer overhangs can be
+    // merged into overhangs_all_layers inside the loop and go through OverhangCluster
+    // cross-layer merge. Port of Bambu c03e13340 (STUDIO-11484). Previously they were sliced
+    // and appended AFTER clustering, so each layer's enforcer sliver stayed isolated and
+    // never merged -> slender / unmerged supports.
     auto enforcers = m_object->slice_support_enforcers();
     auto blockers  = m_object->slice_support_blockers();
     m_vertical_enforcer_points.clear();
     m_object->project_and_append_custom_facets(false, EnforcerBlockerType::ENFORCER, enforcers, &m_vertical_enforcer_points);
     m_object->project_and_append_custom_facets(false, EnforcerBlockerType::BLOCKER, blockers);
-    // A layer is processed in auto mode, inside the enforce-support window, or when it has painted enforcers.
-    auto layer_needs_detection = [&](size_t layer_nr) {
-        return is_auto(stype) || layer_nr <= size_t(std::max(0, enforce_support_layers)) ||
-               (layer_nr < enforcers.size() && !enforcers[layer_nr].empty());
-    };
     // main part of overhang detection can be parallel
     tbb::concurrent_vector<ExPolygons> overhangs_all_layers(m_object->layer_count());
-    // ORCA: the lower layer offset by the overhang threshold, kept for the second pass below.
-    std::vector<ExPolygons> lower_layers_offseted(m_object->layer_count());
-    // Painted enforcer overhangs per layer, also scanned for sharp tails in the second pass.
-    std::vector<ExPolygons> enforced_overhangs_by_layer(m_object->layer_count());
     tbb::parallel_for(tbb::blocked_range<size_t>(0, m_object->layer_count()),
         [&](const tbb::blocked_range<size_t>& range) {
             for (size_t layer_nr = range.begin(); layer_nr < range.end(); layer_nr++) {
                 if (m_object->print()->canceled())
                     break;
 
-                if (!layer_needs_detection(layer_nr))
+                // Process this layer if it is auto mode, within the enforce-support window, or
+                // has painted enforcers. The enforcer clause is the key change so that manual-
+                // mode enforcer layers also fill overhangs_all_layers and go through OverhangCluster
+                // merge. Port of Bambu c03e13340 (STUDIO-11484).
+                if (!(is_auto(stype) || layer_nr <= enforce_support_layers || (layer_nr < enforcers.size() && !enforcers[layer_nr].empty())))
                     continue;
 
                 Layer* layer = m_object->get_layer(layer_nr);
@@ -1063,7 +1066,6 @@ void TreeSupport::detect_overhangs(bool check_support_necessity/* = false*/)
                 ExPolygons& curr_polys = layer->lslices_extrudable;
                 ExPolygons& lower_polys = lower_layer->lslices_extrudable;
 
-<<<<<<< snaporca-int
                 // Apply build plate tilt: shift lower layer polygons to simulate tilted gravity
                 //
                 // On a belt the object's very first slice can come out empty (the bottom
@@ -1155,77 +1157,17 @@ void TreeSupport::detect_overhangs(bool check_support_necessity/* = false*/)
                     config_detect_sharp_tails = false;
                     config_remove_small_overhangs = false;
                     continue;
-=======
-                // Normal overhangs; manual mode above the enforce window keeps only the painted ones added below.
-                ExPolygons lower_layer_offseted = offset_ex(lower_polys, support_offset_scaled, SUPPORT_SURFACES_OFFSET_PARAMETERS);
-                if (is_auto(stype) || layer_nr <= size_t(std::max(0, enforce_support_layers)))
-                    overhangs_all_layers[layer_nr] = diff_ex(curr_polys, lower_layer_offseted);
-                lower_layers_offseted[layer_nr] = std::move(lower_layer_offseted);
-                // Painted enforcer overhangs join the normal overhangs so that they merge across layers.
-                if (layer_nr < enforcers.size() && !enforcers[layer_nr].empty()) {
-                    ExPolygons enforced_overhangs = intersection_ex(diff_ex(curr_polys, lower_polys), enforcers[layer_nr]);
-                    if (!enforced_overhangs.empty()) {
-                        // Expand the enforcers a bit so they also work on steep overhangs.
-                        enforced_overhangs = diff_ex(offset_ex(enforced_overhangs, enforcer_overhang_offset), lower_polys);
-                        overhangs_all_layers[layer_nr] = union_ex(overhangs_all_layers[layer_nr], enforced_overhangs);
-                        enforced_overhangs_by_layer[layer_nr] = std::move(enforced_overhangs);
-                    }
->>>>>>> lixnix/main
                 }
-            }
-        }
-    ); // end tbb::parallel_for
-
-    // ORCA: the too-many-overhangs fallback is decided once, before sharp tail detection, so the
-    // result does not depend on the thread schedule or machine load. The layer with the many
-    // overhangs still skips its own sharp tail and cantilever checks.
-    {
-        bool too_many_overhangs = false;
-        for (size_t layer_nr = 0; layer_nr < m_object->layer_count() && ! too_many_overhangs; layer_nr++)
-            if (overhangs_all_layers[layer_nr].size() > 100) {
-                BOOST_LOG_TRIVIAL(info) << "detect_overhangs: more than 100 overhangs on a layer, skip cantilever and sharp tails detection: layer_nr=" << layer_nr;
-                too_many_overhangs = true;
-            }
-        if (too_many_overhangs) {
-            config_detect_sharp_tails = false;
-            config_remove_small_overhangs = false;
-        }
-    }
-
-    // ORCA: per layer, reduced in layer order after the loop, so worker threads share no state.
-    std::vector<double> cantilever_dist_by_layer(m_object->layer_count(), 0.);
-    tbb::parallel_for(tbb::blocked_range<size_t>(0, m_object->layer_count()),
-        [&](const tbb::blocked_range<size_t>& range) {
-            for (size_t layer_nr = range.begin(); layer_nr < range.end(); layer_nr++) {
-                if (m_object->print()->canceled())
-                    break;
-
-                if (!layer_needs_detection(layer_nr))
-                    continue;
-
-                Layer* layer = m_object->get_layer(layer_nr);
-                if (layer->lower_layer == nullptr)
-                    continue;
-                if (overhangs_all_layers[layer_nr].size() > 100)
-                    continue;
-
-                Layer* lower_layer = layer->lower_layer;
-                coordf_t lower_layer_offset = layer_nr < enforce_support_layers ? -0.15 * extrusion_width : (float)lower_layer->height / tan(threshold_rad);
-                ExPolygons& curr_polys = layer->lslices_extrudable;
-                ExPolygons& lower_polys = lower_layer->lslices_extrudable;
-                ExPolygons lower_layer_offseted = std::move(lower_layers_offseted[layer_nr]);
-                const ExPolygons& enforced_overhangs = enforced_overhangs_by_layer[layer_nr];
-
                 if (is_auto(stype) && config_detect_sharp_tails)
                 {
-                    // Enforcer overhangs are scanned for sharp tails too, so that an enforcer painted on a
-                    // floating region still becomes a sharp tail and gets support.
+                    // Scan enforcer overhangs for sharp tails too (port of Bambu c03e13340): an
+                    // enforcer painted on a floating region should still become a sharp tail and get
+                    // support; without this, painted floating areas produced no overhang at all.
                     ExPolygons curr = curr_polys;
                     if (!enforced_overhangs.empty()) curr = union_ex(curr, enforced_overhangs);
                     // BBS detect sharp tail
                     for (const ExPolygon& expoly : curr) {
                         bool  is_sharp_tail = false;
-<<<<<<< snaporca-int
                         // 1. nothing below. Rescue thin-but-wide rings (small area + large bbox, or
                         // erodes to nothing) as sharp tails so they aren't dropped later.
                         // On a belt, "below" has to include the belt itself and the
@@ -1233,17 +1175,15 @@ void TreeSupport::detect_overhangs(bool check_support_necessity/* = false*/)
                         // a sharp tail. effective_lower is exactly that notion of below.
                         const ExPolygons &tail_lower = belt_ovh_active ? effective_lower : lower_polys;
                         if (!overlaps(offset_ex(expoly, 0.1 * extrusion_width_scaled), tail_lower) &&
-=======
-                        // 1. nothing below. Thin but wide rings (small area with a large bounding box, or eroding
-                        // to nothing) stay sharp tails so that they are not dropped later.
-                        if (!overlaps(offset_ex(expoly, 0.1 * extrusion_width_scaled), lower_polys) &&
->>>>>>> lixnix/main
                             area(expoly) < SQ(m_support_params.thresh_big_overhang) &&
                             (get_extents(expoly).area() < SQ(m_support_params.thresh_big_overhang) ||
                              offset_ex(expoly, -radius_thresh_small_overhang).empty())) {
                             is_sharp_tail = !offset_ex(expoly, -0.1 * extrusion_width_scaled).empty();
                         }
-                        // Not a sharp tail when the layer two below supports it.
+                        if (is_sharp_tail && lower_layer->lower_layer) {
+                            if (overlaps(offset_ex(expoly, 0.1 * extrusion_width_scaled), lower_layer->lower_layer->lslices_extrudable)) is_sharp_tail = false;
+                        }
+
                         if (is_sharp_tail && lower_layer->lower_layer) {
                             if (overlaps(offset_ex(expoly, 0.1 * extrusion_width_scaled), lower_layer->lower_layer->lslices_extrudable))
                                 is_sharp_tail = false;
@@ -1303,20 +1243,16 @@ void TreeSupport::detect_overhangs(bool check_support_necessity/* = false*/)
                         }
                     }
                     if (is_cantilever || dist_max > scale_(3)) {  // is cantilever if a contour is fully floating or the farmost point is > 3mm away from base
-                        cantilever_dist_by_layer[layer_nr] = std::max(cantilever_dist_by_layer[layer_nr], dist_max);
+                        max_cantilever_dist = std::max(max_cantilever_dist, dist_max);
                         layer->cantilevers.emplace_back(poly);
                         BOOST_LOG_TRIVIAL(debug) << "found a cantilever cluster. layer_nr=" << layer_nr << dist_max;
+                        has_cantilever = true;
                     }
                 }
             }
         }
     ); // end tbb::parallel_for
 
-    for (size_t layer_nr = 0; layer_nr < m_object->layer_count(); layer_nr++) {
-        max_cantilever_dist = std::max(max_cantilever_dist, cantilever_dist_by_layer[layer_nr]);
-        if (! m_object->get_layer(layer_nr)->cantilevers.empty())
-            has_cantilever = true;
-    }
     BOOST_LOG_TRIVIAL(info) << "max_cantilever_dist=" << max_cantilever_dist;
     if (check_support_necessity)
         return;
@@ -1507,10 +1443,10 @@ void TreeSupport::detect_overhangs(bool check_support_necessity/* = false*/)
         }
 
         if (layer_nr < blockers.size()) {
-            // Arthur: union_ is a must because after mirroring, the blocker polygons are in left-hand coordinates, ie clockwise,
-            // which are not valid polygons, and will be removed by offset_ex. union_ can make these polygons right.
+            // Arthur: union_ is a must because after mirroring, the blocker polygons are in left-hand coordinates,
+            // ie clockwise, which are not valid polygons, and will be removed by offset_ex. union_ makes them right.
             ExPolygons blocker = offset_ex(union_(blockers[layer_nr]), scale_(radius_sample_resolution));
-            // The blockers cut the typed overhangs; every fragment keeps the type of its overhang.
+            // filter loverhangs_with_type with blocker, propagating type to each resulting fragment
             std::vector<std::pair<ExPolygon, int>> filtered;
             for (auto& wt : layer->loverhangs_with_type) {
                 ExPolygons diffed = diff_ex({wt.first}, blocker);
@@ -1524,7 +1460,7 @@ void TreeSupport::detect_overhangs(bool check_support_necessity/* = false*/)
         }
 
         if (support_critical_regions_only && is_auto(stype)) {
-            // Only enforced, cantilever and sharp tail areas are kept.
+            // Ported from Bambu: keep only enforced / cantilever / sharp tail areas
             bool has_no_enforcers = enforcers.empty()
                 || layer_nr >= enforcers.size()
                 || enforcers[layer_nr].empty();
@@ -1579,13 +1515,14 @@ void TreeSupport::detect_overhangs(bool check_support_necessity/* = false*/)
                 &layer->loverhangs, max_bridge_length, break_bridge,
                 &layer->loverhangs_with_type);
         }
-        // Bridge removal updates loverhangs_with_type as well, which generate_contact_points reads.
+        // loverhangs_with_type must stay in sync with loverhangs here: generate_initial_nodes
+        // iterates loverhangs_with_type, so an unsynced list would make bridge removal invisible to node generation.
 
         if (!layer->loverhangs_with_type.empty()) {
             layers_with_overhangs++;
             m_highest_overhang_layer = std::max(m_highest_overhang_layer, size_t(layer_nr));
         }
-        // Layers with painted enforcers, for the log.
+        // layers_with_enforcers is now a presence diagnostic (enforcers are merged upstream).
         if (layer_nr < enforcers.size() && !enforcers[layer_nr].empty() && lower_layer) layers_with_enforcers++;
         if (!layer->cantilevers.empty()) has_cantilever = true;
     }
@@ -1753,7 +1690,7 @@ static void make_perimeter_and_inner_brim(ExtrusionEntitiesPtr &dst, const ExPol
     _make_loops(dst, support_area_new, role, wall_count, flow);
 }
 
-static void make_perimeter_and_infill(ExtrusionEntitiesPtr& dst, const ExPolygon& support_area, size_t wall_count, const Flow& flow, ExtrusionRole role, Fill* filler_support, double support_density, bool infill_first=true, bool dont_sort=false)
+static void make_perimeter_and_infill(ExtrusionEntitiesPtr& dst, const ExPolygon& support_area, size_t wall_count, const Flow& flow, ExtrusionRole role, Fill* filler_support, double support_density, bool infill_first=true)
 {
     Polygons   loops;
     ExPolygons support_area_new = offset_ex(support_area, -0.5f * float(flow.scaled_spacing()), jtSquare);
@@ -1762,7 +1699,6 @@ static void make_perimeter_and_infill(ExtrusionEntitiesPtr& dst, const ExPolygon
     FillParams fill_params;
     fill_params.density = support_density;
     fill_params.dont_adjust = true;
-    fill_params.dont_sort = dont_sort;
     ExPolygons to_infill = offset_ex(support_area, -float(wall_count) * float(flow.scaled_spacing()), jtSquare);
     std::vector<BoundingBox> fill_boxes = fill_expolygons_generate_paths(dst, to_infill, filler_support, fill_params, role, flow);
 
@@ -1825,11 +1761,7 @@ void TreeSupport::generate_toolpaths()
 {
     const PrintObjectConfig &object_config = m_object->config();
     coordf_t support_extrusion_width = m_support_params.support_extrusion_width;
-<<<<<<< snaporca-int
     coordf_t nozzle_diameter = nozzle_diameter_for_filament(*m_print_config, object_config.support_filament, m_object->print()->is_BBL_printer());
-=======
-    coordf_t nozzle_diameter = support_material_nozzle_diameter(m_object, object_config.support_filament);
->>>>>>> lixnix/main
     coordf_t layer_height = object_config.layer_height.value;
     const size_t wall_count = tree_support_effective_wall_count(m_support_params.support_style, object_config.tree_support_wall_count.value);
 
@@ -1869,7 +1801,6 @@ void TreeSupport::generate_toolpaths()
             raft_areas.push_back(expoly);
     }
 
-<<<<<<< snaporca-int
     // Base raft grip: fixed 3.0mm margin (matches Bambu golden), applied to ALL raft
     // layers. The user parameter must NOT drive the base expansion, otherwise it is
     // double-applied on layer 0 (base offset + layer0 offset below). Keep the base a
@@ -1881,12 +1812,6 @@ void TreeSupport::generate_toolpaths()
     // parameter and a raw -1 would erode the raft; the fixed 3.0 base removed that.)
     float raft_1st_layer_expansion = object_config.raft_first_layer_expansion.value;
     raft_areas = std::move(offset_ex(raft_areas, scale_(3.)));
-=======
-    // All raft layers get a fixed 3 mm grip around the base; raft_first_layer_expansion is added on the
-    // first raft layer only (-1 = auto, a small inset that keeps the first layer inside the base).
-    const float raft_1st_layer_expansion = object_config.raft_first_layer_expansion.value;
-    raft_areas = offset_ex(raft_areas, scale_(3.));
->>>>>>> lixnix/main
 
     size_t layer_nr = 0;
     for (; layer_nr < m_slicing_params.base_raft_layers; layer_nr++) {
@@ -2032,31 +1957,20 @@ void TreeSupport::generate_toolpaths()
                         fill_params.dont_adjust = true;
                     }
                     if (area_group.type == SupportLayer::Roof1stLayer) {
-<<<<<<< snaporca-int
                         // roof_1st_layer — Snapmaker: transition strips that use support body filament.
                         // Use interface_flow to match Bambu Studio behavior (higher flow for dense transition).
                         // ORCA: Roof1stLayer may be printed with base material when it acts as a contact layer.
                         bool interface_as_base = area_group.interface_as_base;
-=======
-                        // roof_1st_layer: transition layer between the interface and the support body, printed
-                        // dense with the support body filament and a perimeter first.
->>>>>>> lixnix/main
                         fill_params.density = interface_density;
-                        // Note: spacing means the separation between two lines as if they are tightly extruded
                         filler_Roof1stLayer->spacing = interface_flow.spacing();
                         filler_Roof1stLayer->angle = m_support_params.support_interface_angle(area_group.interface_id);
                         fill_params.dont_sort = true;
                         filler_Roof1stLayer->fixed_angle = (m_object_config->support_interface_pattern == smipRectilinearInterlaced ||
                                                             m_object_config->support_interface_pattern == smipRectilinear);
-<<<<<<< snaporca-int
                         ExtrusionRole interface_role = interface_as_base ? erSupportMaterial : erSupportTransition;
                         // generate a perimeter first to support interface better
                         ExtrusionEntityCollection* temp_support_fills = new ExtrusionEntityCollection();
                         make_perimeter_and_infill(temp_support_fills->entities, poly, 1, interface_flow, interface_role,
-=======
-                        ExtrusionEntityCollection* temp_support_fills = new ExtrusionEntityCollection();
-                        make_perimeter_and_infill(temp_support_fills->entities, poly, 1, interface_flow, erSupportTransition,
->>>>>>> lixnix/main
                             filler_Roof1stLayer.get(), interface_density, false);
                         temp_support_fills->no_sort = true; // make sure loops are first
                         if (!temp_support_fills->entities.empty())
@@ -2075,17 +1989,16 @@ void TreeSupport::generate_toolpaths()
                         filler_interface->fixed_angle = (m_object_config->support_interface_pattern == smipRectilinearInterlaced ||
                                                         m_object_config->support_interface_pattern == smipRectilinear);
 
-                        // A bottom interface layer printed with the support body filament is a transition layer.
                         Flow interface_base_flow = interface_as_base ? support_flow : interface_flow;
-                        ExtrusionRole interface_role = interface_as_base ? erSupportTransition : erSupportMaterialInterface;
+                        ExtrusionRole interface_role = interface_as_base ? erSupportMaterial : erSupportMaterialInterface;
                         fill_expolygons_generate_paths(ts_layer->support_fills.entities, polys,
                             filler_interface.get(), fill_params, interface_role, interface_base_flow);
                     } else if (area_group.type == SupportLayer::RoofType) {
                         // roof_areas
+                        bool interface_as_base = area_group.interface_as_base;
                         fill_params.density       = interface_density;
                         filler_interface->spacing = interface_flow.spacing();
 
-<<<<<<< snaporca-int
                         filler_interface->fixed_angle = (m_object_config->support_interface_pattern == smipRectilinearInterlaced ||
                                                         m_object_config->support_interface_pattern == smipRectilinear);
 
@@ -2102,23 +2015,6 @@ void TreeSupport::generate_toolpaths()
                             else
                                 delete temp_support_fills;
                         }
-=======
-                        fill_params.dont_sort = (m_object_config->support_interface_pattern == smipGrid ||
-                                                m_object_config->support_interface_pattern == smipRectilinearInterlaced);
-
-                        filler_interface->fixed_angle = (m_object_config->support_interface_pattern == smipRectilinearInterlaced ||
-                                                        m_object_config->support_interface_pattern == smipRectilinear);
-
-                        // A perimeter is printed before the infill so that the interface is better supported.
-                        ExtrusionEntityCollection* temp_support_fills = new ExtrusionEntityCollection();
-                        make_perimeter_and_infill(temp_support_fills->entities, poly, 1, interface_flow, erSupportMaterialInterface,
-                            filler_interface.get(), interface_density, false, fill_params.dont_sort);
-                        temp_support_fills->no_sort = true; // make sure loops are first
-                        if (!temp_support_fills->entities.empty())
-                            ts_layer->support_fills.entities.push_back(temp_support_fills);
-                        else
-                            delete temp_support_fills;
->>>>>>> lixnix/main
                     }
                     else {
                         // base_areas
@@ -2353,20 +2249,9 @@ coordf_t TreeSupport::get_radius(const SupportNode* node)
     return node->radius;
 }
 
-<<<<<<< snaporca-int
 // Orca: drop_nodes() calls these several times per node per layer, so they return a reference into the
 // TreeSupportData cache. The cache only ever inserts, so its entries never move while nodes drop in parallel.
 const ExPolygons& TreeSupport::get_avoidance(coordf_t radius, size_t obj_layer_nr)
-=======
-int TreeSupport::num_transition_layers() const
-{
-    if (m_object_config->support_interface_top_layers.value <= 0)
-        return 0;
-    return std::clamp(m_object_config->tree_support_transition_layers.value, 0, 3);
-}
-
-ExPolygons TreeSupport::get_avoidance(coordf_t radius, size_t obj_layer_nr)
->>>>>>> lixnix/main
 {
     return m_ts_data->get_avoidance(radius, obj_layer_nr);
 }
@@ -2527,7 +2412,9 @@ void TreeSupport::draw_circles()
     // generate areas
     const coordf_t layer_height = config.layer_height.value;
     const size_t top_interface_layers = m_support_params.num_top_interface_layers;
-    const int    transition_layers    = num_transition_layers();
+    const int top_base_interface_layers = std::min<int>(
+        int(m_support_params.num_top_base_interface_layers),
+        top_interface_layers > 0 ? int(top_interface_layers) - 1 : 0);
     const size_t bottom_interface_layers = number_of_support_interface_bottom_layers(config);
     const double nozzle_diameter = m_object->print()->config().nozzle_diameter.get_at(0);
     // Snapmaker Orca: the width is a column per tool head; the first column with the first nozzle,
@@ -2536,12 +2423,11 @@ void TreeSupport::draw_circles()
     const coordf_t line_width_scaled           = scale_(line_width);
     const bool with_lightning_infill = m_support_params.base_fill_pattern == ipLightning;
     coordf_t support_extrusion_width = m_support_params.support_extrusion_width;
-    // First layer expansion without a raft: raft_first_layer_expansion (-1 = auto) is the minimum width of the
-    // automatic expansion; branch nodes with the automatic tree brim off use tree_support_brim_width instead.
-    const float first_layer_expansion = config.raft_first_layer_expansion.value;
-    const float tree_brim_width       = config.tree_support_brim_width.value;
-    // The automatic width scales with the support speed; the first column, as for the line width above.
-    const double first_layer_support_speed = config.support_speed.get_at(0);
+    // Align with BambuStudio: no-raft tree first-layer expansion is driven by
+    // raft_first_layer_expansion (the same key as the raft path), so first-layer
+    // expansion works independently of whether a raft is generated.
+    // -1 = auto, 0 = none, >=1 = explicit width in mm.
+    const float tree_brim_width = config.raft_first_layer_expansion.value;
 
     // Belt floor: the first object layer is not on a flat bed — it rests on the
     // tilted, moving belt. So the first-object-layer adhesion features (the tree
@@ -2584,12 +2470,14 @@ void TreeSupport::draw_circles()
 
                 ExPolygons& base_areas = ts_layer->base_areas;
                 ExPolygons& roof_areas = ts_layer->roof_areas;
+                ExPolygons roof_base_areas;
                 ExPolygons& roof_1st_layer = ts_layer->roof_1st_layer;
                 ExPolygons& floor_areas = ts_layer->floor_areas;
                 ExPolygons& roof_gap_areas = ts_layer->roof_gap_areas;
                 coordf_t         max_layers_above_base = 0;
                 coordf_t         max_layers_above_roof = 0;
                 coordf_t         max_layers_above_roof1 = 0;
+                size_t           first_base_roof_area = 0;
                 bool             floor_interface_as_base = false;
                 bool has_circle_node = false;
                 bool need_extra_wall = false;
@@ -2666,41 +2554,33 @@ void TreeSupport::draw_circles()
                         if (!area.empty()) has_circle_node = true;
                         if (node.need_extra_wall) need_extra_wall = true;
 
-                        // Interface and transition layers of a branch, and the layer right below its tip, take the shape
-                        // of its overhang, which gives a continuous interface surface instead of circle fragments. Sharp
-                        // tails keep the circle below their interface layers, and nodes without an overhang keep it.
-                        // Not with build-plate-only, where pruned branches would leave parts of the overhang in the air.
-                        if (top_interface_layers > 0 && !on_buildplate_only && !node.overhang.empty() &&
-                            (node.support_roof_layers_below > transition_layers ||
-                             ((node.support_roof_layers_below > 0 || node.distance_to_top == 0) && !node.is_sharp_tail))) {
+                        // merge overhang to get a smoother interface surface.
+                        // Only when overhang exists — circle nodes that descended through drop_nodes
+                        // lose their overhang, so keep the grown circle to preserve transition connectivity.
+                        if (top_interface_layers > 0 && (node.support_roof_layers_below > 1 || (node.support_roof_layers_below >= 0 && !node.is_sharp_tail))) {
+                            // Port of Orca #13192: merging the overhang into the roof area keeps tree
+                            // tips producing a continuous support interface. Suppressing this for
+                            // build-plate-only support drops the roof polygons of valid branches.
                             ExPolygons overhang_expanded;
                             if (node.overhang.contour.size() > 100 || node.overhang.holes.size()>1)
                                 overhang_expanded.emplace_back(node.overhang);
                             else {
                                 overhang_expanded = offset_ex({ node.overhang }, scale_(m_ts_data->m_xy_distance));
                             }
-                            area = diff_clipped(overhang_expanded, get_collision(node.is_sharp_tail && node.distance_to_top <= 0));
+                            // Replace the circle area with the expanded overhang (aligns with Bambu)
+                            // This produces a single coherent polygon instead of circle+overhang fragments
+                            area = std::move(overhang_expanded);
+                            // Apply collision avoidance to the overhang area
+                            area = diff_clipped(area, get_collision(node.is_sharp_tail && node.distance_to_top <= 0));
                             if (!area.empty()) has_circle_node = true;
                         }
                     }
 
-<<<<<<< snaporca-int
                     if (obj_layer_nr == 0 && m_raft_layers == 0 && !belt_floor_active) {
                         double brim_width = tree_brim_width >= 0.f ? tree_brim_width : 0.;
                         for (const ExPolygon &expoly : area) {
                             brim_width = std::max(brim_width,
                                 expoly.map_moment_to_expansion(get_value_at(config, config.support_speed, ConfigFlowDomain::Process), node.dist_mm_to_top));
-=======
-                    // First layer expansion without a raft, trimmed by the object with its first layer gap.
-                    if (obj_layer_nr == 0 && m_raft_layers == 0) {
-                        double brim_width = 0.;
-                        if (node.type != ePolygon && !config.tree_support_auto_brim)
-                            brim_width = tree_brim_width;
-                        else {
-                            brim_width = first_layer_expansion >= 0.f ? first_layer_expansion : 0.;
-                            for (const ExPolygon &expoly : area)
-                                brim_width = std::max(brim_width, expoly.map_moment_to_expansion(first_layer_support_speed, node.dist_mm_to_top));
->>>>>>> lixnix/main
                         }
                         area = safe_offset_inc(area, scale_(brim_width), get_collision(false),
                                                scale_(MIN_BRANCH_RADIUS * 0.5), 0, 1);
@@ -2708,21 +2588,15 @@ void TreeSupport::draw_circles()
 
                     if (obj_layer_nr>0 && node.distance_to_top < 0)
                         append(roof_gap_areas, area);
-<<<<<<< snaporca-int
                     else if (top_interface_layers > 0 && obj_layer_nr > 0 && (node.support_roof_layers_below == 0 || node.support_roof_layers_below == 1) &&
                              node.distance_to_top >= (int)top_interface_layers)
-=======
-                    else if (top_interface_layers > 0 && obj_layer_nr > 0 && node.support_roof_layers_below > 0 &&
-                             node.support_roof_layers_below <= transition_layers && node.distance_to_top >= (int)top_interface_layers)
->>>>>>> lixnix/main
                     {
-                        // Transition layers below the interface layers.
                         append(roof_1st_layer, area);
                         max_layers_above_roof1 = std::max(max_layers_above_roof1, node.dist_mm_to_top);
                     }
                     else if (top_interface_layers > 0 && obj_layer_nr > 0 && node.support_roof_layers_below > 0)
                     {
-                        append(roof_areas, area);
+                        append(node.support_roof_layers_below <= top_base_interface_layers ? roof_base_areas : roof_areas, area);
                         max_layers_above_roof = std::max(max_layers_above_roof, node.dist_mm_to_top);
                     }
                     else
@@ -2738,7 +2612,6 @@ void TreeSupport::draw_circles()
                 // join roof segments
                 roof_areas     = diff_clipped(closing_ex(roof_areas, line_width_scaled), get_collision(false));
                 roof_areas     = intersection_ex(roof_areas, m_machine_border);
-<<<<<<< snaporca-int
                 roof_areas     = union_ex(roof_areas); // Snapmaker: merge fragments into continuous surfaces (align with Bambu)
                 roof_base_areas = diff_clipped(closing_ex(roof_base_areas, line_width_scaled), get_collision(false));
                 roof_base_areas = intersection_ex(roof_base_areas, m_machine_border);
@@ -2747,18 +2620,15 @@ void TreeSupport::draw_circles()
                         ClipperUtils::clip_clipper_polygons_with_subject_bbox(roof_areas, get_extents(roof_base_areas)));
                 roof_1st_layer = diff_clipped(offset2_ex(roof_1st_layer, line_width_scaled, -line_width_scaled), get_collision(false));
                 roof_1st_layer = union_ex(roof_1st_layer); // merge fragments into continuous transition surface
-=======
-                roof_areas     = union_ex(roof_areas); // merge fragments into continuous surfaces
-                roof_1st_layer = diff_clipped(closing_ex(roof_1st_layer, line_width_scaled), get_collision(false));
-                roof_1st_layer = union_ex(roof_1st_layer); // merge fragments into a continuous transition surface
->>>>>>> lixnix/main
 
-                // Where they overlap, the transition layer wins, so transition strips keep the support body filament.
+                // roof_areas and roof_1st_layer may intersect.
+                // Subtract roof_1st_layer from roof_areas so transition strips keep support body filament.
                 roof_areas = diff_ex(roof_areas, roof_1st_layer);
                 roof_base_areas = diff_ex(roof_base_areas, roof_1st_layer);
                 roof_1st_layer = intersection_ex(roof_1st_layer, m_machine_border);
 
-                // Interface pieces smaller than 1 mm^2 are printed as transition, which widens the transition surface.
+                // Move small roof_areas (< 1mm^2) into roof_1st_layer, matching Bambu Studio behavior.
+                // This increases the transition layer area for better surface adhesion.
                 ExPolygons new_roofs;
                 for (ExPolygon &expoly : roof_areas) {
                     if (area(expoly) < SQ(scale_(1.)) && max_layers_above_roof > EPSILON) {
@@ -2769,7 +2639,6 @@ void TreeSupport::draw_circles()
                 }
                 roof_areas = std::move(new_roofs);
 
-<<<<<<< snaporca-int
                 // Port of Orca #13192: build-plate-only pruning can collapse the roof stack
                 // down to a single printable layer. In that case still emit an interface
                 // layer instead of downgrading the last roof-adjacent layer to base support.
@@ -2785,8 +2654,6 @@ void TreeSupport::draw_circles()
                 first_base_roof_area = roof_areas.size();
                 append(roof_areas, std::move(roof_base_areas));
 
-=======
->>>>>>> lixnix/main
                 ExPolygons roofs; append(roofs, roof_1st_layer); append(roofs, roof_areas);append(roofs, roof_gap_areas);
                 base_areas = diff_ex(base_areas, ClipperUtils::clip_clipper_polygons_with_subject_bbox(roofs, get_extents(base_areas)));
                 base_areas = intersection_ex(base_areas, m_machine_border);
@@ -2942,7 +2809,6 @@ void TreeSupport::draw_circles()
                     floor_areas = std::move(new_floor_areas);
                 }
 
-<<<<<<< snaporca-int
                 // Orca: Hybrid tree first-layer expansion belongs only to the normal-support
                 // part. area_poly is collected from ePolygon nodes above, which are the normal
                 // support nodes in Hybrid mode. Apply the expansion before area_groups and
@@ -2968,8 +2834,6 @@ void TreeSupport::draw_circles()
                     ts_layer->base_areas = std::move(expanded_base_areas);
                 }
 
-=======
->>>>>>> lixnix/main
                 // Orca: Final tree base polygons may be too close above model surfaces.
                 // Enforce bottom Z clearance for non-contact support layers as well.
                 if (!ts_layer->base_areas.empty()) {
@@ -2987,9 +2851,11 @@ void TreeSupport::draw_circles()
                     area_groups.back().need_infill = overlaps({ expoly }, area_poly);
                     area_groups.back().need_extra_wall = need_extra_wall && !area_groups.back().need_infill;
                 }
-                for (auto &expoly : ts_layer->roof_areas) {
+                for (size_t roof_idx = 0; roof_idx < ts_layer->roof_areas.size(); ++roof_idx) {
+                    auto &expoly = ts_layer->roof_areas[roof_idx];
                     //if (area(expoly) < SQ(scale_(1))) continue;
                     area_groups.emplace_back(&expoly, SupportLayer::RoofType, max_layers_above_roof);
+                    area_groups.back().interface_as_base = roof_idx >= first_base_roof_area;
                 }
                 for (auto &expoly : ts_layer->floor_areas) {
                     //if (area(expoly) < SQ(scale_(1))) continue;
@@ -2999,10 +2865,12 @@ void TreeSupport::draw_circles()
                 for (auto &expoly : ts_layer->roof_1st_layer) {
                     //if (area(expoly) < SQ(scale_(1))) continue;
                     area_groups.emplace_back(&expoly, SupportLayer::Roof1stLayer, max_layers_above_roof1);
+                    area_groups.back().interface_as_base = top_base_interface_layers > 0;
                 }
 
-                // The polygons of all area groups at this layer let the small-hole cleanup tell slivers from
-                // holes that another group owns (a transition strip carved into an interface polygon).
+                // Snapmaker: collect the polygons of all area groups at this layer so the
+                // small-hole cleanup below can tell slivers from carve holes that another
+                // group owns (transition strip carved into an interface polygon etc.).
                 std::vector<const ExPolygon *> area_group_polys;
                 area_group_polys.reserve(area_groups.size());
                 for (const auto &group : area_groups)
@@ -3294,9 +3162,10 @@ void TreeSupport::drop_nodes()
     const bool has_belt_floor = std::abs(m_slicing_params.belt_floor_shear_factor) > EPSILON;
     const size_t bottom_interface_layers = number_of_support_interface_bottom_layers(config);
     SupportNode::diameter_angle_scale_factor = diameter_angle_scale_factor;
-    const int  transition_layers = num_transition_layers();
-    // Bottom expansion grows the branch radius in the first DO_NOT_MOVER_UNDER_MM above the bed so that tree
-    // bases fill cavities instead of spilling out of them; every wall count except an explicit single wall.
+    // Ported from BambuStudio d61ebefa2: bottom expansion grows branch radius in the first
+    // DO_NOT_MOVER_UNDER_MM above the bed so tree bases fill cavities/grooves instead of spilling
+    // out of them. Bambu gates it on wall_count > 1 || < 0 (their auto is -1); here the range is
+    // [0,2] with 0 meaning auto, so the gate is every value except an explicit single wall.
     const bool bottom_expand_enabled = config.tree_support_wall_count != 1;
 
     auto get_max_move_dist = [this, tan_angle, support_extrusion_width](const SupportNode *node, int power = 1) {
@@ -3413,9 +3282,14 @@ void TreeSupport::drop_nodes()
                 unsupported_branch_leaves.push_front({ layer_nr, p_node });
                 continue;
             }
-            // A node that can no longer reach the build plate rests on the model: it stops when its center is
-            // inside the radius-shrunk collision area, otherwise it becomes a polygon overhang on the model
-            // surface, so that wall-hugging branches do not grow into isolated trunks down to the plate.
+            // Port of Bambu Studio: a node that can no longer reach the build plate and is
+            // allowed to rest on the model must stop growing downward here. If the node
+            // center is already inside the (radius-shrunk) collision area it has landed;
+            // otherwise it is converted to a polygon overhang on the model surface.
+            // Without this guard such "wall-hugging orphan" nodes keep spawning children
+            // every layer. Their MST neighbour lines are all cut by the object contour, so
+            // they never converge, never merge, and grow into isolated slender trunks that
+            // run from the overhang down to the build plate.
             if (!node.to_buildplate) {
                 auto overlap_with_circle = shrink_ex(get_collision(0, obj_layer_nr), scale_(node.radius));
                 if (!overlap_with_circle.empty() && is_inside_ex(overlap_with_circle, node.position)) {
@@ -3426,8 +3300,7 @@ void TreeSupport::drop_nodes()
                 ExPolygons area = avoid_object_remove_extra_small_parts(ExPolygon(circle), get_collision(0, obj_layer_nr));
                 if (!area.empty()) {
                     p_node->overhang = area[0];
-                    if (area[0].area() < SQ(scale_(1.)) ||
-                        (node.parent != nullptr && !node.parent->to_buildplate && !overlaps({node.overhang}, {node.parent->overhang}))) {
+                    if (area[0].area() < SQ(scale_(1.)) || (!node.parent->to_buildplate && !overlaps({node.overhang}, {node.parent->overhang}))) {
                         p_node->valid        = false;
                         p_node->is_processed = true;
                         continue;
@@ -3510,14 +3383,14 @@ void TreeSupport::drop_nodes()
                     return; //Delete this node (don't create a new node for it on the next layer).
                 }
                 if (p_node->fading)
-                    return; // a fading node shrinks to nothing and merges no other node
+                    return; // a fading node is shrinking to nothing; don't merge others into it
                 const std::vector<Point>& neighbours = mst.adjacent_nodes(node.position);
                 if (node.type == ePolygon) {
                     // Remove all circle neighbours that are completely inside the polygon and merge them into this node.
                     for (const Point &neighbour : neighbours) {
                         SupportNode *    neighbour_node          = nodes_this_part[neighbour];
                         if (neighbour_node->valid == false) continue;
-                        if (neighbour_node->fading) continue; // a node already fading out stays as it is
+                        if (neighbour_node->fading) continue; // don't touch a node already fading out
                         if (neighbour_node->type == ePolygon) continue;
                         coord_t    neighbour_radius = scale_(neighbour_node->radius);
                         Point     pt_north = neighbour + Point(0, neighbour_radius), pt_south = neighbour - Point(0, neighbour_radius),
@@ -3532,9 +3405,9 @@ void TreeSupport::drop_nodes()
                             neighbour_node->valid = false;
                         }
                         else if (is_inside_ex(node.overhang, neighbour)) {
-                            // Partial overlap (center inside, edge outside): the circle fades out and the polygon
-                            // adopts its radius as expansion target.
-                            neighbour_node->fading = true;
+                            // Partial overlap: center inside, edge spills out.
+                            // Mark fade-out (976b5062c), then adopt radius as expansion target.
+                            neighbour_node->fading = true;   // <-- the line phase2's port (0909d7ed63) dropped
                             if (node.overhang.contour.bounding_box().radius() < neighbour_radius)
                                 node.target_radius = std::max(node.target_radius, neighbour_node->radius);
                         }
@@ -3627,19 +3500,12 @@ void TreeSupport::drop_nodes()
                 bool         clamp_radius              = false;
                 coordf_t     parent_radius             = 0;
                 double       dist_to_outer             = 0;
-<<<<<<< snaporca-int
                 // Snapmaker additions
                 bool         bottom_expand             = false;
                 coordf_t     target_radius             = -1.;
                 coordf_t     origin_area               = 0.;
                 bool         fading                    = false;
                 coordf_t     fixed_radius              = 0.;
-=======
-                bool         set_radius                = false;
-                coordf_t     radius                    = 0;
-                bool         fading                    = false;
-                coordf_t     target_radius             = -1.;
->>>>>>> lixnix/main
             };
             struct PassTwoResult {
                 bool                     invalidate       = false;
@@ -3655,19 +3521,15 @@ void TreeSupport::drop_nodes()
                 const SupportNode& node = *p_node;
                 if (!p_node->valid)
                 {
-                    return;
+                    return; 
                 }
                 if (node.fading) {
-                    // A fading node shrinks by max_move_distance per layer until it vanishes, instead of growing a
-                    // redundant trunk next to a polygon column.
+                    // Shrink radius by max_move_distance each lower layer until it vanishes,
+                    // instead of growing a full redundant trunk next to an ePolygon column.
                     coordf_t next_radius = node.radius - max_move_distance;
                     if (next_radius < EPSILON)
-<<<<<<< snaporca-int
                         return; // shrunk to nothing -> no child, branch ends here
                     // Node creation is deferred to the ordered apply loop below (see PendingNode).
-=======
-                        return; // shrunk to nothing: the branch ends here
->>>>>>> lixnix/main
                     PendingNode pending;
                     pending.position                  = node.position;
                     pending.distance_to_top           = p_node->distance_to_top + 1;
@@ -3675,42 +3537,42 @@ void TreeSupport::drop_nodes()
                     pending.to_buildplate             = node.to_buildplate;
                     pending.parent                    = p_node;
                     pending.zero_max_move             = true;
-<<<<<<< snaporca-int
                     pending.fading                    = true;
                     pending.fixed_radius              = next_radius;
-=======
-                    pending.set_radius                = true;
-                    pending.radius                    = next_radius;
-                    pending.fading                    = true;
->>>>>>> lixnix/main
                     pass2_out.pending.emplace_back(std::move(pending));
                     return;
                 }
                 if (node.type == ePolygon) {
                     // polygon node do not merge or move
                     if (node.overhang.contour.points.empty()) {
-                        pass2_out.invalidate = true;
+                        p_node->valid = false;
                         return;
                     }
                     const bool to_buildplate = true;
                     ExPolygons  overhangs_next{node.overhang};
                     auto        poly_radius   = node.overhang.contour.bounding_box().radius();
+                    bool        offseted      = false;
 
-                    // The polygon grows near the bed (bottom expansion) and when it is small or next to a merged
-                    // circle branch (target_radius).
+                    // Polygon support expansion (ported from Bambu Studio):
+                    // 1. bottom expansion enabled
+                    // 2. target_radius gate: small polygons or polygons near a merged circle branch
                     if ((bottom_expand_enabled && node.print_z < DO_NOT_MOVER_UNDER_MM) ||
-                        (poly_radius < scale_(node.target_radius) || node.overhang.area() < 3. * SQ(scale_(node.target_radius))))
+                        (poly_radius < scale_(node.target_radius) || node.overhang.area() < 3. * SQ(scale_(node.target_radius)))) {
                         overhangs_next = offset_ex({node.overhang}, scale_(max_move_distance / 2.));
+                        offseted       = true;
+                    }
 
                     // Keep only the part that won't be removed by the next layer.
                     overhangs_next = diff_clipped(overhangs_next, get_collision(0, obj_layer_nr_next));
 
                     // Smooth the transition at the first contact layer.
-                    if (node.distance_to_top == 0)
-                        overhangs_next = offset2_ex(overhangs_next, scale_(max_move_distance), -scale_(max_move_distance));
+                    if (node.distance_to_top == 0) {
+                        overhangs_next      = offset2_ex(overhangs_next, scale_(max_move_distance), -scale_(max_move_distance));
+                        p_node->origin_area = node.overhang.area();
+                    }
 
-                    // The polygon expands below the first transition layer.
-                    if (transition_layers > 0 && obj_layer_nr_next > 0 && node.support_roof_layers_below == transition_layers &&
+                    // Expand when entering the first transition layer (srlb == 1).
+                    if (m_support_params.num_top_interface_layers > 0 && obj_layer_nr_next > 0 && node.support_roof_layers_below == 1 &&
                         node.distance_to_top >= (int)m_support_params.num_top_interface_layers)
                         overhangs_next = safe_offset_inc(overhangs_next, scale_(max_move_distance), get_collision(0, obj_layer_nr_next), scale_(MIN_BRANCH_RADIUS * 1.75), 0, 1);
 
@@ -3732,13 +3594,9 @@ void TreeSupport::drop_nodes()
                         pending.zero_max_move             = true;
                         pending.has_overhang              = true;
                         pending.overhang                  = std::move(overhang);
-<<<<<<< snaporca-int
                         // Snapmaker: keep the polygon-node expansion lineage.
                         pending.target_radius             = p_node->target_radius;
                         pending.origin_area               = node.origin_area;
-=======
-                        pending.target_radius             = p_node->target_radius;
->>>>>>> lixnix/main
                         pass2_out.pending.emplace_back(std::move(pending));
                     }
                     return;
@@ -3788,7 +3646,7 @@ void TreeSupport::drop_nodes()
                         if (!neighbour_node->valid) continue;
 
                         Point direction = neighbour - node.position;
-                        // do not move to neighbor that's too far away (even at full speed they could not meet before reaching the bed)
+                        // do not move to neighbor that's too far away (即使以最大速度移动，在接触热床之前都无法汇聚)
                         float dist2_to_neighbor = vsize2_with_unscale(direction);
 
                         coordf_t branch_bottom_radius = calc_radius(node.dist_mm_to_top + node.print_z);
@@ -3826,8 +3684,9 @@ void TreeSupport::drop_nodes()
 
                 Point  to_outside         = projection_onto(avoidance_next, node.position);
                 Point  direction_to_outer = to_outside - node.position;
-                // A sharp tail within 3 mm of its tip steers both directions along the skin, so the tip keeps
-                // growing down the slanted surface instead of being pushed to the avoidance border.
+                // Ported from BambuStudio 976b5062c: a sharp tail within 3 mm of its tip steers both
+                // directions along the skin, so the tip keeps growing down the slanted surface
+                // instead of being flung to the avoidance border.
                 if (node.skin_direction != Point(0, 0) && node.dist_mm_to_top < 3) {
                     direction_to_outer = move_to_neighbor_center = normal(node.skin_direction, scale_(max_move_distance));
                 }
@@ -3853,9 +3712,11 @@ void TreeSupport::drop_nodes()
                 // move to the averaged direction of neighbor center and contour edge if they are roughly same direction
                 Point movement(0, 0);
                 if (support_on_buildplate_only) {
-                    // A branch has to reach the plate: it escapes outward at full speed while an escape direction
-                    // exists, otherwise it converges to the normalized neighbor center. Sharp tails follow their
-                    // skin for the first layers.
+                    // With "support on build plate only" a branch has to reach the plate or its whole area goes
+                    // unsupported, so keep the full-speed escape semantics: outward when touching the
+                    // avoidance area, otherwise converge to the neighbor center (normalized, so branches in the
+                    // middle of a cavity still converge at node speed and can escape closed openings).
+                    // Sharp tails keep following their skin for the first layers.
                     if (node.is_sharp_tail && node.dist_mm_to_top < 3 && node.skin_direction != Point(0, 0))
                         movement = normal(node.skin_direction, scale_(get_max_move_dist(&node)));
                     else if (dist2_to_outer > EPSILON)
@@ -3863,16 +3724,25 @@ void TreeSupport::drop_nodes()
                     else
                         movement = normal(move_to_neighbor_center, scale_(get_max_move_dist(&node)));
                 } else {
-                    // Every tree style follows the neighbor-center skeleton, which keeps branches inside cavities;
-                    // with movement still zero the dot product is 0, so a lone branch moves outward.
+                    // The dot() reads movement before any assignment in the ported BambuStudio code too; zero
+                    // initializing it keeps that check deterministic (always false), so a branch follows the
+                    // neighbor center whenever one exists and only a lone branch falls outward.
+                    // Deliberate deviation from BambuStudio 976b5062c: upstream keeps a blended outward
+                    // escape term for the non-strong styles whose weight (1/dist2_to_outer) dominates once a
+                    // branch grazes a wall, which still walks slim/hybrid branches out of cavities. Pin every
+                    // 2D tree style to the neighbor-center skeleton the same way strong trees already are.
                     if (movement.dot(move_to_neighbor_center) >= 0.2 || move_to_neighbor_center == Point(0, 0))
                         movement = direction_to_outer + move_to_neighbor_center;
                     else
                         movement = move_to_neighbor_center; // otherwise move to neighbor center first
                 }
 
-                // The movement keeps its blend of neighbor convergence and push away from the object; only its
-                // magnitude is clamped.
+                // Port of Bambu 976b5062c: keep the movement computed above (the blend of
+                // neighbour convergence and the push away from the object) and only clamp
+                // its magnitude. The previous else-if chain discarded the convergence
+                // component whenever dist2_to_outer > 0 (the common case), so branches
+                // only ever moved away from the object and never toward their neighbours.
+                // Only sharp-tail nodes keep a fixed skin_direction for their first layers.
                 if (vsize2_with_unscale(movement) > get_max_move_dist(&node, 2))
                     movement = normal(movement, scale_(get_max_move_dist(&node)));
 
@@ -3908,23 +3778,12 @@ void TreeSupport::drop_nodes()
                 pending.support_roof_layers_below = node.support_roof_layers_below - (node.distance_to_top >= 0 ? 1 : 0);
                 pending.to_buildplate             = to_buildplate;
                 pending.parent                    = p_node;
+                pending.clamp_radius              = true;
                 pending.parent_radius             = node.radius;
-<<<<<<< snaporca-int
                 pending.dist_to_outer             = dist_to_outer;
                 // Snapmaker: near the bed the branch keeps the full radius lineage and grows by half an extrusion
                 // width per layer (bottom expansion), which widens the base instead of dodging outward.
                 pending.bottom_expand             = bottom_expand_enabled && print_z_next < DO_NOT_MOVER_UNDER_MM && node.dist_mm_to_top > DO_NOT_MOVER_UNDER_MM;
-=======
-                // Near the bed the branch grows by half an extrusion width per layer (bottom expansion), which
-                // widens the base instead of dodging outward.
-                if (bottom_expand_enabled && print_z_next < DO_NOT_MOVER_UNDER_MM && node.dist_mm_to_top > DO_NOT_MOVER_UNDER_MM) {
-                    pending.set_radius = true;
-                    pending.radius     = node.radius + support_extrusion_width / 2.;
-                } else {
-                    pending.clamp_radius  = true;
-                    pending.dist_to_outer = dist_to_outer;
-                }
->>>>>>> lixnix/main
                 pass2_out.pending.emplace_back(std::move(pending));
             };
             tbb::parallel_for(tbb::blocked_range<size_t>(0, nodes_vec.size()),
@@ -3940,7 +3799,6 @@ void TreeSupport::drop_nodes()
                         pending.support_roof_layers_below, pending.to_buildplate, pending.parent, print_z_next, height_next);
                     if (pending.zero_max_move)
                         next_node->max_move_dist = 0;
-<<<<<<< snaporca-int
                     if (pending.has_overhang) {
                         next_node->overhang      = std::move(pending.overhang);
                         next_node->target_radius = pending.target_radius;
@@ -3954,19 +3812,8 @@ void TreeSupport::drop_nodes()
                         next_node->radius = pending.bottom_expand ?
                             pending.parent_radius + support_extrusion_width / 2. :
                             std::max(pending.parent_radius, std::min(next_node->radius, pending.dist_to_outer));
-=======
-                    if (pending.has_overhang)
-                        next_node->overhang = std::move(pending.overhang);
-                    next_node->fading        = pending.fading;
-                    next_node->target_radius = pending.target_radius;
-                    if (pending.set_radius)
-                        next_node->radius = pending.radius;
-                    else if (pending.clamp_radius)
-                        next_node->radius = std::max(pending.parent_radius, std::min(next_node->radius, pending.dist_to_outer));
-                    // A moved node computes its move distance at its final radius.
-                    if ((pending.set_radius || pending.clamp_radius) && !pending.zero_max_move)
->>>>>>> lixnix/main
                         get_max_move_dist(next_node);
+                    }
                     contact_nodes[layer_nr_next].push_back(next_node);
                 }
                 if (pass2_out.unsupported_leaf)
@@ -3976,8 +3823,9 @@ void TreeSupport::drop_nodes()
             }
         }
 
-        // Layer 0 is skipped by the loop above, so a node that only loses to_buildplate there would rest on the
-        // model despite build-plate-only; it is pruned with the other failed leaves.
+        // Port of Bambu 851e982b: the loop above skips layer 0, so a node that only flips
+        // to_buildplate at layer 0 would be drawn resting on the model despite
+        // build-plate-only being enabled. Drop it with the rest of the failed leaves.
         if (layer_nr_next == 0 && support_on_buildplate_only && !contact_nodes[layer_nr_next].empty()) {
             for (SupportNode* node : contact_nodes[layer_nr_next]) {
                 if (!node->to_buildplate)
@@ -4418,18 +4266,13 @@ void TreeSupport::generate_contact_points()
     const coordf_t point_spread = scale_(config.tree_support_branch_distance.value);
     const coordf_t max_bridge_length = scale_(config.max_bridge_length.value);
     coord_t    radius_scaled         = scale_(base_radius);
-    // Snapmaker Orca: the width is a column per tool head; the first column with the first nozzle,
-    // as the scalar read (the support head is not resolved here, the pre-existing rule).
-    const coordf_t extrusion_width = config.get_abs_value_at("line_width", 0, m_object->print()->config().nozzle_diameter.get_at(0));
-    // XY expansion of the polygon nodes of hybrid trees, 2 mm by default with a zero top Z distance.
+    // Snapmaker Orca: the width is a column per tool head; the first column's raw number, as the
+    // scalar read (a percent read as a number, the pre-existing quirk).
+    const coordf_t extrusion_width = Flow::width_at(config.line_width, 0).value;
     coordf_t       xy_expansion    = scale_(config.support_expansion.value);
-<<<<<<< snaporca-int
     // SupportParameters::soluble_interface is gone in Orca 2.5; keep the Snapmaker meaning (zero top Z distance).
     const bool soluble_interface = config.support_top_z_distance.value == 0.;
     if (soluble_interface && xy_expansion < EPSILON) xy_expansion = scale_(2);
-=======
-    if (m_support_params.zero_gap_interface_top && xy_expansion < EPSILON) xy_expansion = scale_(2);
->>>>>>> lixnix/main
 
     bool       on_buildplate_only    = m_object_config->support_on_build_plate_only.value;
     const bool roof_enabled          = config.support_interface_top_layers.value > 0;
@@ -4474,14 +4317,9 @@ void TreeSupport::generate_contact_points()
     const int z_distance_top_layers = round_up_divide(scale_(z_distance_top), scale_(layer_height)) + 1; //Support must always be 1 layer below overhang.
     int gap_layers = z_distance_top == 0 ? 0 : 1;
 
-    // The interface layers and the transition layers below them.
     size_t support_roof_layers = config.support_interface_top_layers.value;
     if (support_roof_layers > 0)
-<<<<<<< snaporca-int
         support_roof_layers += 1;
-=======
-        support_roof_layers += num_transition_layers();
->>>>>>> lixnix/main
     coordf_t  thresh_angle = std::min(89.f, config.support_threshold_angle.value < EPSILON ? 30.f : config.support_threshold_angle.value);
     coordf_t  half_overhang_distance = scale_(tan(thresh_angle * M_PI / 180.0) * layer_height / 2);
 
@@ -4509,6 +4347,8 @@ void TreeSupport::generate_contact_points()
         }
     }
 
+    int      nonempty_layers = 0;
+    tbb::concurrent_vector<Slic3r::Vec3f> all_nodes;
     tbb::parallel_for(tbb::blocked_range<size_t>(1, m_object->layers().size()), [&](const tbb::blocked_range<size_t>& range) {
         for (size_t layer_nr = range.begin(); layer_nr < range.end(); layer_nr++) {
             if (m_object->print()->canceled())
@@ -4553,14 +4393,15 @@ void TreeSupport::generate_contact_points()
                 return contact_node;
             };
 
-            // The overhang type from detect_overhangs decides which overhangs of hybrid trees become polygon nodes.
+            // Ported from Bambu 976b5062c + f9d99ec8c:
+            // Type-based classification replaces area-threshold binary cliff.
             ExPolygons extrudable_collision = offset_ex(
                 layer->lower_layer->lslices_extrudable, m_ts_data->m_xy_distance);
             for (const auto& overhang_with_type : layer->loverhangs_with_type)  {
                 const auto &overhang_part = overhang_with_type.first;
                 const auto &overhang_type = overhang_with_type.second;
                 is_sharp_tail = overhang_type & OverhangType::SharpTail;
-                const bool add_interface  = area(overhang_part) > minimum_roof_area;
+                bool       add_interface  = (force_tip_to_roof || area(overhang_part) > minimum_roof_area);
                 const auto &relevant_forbidden = get_collision(0, layer_nr - 1);
                 ExPolygons overhangs{overhang_part};
                 ExPolygons overhangs_regular;
@@ -4579,7 +4420,7 @@ void TreeSupport::generate_contact_points()
                         overhangs_normal = safe_offset_inc(overhangs_normal, xy_expansion,
                                                            outlines_below_expanded,
                                                            scale_(MIN_BRANCH_RADIUS * 1.75), 0, 1);
-                    // Stable parts outside the model below become polygon (normal support) nodes, split at narrow gaps.
+                    // if the outside area is still big, we can need normal nodes
                     coord_t gap_width = scale_(extrusion_width / 2.) + scale_(m_ts_data->m_xy_distance);
                     ExPolygons overhangs_normal_split;
                     for (auto &overhang : overhangs_normal) {
@@ -4617,17 +4458,11 @@ void TreeSupport::generate_contact_points()
                 if (!is_sharp_tail && layer->lower_layer)
                     overhangs_regular = diff_ex(overhangs_regular, extrudable_collision);
                 for (auto &overhang : overhangs_regular) {
-<<<<<<< snaporca-int
                     if (is_sharp_tail
                         && !soluble_interface
                         && overhang.area() < SQ(scale_(2.))) {
                         add_interface = false;
                     }
-=======
-                    // Sharp tails smaller than 2 mm^2 get no interface unless the top Z distance is zero.
-                    const bool add_interface_here = add_interface &&
-                        !(is_sharp_tail && !m_support_params.zero_gap_interface_top && overhang.area() < SQ(scale_(2.)));
->>>>>>> lixnix/main
                     BoundingBox overhang_bounds = get_extents(overhang);
                     double      radius          = std::clamp(unscale_(overhang_bounds.radius()), MIN_BRANCH_RADIUS, base_radius);
                     // add supports at corners for both auto and manual overhangs, github #2008
@@ -4638,7 +4473,7 @@ void TreeSupport::generate_contact_points()
                         Vec2d v1 = (pt - points[(i - 1 + nSize) % nSize]).cast<double>().normalized();
                         Vec2d v2 = (pt - points[(i + 1) % nSize]).cast<double>().normalized();
                         if (v1.dot(v2) > -0.7) { // angle smaller than 135 degrees
-                            SupportNode *contact_node = insert_point(pt, overhang, radius, false, add_interface_here);
+                            SupportNode *contact_node = insert_point(pt, overhang, radius, false, add_interface);
                             if (contact_node) {
                                 contact_node->is_corner = true;
                             }
@@ -4659,7 +4494,7 @@ void TreeSupport::generate_contact_points()
                         double distance = 0;
                         while (distance < 1) {
                             auto         pt           = i == 0 ? edge_cache.coords(distance) : edge_cache.coords(i - 1, distance);
-                            SupportNode *contact_node = insert_point(pt, overhang,radius, false, add_interface_here);
+                            SupportNode *contact_node = insert_point(pt, overhang,radius, false, add_interface);
                             distance += step;
                         }
                     }
@@ -4674,7 +4509,7 @@ void TreeSupport::generate_contact_points()
                         if (overhang_bounds.contains(candidate)) {
                             // BBS: move_inside_expoly shouldn't be used if candidate is already inside, as it moves point to boundary and the inside is not well supported!
                             bool is_inside = is_inside_ex(overhang_inner, candidate);
-                            if (is_inside) { SupportNode *contact_node = insert_point(candidate, overhang,radius, false, add_interface_here); }
+                            if (is_inside) { SupportNode *contact_node = insert_point(candidate, overhang,radius, false, add_interface); }
                         }
                     }
                 }
@@ -4686,6 +4521,8 @@ void TreeSupport::generate_contact_points()
                 if (node)
                     node->skin_direction = pt_and_normal.second;
             }
+            if (!curr_nodes.empty()) nonempty_layers++;
+            for (auto node : curr_nodes) { all_nodes.emplace_back(node->position(0), node->position(1), scale_(node->print_z)); }
 #ifdef SUPPORT_TREE_DEBUG_TO_SVG
             if (!curr_nodes.empty())
             draw_contours_and_nodes_to_svg(debug_out_path("init_contact_points_%.2f.svg", bottom_z), layer->loverhangs,layer->lslices_extrudable, m_ts_data->m_layer_outlines_below[layer_nr],
@@ -4695,33 +4532,23 @@ void TreeSupport::generate_contact_points()
     ); // end tbb::parallel_for
 
 
-
-    // ORCA: node statistics are gathered after the loop, in layer order and in double, so the
-    // fitted angle (it rotates every branch polygon of square support) is deterministic.
-    int    nonempty_layers = 0;
-    size_t nNodes          = 0;
-    double mx = 0., my = 0., mxy = 0., mx2 = 0.;
-    for (size_t layer_nr = 1; layer_nr < m_object->layers().size(); layer_nr++) {
-        const auto& curr_nodes = contact_nodes[layer_nr - 1];
-        if (!curr_nodes.empty()) nonempty_layers++;
-        for (const SupportNode* node : curr_nodes) {
-            // get orientation of nodes by line fitting
-            // line: y=kx+b, where
-            //       k=tan(nodes_angle)=(n\sum{xy}-\sum{x}\sum{y})/(n\sum{x^2}-\sum{x}^2)
-            const double x = unscale<double>(node->position.x());
-            const double y = unscale<double>(node->position.y());
+    int nNodes = all_nodes.size();
+    avg_node_per_layer = nodes_angle = 0;
+    if (nNodes > 0) {
+        avg_node_per_layer = nNodes / nonempty_layers;
+        // get orientation of nodes by line fitting
+        // line: y=kx+b, where
+        //       k=tan(nodes_angle)=(n\sum{xy}-\sum{x}\sum{y})/(n\sum{x^2}-\sum{x}^2)
+        float mx = 0, my = 0, mxy = 0, mx2 = 0;
+        for (auto &pt : all_nodes) {
+            float x = unscale_(pt(0));
+            float y = unscale_(pt(1));
             mx += x;
             my += y;
             mxy += x * y;
             mx2 += x * x;
-            ++nNodes;
         }
-    }
-    avg_node_per_layer = nodes_angle = 0;
-    if (nNodes > 0) {
-        avg_node_per_layer = int(nNodes / size_t(nonempty_layers));
-        const double n = double(nNodes);
-        nodes_angle = float(atan2(n * mxy - mx * my, n * mx2 - mx * mx));
+        nodes_angle = atan2(nNodes * mxy - mx * my, nNodes * mx2 - SQ(mx));
 
         BOOST_LOG_TRIVIAL(info) << "avg_node_per_layer=" << avg_node_per_layer << ", nodes_angle=" << nodes_angle;
     }

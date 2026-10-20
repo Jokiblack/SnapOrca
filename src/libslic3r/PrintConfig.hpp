@@ -116,16 +116,9 @@ enum class WipeTowerType {
 };
 
 enum PrintHostType {
-<<<<<<< snaporca-int
     htPrusaLink, htPrusaConnect, htOctoPrint, htDuet, htUltiMaker, htFlashAir, htAstroBox, htRepetier, htMKS, htESP3D, htCrealityPrint, htObico, htFlashforge, htSimplyPrint, htElegooLink, ht3DPrinterOS, htMoonraker,
     // Snapmaker: Snapmaker printer connection (MQTT / LAN Moonraker). Not exposed as host_type values in profiles.
     htMoonRaker_mqtt, htMoonRaker
-=======
-    // Orca appends its own host types (htUltiMaker, ht3DPrinterOS, htMoonraker); the Snapmaker device stack keeps
-    // its unserialized htMoonRaker_mqtt / htMoonRaker values at the end (set programmatically, never
-    // round-tripped through the enum string map).
-    htPrusaLink, htPrusaConnect, htOctoPrint, htDuet, htUltiMaker, htFlashAir, htAstroBox, htRepetier, htMKS, htESP3D, htCrealityPrint, htObico, htFlashforge, htSimplyPrint, htElegooLink, ht3DPrinterOS, htMoonraker, htMoonRaker_mqtt, htMoonRaker
->>>>>>> lixnix/main
 };
 
 enum AuthorizationType {
@@ -625,6 +618,57 @@ enum RetractLiftEnforceType {
     rletTopAndBottom
 };
 
+// Snapmaker: flow-variant (standard / high flow) presets ------------------------------------------
+enum class ConfigFlowDomain {
+    Filament,   // *_flow_support key: filament_flow_support
+    Process,    // *_flow_support key: process_flow_support
+    Printer     // *_flow_support key: printer_flow_support
+};
+
+constexpr const char* FLOW_MODE_STANDARD  = "standard";
+constexpr const char* FLOW_MODE_HIGH_FLOW = "high_flow";
+
+enum FilamentVolumeType {
+    fvtStandard = 0,
+    fvtHighFlow = 1,
+};
+
+constexpr const char* FILAMENT_GROUPING_STANDARD = "standard";
+constexpr const char* FILAMENT_GROUPING_CUSTOM   = "custom";
+
+// Bounds-checked: values outside the mapping render as FLOW_MODE_STANDARD.
+const char* to_string(FilamentVolumeType type);
+
+// Unknown names resolve to fvtStandard.
+FilamentVolumeType filament_volume_type_from_string(const std::string &str);
+
+size_t flow_variant_index(const std::vector<std::string> &flow_support, const std::string &mode);
+
+const char* flow_support_key(ConfigFlowDomain domain);
+
+// Filament options whose vector values are stored per declared flow variant.
+const std::vector<std::string>& filament_flow_variant_options();
+bool is_filament_flow_variant_option(const std::string &key);
+
+// Process / printer options whose vector values are stored per declared flow variant.
+const std::vector<std::string>& process_flow_variant_options();
+bool is_process_flow_variant_option(const std::string &key);
+
+// Machine / print options whose vector values are stored per declared flow variant.
+const std::vector<std::string>& machine_flow_variant_options();
+bool is_machine_flow_variant_option(const std::string &key);
+
+size_t get_config_idx(const ConfigBase &config, ConfigFlowDomain domain, unsigned int filament_id = 0);
+
+template<typename VectorOption>
+inline auto get_value_at(const ConfigBase &config, const VectorOption &opt, ConfigFlowDomain domain, unsigned int filament_id = 0)
+    -> decltype(opt.get_at(0))
+{
+    return opt.get_at(get_config_idx(config, domain, filament_id));
+}
+
+// end Snapmaker: flow variant------------------------------------------------------------------------
+
 enum class GCodeThumbnailsFormat {
     PNG, JPG, QOI, BTT_TFT, ColPic
 };
@@ -1085,7 +1129,6 @@ void normalize_filament_values_to_variants(DynamicPrintConfig &config);
 
 extern std::set<std::string> filament_dev_options;
 
-<<<<<<< snaporca-int
 // Orca: a filament_dev_options option holds several values per filament, and how many is up to the
 // filament preset, so one filament's values cannot be replaced in place. This rebuilds each option from
 // filament_configs, one config per filament in slot order, as the filaments' values one after another.
@@ -1095,10 +1138,7 @@ void set_filament_dev_options(DynamicPrintConfig &config, const std::vector<cons
 // old_slot_count values; an option the config lacks is created.
 void resize_mixed_filament_metadata(DynamicPrintConfig &config, size_t old_slot_count, size_t new_slot_count);
 
-extern void update_static_print_config_from_dynamic(ConfigBase& config, const DynamicPrintConfig& dest_config, std::vector<int> variant_index, std::set<std::string>& key_set1, int stride = 1);
-=======
 extern void update_static_print_config_from_dynamic(ConfigBase& config, const DynamicPrintConfig& dest_config, std::vector<int> variant_index, std::set<std::string>& key_set1, int stride = 1, const VariantOverrideRule &rule = VariantOverrideRule());
->>>>>>> lixnix/main
 extern void compute_filament_override_value(const std::string& opt_key, const ConfigOption *opt_old_machine, const ConfigOption *opt_new_machine, const ConfigOption *opt_new_filament, const DynamicPrintConfig& new_full_config,
     t_config_option_keys& diff_keys, DynamicPrintConfig& filament_overrides, std::vector<int>& f_map_indices);
 
@@ -1400,12 +1440,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionInt,                 support_interface_bottom_layers))
     // Spacing between interface lines (the hatching distance). Set zero to get a solid interface.
     ((ConfigOptionFloat,               support_interface_spacing))
-<<<<<<< snaporca-int
     ((ConfigOptionFloat,                support_interface_min_area))
-=======
-    // Tree support overhangs smaller than this area (mm^2) get no support interface (roof).
-    ((ConfigOptionFloat,               support_interface_min_area))
->>>>>>> lixnix/main
     ((ConfigOptionFloatsNullable,      support_interface_speed))
     ((ConfigOptionEnum<SupportMaterialPattern>, support_base_pattern))
     ((ConfigOptionEnum<SupportMaterialInterfacePattern>, support_interface_pattern))
@@ -1456,8 +1491,6 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloat,              tree_support_branch_diameter_angle))
     ((ConfigOptionFloat,              tree_support_angle_slow))
     ((ConfigOptionInt,                tree_support_wall_count))
-    // Snapmaker: kept although mainline Orca dropped the option, so existing fork profiles stay valid.
-    ((ConfigOptionBool,               tree_support_adaptive_layer_height))
     ((ConfigOptionBool,               tree_support_auto_brim))
     ((ConfigOptionFloat,              tree_support_brim_width))
     ((ConfigOptionBool,               detect_narrow_internal_solid_infill))
@@ -1481,7 +1514,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionPercent,            tree_support_top_rate))
     ((ConfigOptionFloat,              tree_support_branch_diameter_organic))
     ((ConfigOptionFloat,              tree_support_branch_angle_organic))
-    // Transition layers between the support interface and the support body.
+    // Snapmaker: Support transition layer parameters
     ((ConfigOptionInt,                tree_support_transition_layers))
     ((ConfigOptionBool,               support_transition_perimeter))
     ((ConfigOptionFloats,             support_transition_speed))
@@ -1621,7 +1654,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloat, ironing_spacing))
     ((ConfigOptionFloat, ironing_inset))
     ((ConfigOptionFloat, ironing_direction))
-    ((ConfigOptionFloat, ironing_speed))
+    ((ConfigOptionFloats, ironing_speed))
     ((ConfigOptionFloat, ironing_angle))
     ((ConfigOptionBool, ironing_angle_fixed))
     // Filament Ironing
@@ -2009,15 +2042,9 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionEnum<WipeTowerType>, wipe_tower_type))
     ((ConfigOptionBool,                purge_in_prime_tower))
     ((ConfigOptionBool,                enable_filament_ramming))
-<<<<<<< snaporca-int
     ((ConfigOptionFloat,                ramming_line_width_ratio))
     ((ConfigOptionBool,                enable_change_pressure_when_wiping))
     ((ConfigOptionFloat,                ramming_pressure_advance_value))
-=======
-    ((ConfigOptionFloat,               ramming_line_width_ratio))
-    ((ConfigOptionBool,                enable_change_pressure_when_wiping))
-    ((ConfigOptionFloat,               ramming_pressure_advance_value))
->>>>>>> lixnix/main
     ((ConfigOptionBool,                tool_change_on_wipe_tower))
     ((ConfigOptionBool,                wait_for_temp_on_wipe_tower))
     ((ConfigOptionBool,                support_multi_bed_types))
@@ -2154,10 +2181,6 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
     ((ConfigOptionBools,              reduce_fan_stop_start_freq))
     ((ConfigOptionBools,              dont_slow_down_outer_wall))
     ((ConfigOptionFloats,             fan_cooling_layer_time))
-<<<<<<< snaporca-int
-=======
-    // Snapmaker mixed-filament colour metadata (filament_colour itself moved to the filament block above).
->>>>>>> lixnix/main
     ((ConfigOptionStrings,            filament_multi_colors))
     ((ConfigOptionInts,               filament_colour_mode))
     ((ConfigOptionBools,              activate_air_filtration))
@@ -2272,10 +2295,6 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
     ((ConfigOptionInt,                wipe_tower_filament))
     ((ConfigOptionFloats,             wiping_volumes_extruders))
     ((ConfigOptionInts,       idle_temperature))
-<<<<<<< snaporca-int
-=======
-    // filament_tower_ironing_area lives in GCodeConfig (both sides added it; single declaration kept).
->>>>>>> lixnix/main
 
     // BBS: wipe tower is only used for priming
     ((ConfigOptionFloat,              prime_volume))
@@ -2310,7 +2329,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
     ((ConfigOptionBool,                exclude_object))
     ((ConfigOptionFloats,             grab_length))
     ((ConfigOptionBool,                gcode_comments))
-    ((ConfigOptionInt,                 slow_down_layers))
+    ((ConfigOptionInts,                slow_down_layers))
     ((ConfigOptionInts,                support_material_interface_fan_speed))
     ((ConfigOptionInts,                internal_bridge_fan_speed)) // ORCA: Add support for separate internal bridge fan speed control
     ((ConfigOptionInts,                ironing_fan_speed))
