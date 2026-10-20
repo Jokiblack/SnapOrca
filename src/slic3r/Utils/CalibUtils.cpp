@@ -1180,7 +1180,7 @@ void CalibUtils::calib_temptue(const CalibInfo &calib_info, wxString &error_mess
         return;
 
     Model                     model;
-    std::string               input_file = Slic3r::resources_dir() + "/calib/temperature_tower/temperature_tower.stl";
+    std::string               input_file = Slic3r::resources_dir() + "/calib/temperature_tower/temperature_tower.drc";
     read_model_from_file(input_file, model);
 
     // cut upper
