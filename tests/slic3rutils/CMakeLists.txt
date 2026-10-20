@@ -18,6 +18,7 @@ add_executable(${_TEST_NAME}_tests
     test_web_media_controller.cpp
     test_scene_raycaster.cpp
     test_scene_benchmark.cpp
+    test_mesh_lod_pool.cpp # Snapmaker Orca: render LOD worker pool and cache
     test_lazy.cpp
     test_prebuild_queue.cpp
     test_staged_build.cpp

@@ -88,6 +88,7 @@
 #include "BackgroundSlicingProcess.hpp"
 #include "CameraUtils.hpp"
 #include "GLModel.hpp"
+#include "MeshLodCache.hpp"
 #include "GLShader.hpp"
 #include "libslic3r/ConnectedBodies.hpp"
 #include "GUI.hpp"
@@ -1849,6 +1850,20 @@ const float GLCanvas3D::get_scale() const
 #endif
 }
 
+float GLCanvas3D::get_lod_pixel_scale() const
+{
+#if ENABLE_RETINA_GL
+    // macOS and GTK3: the viewport is the window size times this factor, see get_canvas_size().
+    return get_scale();
+#else
+    // Windows: the viewport is in device pixels and get_scale() is 1. The content scale factor is
+    // what the ImGui overlays of the canvas are scaled by there, so an object changes its level at
+    // the same apparent size on a 100 % and on a 200 % display.
+    const double factor = m_canvas != nullptr ? m_canvas->GetContentScaleFactor() : 1.;
+    return factor > 0. ? float(factor) : 1.f;
+#endif
+}
+
 void GLCanvas3D::reset_volumes()
 {
     if (!m_initialized)
@@ -2833,8 +2848,67 @@ void GLCanvas3D::_render_frame(bool scene_dirty, bool only_init)
 
 // Everything drawn into the 3D scene, from the clear to the post processing passes, ending in the
 // capture an overlay-only frame reuses.
+void GLCanvas3D::set_type(ECanvasType type)
+{
+    m_canvas_type = type;
+    // Snapmaker Orca: the plater and the assemble view draw reduced models. The volumes of the
+    // preview canvas carry a z range (GLVolume::set_range()), which the render LOD never draws.
+    m_volumes.set_lod_enabled(type != ECanvasType::CanvasPreview);
+}
+
+bool GLCanvas3D::_is_lod_allowed() const
+{
+    const MeshLodCache* cache = MeshLodCache::instance();
+    if (cache == nullptr || !cache->enabled())
+        return false;
+    // The wireframe overlay draws the triangles themselves.
+    if (wxGetApp().plater() != nullptr && wxGetApp().plater()->is_show_wireframe())
+        return false;
+    // Layer height editing draws the object through GLVolume::render() with its own shader.
+    if (is_layers_editing_enabled())
+        return false;
+    // A section view shows the inside of the mesh; the cut is computed from the full mesh.
+    if (m_use_clipping_planes)
+        return false;
+    if (const std::optional<ClippingPlane> clipping_plane = m_gizmos.get_clipping_plane(); clipping_plane.has_value() && clipping_plane->is_active())
+        return false;
+    // These gizmos draw surface features, cross sections or previews computed from the full mesh
+    // for volumes that are not necessarily selected. The target of every other gizmo is selected
+    // and therefore at full detail, the rest of the plate keeps its level.
+    switch (m_gizmos.get_current_type()) {
+    case GLGizmosManager::Simplify:
+    case GLGizmosManager::Cut:
+    case GLGizmosManager::MeshBoolean:
+    case GLGizmosManager::Measure:
+    case GLGizmosManager::Assembly:
+        return false;
+    default:
+        break;
+    }
+#ifdef SLIC3R_CAD
+    // Design tab: the sketch is drawn on faces of the full mesh.
+    if (m_design_sketch_tool != nullptr && m_design_sketch_tool->has_display())
+        return false;
+#endif
+    return true;
+}
+
+double GLCanvas3D::_lod_pin_above_z() const
+{
+    // The option _render_objects() hands to the shader, which darkens what reaches above the
+    // height per fragment from the world position; with one value or none the shader flag is off.
+    const auto* heights = wxGetApp().preset_bundle->printers.get_edited_preset().config.option<ConfigOptionFloatsNullable>("extruder_printable_height");
+    // Nil entries of the nullable option are skipped; all nil means no pin.
+    return heights != nullptr ? lod_pin_height(heights->values) : DBL_MAX;
+}
+
 void GLCanvas3D::_render_scene(const Camera& camera, const Size& cnv_size)
 {
+    // Snapmaker Orca: render LOD, the levels of this scene pass, decided before the shadow pass
+    // and the colour passes draw anything so that both use the same model of every volume.
+    if (m_canvas_type == ECanvasType::CanvasView3D || m_canvas_type == ECanvasType::CanvasAssembleView)
+        m_volumes.update_lod(camera, _is_lod_allowed(), get_lod_pixel_scale(), _lod_pin_above_z());
+
     // Recorded by PartPlate::render_icons() below, when it runs.
     wxGetApp().plater()->get_partplate_list().clear_hover_tooltip();
     glsafe(::glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT));
@@ -3856,6 +3930,14 @@ void GLCanvas3D::load_shells(const Print& print, bool force_previewing)
         m_gcode_viewer.load_shells(print, m_initialized, force_previewing);
         m_gcode_viewer.update_shells_color_by_extruder(m_config);
     }
+}
+
+void GLCanvas3D::on_render_lod_changed()
+{
+    // Buffers can only be freed under a current context; without one the shells keep theirs until
+    // the next load_shells() clears them.
+    m_gcode_viewer.on_render_lod_changed(m_initialized && _set_current());
+    set_as_dirty();
 }
 
 void GLCanvas3D::set_shell_transparence(float alpha){
@@ -8598,6 +8680,12 @@ bool GLCanvas3D::_is_frame_skipping_enabled() const
     return wxGetApp().app_config != nullptr && wxGetApp().app_config->get_bool(SETTING_OPENGL_SKIP_IDENTICAL_FRAMES);
 }
 
+const std::array<unsigned, 3>& GLCanvas3D::_lod_stats() const
+{
+    // The preview draws reduced models for its shells only, its own volumes never opt in.
+    return m_canvas_type == ECanvasType::CanvasPreview ? m_gcode_viewer.shells_lod_stats() : m_volumes.lod_stats();
+}
+
 void GLCanvas3D::_render_fps_overlay(int fps) const
 {
     const bool show_fps = _is_fps_overlay_enabled() && fps >= 0;
@@ -8637,6 +8725,12 @@ void GLCanvas3D::_render_fps_overlay(int fps) const
         ImGui::SameLine();
         // The subset of those frames that redrew the scene rather than reusing the cached one.
         imgui.text(std::string("3D: ") + std::to_string(m_render_stats.get_scene_fps()));
+        // Snapmaker Orca: render LOD, the volumes at full / middle / small detail in the last scene pass.
+        if (const MeshLodCache* lod_cache = MeshLodCache::instance(); lod_cache != nullptr && lod_cache->enabled()) {
+            const std::array<unsigned, 3>& lod = _lod_stats();
+            ImGui::SameLine();
+            imgui.text(std::string("LOD: ") + std::to_string(lod[0]) + "/" + std::to_string(lod[1]) + "/" + std::to_string(lod[2]));
+        }
     }
     if (show_timings && ImGui::BeginTable("frame_sections", 3, ImGuiTableFlags_SizingFixedFit)) {
         ImGui::TableSetupColumn("ms");
@@ -8779,6 +8873,12 @@ SceneCache::Key GLCanvas3D::_scene_cache_key(const Camera& camera) const
     key.size = { { (unsigned int)viewport[2], (unsigned int)viewport[3] } };
     key.view_matrix = camera.get_view_matrix();
     key.projection_matrix = camera.get_projection_matrix();
+    // Snapmaker Orca: the render LOD. The update_lod() arguments can change without setting the
+    // scene dirty, and a replay skips update_lod(), so they are part of the key. LOD readiness is
+    // not: a finished job wakes the canvas once (MeshLodCache::request_canvas_wake()).
+    key.lod_allowed = _is_lod_allowed();
+    key.lod_pixel_scale = get_lod_pixel_scale();
+    key.lod_pin_above_z = _lod_pin_above_z();
     // Hover reaches the scene only through the sinking contour a hovered volume draws over
     // itself (GLVolumeCollection::render()), the plate icons (PartPlate::render_icons()) and the
     // open gizmo's grabbers.
@@ -9305,7 +9405,9 @@ void GLCanvas3D::_render_shadows(const Transform3d& view_matrix, const Transform
                             continue;
                         const Transform3d view_model = Transform3d(light_view) * volume->world_matrix();
                         shader->set_uniform("view_model_matrix", view_model);
-                        volume->model.render(shader);
+                        // Snapmaker Orca: the model the colour pass draws (GLVolume::m_lod_level), or the
+                        // self shadows would show the difference between the two meshes as acne.
+                        volume->shadow_model().render(shader);
                     }
                     shader->stop_using();
                 }

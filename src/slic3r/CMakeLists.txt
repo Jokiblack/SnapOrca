@@ -412,6 +412,11 @@ set(SLIC3R_GUI_SOURCES
     GUI/WebRtcMediaController.hpp
     GUI/MeshUtils.cpp
     GUI/MeshUtils.hpp
+    # Snapmaker Orca: reduced render models of the plater meshes (render LOD, LixNix fork)
+    GUI/MeshLodCache.cpp
+    GUI/MeshLodCache.hpp
+    GUI/MeshLodPool.cpp
+    GUI/MeshLodPool.hpp
     GUI/ModelMall.cpp
     GUI/ModelMall.hpp
     GUI/MonitorBasePanel.cpp

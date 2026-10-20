@@ -120,6 +120,7 @@ class ShortcutRegistry;
 enum class ShortcutContext : uint8_t;
 enum class PreferencesTab;
 class MainFrame;
+class MeshLodCache;
 class Sidebar;
 class ObjectSettings;
 class ObjectList;
@@ -359,6 +360,10 @@ private:
 
     std::unique_ptr<Downloader> m_downloader;
     DownloadManager* m_download_manager;
+    // Snapmaker Orca: the render LOD models and their worker pool. Created before the main frame,
+    // shut down (workers joined) in shutdown() and again in the destructor; whatever still holds a
+    // MeshLod after that stays valid, see MeshLodCache.hpp.
+    std::shared_ptr<MeshLodCache> m_mesh_lod_cache;
 
     //BBS
     std::atomic<bool> m_is_closing {false};

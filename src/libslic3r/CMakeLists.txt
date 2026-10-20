@@ -450,6 +450,9 @@ set(lisbslic3r_sources
     ProjectTask.hpp
     QuadricEdgeCollapse.cpp
     QuadricEdgeCollapse.hpp
+    # Snapmaker Orca: level of detail of the 3D scene, the GUI-less part (LixNix fork)
+    MeshLod.cpp
+    MeshLod.hpp
     Semver.cpp
     Shape/TextShape.cpp
     Shape/TextShape.hpp

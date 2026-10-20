@@ -54,6 +54,7 @@ add_executable(${_TEST_NAME}_tests
     test_step.cpp
     test_stl.cpp
     test_triangle_selector.cpp
+    test_mesh_lod.cpp # Snapmaker Orca: level rule and reduced meshes of the render LOD
     test_used_filaments.cpp # Snapmaker Orca: the filaments a plate counts before slicing
     test_meshboolean.cpp
     test_mesh_repair.cpp
