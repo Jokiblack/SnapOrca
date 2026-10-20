@@ -514,11 +514,6 @@ static bool read_cache_up_to_presets(const std::string& path, const std::string&
             return false;
         CacheDictionary dict;
         dict.load(ar);
-<<<<<<< snaporca-int
-        ar(vendors);
-        read_rest(ar, dict);
-        if (vendors.find(expected_vendor_name) == vendors.end())
-=======
         if (! dict.covers(print_config_def)) {
             // Written by a build that lacked options of this one: the vendor's values
             // of those options are not in it. A miss, so the vendor is parsed from its
@@ -527,13 +522,9 @@ static bool read_cache_up_to_presets(const std::string& path, const std::string&
                                     << " was written by a build without every option of this one; not served";
             return false;
         }
-        ar(data.vendors);
-        load_entries(ar, data.process_entries, dict);
-        load_entries(ar, data.filament_entries, dict);
-        load_entries(ar, data.machine_entries, dict);
-        ar(data.parse_errors);
-        if (data.vendors.find(expected_vendor_name) == data.vendors.end())
->>>>>>> lixnix/main
+        ar(vendors);
+        read_rest(ar, dict);
+        if (vendors.find(expected_vendor_name) == vendors.end())
             throw std::runtime_error("vendor cache does not carry its own vendor profile");
         return true;
     } catch (const std::exception& e) {

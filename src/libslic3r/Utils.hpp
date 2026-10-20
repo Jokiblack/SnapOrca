@@ -810,27 +810,9 @@ inline std::string filter_characters(const std::string& str, const std::string& 
     return filteredStr;
 }
 
-<<<<<<< snaporca-int
 bool copy_directory_recursively(const boost::filesystem::path &source, const boost::filesystem::path &target, std::function<bool(const std::string)> filter = nullptr, bool merge_mode = false);
 
 // Copy source tree to target + ".new", run validate_staging, then rename into place (target + ".old" rollback on failure).
-bool atomic_replace_directory(
-    const boost::filesystem::path &source,
-    const boost::filesystem::path &target,
-    std::function<bool(const std::string)> filter,
-    std::function<bool(const boost::filesystem::path &staging)> validate_staging);
-=======
-// SM Orca: merged signature - the fork's non-throwing bool result plus Orca's merge_mode.
-// Returns false (and logs) on any failure instead of throwing; when merge_mode is true the
-// target directory is not wiped first, so existing files are preserved.
-bool copy_directory_recursively(const boost::filesystem::path& source,
-                                const boost::filesystem::path& target,
-                                std::function<bool(const std::string)> filter = nullptr,
-                                bool merge_mode                               = false);
->>>>>>> lixnix/main
-
-// SM Orca: Copy source tree to target + ".new", run validate_staging, then rename into place
-// (target + ".old" rollback on failure). Used by the Snapmaker OTA vendor update path.
 bool atomic_replace_directory(
     const boost::filesystem::path &source,
     const boost::filesystem::path &target,

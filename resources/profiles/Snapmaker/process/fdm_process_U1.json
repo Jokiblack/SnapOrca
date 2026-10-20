@@ -4,11 +4,6 @@
     "from": "system",
     "bottom_color_penetration_layers": "3",
     "top_color_penetration_layers": "4",
-<<<<<<< snaporca-int
-=======
-    "max_bridge_length": "0",
-    "raft_first_layer_expansion": "-1",
->>>>>>> lixnix/main
     "instantiation": "false",
     "adaptive_layer_height": "0",
     "reduce_crossing_wall": "0",

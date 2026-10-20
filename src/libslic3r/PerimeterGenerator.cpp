@@ -491,18 +491,13 @@ static ExtrusionEntityCollection traverse_extrusions(const PerimeterGenerator& p
             // get overhang paths by checking what parts of this loop fall
             // outside the grown lower slices (thus where the distance between
             // the loop centerline and original lower slices is >= half nozzle diameter
-<<<<<<< snaporca-int
-            extrusion_paths_append(paths, clip_extrusion(extrusion_path, lower_slices_paths, ctDifference), erOverhangPerimeter,
-                perimeter_generator.overhang_flow);
-=======
             // External / fully overhanging extrusions (no supported path at all) dispatch to the outer
             // wall filament (GCode::process_layer()); their overhangs use that filament's flow. Known
             // corner: a fully overhanging fragment of the ExtrusionMultiPath split below keeps the inner
             // flow, but widths come from the Arachne junctions either way; only thick-bridge height differs.
             const bool overhang_external = is_external || paths.empty();
-            extrusion_paths_append(paths, clip_extrusion(extrusion_path, lower_slices_paths, ClipperLib_Z::ctDifference), erOverhangPerimeter,
+            extrusion_paths_append(paths, clip_extrusion(extrusion_path, lower_slices_paths, ctDifference), erOverhangPerimeter,
                 overhang_external ? perimeter_generator.ext_overhang_flow : perimeter_generator.overhang_flow);
->>>>>>> lixnix/main
 
             // Reapply the nearest point search for starting point.
             // We allow polyline reversal because Clipper may have randomly reversed polylines during clipping.
@@ -574,6 +569,7 @@ static ExtrusionEntityCollection traverse_extrusions(const PerimeterGenerator& p
 
             if (extrusion->is_closed) {
                 ExtrusionLoop extrusion_loop(std::move(paths), pg_extrusion.is_contour ? elrDefault : elrHole);
+                extrusion_loop.inset_idx = extrusion->inset_idx;
                 if ((perimeter_generator.config->wall_direction == WallDirection::CounterClockwise) ==
                     (pg_extrusion.is_contour || pg_extrusions.size() == 2))
                     extrusion_loop.make_counter_clockwise();
@@ -586,10 +582,6 @@ static ExtrusionEntityCollection traverse_extrusions(const PerimeterGenerator& p
                     assert(std::prev(it)->polyline.last_point() == it->polyline.first_point());
                 }
                 assert(extrusion_loop.paths.front().first_point() == extrusion_loop.paths.back().last_point());
-<<<<<<< snaporca-int
-=======
-
->>>>>>> lixnix/main
                 extrusion_loop.inset_idx = inset_idx;
                 extrusion_coll.append(std::move(extrusion_loop));
                 // Orca: Reverse the order of paths for thin wall holes. We define thin wall hole as a hole with only one perimeter.
@@ -1873,8 +1865,8 @@ void PerimeterGenerator::process_classic()
                      this->object_config->brim_type == BrimType::btLeadingEdgeOnly) &&
                     this->object_config->brim_width.value > 0))
                 entities.reverse();
-            // Orca: sandwich mode. Apply after 1st layer.
-            else if ((this->config->wall_sequence == WallSequence::InnerOuterInner) && layer_id > 0){
+            // Orca: sandwich mode. Apply on all layers incl.
+            else if (this->config->wall_sequence == WallSequence::InnerOuterInner){
                 entities.reverse(); // reverse all entities - order them from external to internal
                 if(entities.entities.size()>2){ // 3 walls minimum needed to do inner outer inner ordering
                     int position = 0; // index to run the re-ordering for multiple external perimeters in a single island.
@@ -2068,7 +2060,11 @@ void PerimeterGenerator::process_classic()
         {
             const coord_t wall_band        = loop_number < 0 ? 0 : ext_perimeter_width + coord_t(loop_number) * perimeter_spacing - infill_peri_overlap;
             const coord_t half_infill_bead = std::max(this->sparse_infill_flow.scaled_width(), this->solid_infill_flow.scaled_width()) / 2;
-            if (loop_number >= 0 && wall_band < half_infill_bead)
+            // Only an infill nozzle other than the walls' changes the boundary.
+            const bool    infill_nozzle_differs =
+                std::abs(this->sparse_infill_flow.nozzle_diameter() - this->ext_perimeter_flow.nozzle_diameter()) > EPSILON ||
+                std::abs(this->solid_infill_flow.nozzle_diameter() - this->ext_perimeter_flow.nozzle_diameter()) > EPSILON;
+            if (loop_number >= 0 && wall_band < half_infill_bead && infill_nozzle_differs)
                 inset += half_infill_bead - wall_band;
         }
         // simplify infill contours according to resolution
@@ -2317,12 +2313,8 @@ void PerimeterGenerator::process_no_bridge(Surfaces& all_surfaces, coord_t perim
                                 unsupported_filtered = opening_ex(unsupported_filtered, bridge_anchor_offset); // remove anchor area from hole-side walls, it must remain unbridgeable
 
                                 // update 'last' only if we have a valid bridgeable area, otherwise we will lose the original unsupported area
-<<<<<<< snaporca-int
                                 // Snapmaker: when support is enabled, do not remove the bridge area from the model surface,
                                 // so that perimeters and overhang walls can still be generated for the supported overhang.
-=======
-                                // With support enabled the model surface is kept, so perimeters and overhang walls still print over the support.
->>>>>>> lixnix/main
                                 if (!unsupported_filtered.empty() && !this->object_config->enable_support.value)
                                     last = remaining;
                                 // TODO: Fix the case with thin outer walls around the bridge (1~2 walls) where classic wall
@@ -2354,8 +2346,10 @@ void PerimeterGenerator::process_no_bridge(Surfaces& all_surfaces, coord_t perim
                                 }
                             }
                         } else {
-                            // Support is enabled: the model surface stays intact for the perimeters and overhang
-                            // walls; the bridge fill area is shrunk by the perimeter zone so it does not overlap them.
+                            // Support is enabled: keep the model surface intact so that perimeters
+                            // and overhang walls are generated normally. Shrink the bridge fill area
+                            // inward by the perimeter zone width before appending, to avoid overlap
+                            // with the perimeter walls.
                             int wall_loops = std::max(1, this->config->wall_loops.value);
                             coord_t perimeter_zone = ext_perimeter_width / 2
                                 + perimeter_spacing * (wall_loops - 1)
@@ -2902,7 +2896,7 @@ void PerimeterGenerator::process_arachne()
         }
 
        // printf("New Layer: Layer ID %d\n",layer_id); //debug - new layer
-        if (this->config->wall_sequence == WallSequence::InnerOuterInner && layer_id > 0) { // only enable inner outer inner algorithm after first layer
+        if (this->config->wall_sequence == WallSequence::InnerOuterInner) {
             if (ordered_extrusions.size() > 2) { // 3 walls minimum needed to do inner outer inner ordering
                 int position = 0; // index to run the re-ordering for multiple external perimeters in a single island.
                 int arr_i, arr_j = 0;    // indexes to run through the walls in the for loops
@@ -3042,7 +3036,11 @@ void PerimeterGenerator::process_arachne()
         {
             const coord_t wall_band        = loop_number < 0 ? 0 : ext_perimeter_width + coord_t(loop_number) * perimeter_spacing;
             const coord_t half_infill_bead = std::max(this->sparse_infill_flow.scaled_width(), this->solid_infill_flow.scaled_width()) / 2;
-            if (loop_number >= 0 && wall_band - half_infill_bead < inset)
+            // Only an infill nozzle other than the walls' changes the boundary.
+            const bool    infill_nozzle_differs =
+                std::abs(this->sparse_infill_flow.nozzle_diameter() - this->ext_perimeter_flow.nozzle_diameter()) > EPSILON ||
+                std::abs(this->solid_infill_flow.nozzle_diameter() - this->ext_perimeter_flow.nozzle_diameter()) > EPSILON;
+            if (loop_number >= 0 && wall_band - half_infill_bead < inset && infill_nozzle_differs)
                 inset = wall_band - half_infill_bead;
         }
         

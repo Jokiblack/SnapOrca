@@ -8,7 +8,6 @@
 #include "Preset.hpp"
 
 #include <algorithm>
-#include <cmath>
 #include <assert.h>
 #include <cmath>
 #include <boost/algorithm/string/join.hpp>
@@ -59,7 +58,6 @@ using namespace nlohmann;
 //FIXME for GCodeFlavor and gcfMarlin (for forward-compatibility conversion)
 // This is not nice, likely it would be better to pass the ConfigSubstitutionContext to handle_legacy().
 #include "PrintConfig.hpp"
-#include "SnapmakerFlowCompat.hpp"
 
 namespace Slic3r {
 
@@ -483,6 +481,26 @@ std::ostream& ConfigDef::print_cli_help(std::ostream& out, bool show_defaults, s
     return out;
 }
 
+namespace {
+
+bool parse_indexed_option_key(const std::string &key, std::string &base_key, size_t &index)
+{
+    const size_t hash = key.rfind('#');
+    if (hash == std::string::npos || hash == 0 || hash + 1 == key.size())
+        return false;
+    size_t parsed = 0;
+    for (size_t i = hash + 1; i < key.size(); ++i) {
+        if (key[i] < '0' || key[i] > '9')
+            return false;
+        parsed = parsed * 10 + size_t(key[i] - '0');
+    }
+    base_key = key.substr(0, hash);
+    index = parsed;
+    return true;
+}
+
+} // namespace
+
 void ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys &keys, bool ignore_nonexistent)
 {
     // loop through options and apply them
@@ -492,6 +510,20 @@ void ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys 
         // an exception is thrown if not ignore_nonexistent.
         ConfigOption *my_opt = this->option(opt_key, true);
         if (my_opt == nullptr) {
+            std::string base_key;
+            size_t index = 0;
+            if (parse_indexed_option_key(opt_key, base_key, index)) {
+                auto *my_vector = dynamic_cast<ConfigOptionVectorBase *>(this->option(base_key, true));
+                const auto *other_vector = dynamic_cast<const ConfigOptionVectorBase *>(other.option(base_key));
+                if (my_vector != nullptr && other_vector != nullptr && index < other_vector->size()) {
+                    if (my_vector->empty())
+                        my_vector->resize(index + 1, other_vector);
+                    else if (index >= my_vector->size())
+                        my_vector->resize(index + 1);
+                    my_vector->set_at(other_vector, index, index);
+                    continue;
+                }
+            }
             // opt_key does not exist in this ConfigBase and it cannot be created, because it is not defined by this->def().
             // This is only possible if other is of DynamicConfig type.
             if (auto n = opt_key.find('#'); n != std::string::npos) {
@@ -515,11 +547,11 @@ void ConfigBase::apply_only(const ConfigBase &other, const t_config_option_keys 
                 continue;
             throw UnknownOptionException(opt_key);
         }
-		const ConfigOption *other_opt = other.option(opt_key);
-		if (other_opt == nullptr) {
+        const ConfigOption *other_opt = other.option(opt_key);
+        if (other_opt == nullptr) {
             // The key was not found in the source config, therefore it will not be initialized!
 //			printf("Not found, therefore not initialized: %s\n", opt_key.c_str());
-		} else
+        } else
             my_opt->set(other_opt);
     }
 }
@@ -825,6 +857,12 @@ double ConfigBase::get_abs_value(const t_config_option_key &opt_key) const
       return static_cast<const ConfigOptionInt *>(raw_opt)->value;
     if (raw_opt->type() == coBool)
       return static_cast<const ConfigOptionBool *>(raw_opt)->value ? 1 : 0;
+    // Snapmaker: flow-variant
+    if (raw_opt->type() == coFloats) {
+        const auto *floats = static_cast<const ConfigOptionFloats*>(raw_opt);
+        if (!floats->values.empty())
+            return floats->values.front();
+    }
     // Snapmaker Orca: the line width keys are columns per tool head; without a column the value is
     // the first column, the GUI's shared value (a ratio_over chain ending in a line width lands here).
     if (raw_opt->type() == coFloatsOrPercents)
@@ -1120,57 +1158,7 @@ int ConfigBase::load_from_json(const std::string &file, ConfigSubstitutionContex
                         }
                     }
 
-                    // SM Orca: a scalar option that was written out as a per-extruder json
-                    // array collapses back to a single value when every entry is identical
-                    // (or there is only one). Without this, set_deserialize() would choke on
-                    // the joined string.
-                    bool collapsed_to_scalar = false;
-                    if (optdef != nullptr && optdef->is_scalar() && optdef->type != coPoint && optdef->type != coPoint3 &&
-                        !it.value().empty()) {
-                        std::vector<std::string> array_values;
-                        array_values.reserve(it.value().size());
-                        bool all_strings = true;
-                        for (auto iter = it.value().begin(); iter != it.value().end(); ++iter) {
-                            if (!iter.value().is_string()) {
-                                all_strings = false;
-                                break;
-                            }
-                            array_values.emplace_back(iter.value());
-                        }
-                        if (all_strings) {
-                            const std::string &first_value = array_values.front();
-                            if (array_values.size() == 1) {
-                                value_str           = first_value;
-                                collapsed_to_scalar = true;
-                            } else if (std::all_of(array_values.begin() + 1, array_values.end(),
-                                                   [&first_value](const std::string &value) { return value == first_value; })) {
-                                value_str           = first_value;
-                                collapsed_to_scalar = true;
-                                BOOST_LOG_TRIVIAL(warning)
-                                    << __FUNCTION__ << ": collapsing redundant json array for scalar option " << it.key() << " in " << file;
-                            } else if (is_snapmaker_flow_scalar_key(opt_key)) {
-                                // Snapmaker Orca 2.4 stores these options with one value per flow
-                                // type. The first value is the Standard one; the values that are
-                                // given up are reported with the other substitutions of the file.
-                                value_str           = first_value;
-                                collapsed_to_scalar = true;
-                                if (substitution_context.rule == ForwardCompatibilitySubstitutionRule::Enable ||
-                                    substitution_context.rule == ForwardCompatibilitySubstitutionRule::EnableSystemSilent) {
-                                    std::unique_ptr<ConfigOption> kept(optdef->create_empty_option());
-                                    if (kept->deserialize(first_value)) {
-                                        ConfigSubstitution substitution;
-                                        substitution.opt_def   = optdef;
-                                        substitution.old_value = boost::algorithm::join(array_values, ",");
-                                        substitution.new_value = ConfigOptionUniquePtr(kept.release());
-                                        substitution_context.substitutions.emplace_back(std::move(substitution));
-                                    }
-                                }
-                            }
-                        }
-                    }
-
                     // BBS: we only support 2 depth array
-<<<<<<< snaporca-int
                     // SM Orca (mixed filament): a scalar option stored as a JSON array whose
                     // values are all identical is collapsed to that single value.
                     bool collapsed_scalar = false;
@@ -1193,14 +1181,6 @@ int ConfigBase::load_from_json(const std::string &file, ConfigSubstitutionContex
                     if (!valid) {
                         BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": parse " << file << " error, invalid json array for " << it.key();
                         break;
-=======
-                    if (!collapsed_to_scalar) {
-                        valid = parse_str_arr(it, single_sep, array_sep,escape_string_type, value_str);
-                        if (!valid) {
-                            BOOST_LOG_TRIVIAL(error) << __FUNCTION__ << ": parse " << file << " error, invalid json array for " << it.key();
-                            break;
-                        }
->>>>>>> lixnix/main
                     }
                     if (valid)
                         this->set_deserialize(opt_key, value_str, substitution_context);
