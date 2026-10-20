@@ -16,7 +16,8 @@ permissions:
 
 jobs:
   request-label:
-    if: github.event_name == 'pull_request_target' && github.event.pull_request.author_association != 'COLLABORATOR' && github.event.pull_request.author_association != 'OWNER' && github.event.pull_request.author_association != 'MEMBER'
+    # Upstream-only (issue/release bots of OrcaSlicer/OrcaSlicer); skipped in forks.
+    if: github.repository == 'OrcaSlicer/OrcaSlicer' && github.event_name == 'pull_request_target' && github.event.pull_request.author_association != 'COLLABORATOR' && github.event.pull_request.author_association != 'OWNER' && github.event.pull_request.author_association != 'MEMBER'
     permissions:
       contents: read
       pull-requests: write
@@ -89,7 +90,8 @@ jobs:
             }
 
   localization-pr:
-    if: github.event_name == 'pull_request_target'
+    # Upstream-only (issue/release bots of OrcaSlicer/OrcaSlicer); skipped in forks.
+    if: github.repository == 'OrcaSlicer/OrcaSlicer' && github.event_name == 'pull_request_target'
     permissions:
       contents: read
       pull-requests: write
@@ -175,7 +177,8 @@ jobs:
             }
 
   apply-label:
-    if: github.event_name == 'issue_comment'
+    # Upstream-only (issue/release bots of OrcaSlicer/OrcaSlicer); skipped in forks.
+    if: github.repository == 'OrcaSlicer/OrcaSlicer' && github.event_name == 'issue_comment'
     permissions:
       contents: read
       pull-requests: write

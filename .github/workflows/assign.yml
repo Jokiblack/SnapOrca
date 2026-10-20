@@ -9,7 +9,8 @@ on:
 
 jobs:
   assign:
-    if: github.ref == 'refs/heads/main'
+    # Upstream-only (issue/release bots of OrcaSlicer/OrcaSlicer); skipped in forks.
+    if: github.repository == 'OrcaSlicer/OrcaSlicer' && github.ref == 'refs/heads/main'
     permissions:
       issues: write
     runs-on: ubuntu-latest

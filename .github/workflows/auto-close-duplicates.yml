@@ -7,6 +7,8 @@ on:
 
 jobs:
   auto-close-duplicates:
+    # Upstream-only (issue/release bots of OrcaSlicer/OrcaSlicer); skipped in forks.
+    if: github.repository == 'OrcaSlicer/OrcaSlicer'
     runs-on: ubuntu-latest
     timeout-minutes: 10
     permissions:

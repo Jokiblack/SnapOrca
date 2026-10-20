@@ -17,6 +17,8 @@ permissions: {}
 jobs:
   shellcheck:
     name: Shellcheck
+    # Don't run the daily check on forks; pushes and pull requests still run it.
+    if: github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer'
     runs-on: ubuntu-latest
     steps:
       - name: Cache shellcheck download
