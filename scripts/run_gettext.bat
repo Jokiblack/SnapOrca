@@ -10,12 +10,12 @@ for %%a in (%*) do (
 )
 
 set "list_file=./localization/i18n/list.txt"
-set "pot_file=./localization/i18n/OrcaSlicer.pot"
+set "pot_file=./localization/i18n/Snapmaker_Orca.pot"
 set "filtered_list=%TEMP%\orca_gettext_filtered_%RANDOM%_%RANDOM%.txt"
 set "missing_list=%TEMP%\orca_gettext_missing_%RANDOM%_%RANDOM%.txt"
 set "generated_root=%TEMP%\orca_gettext_generated_%RANDOM%_%RANDOM%"
 set "generated_i18n=%generated_root%\i18n"
-set "generated_pot=%generated_i18n%\OrcaSlicer.pot"
+set "generated_pot=%generated_i18n%\Snapmaker_Orca.pot"
 set "has_sources=0"
 set "script_exit_code=0"
 
@@ -120,6 +120,7 @@ exit /b %errorlevel%
     set "file=%~1"
     set "name=%~n1"
     set "lang=%name:OrcaSlicer_=%"
+    set "lang=!lang:Snapmaker_Orca_=!"
     if %FULL_MODE%==1 if exist "%pot_file%" (
         set "merged_file=%TEMP%\orca_gettext_merged_%RANDOM%_%RANDOM%.po"
         .\tools\msgmerge.exe -N --no-wrap -o "!merged_file!" "%file%" "%pot_file%"
