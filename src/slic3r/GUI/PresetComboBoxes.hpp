@@ -237,7 +237,7 @@ public:
     void update_badge_according_flag();
     void set_sync_badge(bool show);
 
-    EncodedFilamentColor get_cur_color_info();
+    FilamentColor get_cur_color_info();
     void show_default_color_picker();
     void sync_colour_config(const std::vector<std::string> &clrs, bool is_gradient);
     void sys_color_changed() override;
@@ -313,46 +313,6 @@ private:
     std::string CurrentFilamentPresetName() const;
     std::string CurrentFilamentId() const;
     bool    m_sync_badge{false};
-    
-    // 按钮显示标志（仅用于打印机类型）
-    bool m_show_connection_button { false };
-    bool m_show_machine_connecting_button { false };
-    bool m_show_edit_button { false };
-    
-    // 按钮图标
-    ScalableBitmap m_connection_icon;
-    ScalableBitmap m_machine_connecting_icon;
-    ScalableBitmap m_edit_icon;
-    
-    // 鼠标悬停状态
-    enum class HoverState {
-        NONE,
-        CONNECTION_BTN,
-        MACHINE_CONNECTING_BTN,
-        EDIT_BTN,
-        DROPDOWN
-    };
-    HoverState m_hover_state { HoverState::NONE };
-    
-    // 事件处理函数
-    std::function<void()> m_connection_btn_handler;
-    std::function<void()> m_machine_connecting_btn_handler;
-    std::function<void()> m_edit_btn_handler;
-    
-    // Tooltip相关
-    wxString m_connection_tooltip;
-    wxString m_machine_connecting_tooltip;
-    
-    // 计算各个区域的矩形
-    wxRect get_connection_btn_rect() const;
-    wxRect get_machine_connecting_btn_rect() const;
-    wxRect get_edit_btn_rect() const;
-    wxRect get_dropdown_rect() const;
-
-    void SelectLegacyFilamentColor();
-    void ApplyFilamentColor(const FilamentColor& colorData);
-    std::string CurrentFilamentPresetName() const;
-    std::string CurrentFilamentId() const;
 };
 
 

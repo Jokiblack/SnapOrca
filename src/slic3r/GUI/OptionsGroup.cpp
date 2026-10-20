@@ -104,7 +104,9 @@ const t_field& OptionsGroup::build_field(const t_config_option_key& id, const Co
 				break;
             case coNone:   break;
             default:
-				throw Slic3r::LogicError("This control doesn't exist till now"); break;
+				wxLogError("Unsupported config option type %d for field '%s'; falling back to a text control.",
+                               static_cast<int>(opt.type), wxString::FromUTF8(id));
+                break;
         }
     }
     // Grab a reference to fields for convenience
@@ -465,11 +467,6 @@ void OptionsGroup::activate_line(Line& line)
         line.get_extra_widgets().size() == 0) {
         const auto& option = option_set.front();
         const auto& field  = build_field(option);
-        // Label widget kept on the field so cross-field validation can recolor it
-        if (label != nullptr)
-            field->set_label_window(label);
-        // Validation highlight derived from the group's config, since pages build lazily and get rebuilt
-        field->init_invalid_highlight_from_config(get_config(), option.opt_id);
 
         if (!custom_ctrl) {
             int flags = option.opt.full_width ? wxEXPAND : wxALIGN_CENTER_VERTICAL;
@@ -490,7 +487,6 @@ void OptionsGroup::activate_line(Line& line)
         ConfigOptionDef option = opt.opt;
         wxSizer* sizer_tmp     = sizer;
         // add label if any
-        wxStaticText* opt_label = nullptr;
         if ((is_multioption_line || line.label.IsEmpty()) && !option.label.empty() && !custom_ctrl) {
             //!			To correct translation by context have to use wxGETTEXT_IN_CONTEXT macro from wxWidget 3.1.1
             wxString str_label = (option.label == L_CONTEXT("Top", "Layers") || option.label == L_CONTEXT("Bottom", "Layers")) ?
@@ -501,17 +497,11 @@ void OptionsGroup::activate_line(Line& line)
             label->SetBackgroundStyle(wxBG_STYLE_PAINT);
             label->SetFont(wxGetApp().normal_font());
             sizer_tmp->Add(label, 0, wxALIGN_CENTER_VERTICAL, 0);
-            opt_label = label;
         }
 
         // add field
         const Option& opt_ref = opt;
         auto& field           = build_field(opt_ref);
-        // Label widget kept on the field so cross-field validation can recolor it
-        if (opt_label != nullptr)
-            field->set_label_window(opt_label);
-        // Validation highlight derived from the group's config, since pages build lazily and get rebuilt
-        field->init_invalid_highlight_from_config(get_config(), opt_ref.opt_id);
         if (!custom_ctrl) {
             if (option_set.size() == 1 && option_set.front().opt.full_width) {
                 const auto v_sizer = new wxBoxSizer(wxVERTICAL);
@@ -717,6 +707,21 @@ Option ConfigOptionsGroup::get_option(const std::string& opt_key, int opt_index 
         wxGetApp().sidebar().settings_index().add_key(opt_id, static_cast<Preset::Type>(this->config_type()), title, this->config_category(), this->icon);
 
     return Option(*m_config->def()->get(opt_key), opt_id);
+}
+
+bool ConfigOptionsGroup::set_option_index(const std::string& opt_key, int opt_index)
+{
+    bool updated = false;
+    for (auto& option : m_opt_map)
+    {
+        if (option.second.first != opt_key)
+            continue;
+
+        option.second.second = opt_index;
+        updated = true;
+    }
+
+    return updated;
 }
 
 void ConfigOptionsGroup::on_change_OG(const t_config_option_key& opt_id, const boost::any& value)
@@ -1109,7 +1114,6 @@ boost::any ConfigOptionsGroup::config_value(const std::string& opt_key, int opt_
     if (opt_key == "bed_type")
         return boost::any((int) BedType::btPC);
 
-<<<<<<< snaporca-int
     if (m_config == nullptr || m_config->def() == nullptr)
         return boost::any();
 
@@ -1126,31 +1130,12 @@ boost::any ConfigOptionsGroup::config_value(const std::string& opt_key, int opt_
 //		return opt_index == -1 ? m_config->get(opt_key) : m_config->get_at(opt_key, opt_index);
 		return get_config_value(*m_config, opt_key, opt_index);
 	}
-=======
-    // ORCA: the per-extruder / mixed-nozzle groups can be built before their config exists.
-    if (m_config == nullptr || m_config->def() == nullptr)
-        return boost::any();
-
-    if (deserialize) {
-        // Want to edit a vector value(currently only multi - strings) in a single edit box.
-        // Aggregate the strings the old way.
-        // Currently used for the post_process config value only.
-        if (opt_index != -1)
-            throw Slic3r::OutOfRange("Can't deserialize option indexed value");
-        // 		return join(';', m_config->get(opt_key)});
-        return get_config_value(*m_config, opt_key);
-    } else {
-        //		return opt_index == -1 ? m_config->get(opt_key) : m_config->get_at(opt_key, opt_index);
-        return get_config_value(*m_config, opt_key, opt_index);
-    }
->>>>>>> lixnix/main
 }
 
 boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config, const std::string& opt_key, int opt_index /*= -1*/)
 {
     size_t idx = opt_index == -1 ? 0 : opt_index;
 
-<<<<<<< snaporca-int
 	boost::any ret;
 	wxString text_value = wxString("");
 	const ConfigOptionDef* opt = config.def()->get(opt_key);
@@ -1164,6 +1149,7 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
             {
             case coPercents:
             case coFloats:
+            case coFloatsOrPercents:
                 ret = _(L("N/A"));
                 break;
             case coBools:
@@ -1175,36 +1161,12 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
                 break;
             default:
                 break;
-=======
-    boost::any ret;
-    wxString text_value        = wxString("");
-    const ConfigOptionDef* opt = config.def()->get(opt_key);
-    // ORCA: option definitions can be missing while a group is rebuilt for another preset.
-    if (opt == nullptr)
-        return ret;
-
-    if (opt->nullable) {
-        // ORCA: a nullable option that is not present in this config falls back to a neutral value.
-        if (!config.has(opt_key) || config.option(opt_key) == nullptr) {
-            switch (opt->type) {
-            case coPercents:
-            case coFloats:
-            case coFloatsOrPercents: ret = _(L("N/A")); break;
-            case coBools: ret = static_cast<unsigned char>(false); break;
-            case coInts:
-            case coEnums: ret = 0; break;
-            default: break;
->>>>>>> lixnix/main
             }
             return ret;
         }
 
-<<<<<<< snaporca-int
         switch (opt->type)
         {
-=======
-        switch (opt->type) {
->>>>>>> lixnix/main
         case coPercents:
         case coFloats: {
             const auto *option = dynamic_cast<const ConfigOptionVectorBase *>(config.option(opt_key));
@@ -1239,7 +1201,6 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
         return ret;
     }
 
-<<<<<<< snaporca-int
 	switch (opt->type) {
 	case coFloatsOrPercents: {
         const ConfigOptionFloatsOrPercents *values = nullptr;
@@ -1247,22 +1208,6 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
             values = config.option<ConfigOptionFloatsOrPercents>(opt_key);
         else if (opt->default_value)
             values = dynamic_cast<const ConfigOptionFloatsOrPercents*>(opt->default_value.get());
-=======
-    switch (opt->type) {
-    case coFloatOrPercent: {
-        // ORCA: fall back to the option's default when the key is absent from this config.
-        if (!config.has(opt_key) || config.option(opt_key) == nullptr) {
-            const auto* defaults = opt->default_value ? dynamic_cast<const ConfigOptionFloatOrPercent*>(opt->default_value.get()) : nullptr;
-            if (defaults != nullptr) {
-                text_value = double_to_string(defaults->value);
-                if (defaults->percent)
-                    text_value += "%";
-                ret = text_value;
-            }
-            break;
-        }
-        const auto& value = *config.option<ConfigOptionFloatOrPercent>(opt_key);
->>>>>>> lixnix/main
 
         if (values != nullptr && !values->values.empty()) {
             const FloatOrPercent &value = values->values[std::min(idx, values->values.size() - 1)];
@@ -1273,7 +1218,6 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
         }
         break;
     }
-<<<<<<< snaporca-int
 	case coFloatOrPercent:{
         if (!config.has(opt_key) || config.option(opt_key) == nullptr) {
             const auto *defaults = opt->default_value ? dynamic_cast<const ConfigOptionFloatOrPercent*>(opt->default_value.get()) : nullptr;
@@ -1283,109 +1227,6 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
                     text_value += "%";
                 ret = text_value;
             }
-=======
-    case coFloatsOrPercents: {
-        // ORCA: fall back to the option's default when the key is absent from this config.
-        if (!config.has(opt_key) || config.option(opt_key) == nullptr) {
-            const auto* defaults = opt->default_value ? dynamic_cast<const ConfigOptionFloatsOrPercents*>(opt->default_value.get()) :
-                                                        nullptr;
-            if (defaults != nullptr && !defaults->values.empty()) {
-                const size_t safe_idx = std::min(idx, defaults->values.size() - 1);
-                text_value            = double_to_string(defaults->values[safe_idx].value);
-                if (defaults->values[safe_idx].percent)
-                    text_value += "%";
-                ret = text_value;
-            }
-            break;
-        }
-        const auto& value = config.option<ConfigOptionFloatsOrPercents>(opt_key)->get_at(idx);
-
-        text_value = double_to_string(value.value);
-        if (value.percent)
-            text_value += "%";
-
-        ret = text_value;
-        break;
-    }
-    case coPercent: {
-        double val = 0.0;
-        if (config.has(opt_key) && config.option(opt_key) != nullptr)
-            val = config.option<ConfigOptionPercent>(opt_key)->value;
-        else if (opt->default_value)
-            val = opt->default_value->getFloat();
-        ret = double_to_string(val); // += "%";
-    } break;
-    case coPercents:
-    case coFloats:
-    case coFloat: {
-        double val = 0.0;
-        if (config.has(opt_key) && config.option(opt_key) != nullptr) {
-            if (opt_key == "extruder_printable_height") {
-                const auto* nullable = dynamic_cast<const ConfigOptionFloatsNullable*>(config.option(opt_key));
-                if (nullable != nullptr && !nullable->values.empty()) {
-                    const size_t safe_idx = std::min(idx, nullable->values.size() - 1);
-                    ret                   = double_to_string(nullable->values[safe_idx]);
-                }
-                break;
-            }
-            val = opt->type == coFloats ? config.opt_float(opt_key, idx) :
-                  opt->type == coFloat  ? config.opt_float(opt_key) :
-                                          config.option<ConfigOptionPercents>(opt_key)->get_at(idx);
-        } else if (opt->default_value) {
-            if (opt->type == coFloats) {
-                const auto* defaults = dynamic_cast<const ConfigOptionFloats*>(opt->default_value.get());
-                if (defaults != nullptr && !defaults->values.empty()) {
-                    const size_t safe_idx = std::min(idx, defaults->values.size() - 1);
-                    val                   = defaults->values[safe_idx];
-                }
-            } else if (opt->type == coFloat) {
-                val = opt->default_value->getFloat();
-            } else {
-                const auto* defaults = dynamic_cast<const ConfigOptionPercents*>(opt->default_value.get());
-                if (defaults != nullptr && !defaults->values.empty()) {
-                    const size_t safe_idx = std::min(idx, defaults->values.size() - 1);
-                    val                   = defaults->values[safe_idx];
-                }
-            }
-        }
-        ret = double_to_string(val);
-        break;
-    }
-    case coString:
-        if (config.has(opt_key) && config.option(opt_key) != nullptr)
-            ret = from_u8(config.opt_string(opt_key));
-        else if (opt->default_value) {
-            const auto* defaults = dynamic_cast<const ConfigOptionString*>(opt->default_value.get());
-            ret                  = defaults != nullptr ? from_u8(defaults->value) : wxString("");
-        } else
-            ret = wxString("");
-        break;
-    case coStrings:
-        // ORCA: fall back to the option's default when the key is absent from this config.
-        if (!config.has(opt_key) || config.option(opt_key) == nullptr) {
-            const auto* defaults = opt->default_value ? dynamic_cast<const ConfigOptionStrings*>(opt->default_value.get()) : nullptr;
-            if (defaults == nullptr || defaults->values.empty()) {
-                ret = text_value;
-                break;
-            }
-            if (opt_key == "compatible_printers" || opt_key == "compatible_prints" ||
-                opt->gui_type == ConfigOptionDef::GUIType::plugin_picker) {
-                ret = defaults->values;
-                break;
-            }
-            if (opt->gui_flags == "serialized") {
-                for (const auto& el : defaults->values)
-                    text_value += from_u8(el) + ";";
-                ret = text_value;
-            } else {
-                const size_t safe_idx = std::min(idx, defaults->values.size() - 1);
-                ret                   = from_u8(defaults->values[safe_idx]);
-            }
-            break;
-        }
-        if (opt_key == "compatible_printers" || opt_key == "compatible_prints") {
-            ret = config.option<ConfigOptionStrings>(opt_key)->values;
->>>>>>> lixnix/main
             break;
         }
 		const auto &value = *config.option<ConfigOptionFloatOrPercent>(opt_key);
@@ -1448,7 +1289,6 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
             const auto *defaults = dynamic_cast<const ConfigOptionString*>(opt->default_value.get());
             ret = defaults != nullptr ? from_u8(defaults->value) : wxString("");
         } else
-<<<<<<< snaporca-int
             ret = wxString("");
 		break;
 	case coStrings:
@@ -1541,55 +1381,6 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
             ret = 0;
 		break;
 	case coEnum:
-=======
-            ret = from_u8(config.opt_string(opt_key, static_cast<unsigned int>(idx)));
-        break;
-    case coBool:
-        if (config.has(opt_key))
-            ret = config.opt_bool(opt_key);
-        else if (opt->default_value) {
-            const auto* defaults = dynamic_cast<const ConfigOptionBool*>(opt->default_value.get());
-            ret                  = defaults != nullptr ? defaults->value : false;
-        } else
-            ret = false;
-        break;
-    case coBools:
-        if (config.has(opt_key))
-            ret = config.opt_bool(opt_key, idx);
-        else if (opt->default_value) {
-            const auto* defaults = dynamic_cast<const ConfigOptionBools*>(opt->default_value.get());
-            if (defaults != nullptr && !defaults->values.empty()) {
-                const size_t safe_idx = std::min(idx, defaults->values.size() - 1);
-                ret                   = defaults->values[safe_idx];
-            } else
-                ret = false;
-        } else
-            ret = false;
-        break;
-    case coInt:
-        if (config.has(opt_key) && config.option(opt_key) != nullptr)
-            ret = config.opt_int(opt_key);
-        else if (opt->default_value) {
-            const auto* defaults = dynamic_cast<const ConfigOptionInt*>(opt->default_value.get());
-            ret                  = defaults != nullptr ? defaults->value : 0;
-        } else
-            ret = 0;
-        break;
-    case coInts:
-        if (config.has(opt_key) && config.option(opt_key) != nullptr)
-            ret = config.opt_int(opt_key, idx);
-        else if (opt->default_value) {
-            const auto* defaults = dynamic_cast<const ConfigOptionInts*>(opt->default_value.get());
-            if (defaults != nullptr && !defaults->values.empty()) {
-                const size_t safe_idx = std::min(idx, defaults->values.size() - 1);
-                ret                   = defaults->values[safe_idx];
-            } else
-                ret = 0;
-        } else
-            ret = 0;
-        break;
-    case coEnum:
->>>>>>> lixnix/main
         if (!config.has("first_layer_sequence_choice") && opt_key == "first_layer_sequence_choice") {
             // reset to Auto value
             ret = 0;
@@ -1616,7 +1407,6 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
         if (config.has(opt_key) && config.option(opt_key) != nullptr)
             ret = config.opt_int(opt_key, idx);
         else if (opt->default_value) {
-<<<<<<< snaporca-int
             const auto *defaults = dynamic_cast<const ConfigOptionEnumsGeneric*>(opt->default_value.get());
             if (defaults != nullptr && !defaults->values.empty()) {
                 const size_t safe_idx = std::min(idx, defaults->values.size() - 1);
@@ -1624,14 +1414,6 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
             } else {
                 ret = 0;
             }
-=======
-            const auto* defaults = dynamic_cast<const ConfigOptionEnumsGeneric*>(opt->default_value.get());
-            if (defaults != nullptr && !defaults->values.empty()) {
-                const size_t safe_idx = std::min(idx, defaults->values.size() - 1);
-                ret                   = defaults->values[safe_idx];
-            } else
-                ret = 0;
->>>>>>> lixnix/main
         } else
             ret = 0;
         break;
@@ -1639,7 +1421,6 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
         if (config.has(opt_key) && config.option(opt_key) != nullptr)
             ret = config.option<ConfigOptionPoint>(opt_key)->value;
         else if (opt->default_value) {
-<<<<<<< snaporca-int
             const auto *defaults = dynamic_cast<const ConfigOptionPoint*>(opt->default_value.get());
             ret = defaults != nullptr ? defaults->value : Vec2d::Zero();
         } else
@@ -1648,22 +1429,10 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
 	case coPoints:
         if (!config.has(opt_key) || config.option(opt_key) == nullptr) {
             const auto *defaults = opt->default_value ? dynamic_cast<const ConfigOptionPoints*>(opt->default_value.get()) : nullptr;
-=======
-            const auto* defaults = dynamic_cast<const ConfigOptionPoint*>(opt->default_value.get());
-            ret                  = defaults != nullptr ? defaults->value : Vec2d::Zero();
-        } else
-            ret = Vec2d::Zero();
-        break;
-    case coPoints:
-        // ORCA: fall back to the option's default when the key is absent from this config.
-        if (!config.has(opt_key) || config.option(opt_key) == nullptr) {
-            const auto* defaults = opt->default_value ? dynamic_cast<const ConfigOptionPoints*>(opt->default_value.get()) : nullptr;
->>>>>>> lixnix/main
             if (defaults == nullptr || defaults->values.empty()) {
                 ret = std::vector<Vec2d>();
                 break;
             }
-<<<<<<< snaporca-int
             if (opt_key == "printable_area" || opt_key == "bed_exclude_area")
                 ret = get_thumbnails_string(defaults->values);
             else {
@@ -1673,17 +1442,6 @@ boost::any ConfigOptionsGroup::get_config_value(const DynamicPrintConfig& config
             break;
         }
 		if (opt_key == "printable_area")
-=======
-            if (opt_key == "printable_area" || opt_key == "bed_exclude_area" || opt_key == "wrapping_exclude_area")
-                ret = get_thumbnails_string(defaults->values);
-            else {
-                const size_t safe_idx = std::min(idx, defaults->values.size() - 1);
-                ret                   = defaults->values[safe_idx];
-            }
-            break;
-        }
-        if (opt_key == "printable_area")
->>>>>>> lixnix/main
             ret = get_thumbnails_string(config.option<ConfigOptionPoints>(opt_key)->values);
         else if (opt_key == "bed_exclude_area")
             ret = get_thumbnails_string(config.option<ConfigOptionPoints>(opt_key)->values);
@@ -1716,7 +1474,6 @@ boost::any ConfigOptionsGroup::get_config_value2(const DynamicPrintConfig& confi
     if (opt == nullptr)
         return ret;
 
-<<<<<<< snaporca-int
     if (opt->nullable)
     {
         if (!config.has(opt_key) || config.option(opt_key) == nullptr) {
@@ -1725,6 +1482,9 @@ boost::any ConfigOptionsGroup::get_config_value2(const DynamicPrintConfig& confi
             case coPercents:
             case coFloats:
                 ret = ConfigOptionFloatsNullable::nil_value();
+                break;
+            case coFloatsOrPercents:
+                ret = ConfigOptionFloatsOrPercentsNullable::nil_value();
                 break;
             case coBools:
                 ret = static_cast<unsigned char>(false);
@@ -1735,32 +1495,16 @@ boost::any ConfigOptionsGroup::get_config_value2(const DynamicPrintConfig& confi
                 break;
             default:
                 break;
-=======
-    if (opt->nullable) {
-        // ORCA: a nullable option that is not present in this config falls back to a neutral value.
-        if (!config.has(opt_key) || config.option(opt_key) == nullptr) {
-            switch (opt->type) {
-            case coPercents:
-            case coFloats: ret = ConfigOptionFloatsNullable::nil_value(); break;
-            case coFloatsOrPercents: ret = ConfigOptionFloatsOrPercentsNullable::nil_value(); break;
-            case coBools: ret = static_cast<unsigned char>(false); break;
-            case coInts:
-            case coEnums: ret = 0; break;
-            default: break;
->>>>>>> lixnix/main
             }
             return ret;
         }
 
-<<<<<<< snaporca-int
         switch (opt->type)
         {
-=======
-        switch (opt->type) {
->>>>>>> lixnix/main
         case coPercents:
         case coFloats: {
-            if (config.option(opt_key)->is_nil())
+            const auto *option = dynamic_cast<const ConfigOptionVectorBase *>(config.option(opt_key));
+            if (option != nullptr && option->is_nil(idx))
                 ret = ConfigOptionFloatsNullable::nil_value();
             else {
                 double val = opt->type == coFloats ? config.option<ConfigOptionFloatsNullable>(opt_key)->get_at(idx) :
@@ -1789,7 +1533,6 @@ boost::any ConfigOptionsGroup::get_config_value2(const DynamicPrintConfig& confi
     }
 
     switch (opt->type) {
-<<<<<<< snaporca-int
     case coFloatsOrPercents: {
         const ConfigOptionFloatsOrPercents *values = nullptr;
         if (config.has(opt_key) && config.option(opt_key) != nullptr)
@@ -1809,12 +1552,6 @@ boost::any ConfigOptionsGroup::get_config_value2(const DynamicPrintConfig& confi
     case coFloatOrPercent:{
         if (!config.has(opt_key) || config.option(opt_key) == nullptr) {
             const auto *defaults = opt->default_value ? dynamic_cast<const ConfigOptionFloatOrPercent*>(opt->default_value.get()) : nullptr;
-=======
-    case coFloatOrPercent: {
-        // ORCA: fall back to the option's default when the key is absent from this config.
-        if (!config.has(opt_key) || config.option(opt_key) == nullptr) {
-            const auto* defaults = opt->default_value ? dynamic_cast<const ConfigOptionFloatOrPercent*>(opt->default_value.get()) : nullptr;
->>>>>>> lixnix/main
             if (defaults != nullptr) {
                 wxString text_value = double_to_string(defaults->value);
                 if (defaults->percent)
@@ -1823,11 +1560,7 @@ boost::any ConfigOptionsGroup::get_config_value2(const DynamicPrintConfig& confi
             }
             break;
         }
-<<<<<<< snaporca-int
         const auto &value = *config.option<ConfigOptionFloatOrPercent>(opt_key);
-=======
-        const auto& value = *config.option<ConfigOptionFloatOrPercent>(opt_key);
->>>>>>> lixnix/main
 
         wxString text_value = double_to_string(value.value);
         if (value.percent)
@@ -2051,40 +1784,23 @@ std::pair<OG_CustomCtrl*, bool*> ConfigOptionsGroup::get_custom_ctrl_with_blinki
 void ConfigOptionsGroup::change_opt_value(const t_config_option_key& opt_key, const boost::any& value, int opt_index /*= 0*/)
 
 {
-<<<<<<< snaporca-int
     if (m_config == nullptr || m_config->def() == nullptr || m_config->def()->get(opt_key) == nullptr)
         return;
 	Slic3r::GUI::change_opt_value(const_cast<DynamicPrintConfig&>(*m_config), opt_key, value, opt_index);
 	if (m_modelconfig)
 		m_modelconfig->touch();
-=======
-    // ORCA: a group can outlive / precede the config that owns the option.
-    if (m_config == nullptr || m_config->def() == nullptr || m_config->def()->get(opt_key) == nullptr)
-        return;
-    Slic3r::GUI::change_opt_value(const_cast<DynamicPrintConfig&>(*m_config), opt_key, value, opt_index);
-    if (m_modelconfig)
-        m_modelconfig->touch();
->>>>>>> lixnix/main
 }
 
 // BBS
 void ExtruderOptionsGroup::on_change_OG(const t_config_option_key& opt_id, const boost::any& value)
 {
-<<<<<<< snaporca-int
-=======
-    // ORCA: per-extruder groups can be driven before their config exists.
->>>>>>> lixnix/main
     if (m_config == nullptr || m_config->def() == nullptr) {
         OptionsGroup::on_change_OG(opt_id, value);
         return;
     }
 
-<<<<<<< snaporca-int
     if (!m_opt_map.empty())
     {
-=======
-    if (!m_opt_map.empty()) {
->>>>>>> lixnix/main
         auto it = m_opt_map.find(opt_id);
         if (it == m_opt_map.end()) {
             OptionsGroup::on_change_OG(opt_id, value);
@@ -2099,22 +1815,8 @@ void ExtruderOptionsGroup::on_change_OG(const t_config_option_key& opt_id, const
             return;
         }
 
-        auto opt = m_config->option(opt_key);
-        if (opt == nullptr) {
-            this->change_opt_value(opt_key, value, std::max(0, itOption.second));
-            OptionsGroup::on_change_OG(opt_id, value);
-            return;
-        }
-        // ORCA: a per-extruder (vector) option is edited for every extruder at once.
-        const ConfigOptionVectorBase* opt_vec = dynamic_cast<const ConfigOptionVectorBase*>(opt);
-        if (opt_vec != nullptr) {
-            for (int opt_index = 0; opt_index < opt_vec->size(); opt_index++) {
-                this->change_opt_value(opt_key, value, opt_index);
-            }
-        } else {
-            int opt_index = itOption.second;
-            this->change_opt_value(opt_key, value, opt_index == -1 ? 0 : opt_index);
-        }
+        int opt_index = itOption.second;
+        this->change_opt_value(opt_key, value, opt_index == -1 ? 0 : opt_index);
     }
 
     OptionsGroup::on_change_OG(opt_id, value);
