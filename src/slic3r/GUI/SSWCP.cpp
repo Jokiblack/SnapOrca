@@ -3,6 +3,8 @@
 #include "FilamentColorUtils.hpp"
 #include "GUI_App.hpp"
 #include "MainFrame.hpp"
+#include "Notebook.hpp"
+#include "PrinterWebView.hpp"
 #include "DownloadManager.hpp"
 #include "Timelapse/TimelapseDownloadPopup.hpp"
 #include "nlohmann/json.hpp"
@@ -56,9 +58,11 @@
 #include "slic3r/Utils/Http.hpp"
 #include "libslic3r/Utils.hpp"
 #include <boost/filesystem/operations.hpp>
+#include <boost/filesystem/path.hpp>
 #include <openssl/sha.h>
 
 namespace pt = boost::property_tree;
+namespace fs = boost::filesystem;
 
 using namespace nlohmann;
 
@@ -1127,7 +1131,12 @@ void SSWCP_Instance::sw_SwitchTab() {
         if (m_param_data.count("target")) {
             std::string target_tab = m_param_data["target"].get<std::string>();
             if (SSWCP::m_tab_map.count(target_tab)) {
-                wxGetApp().mainframe->request_select_tab(MainFrame::TabPosition(SSWCP::m_tab_map[target_tab]));
+                MainFrame* frame = wxGetApp().mainframe;
+                wxString   tab_id = wxString::FromUTF8(SSWCP::m_tab_map[target_tab]);
+                // In printer-agents mode the Snapmaker device page is the separate web Device tab.
+                if (tab_id == TAB_ID_MONITOR && frame->m_tabpanel->FindPageByName(TAB_ID_MONITOR_WEB) != wxNOT_FOUND)
+                    tab_id = TAB_ID_MONITOR_WEB;
+                frame->request_select_tab(tab_id);
                 send_to_js();
                 finish_job();
                 return;
@@ -1916,7 +1925,7 @@ void SSWCP_MachineFind_Instance::sw_StartMachineFind()
             {"eventName", "device_discovery_start"},
             {"source", "cpp"});
 
-        std::vector<string> protocols;
+        std::vector<std::string> protocols;
 
         float last_time = -1;
         if (m_param_data.count("last_time") && m_param_data["last_time"].is_number()) {
@@ -7582,7 +7591,8 @@ void SSWCP_MqttAgent_Instance::sw_mqtt_set_engine()
                                     wxGetApp().mainframe->m_print_enable = true;
                                     wxGetApp().mainframe->update_slice_print_status(MainFrame::eEventPlateUpdate);
 
-                                    if (!wxGetApp().mainframe->m_printer_view->isSnapmakerPage()) {
+                                    PrinterWebView* printer_view = PrinterWebView::if_built();
+                                    if (printer_view == nullptr || !printer_view->isSnapmakerPage()) {
                                         wxString url      = wxString::FromUTF8(LOCALHOST_URL + std::to_string(wxGetApp().get_page_http_port()) +
                                                                                "/web/flutter_web/index.html?path=2");
                                         auto     real_url = wxGetApp().get_international_url(url);
@@ -7770,16 +7780,17 @@ std::unique_ptr<WebSocketDebugServer> SSWCP::m_debug_server = nullptr;
 std::mutex SSWCP::m_debug_server_mutex;
 bool SSWCP::m_debug_mode_enabled = false;
 
-std::unordered_map<std::string, int> SSWCP::m_tab_map = {
-    {"Home", MainFrame::TabPosition::tpHome},
-    {"3DEditor", MainFrame::TabPosition::tp3DEditor},
-    {"Preview", MainFrame::TabPosition::tpPreview},
-    {"Monitor", MainFrame::TabPosition::tpMonitor},
-    {"MultiDevice", MainFrame::TabPosition::tpMultiDevice},
-    {"Project", MainFrame::TabPosition::tpProject},
-    {"Calibration", MainFrame::TabPosition::tpCalibration},
-    {"Auxiliary", MainFrame::TabPosition::tpAuxiliary},
-    {"DebugTool", MainFrame::TabPosition::toDebugTool}
+// Tabs are addressed by id since upstream 2.5; "Auxiliary" was the old name of the Project tab.
+// "DebugTool" has no tab any more, so it is reported as a failure like any unknown name.
+std::unordered_map<std::string, std::string> SSWCP::m_tab_map = {
+    {"Home", TAB_ID_HOME},
+    {"3DEditor", TAB_ID_PREPARE},
+    {"Preview", TAB_ID_PREVIEW},
+    {"Monitor", TAB_ID_MONITOR},
+    {"MultiDevice", TAB_ID_MULTI_DEVICE},
+    {"Project", TAB_ID_PROJECT},
+    {"Calibration", TAB_ID_CALIBRATION},
+    {"Auxiliary", TAB_ID_PROJECT},
 };
 
 std::unordered_set<std::string> SSWCP::m_machine_find_cmd_list = {
