@@ -41,8 +41,8 @@ const std::set<std::string>& composed_keys()
         "default_jerk", "outer_wall_jerk", "inner_wall_jerk", "infill_jerk", "top_surface_jerk", "initial_layer_jerk",
         "default_junction_deviation",
         // line widths (flow_independent_keys): read from the width source's Standard shared column
-        "line_width", "initial_layer_line_width", "outer_wall_line_width", "inner_wall_line_width", "top_surface_line_width",
-        "sparse_infill_line_width", "internal_solid_infill_line_width", "support_line_width", "bridge_line_width",
+        "line_width", "initial_layer_line_width", "initial_layer_infill_line_width", "outer_wall_line_width", "inner_wall_line_width",
+        "top_surface_line_width", "sparse_infill_line_width", "internal_solid_infill_line_width", "support_line_width", "bridge_line_width",
     };
     return keys;
 }
@@ -1435,8 +1435,8 @@ const std::set<std::string> &head_editable_keys()
 const std::set<std::string> &flow_independent_keys()
 {
     static const std::set<std::string> keys = {
-        "line_width", "initial_layer_line_width", "outer_wall_line_width", "inner_wall_line_width", "top_surface_line_width",
-        "sparse_infill_line_width", "internal_solid_infill_line_width", "support_line_width", "bridge_line_width",
+        "line_width", "initial_layer_line_width", "initial_layer_infill_line_width", "outer_wall_line_width", "inner_wall_line_width",
+        "top_surface_line_width", "sparse_infill_line_width", "internal_solid_infill_line_width", "support_line_width", "bridge_line_width",
     };
     return keys;
 }

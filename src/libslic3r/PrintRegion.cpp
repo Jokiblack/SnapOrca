@@ -58,9 +58,10 @@ Flow PrintRegion::flow(const PrintObject &object, FlowRole role, double layer_he
     // The first layer infill has its own line width (Bambu port); zero keeps following
     // "initial_layer_line_width", which is a column per tool head (multi-nozzle).
     const bool infill_role = role == frInfill || role == frSolidInfill || role == frTopSolidInfill;
-    const ConfigOptionFloatOrPercent initial_layer_width = Flow::width_at(print_config.initial_layer_line_width, column);
-    if (first_layer && infill_role && print_config.initial_layer_infill_line_width.value > 0) {
-        config_width = print_config.initial_layer_infill_line_width;
+    const ConfigOptionFloatOrPercent initial_layer_width        = Flow::width_at(print_config.initial_layer_line_width, column);
+    const ConfigOptionFloatOrPercent initial_layer_infill_width = Flow::width_at(print_config.initial_layer_infill_line_width, column);
+    if (first_layer && infill_role && initial_layer_infill_width.value > 0) {
+        config_width = initial_layer_infill_width;
     } else if (first_layer && initial_layer_width.value > 0) {
         config_width = initial_layer_width;
     } else if (role == frExternalPerimeter) {

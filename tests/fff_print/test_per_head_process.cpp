@@ -1949,6 +1949,44 @@ TEST_CASE("Every role of a tool head prints the line width of that head's column
     }
 }
 
+// Bambu Studio c9089d03c: the first layer infill (sparse, solid, top and bottom surfaces) has its own line
+// width, a column per tool head; the walls of the first layer keep the first layer width. Zero (the
+// default) keeps the first layer width for the infill too.
+TEST_CASE("The first layer infill of a tool head prints its first layer infill width, the walls the first layer width", "[PerHeadProcess][PerHeadWidth][columns]")
+{
+    DynamicPrintConfig config = width_harness_config(false);
+    // Tool heads 1 and 3 at their own first layer infill width, 2 and 4 at zero (the first layer width).
+    set_head_widths(config, "initial_layer_infill_line_width", {"0.60", "0", "0.62", "0"});
+    const std::unique_ptr<WidthHarnessSlice> slice = width_harness_slice(config);
+    const auto first = feature_widths(slice->gcode, 1, 1);
+    for (size_t head = 0; head < HEADS; ++head) {
+        const int tool = int(head);
+        REQUIRE(first.count(tool) == 1);
+        const double wall_width   = expected_width(config, "initial_layer_line_width", head);
+        const double infill_width = expected_width(config, "initial_layer_infill_line_width", head);
+        if (head % 2 == 0)
+            REQUIRE(std::abs(infill_width - wall_width) > 0.1);
+        else
+            REQUIRE_THAT(infill_width, Catch::Matchers::WithinAbs(wall_width, 1e-9));
+        for (const auto &[role, values] : first.at(tool)) {
+            const bool   infill   = role == "Sparse infill" || solid_role(role);
+            const double expected = infill ? infill_width : wall_width;
+            INFO("tool " << tool << ", first layer " << role << ": widths " << joined(values) << ", expected " << expected);
+            CHECK(prints_width(values, role, expected));
+        }
+        // The walls of the first layer never pick up the infill width.
+        if (head % 2 == 0) {
+            REQUIRE(first.at(tool).count("Outer wall") == 1);
+            CHECK_FALSE(all_near(first.at(tool).at("Outer wall"), infill_width, 0.001));
+        }
+    }
+    // Above the first layer the infill width of the first layer plays no part.
+    const auto above = feature_widths(slice->gcode, 2);
+    REQUIRE(above.count(0) == 1);
+    REQUIRE(above.at(0).count("Sparse infill") == 1);
+    CHECK(prints_width(above.at(0).at("Sparse infill"), "Sparse infill", expected_width(config, "sparse_infill_line_width", 0)));
+}
+
 TEST_CASE("A surface printed by the filament of another tool head takes that head's width column", "[PerHeadProcess][PerHeadWidth][columns]")
 {
     const DynamicPrintConfig config = width_harness_config(false);

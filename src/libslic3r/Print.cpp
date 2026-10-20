@@ -3258,6 +3258,8 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                 const char *differing = nullptr;
                 if (!uniform(m_config.initial_layer_line_width))
                     differing = "initial_layer_line_width";
+                else if (!uniform(m_config.initial_layer_infill_line_width))
+                    differing = "initial_layer_infill_line_width";
                 else if (!uniform(object->config().line_width))
                     differing = "line_width";
                 else if (!uniform(object->config().support_line_width))
@@ -3349,6 +3351,7 @@ StringObjectException Print::validate(std::vector<StringObjectException> *warnin
                         warn_all_width(region_config, *widths, opt_key, head);
                     warn_all_width(object->config(), object->config().line_width, "line_width", head);
                     warn_all_width(m_config, m_config.initial_layer_line_width, "initial_layer_line_width", head);
+                    warn_all_width(m_config, m_config.initial_layer_infill_line_width, "initial_layer_infill_line_width", head);
                 }
             }
 
