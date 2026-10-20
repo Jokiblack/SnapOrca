@@ -17,6 +17,7 @@
 #include <atomic>
 #include <mutex>
 #include <chrono>
+#include <cstdint>
 
 #include "ObjectID.hpp"
 #include "Model.hpp"
@@ -582,11 +583,14 @@ protected:
     // false, sets CANCELED_INTERNAL and throws CanceledException.
     // An atomic flag prevents concurrent dialog invocations from TBB workers.
     void                   check_memory_guard() {
-        auto now = std::chrono::steady_clock::now();
-        // Throttle to one sample per 500ms per Print instance.
-        if (now - m_last_mem_check < std::chrono::milliseconds(500))
+        // Throttle to one sample per 500ms per Print instance. throw_if_canceled() runs this from every
+        // TBB worker in tight loops, so the timestamp is atomic and only the thread that wins the
+        // exchange takes the sample, instead of several workers querying the OS at once.
+        const int64_t now  = std::chrono::steady_clock::now().time_since_epoch().count();
+        int64_t       last = m_last_mem_check.load(std::memory_order_relaxed);
+        if (now - last < MEM_GUARD_INTERVAL_TICKS ||
+            ! m_last_mem_check.compare_exchange_strong(last, now, std::memory_order_relaxed))
             return;
-        m_last_mem_check = now;
 
         size_t avail = Slic3r::get_available_physical_memory();
         if (avail == 0)
@@ -659,8 +663,10 @@ private:
     // Requires 2 consecutive low samples before triggering the dialog.
     std::atomic<int>                        m_low_mem_count{0};
 
-    // Last memory-guard sample timestamp (throttle: 1 sample / 500ms).
-    std::chrono::steady_clock::time_point   m_last_mem_check{std::chrono::steady_clock::now()};
+    // Last memory-guard sample timestamp in steady_clock ticks (throttle: 1 sample / 500ms).
+    static constexpr int64_t                MEM_GUARD_INTERVAL_TICKS =
+        std::chrono::duration_cast<std::chrono::steady_clock::duration>(std::chrono::milliseconds(500)).count();
+    std::atomic<int64_t>                    m_last_mem_check{std::chrono::steady_clock::now().time_since_epoch().count()};
 
     // Mutex used for synchronization of the worker thread with the UI thread:
     // The mutex will be used to guard the worker thread against entering a stage
