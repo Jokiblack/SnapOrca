@@ -1,8 +1,5 @@
 #include "Plater.hpp"
-<<<<<<< snaporca-int
-=======
 #include "libslic3r/SSWCPProtocol.hpp"
->>>>>>> lixnix/main
 #include "MixedFilamentDialog.hpp"
 #include "MixedFilamentBatchDialog.hpp"
 #include "MixedGradientSelector.hpp"
@@ -10,23 +7,16 @@
 #include "MixedFilamentBadge.hpp"
 #include "MixedFilamentColorMapPanel.hpp"
 #include "MixedColorMatchHelpers.hpp"
-<<<<<<< snaporca-int
 #include "libslic3r/FilamentColorLibrary.hpp" // kFullSpectrumSlotCount (recommended slot write-back)
 #include "../Utils/NetworkAgent.hpp"
 #include "IPrinterAgent.hpp"
 #include "CalibUtils.hpp"
 #include "Flashforge.hpp"
-=======
-#include "../Utils/NetworkAgent.hpp"
-#include "../Utils/NetworkAgentFactory.hpp"
-#include "libslic3r/FilamentColorLibrary.hpp" // kFullSpectrumSlotCount (recommended slot write-back)
->>>>>>> lixnix/main
 #include "libslic3r/Config.hpp"
 #include "libslic3r/MixedFilament.hpp"
 #include "libslic3r/MixedFilamentConfigRemap.hpp"
 #include "common_func/common_func.hpp"
 #include "slic3r/Utils/SnapLogClient.hpp"
-#include "SnapLogWiring.hpp"
 
 #include <atomic>
 #include <boost/assert/source_location.hpp>
@@ -47,11 +37,9 @@
 #include <cstdlib>
 #include <algorithm>
 #include <atomic>
-#include <chrono>
 #include <cmath>
 #include <numeric>
 #include <memory>
-<<<<<<< snaporca-int
 #include <limits>
 #include <thread>
 #include <ios>
@@ -119,11 +107,6 @@
 #include "slic3r/GUI/CalibrationPanel.hpp"
 #include "slic3r/GUI/CalibrationWizard.hpp"
 #include "slic3r/GUI/Monitor.hpp"
-=======
-#include <limits>
-#include <optional>
-#include <thread>
->>>>>>> lixnix/main
 #include <slic3r/plugin/PluginDescriptor.hpp>
 #include <slic3r/plugin/PluginManager.hpp>
 #include <slic3r/plugin/PluginResolver.hpp>
@@ -140,13 +123,9 @@
 #include <future>
 #include <functional>
 #include <sstream>
-<<<<<<< snaporca-int
 #include <utility>
 #include <atomic>
-=======
 #include <locale>
-#include <utility>
->>>>>>> lixnix/main
 #include <mutex>
 #include <boost/algorithm/string.hpp>
 #include <boost/iterator/counting_iterator.hpp>
@@ -219,7 +198,6 @@
 #include <wx/timer.h>
 #include <wx/tokenzr.h>
 #include <wx/aui/aui.h>
-#include <wx/bookctrl.h>
 
 #include "libslic3r/libslic3r.h"
 #include "libslic3r/LifecycleEvents.hpp"
@@ -237,28 +215,22 @@
 #include "libslic3r/Print.hpp"
 #include "libslic3r/Slicing.hpp"
 #include "libslic3r/PrintConfig.hpp"
+#include "libslic3r/ProjectSchemaVersion.hpp"
 #include "libslic3r/SLAPrint.hpp"
 #include "libslic3r/Utils.hpp"
 #include "libslic3r/PresetBundle.hpp"
-<<<<<<< snaporca-int
 #include "libslic3r/Preset.hpp"
 #include "libslic3r/PresetFlowVariant.hpp"
 #include "libslic3r/ClipperUtils.hpp"
 #include "libslic3r/FilamentHotBedNozzleRules.hpp"
-
-#include "libslic3r/IMEXHelpers.hpp"
-=======
 #include "libslic3r/NozzleFilamentPresets.hpp"
 #include "libslic3r/PerHeadProcess.hpp"
 #include "libslic3r/FilamentFlowColumns.hpp"
-#include "libslic3r/LocalesUtils.hpp"
-#include "libslic3r/ProjectSchemaVersion.hpp"
->>>>>>> lixnix/main
+
+#include "libslic3r/IMEXHelpers.hpp"
 #include "libslic3r/PublishSettings.hpp"
 #include "slic3r/Utils/CrealityPrint.hpp"
 #include "libslic3r/ClipperUtils.hpp"
-#include "libslic3r/FilamentHotBedNozzleRules.hpp"
-#include "libslic3r/ObjColorUtils.hpp"
 // For stl export
 #include "libslic3r/CSGMesh/ModelToCSGMesh.hpp"
 #include "libslic3r/CSGMesh/PerformCSGMeshBooleans.hpp"
@@ -297,6 +269,7 @@
 #include "Camera.hpp"
 #include "Mouse3DController.hpp"
 #include "Tab.hpp"
+#include "OptionsGroup.hpp"
 #include "Jobs/OrientJob.hpp"
 #include "Jobs/ArrangeJob.hpp"
 #include "Jobs/FillBedJob.hpp"
@@ -322,6 +295,7 @@
 #include "InstanceCheck.hpp"
 #include "NotificationManager.hpp"
 #include "PresetComboBoxes.hpp"
+#include "PlaterFilamentComboBox.hpp"
 #include "MsgDialog.hpp"
 #include "Widgets/MultiNozzleSync.hpp"           // NozzleOption, tryPopUpMultiNozzleDialog, setExtruderNozzleCount
 #include "DeviceCore/DevNozzleSystem.h"          // DevNozzle, GetExtNozzles / GetRackNozzles
@@ -354,6 +328,7 @@
 #include <libslic3r/miniz_extension.hpp>
 #include <math.h>
 #include "WipeTowerDialog.hpp"
+#include "MixedFilamentDialog.hpp"
 #include "TextureImportDialog.hpp"
 #include "libslic3r/TexturePainting.hpp"
 #include "ColorDecomposeSupport.hpp"
@@ -381,10 +356,7 @@
 #include "filamentsync/SyncFilamentColorDialog.hpp"
 
 #include "sentry_wrapper/SentryWrapper.hpp"
-<<<<<<< snaporca-int
 #include <chrono>
-=======
->>>>>>> lixnix/main
 #include "PurgeModeDialog.hpp"
 
 #include "DeviceCore/DevFilaSystem.h"
@@ -400,14 +372,9 @@ static const std::pair<unsigned int, unsigned int> THUMBNAIL_SIZE_3MF = { 512, 5
 namespace Slic3r {
 namespace GUI {
 
-<<<<<<< snaporca-int
-=======
 // Snapmaker Orca: the way into the speed picker of the Process tab (defined beside Sidebar::update_nozzle_process_hints).
 static void open_speed_source_picker(size_t head);
 
-// From upstream Snapmaker Orca (#794 784cfd18b1): a project written with a newer project schema
-// than ProjectSchemaRegistry knows is loaded as far as possible, and the user is told.
->>>>>>> lixnix/main
 static void handle_newer_3mf_schema(wxWindow* parent,
                                     const DynamicPrintConfig& config)
 {
@@ -424,39 +391,6 @@ static void handle_newer_3mf_schema(wxWindow* parent,
               _L("Loading 3MF"));
 }
 
-<<<<<<< snaporca-int
-=======
-// N6: what reading a Snapmaker Orca 2.4 project changed about the flow types. 2.4 gives every
-// filament a flow type; here a filament is printed with the values of the nozzle of its tool head.
-static std::string flow_import_text(const FlowImportReport& report)
-{
-    auto list = [](const std::vector<int>& numbers) {
-        std::string out;
-        for (size_t i = 0; i < numbers.size(); ++i)
-            out += (i > 0 ? ", " : "") + std::to_string(numbers[i]);
-        return out;
-    };
-    std::vector<int> to_high_flow, to_standard;
-    for (const FlowImportReport::HeadChange& change : report.changed_heads)
-        (change.to_high_flow ? to_high_flow : to_standard).emplace_back(change.head);
-
-    std::string text = _u8L("This project was saved by Snapmaker Orca 2.4 with a flow type for every filament. "
-                            "In this version a filament is printed with the values of the nozzle of its extruder.");
-    if (!to_high_flow.empty())
-        text += "\n" + GUI::format(_u8L("Extruder %1% was set to a High Flow nozzle, as its filaments were."), list(to_high_flow));
-    if (!to_standard.empty())
-        text += "\n" + GUI::format(_u8L("Extruder %1% was set to a Standard nozzle, as its filaments were."), list(to_standard));
-    for (const FlowImportReport::DroppedFilament& dropped : report.dropped_filaments)
-        text += "\n" + (dropped.wanted_high_flow ?
-            GUI::format(_u8L("Filament %1% was set to High Flow, but the filaments of extruder %2% did not agree: it is printed with the Standard values of that extruder."),
-                        dropped.filament, dropped.head) :
-            GUI::format(_u8L("Filament %1% was set to Standard, but the filaments of extruder %2% did not agree: it is printed with the High Flow values of that extruder."),
-                        dropped.filament, dropped.head));
-    text += "\n" + _u8L("Check that the nozzles of the printer match.");
-    return text;
-}
-
->>>>>>> lixnix/main
 // Defensive UTF-8 translation helper.
 //
 // I18N::translate_utf8() (and the _u8L macro) returns std::string constructed
@@ -658,33 +592,20 @@ static void collect_filament_slots_from_config(
     const DynamicPrintConfig& config,
     int num_filaments, std::set<int>& used_slots_0_based)
 {
-<<<<<<< snaporca-int
-    // Support/feature filaments
-    static const std::vector<const char*> feature_keys = {
-        "support_filament",
-        "support_interface_filament",
-=======
     // All feature filament keys use 0 = "Default" (inherit the active object/part filament),
     // so only explicit selections (>= 1) mark a slot as used.
     static const std::vector<const char*> keys_with_default = {
->>>>>>> lixnix/main
         "outer_wall_filament_id",
         "inner_wall_filament_id",
         "sparse_infill_filament_id",
         "internal_solid_filament_id",
         "top_surface_filament_id",
         "bottom_surface_filament_id",
-<<<<<<< snaporca-int
-        "wipe_tower_filament"
-    };
-    for (const char* key : feature_keys)
-=======
         "support_filament",
         "support_interface_filament",
         "wipe_tower_filament"
     };
     for (const char* key : keys_with_default)
->>>>>>> lixnix/main
     {
         const ConfigOptionInt* option = config.option<ConfigOptionInt>(key);
         if (option != nullptr && option->value >= 1 && option->value <= num_filaments)
@@ -709,27 +630,17 @@ static void collect_filament_slots_from_model_config(
             used_slots_0_based.insert(extruder_id - 1);
     }
 
-<<<<<<< snaporca-int
-    // Support/feature filaments
-    static const std::vector<const char*> feature_keys = {
-        "support_filament",
-        "support_interface_filament",
-=======
     // Per-object feature-specific keys (outer_wall_filament_id, etc.) may be
     // overridden independently of the object's primary extruder.
     static const std::vector<const char*> feature_keys = {
->>>>>>> lixnix/main
         "outer_wall_filament_id",
         "inner_wall_filament_id",
         "sparse_infill_filament_id",
         "internal_solid_filament_id",
         "top_surface_filament_id",
         "bottom_surface_filament_id",
-<<<<<<< snaporca-int
-=======
         "support_filament",
         "support_interface_filament",
->>>>>>> lixnix/main
         "wipe_tower_filament"
     };
     for (const char* key : feature_keys)
@@ -747,13 +658,9 @@ static void collect_filament_slots_from_model_config(
 /// \details Mirrors the slot-collection block of Plater::check_filament_temp_mixing so that
 ///          cold-plate incompatibility checking uses the same definition of "used filament".
 ///          Includes: plate config, per-object/volume configs, plus Plater working config
-<<<<<<< snaporca-int
-///          (wipe_tower / support / wall / infill defaults when any object uses extruder=0).
-=======
 ///          (wipe_tower / support always; global feature selectors unless every object/part
 ///          on the plate overrides the same key; the default extruder when any object uses
 ///          extruder=0).
->>>>>>> lixnix/main
 /// \param[in]  plate                 Non-null target plate.
 /// \param[in]  num_filaments         Total number of filaments in the current configuration.
 /// \param[in]  plater_working_config The Plater's current working config (this->config()).
@@ -772,9 +679,6 @@ static void collect_used_filament_slots_on_plate(
     // Plate-local config
     collect_filament_slots_from_config(*plate->config(), num_filaments, used_slots_0_based);
 
-<<<<<<< snaporca-int
-    // Per-object + per-volume config
-=======
     // Per-object + per-volume config. Also track, per feature selector, whether
     // any object/part on the plate still follows the global value.
     static const std::vector<const char*> selector_keys = {
@@ -786,7 +690,6 @@ static void collect_used_filament_slots_on_plate(
         "bottom_surface_filament_id"
     };
     std::vector<bool> selector_overridden_everywhere(selector_keys.size(), true);
->>>>>>> lixnix/main
     bool uses_default_extruder = false;
     for (size_t obj_idx = 0; obj_idx < wxGetApp().model().objects.size(); ++obj_idx) {
         const ModelObject* model_object = wxGetApp().model().objects[obj_idx];
@@ -804,12 +707,6 @@ static void collect_used_filament_slots_on_plate(
                     used_slots_0_based.insert(extruder_id - 1);
             }
         }
-<<<<<<< snaporca-int
-    }
-
-    // Plater working config — global features (always apply) + feature-specific
-    // keys (only when at least one object uses the default extruder).
-=======
 
         // A global selector reaches this object's regions unless the object (or each of its
         // printed parts) explicitly overrides the same key.
@@ -829,7 +726,6 @@ static void collect_used_filament_slots_on_plate(
 
     // Plater working config — global features (always apply) + feature selectors
     // (collected unless every object/part on the plate overrides the same key).
->>>>>>> lixnix/main
     if (plater_working_config != nullptr) {
         static const std::vector<const char*> always_collect = {"wipe_tower_filament", "support_filament", "support_interface_filament"};
         for (const char* key : always_collect) {
@@ -838,23 +734,12 @@ static void collect_used_filament_slots_on_plate(
                 used_slots_0_based.insert(option->value - 1);
         }
 
-<<<<<<< snaporca-int
-        if (uses_default_extruder) {
-            static const std::vector<const char*> default_keys = {"outer_wall_filament_id", "inner_wall_filament_id", "sparse_infill_filament_id",
-                                                                  "internal_solid_filament_id", "top_surface_filament_id", "bottom_surface_filament_id"};
-            for (const char* key : default_keys) {
-                const ConfigOptionInt* option = plater_working_config->option<ConfigOptionInt>(key);
-                if (option != nullptr && option->value >= 1 && option->value <= num_filaments)
-                    used_slots_0_based.insert(option->value - 1);
-            }
-=======
         for (size_t k = 0; k < selector_keys.size(); ++k) {
             if (selector_overridden_everywhere[k])
                 continue;
             const ConfigOptionInt* option = plater_working_config->option<ConfigOptionInt>(selector_keys[k]);
             if (option != nullptr && option->value >= 1 && option->value <= num_filaments)
                 used_slots_0_based.insert(option->value - 1);
->>>>>>> lixnix/main
         }
     }
 
@@ -916,6 +801,8 @@ wxDEFINE_EVENT(EVT_DEL_FILAMENT, SimpleEvent);
 wxDEFINE_EVENT(EVT_ADD_CUSTOM_FILAMENT, ColorEvent);
 wxDEFINE_EVENT(EVT_NOTICE_CHILDE_SIZE_CHANGED, SimpleEvent);
 wxDEFINE_EVENT(EVT_NOTICE_FULL_SCREEN_CHANGED, IntEvent);
+#define PRINTER_THUMBNAIL_SIZE (wxSize(40, 40)) // ORCA
+#define PRINTER_PANEL_SIZE (    wxSize(70, 60)) // ORCA
 #define PRINTER_PANEL_RADIUS (6) // ORCA
 #define BTN_SYNC_SIZE (wxSize(FromDIP(96), FromDIP(98)))
 
@@ -969,16 +856,8 @@ static void zero_pressure_advance_where_disabled(DynamicPrintConfig *filament_co
     }
 }
 
-<<<<<<< snaporca-int
 
 
-=======
-#define PRINTER_THUMBNAIL_SIZE (wxSize(FromDIP(48), FromDIP(48)))
-#define PRINTER_THUMBNAIL_SIZE_SMALL (wxSize(FromDIP(32), FromDIP(32)))
-#define PRINTER_PANEL_SIZE_SMALL (wxSize(FromDIP(98), FromDIP(68)))
-#define PRINTER_PANEL_SIZE_WIDEN (wxSize(FromDIP(136), FromDIP(68)))
-#define PRINTER_PANEL_SIZE (wxSize(FromDIP(98), FromDIP(98)))
->>>>>>> lixnix/main
 
 // Nozzle diameter selection when multiple diameters are reported (e.g. U1 sync).
 // diameters_raw: list from device (may have duplicates or fewer than 4). Dedup and full-list logic inside.
@@ -1140,11 +1019,7 @@ void build_design_filament_list(PresetBundle* preset_bundle, std::vector<Filamen
             if (colorModeOpt && i < colorModeOpt->values.size())
                 mode = FilamentColorModeFromConfig(colorModeOpt->values[i]);
 
-<<<<<<< snaporca-int
             fd.m_color = SMFilamentColor::FromColors(filamentColors, mode);
-=======
-            fd.m_color = FilamentColor::FromColors(filamentColors, mode);
->>>>>>> lixnix/main
         }
 
         out_list.push_back(std::move(fd));
@@ -1163,11 +1038,7 @@ void build_machine_filament_list(PresetBundle* preset_bundle, std::vector<Filame
         fd.m_type  = info.filament_type;
         
         if (!info.color_info.empty() || !info.multiColors.empty()) {
-<<<<<<< snaporca-int
             fd.m_color = SMFilamentColor::FromColors(info.multiColors, info.colorMode, info.color_info);
-=======
-            fd.m_color = FilamentColor::FromColors(info.multiColors, info.colorMode, info.color_info);
->>>>>>> lixnix/main
         }
 
         out_list.push_back(std::move(fd));
@@ -1369,11 +1240,7 @@ enum class ActionButtonType : int {
     abSendGCode
 };
 
-<<<<<<< snaporca-int
 
-=======
-// CustomNotebook.h
->>>>>>> lixnix/main
 #include <wx/wx.h>
 #include <vector>
 
@@ -1381,33 +1248,13 @@ class CustomNotebook : public wxControl
 {
 public:
     CustomNotebook(wxWindow* parent, wxWindowID id = wxID_ANY, const wxPoint& pos = wxDefaultPosition, const wxSize& size = wxDefaultSize)
-<<<<<<< snaporca-int
         : wxControl(parent, id, pos, size, wxBORDER_NONE), m_selectedIndex(-1)
     {
-        // Figma 27551-61181: each segment is a fixed 70x24 button with 13 px inner
-        // padding, centered text and square corners. The outer radius matches the
-        // parent nozzle card (StaticBox::SetCornerRadius(8), raw pixels).
-        m_tabWidth    = FromDIP(70);
-        m_tabHeight   = FromDIP(24);
-        m_tabPadding  = FromDIP(13);
-        m_roundRadius = 8;
-
-        SetBackgroundStyle(wxBG_STYLE_PAINT);
-        UpdateColors();
-
-=======
-        : wxControl(parent, id, pos, size, wxBORDER_NONE), m_selectedIndex(-1), m_tabHeight(0), m_tabPadding(0), m_roundRadius(0)
-    {
-        SetBackgroundStyle(wxBG_STYLE_PAINT);
-        UpdateColors();
-
-        // Texts are measured through the window: no DC, valid before the first paint.
-        wxFont font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
-        font.SetPointSize(m_textSize);
-        SetFont(font);
         UpdateMetrics();
 
->>>>>>> lixnix/main
+        SetBackgroundStyle(wxBG_STYLE_PAINT);
+        UpdateColors();
+
         Bind(wxEVT_PAINT, &CustomNotebook::OnPaint, this);
         Bind(wxEVT_ERASE_BACKGROUND, &CustomNotebook::OnEraseBackground, this);
         Bind(wxEVT_LEFT_DOWN, &CustomNotebook::OnLeftDown, this);
@@ -1419,14 +1266,8 @@ public:
         m_tabs.push_back({text, page});
         if (page) {
             page->Reparent(this);
-<<<<<<< snaporca-int
             page->Hide();
             page->SetBackgroundColour(m_selectedTabColor);
-=======
-            // The caller owns the page colour: m_selectedTabColor is refreshed when the strip
-            // paints and can be stale after a theme switch.
-            page->Hide();
->>>>>>> lixnix/main
         }
 
         if (m_selectedIndex == -1) {
@@ -1434,10 +1275,7 @@ public:
         }
 
         UpdateLayout();
-<<<<<<< snaporca-int
         InvalidateBestSize();
-=======
->>>>>>> lixnix/main
         Refresh();
     }
 
@@ -1451,22 +1289,18 @@ public:
         m_tabs.clear();
         m_selectedIndex = -1;
         UpdateLayout();
-<<<<<<< snaporca-int
         InvalidateBestSize();
-=======
->>>>>>> lixnix/main
         Refresh();
     }
 
     size_t GetPageCount() const { return m_tabs.size(); }
 
-<<<<<<< snaporca-int
-=======
     // After a DPI change.
     void Rescale()
     {
         UpdateMetrics();
         UpdateLayout();
+        InvalidateBestSize();
         Refresh();
     }
 
@@ -1482,7 +1316,6 @@ public:
         return m_tabHeight + 1 + page_height + 3;
     }
 
->>>>>>> lixnix/main
     wxWindow* GetPage(size_t index) const { return (index < m_tabs.size()) ? m_tabs[index].page : nullptr; }
 
     int GetSelection() const { return m_selectedIndex; }
@@ -1513,15 +1346,10 @@ protected:
 
         wxPaintDC dc(this);
 
-<<<<<<< snaporca-int
-=======
-        // 1. 绘制背景
->>>>>>> lixnix/main
         dc.SetPen(*wxTRANSPARENT_PEN);
         dc.SetBrush(wxBrush(m_bgColor));
         dc.DrawRectangle(GetClientRect());
 
-<<<<<<< snaporca-int
         dc.SetPen(wxPen(m_dividerColor, 1));
         dc.SetBrush(wxBrush(m_dividerColor));
         int trackW = GetSize().x;
@@ -1538,30 +1366,12 @@ protected:
         if (height > m_tabHeight - 2) {
             m_tabHeight = height + 2;
             Layout();
-=======
-        // 2. 绘制标签背景区域
-        dc.SetPen(wxPen(m_dividerColor, 1));
-        dc.SetBrush(wxBrush(m_dividerColor));
-        wxRect labelRect(0, 0, GetSize().x, m_tabHeight);
-        dc.DrawRoundedRectangle(labelRect, m_roundRadius);
-        dc.DrawRectangle(0, m_tabHeight - 2, GetSize().x, 4);
-
-        // 3. 绘制所有标签
-        dc.SetFont(GetFont());
-
-        // A floor that heals itself: the strip is never lower than the text the DC draws. The
-        // notebook has no sizer, so the page is placed by UpdateLayout().
-        if (dc.GetCharHeight() + 2 > m_tabHeight) {
-            m_tabHeight = dc.GetCharHeight() + 2;
-            UpdateLayout();
->>>>>>> lixnix/main
         }
 
         int xPos = 0;
         for (size_t i = 0; i < m_tabs.size(); ++i) {
             bool isSelected = static_cast<int>(i) == m_selectedIndex;
 
-<<<<<<< snaporca-int
             int textWidth, textHeight;
             dc.GetTextExtent(m_tabs[i].text, &textWidth, &textHeight);
             int tabWidth = GetTabWidth(textWidth);
@@ -1590,25 +1400,6 @@ protected:
             dc.SetTextForeground(isSelected ? m_selectedTextColor : m_textColor);
             int xText = xPos + (tabWidth - textWidth) / 2;
             dc.DrawText(m_tabs[i].text, xText, (m_tabHeight - textHeight) / 2);
-=======
-            const int textHeight = dc.GetTextExtent(m_tabs[i].text).y;
-            const int tabWidth   = TabWidth(i);
-
-            if (isSelected) {
-                dc.SetPen(wxPen(m_dividerColor, 1));
-                dc.SetBrush(wxBrush(m_bgColor));
-                wxRect selectedRect(xPos, 0, tabWidth, m_tabHeight + 2);
-                dc.DrawRectangle(selectedRect);
-                dc.DrawRoundedRectangle(selectedRect, m_roundRadius);
-
-                dc.SetPen(wxPen(m_bgColor, 1));
-                dc.SetBrush(wxBrush(m_bgColor));
-                dc.DrawRectangle(xPos, m_tabHeight, tabWidth, 4);
-            }
-
-            dc.SetTextForeground(isSelected ? m_selectedTextColor : m_textColor);
-            dc.DrawText(m_tabs[i].text, xPos + m_tabPadding, (m_tabHeight - textHeight) / 2);
->>>>>>> lixnix/main
 
             xPos += tabWidth;
         }
@@ -1629,10 +1420,6 @@ protected:
 
         int tabIndex = HitTest(pos);
         if (tabIndex != -1 && tabIndex != m_selectedIndex) {
-<<<<<<< snaporca-int
-            SetSelection(tabIndex);
-            Refresh();
-=======
             const int previous = m_selectedIndex;
             SetSelection(tabIndex);
             Refresh();
@@ -1641,7 +1428,6 @@ protected:
             wxBookCtrlEvent changed(wxEVT_BOOKCTRL_PAGE_CHANGED, GetId(), tabIndex, previous);
             changed.SetEventObject(this);
             GetEventHandler()->ProcessEvent(changed);
->>>>>>> lixnix/main
         }
     }
 
@@ -1661,7 +1447,18 @@ private:
         wxWindow* page;
     };
 
-<<<<<<< snaporca-int
+    // Figma 27551-61181: each segment is a fixed 70x24 button with 13 px inner
+    // padding, centered text and square corners. The outer radius matches the
+    // parent nozzle card (StaticBox::SetCornerRadius(8), raw pixels). Called again
+    // from Rescale() after a DPI change.
+    void UpdateMetrics()
+    {
+        m_tabWidth    = FromDIP(70);
+        m_tabHeight   = FromDIP(24);
+        m_tabPadding  = FromDIP(13);
+        m_roundRadius = 8;
+    }
+
     // Figma 27551-61181: segments are 70 px wide; only grow when the
     // localized label (e.g. "Left Nozzle") does not fit.
     int GetTabWidth(int textWidth) const
@@ -1669,14 +1466,11 @@ private:
         return std::max(m_tabWidth, textWidth + 2 * m_tabPadding);
     }
 
-=======
->>>>>>> lixnix/main
     wxRect GetTabRect(size_t index) const
     {
         if (index >= m_tabs.size())
             return wxRect();
 
-<<<<<<< snaporca-int
         wxClientDC dc(const_cast<CustomNotebook*>(this));
         wxFont     font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
         font.SetPointSize(m_textSize);
@@ -1693,13 +1487,6 @@ private:
         }
 
         return wxRect(x, 0, tabWidth, m_tabHeight);
-=======
-        int x = 0;
-        for (size_t i = 0; i < index; ++i)
-            x += TabWidth(i);
-
-        return wxRect(x, 0, TabWidth(index), m_tabHeight);
->>>>>>> lixnix/main
     }
 
     int HitTest(const wxPoint& pt) const
@@ -1707,7 +1494,6 @@ private:
         if (pt.y > m_tabHeight)
             return -1;
 
-<<<<<<< snaporca-int
         wxClientDC dc(const_cast<CustomNotebook*>(this));
         wxFont     font = wxSystemSettings::GetFont(wxSYS_DEFAULT_GUI_FONT);
         font.SetPointSize(m_textSize);
@@ -1718,11 +1504,6 @@ private:
             int textWidth, textHeight;
             dc.GetTextExtent(m_tabs[i].text, &textWidth, &textHeight);
             int tabWidth = GetTabWidth(textWidth);
-=======
-        int xPos = 0;
-        for (size_t i = 0; i < m_tabs.size(); ++i) {
-            const int tabWidth = TabWidth(i);
->>>>>>> lixnix/main
 
             if (pt.x >= xPos && pt.x <= xPos + tabWidth) {
                 return i;
@@ -1742,44 +1523,19 @@ private:
             m_bgColor           = wxColour(255, 255, 255);
             m_borderColor       = wxColour(240, 240, 240);
             m_selectedTabColor  = wxColour(255, 255, 255);
-<<<<<<< snaporca-int
             m_textColor         = wxColour(107, 107, 107); // #6B6B6B: match the process flow toggle's unselected grey
             m_dividerColor      = wxColour(240, 240, 240);
             m_selectedTextColor = wxColour(255, 255, 255); // white text on the teal selected tab
-=======
-            m_textColor         = wxColour(194, 194, 193);
-            m_dividerColor      = wxColour(240, 240, 240);
-            m_selectedTextColor = wxColour(0, 0, 0);
->>>>>>> lixnix/main
         } else {
             m_bgColor           = wxColour(45, 45, 49);
             m_borderColor       = wxColour(76, 76, 85);
             m_selectedTabColor  = wxColour(45, 45, 49);
-<<<<<<< snaporca-int
             m_textColor         = wxColour(107, 107, 107); // #6B6B6B: match the process flow toggle's unselected grey
-=======
-            m_textColor         = wxColour(104, 105, 107);
->>>>>>> lixnix/main
             m_dividerColor      = wxColour(51, 51, 55);
             m_selectedTextColor = wxColour(255, 255, 255);
         }
     }
 
-<<<<<<< snaporca-int
-=======
-    // Strip metrics at the current DPI; the 1 to 4 px literals of OnPaint() and UpdateLayout() are
-    // line widths and stay raw.
-    void UpdateMetrics()
-    {
-        m_tabPadding  = FromDIP(10);
-        m_roundRadius = FromDIP(5);
-        m_tabHeight   = std::max(FromDIP(24), GetCharHeight() + FromDIP(4));   // 24 at 100 %, as before
-    }
-
-    // Measured through the window, with the font of the constructor.
-    int TabWidth(size_t index) const { return GetTextExtent(m_tabs[index].text).x + 2 * m_tabPadding; }
-
->>>>>>> lixnix/main
     void UpdateLayout()
     {
         if (m_selectedIndex != -1 && m_tabs[m_selectedIndex].page) {
@@ -1792,7 +1548,6 @@ private:
         }
     }
 
-<<<<<<< snaporca-int
     // Include page content so the parent sizer reserves the notebook height instead
     // of allowing following sidebar panels to overlap it.
     wxSize DoGetBestSize() const override
@@ -1811,8 +1566,6 @@ private:
         return wxSize(best_width, best_height);
     }
 
-=======
->>>>>>> lixnix/main
 private:
     std::vector<TabInfo> m_tabs;
     int                  m_selectedIndex;
@@ -1824,10 +1577,7 @@ private:
     wxColour m_selectedTextColor;
     wxColour m_dividerColor;
 
-<<<<<<< snaporca-int
     int m_tabWidth;
-=======
->>>>>>> lixnix/main
     int m_tabHeight;
     int m_tabPadding;
     int m_roundRadius;
@@ -1838,8 +1588,6 @@ private:
 #endif
 };
 
-<<<<<<< snaporca-int
-=======
 // The windows of one nozzle tab; the sizers are rebuilt from them (layout_nozzle_page).
 struct NozzlePage
 {
@@ -1923,7 +1671,6 @@ static void layout_nozzle_page(const NozzlePage &page)
     panel->SetSizer(page_sizer);
 }
 
->>>>>>> lixnix/main
 // Background for the extruder-group title chip and its edit buttons
 static wxColour extruder_group_chip_bg()
 {
@@ -2226,6 +1973,7 @@ struct Sidebar::priv
     ExtruderGroup *single_extruder = nullptr;
 
     int  FromDIP(int n) { return plater->FromDIP(n); }
+    void layout_printer(bool isBBL, bool isDual);
 
     void flush_printer_sync(bool restart = false);
 
@@ -2234,10 +1982,7 @@ struct Sidebar::priv
     int editing_filament = -1;
     wxBoxSizer *sizer_filaments = nullptr;
 
-<<<<<<< snaporca-int
 
-=======
->>>>>>> lixnix/main
     //BBS Sidebar widgets
     wxPanel* m_panel_print_title;
     wxStaticText* m_staticText_print_title;
@@ -2248,11 +1993,7 @@ struct Sidebar::priv
     wxStaticLine *              m_staticline1;
     StaticBox* m_panel_filament_title;
     ScalableButton* m_filament_config_icon = nullptr;
-<<<<<<< snaporca-int
     wxPanel*   m_panel_filament_separator;
-=======
-    wxPanel*   m_panel_filament_separator = nullptr;
->>>>>>> lixnix/main
     wxStaticText* m_staticText_filament_settings;
     wxStaticText* m_staticText_filament_count;
     ScalableButton *  m_bpButton_add_filament;
@@ -2260,7 +2001,6 @@ struct Sidebar::priv
     ScalableButton *  m_bpButton_ams_filament;
     ScalableButton *  m_bpButton_set_filament;
     ScalableButton *  m_bpButton_sync_filament = nullptr;
-<<<<<<< snaporca-int
     int m_menu_filament_id = -1;
 
     wxPanel* m_filament_area_wrapper;
@@ -2283,10 +2023,6 @@ struct Sidebar::priv
     wxStaticText*     m_text_mixed_warning{nullptr};
     bool              m_mixed_filament_broken{false};
 
-=======
-    int                         m_menu_filament_id = -1;
-    wxPanel* m_panel_filament_content;
->>>>>>> lixnix/main
     wxScrolledWindow* m_scrolledWindow_filament_content;
 
     // Mixed (virtual) filaments panel - collapsible like Printer/Filament sections
@@ -2356,6 +2092,7 @@ struct Sidebar::priv
     // Flow row: one combo per nozzle tab (always created, shown only on tool heads that declare
     // more than one nozzle volume type).
     std::vector<ComboBox*>       m_nozzle_flow_lists;
+    std::vector<ScalableButton*> m_nozzle_edit_btns;
     // Every window of the nozzle tabs, one entry per tab. Window pointers only: they die with
     // DeleteAllPages().
     std::vector<NozzlePage>      m_nozzle_pages;
@@ -2415,7 +2152,6 @@ struct Sidebar::priv
 #endif
 };
 
-<<<<<<< snaporca-int
 static bool is_snapmaker_printer_selected();
 
 void Sidebar::priv::layout_printer(bool isBBL, bool isDual)
@@ -2535,8 +2271,6 @@ void Sidebar::priv::layout_printer(bool isBBL, bool isDual)
     }
 }
 
-=======
->>>>>>> lixnix/main
 void Sidebar::priv::flush_printer_sync(bool restart)
 {
     if (restart) {
@@ -3328,23 +3062,6 @@ MixedColorMatchRecipeResult prompt_best_color_match_recipe(wxWindow*            
     return dlg.selected_recipe();
 }
 
-<<<<<<< snaporca-int
-=======
-static wxString nozzle_type_key_to_label(const std::string& key)
-{
-    if (key == "hardened_steel")
-        return _L("Hardened Steel");
-    if (key == "stainless_steel")
-        return _L("Stainless Steel");
-    if (key == "brass")
-        return _L("Brass");
-    if (key == "undefine")
-        return _L("Unknown");
-    return wxString::FromUTF8(key);
-}
-
-
->>>>>>> lixnix/main
 // Check if the machine supports Junction Deviation (Marlin firmware with machine_max_junction_deviation > 0)
 static bool has_junction_deviation(const DynamicPrintConfig* printer_config)
 {
@@ -3822,9 +3539,6 @@ void ExtruderGroup::SetTitle(const wxString& title)
 
 bool Sidebar::priv::switch_diameter(bool single)
 {
-    // Snapmaker sidebar does not build the BBL extruder-group widgets.
-    if (left_extruder == nullptr || right_extruder == nullptr || single_extruder == nullptr)
-        return false;
     wxString diameter;
     if (single) {
         diameter = single_extruder->combo_diameter->GetValue();
@@ -4234,9 +3948,6 @@ void Sidebar::priv::show_filament_switcher_dialog(bool is_ready, bool is_manual)
 
 void Sidebar::priv::update_extruder_separator_icon(bool show, bool ready)
 {
-    // Snapmaker sidebar: BBL ExtruderGroup widgets are not created.
-    if (left_extruder == nullptr || right_extruder == nullptr)
-        return;
     if (!extruder_separator_icon)
         return;
     static bool last_show  = false;
@@ -4289,9 +4000,6 @@ void Sidebar::priv::update_extruder_separator_icon(bool show, bool ready)
 
 bool Sidebar::priv::sync_extruder_list(bool &only_external_material, bool is_manual)
 {
-    // Snapmaker sidebar does not build the BBL extruder-group widgets; nothing to sync.
-    if (left_extruder == nullptr || right_extruder == nullptr || single_extruder == nullptr)
-        return false;
     MachineObject *obj = wxGetApp().getDeviceManager()->get_selected_machine();
     auto           printer_name = plater->get_selected_printer_name_in_combox();
     BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << __LINE__ << " begin sync_extruder_list";
@@ -4473,10 +4181,6 @@ bool Sidebar::priv::sync_extruder_list(bool &only_external_material, bool is_man
 
 void Sidebar::priv::update_sync_status(const MachineObject *obj)
 {
-    // Snapmaker sidebar does not build the BBL printer/extruder sync widgets; nothing to update.
-    if (panel_printer_preset == nullptr || panel_printer_bed == nullptr || panel_nozzle_dia == nullptr ||
-        left_extruder == nullptr || right_extruder == nullptr || single_extruder == nullptr)
-        return;
     StateColor not_synced_colour(std::pair<wxColour, int>(wxColour("#009688"), StateColor::Normal));
     auto clear_all_sync_status = [this]() {
         panel_printer_preset->ShowBadge(false);
@@ -4723,16 +4427,27 @@ void Sidebar::update_sync_ams_btn_enable(wxUpdateUIEvent &e)
      if (m_last_slice_state != p->plater->is_background_process_slicing()) {
          m_last_slice_state = p->plater->is_background_process_slicing();
          //btn_sync->Enable(!m_last_slice_state);
-         if (p->m_printer_bbl_sync)
-             p->m_printer_bbl_sync->Enable(!m_last_slice_state);
-         if (ams_btn)
-             ams_btn->Enable(!m_last_slice_state);
+         p->m_printer_bbl_sync->Enable(!m_last_slice_state);
+         ams_btn->Enable(!m_last_slice_state);
          Refresh();
      }
  }
 
+static wxString nozzle_type_key_to_label(const std::string& key)
+{
+    if (key == "hardened_steel")
+        return _L("Hardened Steel");
+    if (key == "stainless_steel")
+        return _L("Stainless Steel");
+    if (key == "brass")
+        return _L("Brass");
+    if (key == "undefine")
+        return _L("Unknown");
+    return wxString::FromUTF8(key);
+}
+
 Sidebar::Sidebar(Plater *parent)
-    : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(42 * wxGetApp().em_unit(), -1)), p(new priv(parent))
+    : wxPanel(parent, wxID_ANY, wxDefaultPosition, wxSize(39 * wxGetApp().em_unit(), -1)), p(new priv(parent))
 {
     Choice::register_dynamic_list("support_filament", &dynamic_physical_filament_list);
     Choice::register_dynamic_list("support_interface_filament", &dynamic_physical_filament_list);
@@ -4782,7 +4497,7 @@ Sidebar::Sidebar(Plater *parent)
         p->m_panel_printer_title->SetBackgroundColor2(0xF1F1F1);
 
         p->m_printer_icon = new ScalableButton(p->m_panel_printer_title, wxID_ANY, "printer");
-        p->m_text_printer_settings = new Label(p->m_panel_printer_title, _L("Printer"), LB_PROPAGATE_MOUSE_EVENT);
+        p->m_text_printer_settings = new Label(p->m_panel_printer_title, _L("Printer"), LB_PROPAGATE_MOUSE_EVENT | wxST_ELLIPSIZE_END);
 
         // Use ams_fila_sync icon (sync_nozzle_info.svg does not exist in resources)
         p->m_printerinfo_syncbtn = new ScalableButton(p->m_panel_printer_title, wxID_ANY, "nozzle_sync");
@@ -4808,14 +4523,6 @@ Sidebar::Sidebar(Plater *parent)
                 return;        
             }
 
-<<<<<<< snaporca-int
-            std::shared_ptr<PrintHost> host = nullptr;
-            wxGetApp().get_connect_host(host);
-            SSWCPProtocol::ResolveResult resolve_result = SSWCP::resolve_machine_info(host);
-            MachineInfo&              machine_info      = resolve_result.info;
-            std::vector<std::string>  nozzle_diameters  = machine_info.nozzle_diameters;
-
-=======
             // Upstream #807 87f34b9a63: model, nozzle sizes and nozzle flow types from the system info
             // and from the live extruder objects of the printer.
             std::shared_ptr<PrintHost> host = nullptr;
@@ -4835,17 +4542,10 @@ Sidebar::Sidebar(Plater *parent)
             };
             // The slots the device page keeps up to date replace the answer when every slot names
             // its nozzle size, and its flow types when every slot names one too.
->>>>>>> lixnix/main
             const auto& sync_nozzle_slots = wxGetApp().preset_bundle->m_connect_machine_info_list;
             if (!sync_nozzle_slots.empty()) {
                 std::vector<std::pair<std::string, std::string>> cached_slots;
                 for (const auto& slot : sync_nozzle_slots)
-<<<<<<< snaporca-int
-                    cached_slots.emplace_back(slot.nozzle_info, slot.nozzle_volume_type);
-                SSWCPProtocol::select_complete_cached_nozzle_info(cached_slots, nozzle_diameters, machine_info.nozzle_volume_types);
-            }
-            if (resolve_result.status != SSWCPProtocol::ResolveStatus::NoResponse && machine_info.model == "Snapmaker U1")
-=======
                     cached_slots.emplace_back(trim_diameter(slot.nozzle_info), slot.nozzle_volume_type);
                 SSWCPProtocol::select_complete_cached_nozzle_info(cached_slots, nozzle_diameters, nozzle_flows);
             }
@@ -4853,7 +4553,6 @@ Sidebar::Sidebar(Plater *parent)
                 diameter = trim_diameter(diameter);
 
             if (resolved.status != SSWCPProtocol::ResolveStatus::NoResponse && machine_type == "Snapmaker U1")
->>>>>>> lixnix/main
             {
                 if (nozzle_diameters.size() <= 0)
                 {
@@ -4867,106 +4566,6 @@ Sidebar::Sidebar(Plater *parent)
                     return;
                 }
 
-<<<<<<< snaporca-int
-                bool res = false;
-                std::string headNozzleSize = nozzle_diameters[0];
-                for (int i = 1; i < nozzle_diameters.size(); i++)
-                {
-                    if (headNozzleSize != nozzle_diameters[i])
-                    {
-                        res = true;
-                        break;
-                    }
-                }
-
-                if (res)
-                {
-                    std::vector<std::string> diameters_raw = nozzle_diameters;
-                    //std::vector<std::string> diameters_raw = {"0.2", "0.8"};
-                    wxTheApp->CallAfter([this, diameters_raw, nozzle_volume_types = machine_info.nozzle_volume_types]() {
-                        NozzleDiameterSelectDialog dlg(
-                            wxGetApp().mainframe,
-                            _L("Note: Inconsistent nozzle diameters. Current version does not support mixed diameter printing. Please select one nozzle for this print."),
-                            _L("Set Nozzle Diameter"),
-                            diameters_raw);
-                        if (dlg.ShowModal() == wxID_OK) {
-                            std::string sel = dlg.GetSelectedDiameter();
-                            if (!sel.empty()) {
-                                auto preset = wxGetApp().preset_bundle->get_similar_printer_preset({}, sel);
-                                if (preset) {
-                                    preset->is_visible = true;
-
-                                    auto diameter = sel;
-                                    auto preset   = wxGetApp().preset_bundle->get_similar_printer_preset({}, diameter);
-                                    if (preset == nullptr) {
-                                        BOOST_LOG_TRIVIAL(error) << "get the similar printer preset fail";
-                                    } else {
-                                        preset->is_visible = true; // force visible
-
-                                        for (size_t i = 0; i < p->m_nozzle_diameter_lists.size(); ++i) {
-                                            p->m_nozzle_diameter_lists[i]->SetValue(diameter + "mm");
-                                        }
-
-                                        wxGetApp().get_tab(Preset::TYPE_PRINTER)->select_preset(preset->name);
-                                        wxGetApp().plater()->sidebar().update_all_preset_comboboxes(true);
-                                    }
-                                }
-                            }
-                        }
-
-                        if (!nozzle_volume_types.empty())
-                            GUI::FlowType::set_nozzle_volume_types(nozzle_volume_types);
-
-                        wxGetApp().plater()->sidebar().update_nozzle_settings(true);
-                    });
-                    return;
-                }
-                else {
-                    // All tool heads report the same diameter: apply it without opening the picker.
-                    std::string diameter = headNozzleSize;
-                    boost::algorithm::trim(diameter);
-                    if (diameter.size() > 2 && boost::iends_with(diameter, "mm")) {
-                        diameter.resize(diameter.size() - 2);
-                        boost::algorithm::trim(diameter);
-                    }
-                    wxTheApp->CallAfter([this, diameter, nozzle_volume_types = machine_info.nozzle_volume_types]() {
-                        auto preset = wxGetApp().preset_bundle->get_similar_printer_preset({}, diameter);
-                        if (preset == nullptr) {
-                            BOOST_LOG_TRIVIAL(error) << "get the similar printer preset fail (uniform nozzle sync)";
-                            return;
-                        }
-                        preset->is_visible = true;
-
-                        for (size_t i = 0; i < p->m_nozzle_diameter_lists.size(); ++i)
-                            p->m_nozzle_diameter_lists[i]->SetValue(diameter + "mm");
-
-                        wxGetApp().get_tab(Preset::TYPE_PRINTER)->select_preset(preset->name);
-                        wxGetApp().plater()->sidebar().update_all_preset_comboboxes(true);
-
-                        // Apply synchronized nozzle flow types BEFORE rebuilding the nozzle
-                        // UI: update_nozzle_settings rebuilds the per-nozzle flow combos by
-                        // reading nozzle_volume_type from config, so the write must land first
-                        // or the combos show stale values.
-                        if (!nozzle_volume_types.empty())
-                            GUI::FlowType::set_nozzle_volume_types(nozzle_volume_types);
-
-                        wxGetApp().plater()->sidebar().update_nozzle_settings(true);
-
-                        wxTheApp->CallAfter([this]() {
-                            MessageDialog dlg_Ex(wxGetApp().mainframe, _L("Nozzle settings synchronized successfully"),
-                                                 _L("Note"), wxOK);
-                            dlg_Ex.ShowModal();
-                        });
-                    });
-                }
-            }
-            
-            });
-        
-        p->m_printer_icon->Bind(wxEVT_BUTTON, [](wxCommandEvent& e) {
-            //auto wizard_t = new ConfigWizard(wxGetApp().mainframe);
-            //wizard_t->run(ConfigWizard::RR_USER, ConfigWizard::SP_CUSTOM);
-=======
                 // ORCA multi-nozzle-size: selects one printer profile, then applies every tool head's
                 // reported size, then the flow types, then the High Flow rule. The profile follows
                 // head 1 unless only a High Flow head's size has High Flow values (sync_reference_head).
@@ -5017,29 +4616,43 @@ Sidebar::Sidebar(Plater *parent)
                 });
             }
             
->>>>>>> lixnix/main
             });
         
+        p->m_printer_icon->Bind(wxEVT_BUTTON, [](wxCommandEvent& e) {
+            //auto wizard_t = new ConfigWizard(wxGetApp().mainframe);
+            //wizard_t->run(ConfigWizard::RR_USER, ConfigWizard::SP_CUSTOM);
+            });
+
+        // ORCA use connect button on titlebar
+        p->m_printer_connect = new ScalableButton(p->m_panel_printer_title, wxID_ANY, "monitor_signal_strong");
+        p->m_printer_connect->SetToolTip(_L("Connection"));
+        p->m_printer_connect->Bind(wxEVT_BUTTON, [this](wxCommandEvent &e) {
+            PhysicalPrinterDialog dlg(this->GetParent());
+            dlg.ShowModal();
+        });
+
+        // ORCA use sync button on titlebar
+        p->m_printer_bbl_sync = new ScalableButton(p->m_panel_printer_title, wxID_ANY, "printer_sync_not");
+        p->m_printer_bbl_sync->SetToolTip(_L("Synchronize nozzle information and the number of AMS"));
+        p->m_printer_bbl_sync->Bind(wxEVT_BUTTON, [this](wxCommandEvent &e) {
+            deal_btn_sync();
+        });
+
         p->m_printer_setting = new ScalableButton(p->m_panel_printer_title, wxID_ANY, "settings");
-        p->m_printer_setting->SetToolTip(_L("settings"));
         p->m_printer_setting->Bind(wxEVT_BUTTON, [](wxCommandEvent &e) {
+            // p->editing_filament = -1;
+            // wxGetApp().params_dialog()->Popup();
+            // wxGetApp().get_tab(Preset::TYPE_FILAMENT)->restore_last_select_item();
             wxGetApp().run_wizard(ConfigWizard::RR_USER, ConfigWizard::SP_PRINTERS);
             });
 
         wxBoxSizer* h_sizer_title = new wxBoxSizer(wxHORIZONTAL);
         h_sizer_title->Add(p->m_printer_icon, 0, wxALIGN_CENTRE | wxLEFT, FromDIP(SidebarProps::TitlebarMargin()));
         h_sizer_title->AddSpacer(FromDIP(SidebarProps::ElementSpacing()));
-<<<<<<< snaporca-int
         h_sizer_title->Add(p->m_text_printer_settings, 1, wxALIGN_CENTER | wxRIGHT, FromDIP(SidebarProps::WideSpacing()));
         h_sizer_title->Add(p->m_printerinfo_syncbtn, 0, wxALIGN_CENTER | wxRIGHT, FromDIP(SidebarProps::WideSpacing())); // Snapmaker nozzle sync
         h_sizer_title->Add(p->m_printer_connect , 0, wxALIGN_CENTER | wxRIGHT, FromDIP(SidebarProps::WideSpacing())); // used larger margin to prevent accidental clicks
         h_sizer_title->Add(p->m_printer_bbl_sync, 0, wxALIGN_CENTER | wxRIGHT, FromDIP(SidebarProps::WideSpacing())); // used larger margin to prevent accidental clicks
-=======
-        h_sizer_title->Add(p->m_text_printer_settings, 0, wxALIGN_CENTER);
-        h_sizer_title->AddStretchSpacer();
-        h_sizer_title->Add(p->m_printerinfo_syncbtn, 0, wxALIGN_CENTER);
-        h_sizer_title->wxSizer::AddSpacer(FromDIP(10));
->>>>>>> lixnix/main
         h_sizer_title->Add(p->m_printer_setting, 0, wxALIGN_CENTER);
         h_sizer_title->AddSpacer(FromDIP(SidebarProps::TitlebarMargin()));
         h_sizer_title->SetMinSize(-1, 3 * em);
@@ -5047,54 +4660,80 @@ Sidebar::Sidebar(Plater *parent)
         p->m_panel_printer_title->SetSizer(h_sizer_title);
         p->m_panel_printer_title->Layout();
 
+        // 1.2 Add spliters around title bar
+
         // add printer title
         scrolled_sizer->Add(p->m_panel_printer_title, 0, wxEXPAND | wxALL, 0);
-        p->m_panel_printer_title->Bind(wxEVT_LEFT_UP, [this] (auto & e)
-        {
-            const bool expanded = p->m_panel_printer_content->IsShown();
-            p->m_panel_printer_content->Show(!expanded);
-            p->m_panel_printer_content->SetMaxSize(expanded ? wxSize(-1, 0) : wxSize(-1, -1));
+        p->m_panel_printer_title->Bind(wxEVT_LEFT_UP, [this] (auto & e) {
+            if (!p || !p->combo_printer || !p->m_text_printer_settings || !p->m_panel_printer_content || !m_scrolled_sizer)
+                return;
+            // ORCA Show printer name on title when its folded to inform user without expanding it again
+            bool     isShown = p->m_panel_printer_content->IsShown();
+            wxString title   = _L("Printer") + wxString(!isShown ? "" : ("  |  " + p->combo_printer->GetValue()));
+            p->m_text_printer_settings->SetLabel(title);
+            p->m_panel_printer_content->Show(!isShown);
+            p->m_panel_printer_separator->Show(isShown);
             m_scrolled_sizer->Layout();
         });
-
-        // add spliter 2
-        auto spliter_2 = new ::StaticLine(p->scrolled);
-        spliter_2->SetLineColour("#CECECE");
-        scrolled_sizer->Add(spliter_2, 0, wxEXPAND);
-
+        // ORCA add bottom border for seperation wile sections folded
+        p->m_panel_printer_separator = new wxPanel(p->scrolled, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(2))); // ORCA staticline class not works without string
+        p->m_panel_printer_separator->SetBackgroundColour("#FFFFFF");
+        scrolled_sizer->Add(p->m_panel_printer_separator, 0, wxEXPAND);
 
         /*************************** 2. add printer content ************************/
+
         p->m_panel_printer_content = new wxPanel(p->scrolled, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL);
         p->m_panel_printer_content->SetBackgroundColour(wxColour(255, 255, 255));
 
-        StateColor panel_bd_col(std::pair<wxColour, int>(wxColour(0x00AE42), StateColor::Pressed),
-                                std::pair<wxColour, int>(wxColour(0x00AE42), StateColor::Hovered),
-                                std::pair<wxColour, int>(wxColour(0xEEEEEE), StateColor::Normal));
+        struct PanelColors {
+            wxColour bg_normal = "#FFFFFF";
+            wxColour bg_focus  = "#E5F0EE";
+            wxColour bd_normal = "#DBDBDB";
+            wxColour bd_hover  = "#009688";
+            wxColour bd_focus  = "#009688";
+        };
+        PanelColors panel_color;
 
         p->panel_printer_preset = new StaticBox(p->m_panel_printer_content);
-        p->panel_printer_preset->SetCornerRadius(8);
-        p->panel_printer_preset->SetBorderColor(panel_bd_col);
-        p->panel_printer_preset->SetMinSize(PRINTER_PANEL_SIZE_SMALL);
-        p->panel_printer_preset->Bind(wxEVT_LEFT_DOWN, [this](auto& evt) { p->combo_printer->wxEvtHandler::ProcessEvent(evt); });
+        p->panel_printer_preset->SetCornerRadius(FromDIP(PRINTER_PANEL_RADIUS));
+        p->panel_printer_preset->SetBorderColor(panel_color.bd_normal);
+        p->panel_printer_preset->SetMinSize(FromDIP(PRINTER_PANEL_SIZE));
+        p->panel_printer_preset->Bind(wxEVT_LEFT_DOWN, [this](auto & evt) {
+            p->combo_printer->wxEvtHandler::ProcessEvent(evt);
+        });
+        // ORCA Hide Cover automatically if there is not enough space
+        p->panel_printer_preset->Bind(wxEVT_SIZE, [this](auto & e) {
+            auto current_width = e.GetSize().GetWidth();
+            auto narrow_width  = FromDIP(235);
+            auto label_width   = p->combo_printer->GetTextExtent(p->combo_printer->GetStringSelection()).GetWidth(); 
+            auto min_width     = label_width + FromDIP(25  + PRINTER_PANEL_SIZE.GetWidth());
+            if(((min_width < narrow_width && min_width > current_width) || (current_width < narrow_width && min_width > narrow_width)) && p->image_printer->IsShown())
+                p->image_printer->Hide();
+            else if((current_width > min_width || !(current_width < narrow_width)) && !p->image_printer->IsShown())
+                p->image_printer->Show();
+            e.Skip();
+        });
 
-        PlaterPresetComboBox* combo_printer = new PlaterPresetComboBox(p->panel_printer_preset, Preset::TYPE_PRINTER);
-        combo_printer->SetWindowStyle((combo_printer->GetWindowStyle() & ~wxALIGN_MASK) | wxALIGN_LEFT);
-        combo_printer->SetBorderWidth(0);
-        
-        ScalableBitmap bitmap_printer(p->panel_printer_preset, "printer_placeholder", 48);
-        p->image_printer = new wxStaticBitmap(p->panel_printer_preset, wxID_ANY, bitmap_printer.bmp(), wxDefaultPosition,
-                                                                 PRINTER_THUMBNAIL_SIZE, 0);
-        p->image_printer->Bind(wxEVT_LEFT_DOWN, [this](auto& evt) { p->combo_printer->wxEvtHandler::ProcessEvent(evt); });
-        
-        p->combo_printer = combo_printer;
+        // hover state data for printer panel
+        auto printer_preset_hovered = std::make_shared<std::unordered_set<wxWindow*>>();
 
-        // 绑定 combo 内部按钮的事件处理（按钮现在在 combo 内部）
-        combo_printer->bind_edit_button_handler([this, combo_printer]() {
-                p->editing_filament = -1;
-                if (combo_printer->switch_to_tab())
-                    p->editing_filament = 0;
+        p->btn_edit_printer = new ScalableButton(p->panel_printer_preset, wxID_ANY, "edit");
+        p->btn_edit_printer->SetToolTip(_L("Click to edit preset"));
+        p->btn_edit_printer->Hide(); // hide for first launch
+        p->btn_edit_printer->Bind(wxEVT_BUTTON, [this, panel_color, printer_preset_hovered](wxCommandEvent){
+            p->editing_filament = -1;
+            if (p->combo_printer->switch_to_tab())
+                p->editing_filament = 0;
+            // ORCA: FIX crash on wxGTK, directly modifying UI (self->Hide() / parent->Layout()) inside a button event can crash because callbacks are not re-entrant, leaving widgets in an inconsistent state
+            wxGetApp().CallAfter([this, panel_color, printer_preset_hovered]() {
+                // ORCA clicking edit button not triggers wxEVT_KILL_FOCUS wxEVT_LEAVE_WINDOW make changes manually to prevent stucked colors when opening printer settings
+                if (!p || !p->panel_printer_preset || !p->btn_edit_printer)
+                    return;
+				p->panel_printer_preset->SetBorderColor(panel_color.bd_normal);
+                printer_preset_hovered->clear();
+                p->btn_edit_printer->Hide();
+                p->panel_printer_preset->Layout();
             });
-<<<<<<< snaporca-int
         });
 
         ScalableBitmap bitmap_printer(p->panel_printer_preset, "printer_placeholder", PRINTER_THUMBNAIL_SIZE.GetHeight());
@@ -5134,118 +4773,184 @@ Sidebar::Sidebar(Plater *parent)
         p->btn_connect_printer->SetToolTip(_L("Connection"));
         p->btn_connect_printer->Bind(wxEVT_BUTTON, [this, combo_printer](wxCommandEvent)
             {
-=======
-        
-        combo_printer->bind_connection_button_handler([this]() {
-                wxGetApp().sm_disconnect_current_machine();
->>>>>>> lixnix/main
                 PhysicalPrinterDialog dlg(this->GetParent());
                 dlg.ShowModal();
             });
-
-        combo_printer->bind_machine_connecting_button_handler([this]() {
-            // machine_connecting_btn 的处理逻辑（如果有的话）
+        */
+        // ORCA use Show/Hide to gain text area instead using blank icon. also manages hover effect for border
+        for (wxWindow *w : std::initializer_list<wxWindow *>{p->panel_printer_preset, p->btn_edit_printer, p->image_printer, p->combo_printer}) {
+            w->Bind(wxEVT_ENTER_WINDOW, [this, w, panel_color, printer_preset_hovered](wxMouseEvent &e) {
+                printer_preset_hovered->insert(w);
+                if(!p->combo_printer->HasFocus())
+                    p->panel_printer_preset->SetBorderColor(panel_color.bd_hover);
+                e.Skip();
+            });
+            w->Bind(wxEVT_LEAVE_WINDOW, [this, w, panel_color, printer_preset_hovered](wxMouseEvent &e) {
+                printer_preset_hovered->erase(w);
+                if (printer_preset_hovered->empty() && !p->combo_printer->HasFocus())
+                    p->panel_printer_preset->SetBorderColor(panel_color.bd_normal);
+                e.Skip();
+            });
+        }
+        // Perform show/hide in wxEVT_IDLE after enter/leave events have settled.
+        // This prevents the extraneous enter/leave events generated by the
+        // layout change itself from causing a feedback loop.
+        Bind(wxEVT_IDLE, [this, printer_preset_hovered](wxIdleEvent &e) {
+            auto hovered = !printer_preset_hovered->empty();
+            if (p->btn_edit_printer->IsShown() != hovered) {
+                if (hovered) {
+                    p->btn_edit_printer->Show();
+                } else {
+                    p->btn_edit_printer->Hide();
+                }
+                p->panel_printer_preset->Layout();
+            }
         });
-        
-        // 显示编辑按钮（鼠标悬停时原来会显示，现在直接显示）
-        combo_printer->set_show_edit_button(true);
-        
-        // 设置按钮tooltip
-        combo_printer->set_connection_tooltip(_L("Connect to printer"));
-        combo_printer->set_machine_connecting_tooltip(_L("The machine has been connected and is currently in working mode"));
 
-        // 外部按钮已集成到 combo 内部，不再需要创建
-        // 保留变量引用以避免编译错误，但设为 nullptr
-        connection_btn = nullptr;
-        machine_connecting_btn = nullptr;
+        // ORCA unified Nozzle diameter selection
+        p->panel_nozzle_dia = new StaticBox(p->m_panel_printer_content);
+        p->panel_nozzle_dia->SetCornerRadius(FromDIP(PRINTER_PANEL_RADIUS));
+        p->panel_nozzle_dia->SetBorderColor(panel_color.bd_normal);
+        p->panel_nozzle_dia->SetMinSize(FromDIP(PRINTER_PANEL_SIZE));
+        p->panel_nozzle_dia->Bind(wxEVT_LEFT_DOWN, [this](auto & evt) {
+            p->combo_nozzle_dia->wxEvtHandler::ProcessEvent(evt);
+        });
 
-<<<<<<< snaporca-int
         // "Variant", not "Nozzle": picking one switches the printer preset (see panel_nozzle_dia).
         // TRN Sidebar label of the printer variant (nozzle) selector; picking one switches the printer preset.
         p->label_nozzle_title = new Label(p->panel_nozzle_dia, _L("Variant"), LB_PROPAGATE_MOUSE_EVENT);
         p->label_nozzle_title->SetFont(Label::Body_10);
-=======
-        wxBoxSizer* vsizer_printer = new wxBoxSizer(wxVERTICAL);
-        wxBoxSizer* hsizer_printer = new wxBoxSizer(wxHORIZONTAL);
->>>>>>> lixnix/main
 
-        wxBoxSizer* vsizer = new wxBoxSizer(wxVERTICAL);
-        wxBoxSizer* hsizer = new wxBoxSizer(wxHORIZONTAL);
+        p->combo_nozzle_dia = new ComboBox(p->panel_nozzle_dia, wxID_ANY, wxString(""), wxDefaultPosition, wxDefaultSize, 0, nullptr, wxCB_READONLY);
+        p->combo_nozzle_dia->SetBorderWidth(0);
+        p->combo_nozzle_dia->GetDropDown().SetUseContentWidth(true);
+        p->combo_nozzle_dia->SetMinSize(FromDIP(wxSize(PRINTER_PANEL_SIZE.GetWidth() - 4, 26))); // requires a static value in here
+        p->combo_nozzle_dia->SetMaxSize(FromDIP(wxSize(PRINTER_PANEL_SIZE.GetWidth() - 4, 26))); // using -1 with wxEXPAND has issues
+        p->combo_nozzle_dia->Bind(wxEVT_COMBOBOX, [this](auto &e) {
+            // This box is the machine-variant selector, so it switches the printer preset directly
+            // instead of feeding an extruder card's combo. Deferred, because switching preset
+            // rebuilds this very combo.
+            const wxString diameter = p->combo_nozzle_dia->GetValue();
+            p->combo_nozzle_dia->CallAfter([this, diameter]() {
+                p->is_switching_diameter = true;
+                p->switch_diameter_to(diameter);
+                p->is_switching_diameter = false;
+            });
+            e.Skip();
+        });
+        // ORCA paint whole combobox on focus
+        auto nozzle_focus_bg = [this, panel_color](bool focused){
+            auto bg_color = StateColor::darkModeColorFor(focused ? panel_color.bg_focus : panel_color.bg_normal);
+            p->panel_nozzle_dia->SetBackgroundColor(bg_color);
+            p->panel_nozzle_dia->SetBorderColor(focused ? panel_color.bd_focus : panel_color.bd_normal);
+            p->label_nozzle_title->SetBackgroundColour(bg_color);
+            p->label_nozzle_type->SetBackgroundColour(bg_color);
+            p->combo_nozzle_dia->SetBackgroundColour(bg_color); // paints margins instead combo background
+        };
+        p->combo_nozzle_dia->Bind(wxEVT_SET_FOCUS,  [nozzle_focus_bg](auto& e) {nozzle_focus_bg(true ); e.Skip();});
+        p->combo_nozzle_dia->Bind(wxEVT_KILL_FOCUS, [nozzle_focus_bg](auto& e) {nozzle_focus_bg(false); e.Skip();});
 
-<<<<<<< snaporca-int
         p->label_nozzle_type = new Label(p->panel_nozzle_dia, _L("Brass"), LB_PROPAGATE_MOUSE_EVENT | wxST_ELLIPSIZE_END | wxALIGN_CENTRE_HORIZONTAL);
         p->label_nozzle_type->SetFont(Label::Body_10);
         p->label_nozzle_type->SetMinSize(FromDIP(wxSize(56, -1)));
         p->label_nozzle_type->SetMaxSize(FromDIP(wxSize(56, -1)));
-=======
-        // 简化后的布局：打印机图片 + combo_printer（内含所有按钮）
-        combo_printer->SetWindowStyle((combo_printer->GetWindowStyle() & ~wxALIGN_MASK) | wxALIGN_LEFT);
->>>>>>> lixnix/main
 
-        hsizer->Add(p->image_printer, 0, wxLEFT | wxALIGN_CENTER, FromDIP(4));
-        hsizer->Add(combo_printer, 1, wxALIGN_CENTRE | wxLEFT | wxRIGHT, FromDIP(6));
-        hsizer->AddSpacer(FromDIP(10));
-        p->panel_printer_preset->SetSizer(hsizer);
-
-        hsizer_printer->Add(p->panel_printer_preset, 1, wxEXPAND, 0);
-        vsizer_printer->AddSpacer(FromDIP(4));
-        vsizer_printer->Add(hsizer_printer, 0, wxEXPAND | wxLEFT | wxRIGHT | wxTOP, FromDIP(4));
-        vsizer_printer->AddSpacer(FromDIP(10));
-
-        /*vsizer_printer->AddSpacer(FromDIP(16));
-        hsizer_printer->Add(p->image_printer, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(3));
-        hsizer_printer->Add(combo_printer, 1, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(3));
-        hsizer_printer->Add(edit_btn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(3));
-        hsizer_printer->Add(FromDIP(8), 0, 0, 0, 0);
-        hsizer_printer->Add(connection_btn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(3));
-        hsizer_printer->Add(machine_connecting_btn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(3));
-        hsizer_printer->Add(FromDIP(8), 0, 0, 0, 0);
-
-        vsizer_printer->Add(hsizer_printer, 0, wxEXPAND, 0);*/
-
-        // Bed type selection
-        // 创建一个像打印机选择那样的容器
-        p->panel_printer_preset = new StaticBox(p->m_panel_printer_content, wxID_ANY, wxDefaultPosition, wxDefaultSize,
-                                                wxTAB_TRAVERSAL | wxBORDER_NONE);
-        p->panel_printer_preset->SetCornerRadius(8);
-        StateColor panel_bd_col1(std::pair<wxColour, int>(wxColour(0x00AE42), StateColor::Pressed),
-                            std::pair<wxColour, int>(wxColour(0x00AE42), StateColor::Hovered),
-                            std::pair<wxColour, int>(wxColour(0xEEEEEE), StateColor::Normal));
-        // p->panel_printer_preset->SetBorderColor(panel_bd_col1);
-        // p->panel_printer_preset->SetMinSize(PRINTER_PANEL_SIZE_SMALL);
-
-        // 创建Bed type选择控件
-        wxBoxSizer* bed_type_sizer = new wxBoxSizer(wxHORIZONTAL);
-        wxStaticText* bed_type_title = new wxStaticText(p->panel_printer_preset, wxID_ANY, _L("Bed type"));
-        bed_type_title->Wrap(-1);
-        bed_type_title->SetFont(Label::Body_14);
-        m_bed_type_list = new ComboBox(p->panel_printer_preset, wxID_ANY, wxString(""), wxDefaultPosition, {-1, FromDIP(30)}, 0, nullptr, wxCB_READONLY);
-        const ConfigOptionDef* bed_type_def = print_config_def.get("curr_bed_type");
-        if (bed_type_def && bed_type_def->enum_keys_map) {
-            for (const auto& item : bed_type_def->enum_labels)
-                m_bed_type_list->AppendString(_L(item));
-            for (const auto& v : bed_type_def->enum_values)
-                m_bed_type_combo_enum_values.push_back(v);
+        // highlight border on hover
+        auto nozzle_dia_hovered = std::make_shared<std::unordered_set<wxWindow*>>();
+        for (wxWindow *w : std::initializer_list<wxWindow *>{p->panel_nozzle_dia, p->label_nozzle_title, p->label_nozzle_type, p->combo_nozzle_dia}) {
+            w->Bind(wxEVT_ENTER_WINDOW, [this, w, panel_color, nozzle_dia_hovered](wxMouseEvent &e) {
+                nozzle_dia_hovered->insert(w);
+                if(!p->combo_nozzle_dia->HasFocus())
+                    p->panel_nozzle_dia->SetBorderColor(panel_color.bd_hover);
+                e.Skip();
+            });
+            w->Bind(wxEVT_LEAVE_WINDOW, [this, w, panel_color, nozzle_dia_hovered](wxMouseEvent &e) {
+                nozzle_dia_hovered->erase(w);
+                if (nozzle_dia_hovered->empty() && !p->combo_nozzle_dia->HasFocus())
+                    p->panel_nozzle_dia->SetBorderColor(panel_color.bd_normal);
+                e.Skip();
+            });
         }
 
-        // 添加链接事件等
-        bed_type_title->Bind(wxEVT_ENTER_WINDOW, [bed_type_title, this](wxMouseEvent &e) {
+        wxGridSizer *nozzle_dia_sizer = new wxGridSizer(3, 1, FromDIP(2), 0);
+        nozzle_dia_sizer->Add(p->label_nozzle_title, 1, wxALIGN_CENTER | wxTOP   , FromDIP(2));
+        nozzle_dia_sizer->Add(p->combo_nozzle_dia  , 0, wxALIGN_CENTER);
+        nozzle_dia_sizer->Add(p->label_nozzle_type , 1, wxALIGN_CENTER | wxBOTTOM, FromDIP(1));
+
+        p->panel_nozzle_dia->SetSizer(nozzle_dia_sizer);
+
+        // Bed type selection
+        p->panel_printer_bed = new StaticBox(p->m_panel_printer_content);
+        p->panel_printer_bed->SetCornerRadius(FromDIP(PRINTER_PANEL_RADIUS));
+        p->panel_printer_bed->SetBorderColor(panel_color.bd_normal);
+        p->panel_printer_bed->SetMinSize(FromDIP(PRINTER_PANEL_SIZE));
+        p->panel_printer_bed->Bind(wxEVT_LEFT_DOWN, [this](auto &evt) {
+            on_leave_image_printer_bed(evt);
+            p->combo_printer_bed->wxEvtHandler::ProcessEvent(evt);
+        });
+
+        //ScalableButton *wiki_bed = new ScalableButton(p->panel_printer_bed, wxID_ANY, "help");
+        //wiki_bed->Bind(wxEVT_BUTTON, [](wxCommandEvent) {
+        //    wxLaunchDefaultBrowser("https://wiki.bambulab.com/en/x1/manual/compatibility-and-parameter-settings-of-filaments");
+        //});
+
+        ScalableBitmap bitmap_bed(p->panel_printer_bed, "printer_placeholder", PRINTER_THUMBNAIL_SIZE.GetHeight());
+        p->image_printer_bed = new wxStaticBitmap(p->panel_printer_bed, wxID_ANY, bitmap_bed.bmp(), wxDefaultPosition, wxDefaultSize, 0);
+        p->image_printer_bed->Bind(wxEVT_LEFT_DOWN, [this](auto &evt) {
+            on_leave_image_printer_bed(evt);
+            p->combo_printer_bed->wxEvtHandler::ProcessEvent(evt);
+        });
+
+        p->combo_printer_bed = new ComboBox(p->panel_printer_bed, wxID_ANY, wxString(""), wxDefaultPosition, wxDefaultSize, 0, nullptr, wxCB_READONLY);
+        p->combo_printer_bed->SetBorderWidth(0);
+        p->combo_printer_bed->GetDropDown().SetUseContentWidth(true);
+        p->combo_printer_bed->SetMinSize(FromDIP(wxSize(18,-1))); // ORCA show only arrow
+        p->combo_printer_bed->SetMaxSize(FromDIP(wxSize(18,-1))); // ORCA show only arrow
+        reset_bed_type_combox_choices(true);
+
+        p->combo_printer_bed->Bind(wxEVT_COMBOBOX, [this](auto &e) {
+            auto image_path        = get_cur_select_bed_image();
+            p->image_printer_bed->SetBitmap(create_scaled_bitmap(image_path, this, PRINTER_THUMBNAIL_SIZE.GetHeight()));
             e.Skip();
-            auto font = bed_type_title->GetFont();
-            font.SetUnderlined(true);
-            bed_type_title->SetFont(font);
-            SetCursor(wxCURSOR_HAND);
         });
-        bed_type_title->Bind(wxEVT_LEAVE_WINDOW, [bed_type_title, this](wxMouseEvent &e) {
-            e.Skip();
-            auto font = bed_type_title->GetFont();
-            font.SetUnderlined(false);
-            bed_type_title->SetFont(font);
-            SetCursor(wxCURSOR_ARROW);
-        });
-        bed_type_title->Bind(wxEVT_LEFT_UP, [bed_type_title, this](wxMouseEvent &e) {
-            wxLaunchDefaultBrowser("https://www.orcaslicer.com/wiki/bed-types");
-        });
+
+        // ORCA paint whole combobox on focus
+        auto bed_focus_bg = [this, panel_color](bool focused){
+            auto bg_color = StateColor::darkModeColorFor(focused ? panel_color.bg_focus : panel_color.bg_normal);
+            p->panel_printer_bed->SetBackgroundColor(bg_color);
+            p->panel_printer_bed->SetBorderColor(focused ? panel_color.bd_focus : panel_color.bd_normal);
+            p->image_printer_bed->SetBackgroundColour(bg_color);
+            p->combo_printer_bed->SetBackgroundColour(bg_color); // paints margins instead combo background
+        };
+        p->combo_printer_bed->Bind(wxEVT_SET_FOCUS,  [bed_focus_bg](auto& e) {bed_focus_bg(true ); e.Skip();});
+        p->combo_printer_bed->Bind(wxEVT_KILL_FOCUS, [bed_focus_bg](auto& e) {bed_focus_bg(false); e.Skip();});
+
+        // highlight border on hover
+        auto printer_bed_hovered = std::make_shared<std::unordered_set<wxWindow*>>();
+        for (wxWindow *w : std::initializer_list<wxWindow *>{p->panel_printer_bed, p->image_printer_bed, p->combo_printer_bed}) {
+            w->Bind(wxEVT_ENTER_WINDOW, [this, w, panel_color, printer_bed_hovered](wxMouseEvent &e) {
+                printer_bed_hovered->insert(w);
+                if(!p->combo_printer_bed->HasFocus())
+                    p->panel_printer_bed->SetBorderColor(panel_color.bd_hover);
+                if(w == p->image_printer_bed && !p->combo_printer_bed->is_drop_down()) // dont trigger while combo open
+                    on_enter_image_printer_bed(e);
+                e.Skip();
+            });
+            w->Bind(wxEVT_LEAVE_WINDOW, [this, w, panel_color, printer_bed_hovered](wxMouseEvent &e) {
+                printer_bed_hovered->erase(w);
+                if (printer_bed_hovered->empty() && !p->combo_printer_bed->HasFocus())
+                    p->panel_printer_bed->SetBorderColor(panel_color.bd_normal);
+                if(w == p->image_printer_bed)
+                    on_leave_image_printer_bed(e);
+                e.Skip();
+            });
+        }
+
+        wxBoxSizer *bed_type_sizer = new wxBoxSizer(wxHORIZONTAL);
+        bed_type_sizer->Add(p->combo_printer_bed, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(2));
+        bed_type_sizer->Add(p->image_printer_bed, 0, wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(2));
+
+        p->panel_printer_bed->SetSizer(bed_type_sizer);
 
         AppConfig *app_config = wxGetApp().app_config;
         std::string str_bed_type = app_config->get("curr_bed_type");
@@ -5257,22 +4962,84 @@ Sidebar::Sidebar(Plater *parent)
         }
 
         int bed_type_idx = bed_type_value - 1;
-        m_bed_type_list->Select(bed_type_idx);
-
-        // 布局Bed type控件
-        bed_type_sizer->Add(bed_type_title, 0, wxLEFT | wxRIGHT | wxALIGN_CENTER_VERTICAL, FromDIP(10));
-        bed_type_sizer->Add(m_bed_type_list, 1, wxLEFT | wxRIGHT | wxEXPAND, FromDIP(0));
-        p->panel_printer_preset->SetSizer(bed_type_sizer);
-
-        // 添加到垂直布局
-        vsizer_printer->Add(p->panel_printer_preset, 0, wxEXPAND | wxALL, FromDIP(4));
-        vsizer_printer->AddSpacer(FromDIP(8));
+        p->combo_printer_bed->Select(bed_type_idx);
 
         auto& project_config = wxGetApp().preset_bundle->project_config;
         BedType bed_type = (BedType)bed_type_value;
         project_config.set_key_value("curr_bed_type", new ConfigOptionEnum<BedType>(bed_type));
 
-        p->m_panel_printer_content->SetSizer(vsizer_printer);
+        /* ORCA THIS PART MOVED TO TITLEBAR
+        // Sync printer information
+        btn_sync = new Button(p->m_panel_printer_content, _L("Sync info"), "printer_sync", 0, 32);
+        //btn_sync->SetFont(Label::Body_8);
+        btn_sync->SetToolTip(_L("Synchronize nozzle information and the number of AMS"));
+        btn_sync->SetCornerRadius(8);
+        StateColor btn_sync_bg_col(
+                std::pair<wxColour, int>(wxColour("#CECECE"), StateColor::Pressed),
+                std::pair<wxColour, int>(wxColour("#F8F8F8"), StateColor::Hovered),
+                std::pair<wxColour, int>(wxColour("#F8F8F8"), StateColor::Normal));
+        StateColor btn_sync_bd_col(
+                std::pair<wxColour, int>(wxColour("#009688"), StateColor::Pressed),
+                std::pair<wxColour, int>(wxColour("#009688"), StateColor::Hovered),
+                std::pair<wxColour, int>(wxColour("#EEEEEE"), StateColor::Normal));
+        btn_sync->SetBackgroundColor(btn_sync_bg_col);
+        btn_sync->SetBorderColor(btn_sync_bd_col);
+        btn_sync->SetCanFocus(false);
+        btn_sync->SetPaddingSize({FromDIP(6), FromDIP(12)});
+        btn_sync->SetMinSize(BTN_SYNC_SIZE);
+        btn_sync->SetMaxSize(BTN_SYNC_SIZE);
+        btn_sync->SetVertical();
+        btn_sync->Bind(wxEVT_UPDATE_UI, &Sidebar::update_sync_ams_btn_enable, this);
+        btn_sync->Bind(wxEVT_BUTTON, [this](wxCommandEvent &e) {
+            deal_btn_sync();
+        });
+        p->btn_sync_printer = btn_sync;
+        */
+        p->timer_sync_printer->Bind(wxEVT_TIMER, [this] (wxTimerEvent & e) {
+            p->flush_printer_sync();
+        });
+       
+
+        p->left_extruder  = new ExtruderGroup(p->m_panel_printer_content, 0, _L("Left Nozzle"));
+        p->right_extruder = new ExtruderGroup(p->m_panel_printer_content, 1, _L("Right Nozzle"));
+        p->single_extruder = new ExtruderGroup(p->m_panel_printer_content, -1, _L("Nozzle"));
+        // manuallySetNozzleCount refreshes the badge and the plater itself; it is a no-op unless the
+        // printer has a multi-nozzle extruder (and the edit button is only enabled then, see
+        // enable_nozzle_count_edit).
+        p->left_extruder->SetOnHoverClick([]() { GUI::manuallySetNozzleCount(0); });
+        p->right_extruder->SetOnHoverClick([]() { GUI::manuallySetNozzleCount(1); });
+        p->single_extruder->SetEditEnabled(false);
+        // Orca: keep the floating switcher icon aligned with the left extruder's AMS row when the
+        // extruder card is resized (the overlay is absolutely positioned, not managed by a sizer).
+        p->left_extruder->Bind(wxEVT_SIZE, [this](wxSizeEvent &evt) {
+            if (p->extruder_separator_icon && p->extruder_separator_icon->IsShown()) {
+                wxPoint left_box_pos  = p->left_extruder->GetPosition();
+                wxPoint ams_local_pos = p->left_extruder->hsizer_ams->GetPosition();
+                wxSize  left_size     = p->left_extruder->sizer->GetSize();
+                wxSize  ams_size      = p->left_extruder->hsizer_ams->GetSize();
+                wxSize  icon_size     = p->extruder_separator_icon->GetSize();
+                int     ams_abs_y     = left_box_pos.y + ams_local_pos.y + FromDIP(4);
+                int     center_x      = left_size.GetWidth() + FromDIP(6) - icon_size.GetWidth() / 2;
+                int     center_y      = ams_abs_y + (ams_size.GetHeight() - icon_size.GetHeight()) / 2 - icon_size.GetHeight() / 2;
+                p->extruder_separator_icon->SetPosition(wxPoint(center_x, center_y));
+                if (p->m_panel_printer_content)
+                    p->m_panel_printer_content->Refresh();
+            }
+            evt.Skip();
+        });
+        auto switch_diameter = [this](wxCommandEvent & evt) {
+            auto extruder = dynamic_cast<ExtruderGroup *>(dynamic_cast<ComboBox *>(evt.GetEventObject())->GetParent());
+            p->is_switching_diameter = true;
+            p->switch_diameter(extruder == p->single_extruder);
+            p->is_switching_diameter = false;
+        };
+        p->left_extruder->combo_diameter->Bind(wxEVT_COMBOBOX, switch_diameter);
+        p->right_extruder->combo_diameter->Bind(wxEVT_COMBOBOX, switch_diameter);
+        p->single_extruder->combo_diameter->Bind(wxEVT_COMBOBOX, switch_diameter);
+
+        p->vsizer_printer = new wxBoxSizer(wxVERTICAL);
+        p->layout_printer(true, true);
+        p->m_panel_printer_content->SetSizer(p->vsizer_printer);
         p->m_panel_printer_content->Layout();
         scrolled_sizer->Add(p->m_panel_printer_content, 0, wxEXPAND, 0);
 
@@ -5304,6 +5071,7 @@ Sidebar::Sidebar(Plater *parent)
         wxBoxSizer* nozzle_sizer = new wxBoxSizer(wxVERTICAL);
         nozzle_sizer->Add(p->m_nozzle_notebook, 1, wxEXPAND | wxALL, FromDIP(0));
         nozzle_container->SetSizer(nozzle_sizer);
+        nozzle_container->SetMinSize(wxSize(-1, FromDIP(80)));
 
         // 添加到主布局
         p->vsizer_printer->Add(nozzle_container, 0, wxEXPAND | wxLEFT | wxRIGHT | wxBOTTOM, FromDIP(SidebarProps::ContentMargin()));
@@ -5313,34 +5081,30 @@ Sidebar::Sidebar(Plater *parent)
     }
 
     {
+
+    // Orca: Sidebar - Filament titlebar UI
     // add filament title
     p->m_panel_filament_title = new StaticBox(p->scrolled, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL | wxBORDER_NONE);
     p->m_panel_filament_title->SetBackgroundColor(title_bg);
     p->m_panel_filament_title->SetBackgroundColor2(0xF1F1F1);
     p->m_panel_filament_title->Bind(wxEVT_LEFT_UP, [this](wxMouseEvent &e) {
-        if (!p || !m_scrolled_sizer || !p->m_panel_filament_title || !p->m_panel_filament_content)
+        if (!p || !p->m_filament_area_wrapper || !m_scrolled_sizer || !p->m_bpButton_set_filament || !p->m_purge_mode_btn || !p->m_flushing_volume_btn || !p->m_bpButton_add_filament || !ams_btn)
             return;
-        // ORCA exclude the area of the titlebar buttons from the collapse/expand hit test, so
-        // that spamming a button does not fold the section, and so that a click on the spacing
-        // between icons does not either. Snapmaker Orca moved add/delete onto
-        // m_panel_physical_filaments_title, so only the buttons that really live on this
-        // titlebar are considered, and each one is null-checked because this fork does not
-        // create all of them.
-        int exclude_pt = p->m_panel_filament_title->GetClientSize().x;
-        if (p->m_purge_mode_btn && p->m_purge_mode_btn->IsShown())
-            exclude_pt = p->m_purge_mode_btn->GetPosition().x;
-        else if (p->m_flushing_volume_btn && p->m_flushing_volume_btn->IsShown())
-            exclude_pt = p->m_flushing_volume_btn->GetPosition().x;
-        else if (p->m_bpButton_ams_filament && p->m_bpButton_ams_filament->IsShown())
-            exclude_pt = p->m_bpButton_ams_filament->GetPosition().x - FromDIP(30);
-        else if (p->m_bpButton_set_filament)
-            exclude_pt = p->m_bpButton_set_filament->GetPosition().x;
+        // ORCA exclude area of del button from titlebar collapse/expand feature to fix undesired collapse when user spams del filament button
+        // also block fold/unfold feature when user clicks to spacing between icons
+        int exclude_pt = p->m_bpButton_set_filament->GetPosition().x; // maximum fixed item
+        if      (p->m_purge_mode_btn->IsShown())        exclude_pt = p->m_purge_mode_btn->GetPosition().x;
+        else if (p->m_flushing_volume_btn->IsShown())   exclude_pt = p->m_flushing_volume_btn->GetPosition().x;
+        else if (p->m_bpButton_add_filament->IsShown()) exclude_pt = p->m_bpButton_add_filament->GetPosition().x - FromDIP(30); // reserve spacing for delete button
+        else if (ams_btn->IsShown())                    exclude_pt = ams_btn->GetPosition().x;
         if (e.GetPosition().x > exclude_pt)
             return;
-        const bool expanded = p->m_panel_filament_content->IsShown();
-        p->m_panel_filament_content->Show(!expanded);
-        p->m_panel_filament_content->SetMaxSize(expanded ? wxSize(-1, 0) : wxSize(-1, -1));
+        bool isShown = p->m_filament_area_wrapper->IsShown();
+        p->m_filament_area_wrapper->Show(!isShown);
+        p->m_panel_filament_separator->Show(isShown);
         m_scrolled_sizer->Layout();
+
+        CallAfter([this]{update_filaments_counter(true);}); // call after all UI processing done
     });
 
     wxBoxSizer* bSizer39;
@@ -5349,28 +5113,40 @@ Sidebar::Sidebar(Plater *parent)
     bSizer39->Add(p->m_filament_config_icon, 0, wxALIGN_CENTER | wxLEFT, FromDIP(SidebarProps::TitlebarMargin()));
     p->m_staticText_filament_settings = new Label(p->m_panel_filament_title, _L("Filament Management"), LB_PROPAGATE_MOUSE_EVENT);
     bSizer39->Add( p->m_staticText_filament_settings, 0, wxALIGN_CENTER | wxLEFT, FromDIP(SidebarProps::TitlebarMargin()));
-<<<<<<< snaporca-int
     bSizer39->Add(FromDIP(10), 0, 0, 0, 0);
     bSizer39->SetMinSize(-1, FromDIP(30));
 
     p->m_staticText_filament_count = new Label(p->m_panel_filament_title, "(0)", LB_PROPAGATE_MOUSE_EVENT);
     bSizer39->Add(p->m_staticText_filament_count, 0, wxALIGN_CENTER );
-=======
->>>>>>> lixnix/main
     bSizer39->Add(FromDIP(10), 0, 0, 0, 0);
-    bSizer39->SetMinSize(-1, FromDIP(30));
 
     p->m_panel_filament_title->SetSizer( bSizer39 );
     p->m_panel_filament_title->Layout();
-    auto spliter_1 = new ::StaticLine(p->scrolled);
-    spliter_1->SetLineColour("#A6A9AA");
-    scrolled_sizer->Add(spliter_1, 0, wxEXPAND);
     scrolled_sizer->Add(p->m_panel_filament_title, 0, wxEXPAND | wxALL, 0);
-    auto spliter_2 = new ::StaticLine(p->scrolled);
-    spliter_2->SetLineColour("#CECECE");
-    scrolled_sizer->Add(spliter_2, 0, wxEXPAND);
+    // ORCA add bottom border for seperation wile sections folded
+    p->m_panel_filament_separator = new wxPanel(p->scrolled, wxID_ANY, wxDefaultPosition, wxSize(-1, FromDIP(2))); // ORCA staticline class not works without string
+    p->m_panel_filament_separator->SetBackgroundColour("#FFFFFF");
+    scrolled_sizer->Add(p->m_panel_filament_separator, 0, wxEXPAND);
 
     bSizer39->AddStretchSpacer(1);
+
+    p->m_purge_mode_btn = new Button(p->m_panel_filament_title, _L("Purge mode"));
+    p->m_purge_mode_btn->SetStyle(ButtonStyle::Confirm, ButtonType::Compact);
+
+    p->m_purge_mode_btn->Bind(wxEVT_BUTTON, [](wxCommandEvent &e) {
+        auto &preset_bundle         = *wxGetApp().preset_bundle;
+        auto support_fast_purge_opt = preset_bundle.printers.get_edited_preset().config.option<ConfigOptionBool>("support_fast_purge_mode");
+        bool support_fast_purge     = support_fast_purge_opt ? support_fast_purge_opt->value : false;
+        auto dlg_type               = support_fast_purge ? PurgeModeDialogType::FastMode : PurgeModeDialogType::MultiNozzle;
+        PurgeModeDialog dlg(static_cast<wxWindow *>(wxGetApp().mainframe), dlg_type);
+        if (dlg.ShowModal() == wxID_OK) {
+            preset_bundle.project_config.set_key_value("prime_volume_mode", new ConfigOptionEnum<PrimeVolumeMode>(dlg.get_selected_mode()));
+            wxGetApp().plater()->update();
+        }
+    });
+
+    bSizer39->Add(p->m_purge_mode_btn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(4));
+    bSizer39->Hide(p->m_purge_mode_btn); // hidden on launch; shown only for printers that support purge mode selection
 
     // BBS
     // add wiping dialog
@@ -5378,13 +5154,17 @@ Sidebar::Sidebar(Plater *parent)
     p->m_flushing_volume_btn = new Button(p->m_panel_filament_title, _L("Flushing volumes"));
     p->m_flushing_volume_btn->SetStyle(ButtonStyle::Confirm, ButtonType::Compact);
     p->m_flushing_volume_btn->SetId(wxID_RESET);
-    p->m_flushing_volume_btn->Bind(wxEVT_BUTTON, ([parent](wxCommandEvent &e)
-        {
+    auto has_modify = is_flush_config_modified();
+    set_flushing_volume_warning(has_modify);
+
+    p->m_flushing_volume_btn->Bind(wxEVT_BUTTON, ([parent, this](wxCommandEvent &e) {
             open_flushing_dialog(parent, SimpleEvent(EVT_SCHEDULE_BACKGROUND_PROCESS, parent));
+            p->plater->get_view3D_canvas3D()->reload_scene(true);
+            p->plater->update();
         }));
 
-    bSizer39->Add(p->m_flushing_volume_btn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(5));
-    bSizer39->Hide(p->m_flushing_volume_btn);
+    bSizer39->Add(p->m_flushing_volume_btn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(4));
+    bSizer39->Hide(p->m_flushing_volume_btn); // ORCA Ensure button is hidden on launch while 1 filament exist
 
     // Batch color-match mapping button
     p->m_btn_batch_match = new Button(p->m_panel_filament_title, _L("Color Mixing Match"));
@@ -5615,11 +5395,7 @@ Sidebar::Sidebar(Plater *parent)
             for (size_t i = 0; i < std::min<size_t>(static_cast<size_t>(kFullSpectrumSlotCount), target_count); ++i) {
                 std::string preset_name;
                 if (i < result.recommended_physical_family_names.size()) {
-<<<<<<< snaporca-int
                     preset_name = find_selectable_full_spectrum_family_preset(result.recommended_physical_family_names[i]);
-=======
-                    preset_name = find_selectable_full_spectrum_family_preset(result.recommended_physical_family_names[i], static_cast<int>(i));
->>>>>>> lixnix/main
                     // Family not selectable: leave empty on purpose — the slot keeps
                     // the user's configured preset (§5.1). Do NOT substitute the
                     // default family here: the user explicitly chose this family.
@@ -5634,11 +5410,7 @@ Sidebar::Sidebar(Plater *parent)
                     pb->set_filament_preset(i, preset_name);
             }
 
-<<<<<<< snaporca-int
             wxGetApp().plater()->on_filament_count_change(static_cast<int>(target_count));
-=======
-            wxGetApp().plater()->on_filaments_change(static_cast<int>(target_count));
->>>>>>> lixnix/main
         } else {
             ConfigOptionStrings* co = wxGetApp().preset_bundle->project_config.option<ConfigOptionStrings>("filament_colour");
             colors_vec = co ? co->values : std::vector<std::string>{};
@@ -5802,17 +5574,6 @@ Sidebar::Sidebar(Plater *parent)
         // ~96% of apply time (per-deletion combo rebuild). Map the deletion loop's
         // (current, total) onto 5..95 so the bar advances steadily and reflects
         // real remaining work, not just a spinner.
-<<<<<<< snaporca-int
-        cleanup_unused_filaments_after_batch_match(
-            model_result,
-            [&set_progress](int current, int total) {
-                // Map current/total ∈ [1,total] to 5..95. total==0 can't happen
-                // here (the loop only runs when redundant_physical is non-empty),
-                // but guard anyway to avoid divide-by-zero if the contract changes.
-                const int span = (total > 0) ? (90 * current / total) : 0;
-                set_progress(5 + span);
-            });
-=======
         {
             // Snapmaker Orca: the deletions in there make no pass of their own over the filament
             // presets (the scope is left without finish()); one pass follows below.
@@ -5827,7 +5588,6 @@ Sidebar::Sidebar(Plater *parent)
                     set_progress(5 + span);
                 });
         }
->>>>>>> lixnix/main
 
         // cleanup already serializes; only panel refresh needed.
         set_progress(95);
@@ -5848,13 +5608,10 @@ Sidebar::Sidebar(Plater *parent)
         // No undo snapshot in this apply path: mark dirty so close-without-save prompts
         // instead of silently dropping the match result.
         wxGetApp().plater()->update_project_dirty_from_presets();
-<<<<<<< snaporca-int
-=======
         // Snapmaker Orca: the Full Spectrum presets were written into the slots without regard to
         // the tool heads (the picker rates against the printer preset), and the cleanup renumbered
         // the slots: the filaments of a tool head of another size move to their presets now.
         wxGetApp().plater()->follow_nozzle_sizes_and_notify(Plater::FollowReason::SlotsWritten);
->>>>>>> lixnix/main
         // §70: wxPD_AUTO_HIDE only fires at 100%, so reach 100 here for a clean
         // dismiss (otherwise the bar visibly aborts when the dialog leaves scope).
         set_progress(100);
@@ -5867,9 +5624,11 @@ Sidebar::Sidebar(Plater *parent)
     ams_btn->Bind(wxEVT_BUTTON, [this](wxCommandEvent &e) {
         sync_ams_list();
     });
+
+    ams_btn->Bind(wxEVT_UPDATE_UI, &Sidebar::update_sync_ams_btn_enable, this);
     p->m_bpButton_ams_filament = ams_btn;
 
-    bSizer39->Add(ams_btn, 0, wxALIGN_CENTER | wxLEFT, FromDIP(SidebarProps::IconSpacing()));
+    bSizer39->Add(ams_btn, 0, wxALIGN_CENTER | wxLEFT, FromDIP(SidebarProps::WideSpacing()));
     //bSizer39->Add(FromDIP(10), 0, 0, 0, 0 );
 
     ScalableButton* set_btn = new ScalableButton(p->m_panel_filament_title, wxID_ANY, "settings");
@@ -5882,23 +5641,31 @@ Sidebar::Sidebar(Plater *parent)
         });
     p->m_bpButton_set_filament = set_btn;
 
-    bSizer39->Add(set_btn, 0, wxALIGN_CENTER | wxLEFT, FromDIP(SidebarProps::IconSpacing()));
+    bSizer39->Add(set_btn, 0, wxALIGN_CENTER | wxLEFT, FromDIP(SidebarProps::WideSpacing()));
     bSizer39->AddSpacer(FromDIP(SidebarProps::TitlebarMargin()));
 
+    // ---- Wrapper panel for collapse/expand of all filament content ----
+    p->m_filament_area_wrapper = new wxPanel(p->scrolled, wxID_ANY);
+    p->m_filament_area_wrapper->SetBackgroundColour(*wxWHITE);
+    auto* wrapper_sizer = new wxBoxSizer(wxVERTICAL);
+
     // add filament content
-    p->m_panel_filament_content = new wxPanel( p->scrolled, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
-    p->m_panel_filament_content->SetBackgroundColour( wxColour( 255, 255, 255 ) );
+    p->m_panel_filament_content = new wxScrolledWindow(p->m_filament_area_wrapper, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxTAB_TRAVERSAL );
+    p->m_panel_filament_content->SetScrollRate(0, FromDIP(20));
+    //p->m_panel_filament_content->SetMaxSize(wxSize{-1, FromDIP(174)});
+    p->m_panel_filament_content->SetBackgroundColour(wxColour(255, 255, 255));
 
     //wxBoxSizer* bSizer_filament_content;
     //bSizer_filament_content = new wxBoxSizer( wxHORIZONTAL );
 
-    // BBS:  filament double columns, wrapped in scrolled window (max 3 rows)
+    // Orca: Sidebar - Filament content UI: setup filament selection combos panel layout
+    // Creates a two-column grid layout for filament selection dropdowns within the scrollable panel
     p->sizer_filaments = new wxBoxSizer(wxHORIZONTAL);
     p->sizer_filaments->Add(new wxBoxSizer(wxVERTICAL), 1, wxEXPAND);
     p->sizer_filaments->Add(new wxBoxSizer(wxVERTICAL), 1, wxEXPAND);
 
     p->m_scrolled_filaments = new wxScrolledWindow(p->m_panel_filament_content, wxID_ANY, wxDefaultPosition, wxDefaultSize, wxVSCROLL);
-    p->m_scrolled_filaments->SetScrollRate(0, FromDIP(20));
+    p->m_scrolled_filaments->SetScrollRate(0, 5);
     p->m_scrolled_filaments->SetBackgroundColour(*wxWHITE);
     p->m_panel_scrolled_filament_content = new wxPanel(p->m_scrolled_filaments, wxID_ANY);
     p->m_panel_scrolled_filament_content->SetBackgroundColour(*wxWHITE);
@@ -5912,11 +5679,7 @@ Sidebar::Sidebar(Plater *parent)
     /* first filament item */
     // init_filament_combo(&p->combos_filament[0], 0);
 
-<<<<<<< snaporca-int
     p->combos_filament[0] = new PlaterFilamentComboBox(p->m_panel_scrolled_filament_content, Preset::TYPE_FILAMENT);
-=======
-    p->combos_filament[0] = new PlaterPresetComboBox(p->m_panel_scrolled_filament_content, Preset::TYPE_FILAMENT);
->>>>>>> lixnix/main
     auto combo_and_btn_sizer = new wxBoxSizer(wxHORIZONTAL);
     // BBS:  filament double columns
     combo_and_btn_sizer->AddSpacer(FromDIP(SidebarProps::ContentMargin()));
@@ -5934,7 +5697,6 @@ Sidebar::Sidebar(Plater *parent)
     edit_btn->SetToolTip(_L("Click to edit preset"));
 
     PlaterPresetComboBox* combobox = p->combos_filament[0];
-<<<<<<< snaporca-int
     edit_btn->Bind(wxEVT_BUTTON, [this, edit_btn, combobox](wxCommandEvent) {
         // ORCA: same behaviour as the combos created by init_filament_combo()
         if (should_show_SEMM_buttons() && p->combos_filament.size() > 1) {
@@ -5948,15 +5710,6 @@ Sidebar::Sidebar(Plater *parent)
             p->editing_filament = 0;
             combobox->switch_to_tab();
         }
-=======
-    edit_btn->Bind(wxEVT_BUTTON, [this, edit_btn](wxCommandEvent) {
-        auto    menu = p->plater->filament_action_menu(0);
-        wxPoint pt{0, edit_btn->GetSize().GetHeight() + 10};
-        pt                    = edit_btn->ClientToScreen(pt);
-        pt                    = wxGetApp().mainframe->ScreenToClient(pt);
-        p->m_menu_filament_id = 0;
-        p->plater->PopupMenu(menu, (int) pt.x, pt.y);
->>>>>>> lixnix/main
     });
     combobox->edit_btn = edit_btn;
 
@@ -6018,11 +5771,7 @@ Sidebar::Sidebar(Plater *parent)
         wxColour new_col = Plater::get_next_color_for_filament();
         std::string new_color = new_col.GetAsString(wxC2S_HTML_SYNTAX).ToStdString();
         pb->set_num_filaments(filament_count, new_color);
-<<<<<<< snaporca-int
         wxGetApp().plater()->on_filament_count_change(filament_count);
-=======
-        wxGetApp().plater()->on_filaments_change(filament_count);
->>>>>>> lixnix/main
         wxGetApp().get_tab(Preset::TYPE_PRINT)->update();
         pb->export_selections(*wxGetApp().app_config);
         auto_calc_flushing_volumes(filament_count - 1);
@@ -6050,7 +5799,6 @@ Sidebar::Sidebar(Plater *parent)
     init_color_mix_panel(p->m_panel_filament_content, sizer_filaments2);
     p->m_panel_filament_content->SetSizer(sizer_filaments2);
     p->m_panel_filament_content->Layout();
-<<<<<<< snaporca-int
     
     update_filaments_area_height(); // ORCA
 
@@ -6181,9 +5929,6 @@ Sidebar::Sidebar(Plater *parent)
     p->m_filament_area_wrapper->Layout();
     scrolled_sizer->Add(p->m_filament_area_wrapper, 0, wxEXPAND | wxTOP | wxBOTTOM, FromDIP(SidebarProps::ContentMarginV())); // ORCA use vertical margin on parent otherwise it shows scrollbar even on 1 filament
     // ---- End filament area ----
-=======
-    scrolled_sizer->Add(p->m_panel_filament_content, 0, wxEXPAND, 0);
->>>>>>> lixnix/main
     }
 
     // --- Mixed Filaments Panel (Collapsible) ---
@@ -6408,7 +6153,7 @@ Sidebar::Sidebar(Plater *parent)
 
     auto search_sizer = new wxBoxSizer(wxHORIZONTAL);
     search_sizer->Add(new wxWindow(p->m_search_bar, wxID_ANY, wxDefaultPosition, wxSize(0, 0)), 0, wxEXPAND|wxLEFT|wxRIGHT, FromDIP(1));
-    search_sizer->Add(p->m_search_item, 1, wxEXPAND | wxALL | wxALIGN_CENTER_VERTICAL, FromDIP(2));
+    search_sizer->Add(p->m_search_item, 1, wxEXPAND | wxALL, FromDIP(2));
     p->m_search_bar->SetSizer(search_sizer);
     p->m_search_bar->Layout();
     search_sizer->Fit(p->m_search_bar);
@@ -6454,15 +6199,50 @@ Sidebar::Sidebar(Plater *parent)
 
 Sidebar::~Sidebar() {}
 
+void Sidebar::on_enter_image_printer_bed(wxMouseEvent &evt) {
+    //p->image_printer_bed->Bind(wxEVT_LEAVE_WINDOW, &Sidebar::on_leave_image_printer_bed, this);
+    auto    pos  = p->panel_printer_bed->GetScreenPosition();
+    auto    rect = p->panel_printer_bed->GetRect();
+    wxPoint temp_pos(pos.x + rect.GetWidth() +  FromDIP(3), pos.y);
+    if (p->big_bed_image_popup == nullptr)
+        p->big_bed_image_popup = new ImageDPIFrame();
+    auto image_path        = get_cur_select_bed_image();
+    p->big_bed_image_popup->set_bitmap(create_scaled_bitmap("big_" + image_path, p->big_bed_image_popup, p->big_bed_image_popup->get_image_px()));
+    p->big_bed_image_popup->set_title(p->combo_printer_bed->GetString(p->combo_printer_bed->GetSelection()));
+    p->big_bed_image_popup->SetCanFocus(false);
+    p->big_bed_image_popup->SetPosition(temp_pos);
+    p->big_bed_image_popup->on_show();
+}
+
+void Sidebar::on_leave_image_printer_bed(wxMouseEvent &evt) {
+    //auto pos_x = evt.GetX();
+    //auto pos_y = evt.GetY();
+    //auto rect  = p->image_printer_bed->GetRect();
+    //if ((pos_x <= 0 || pos_y <= 0 || pos_x >= rect.GetWidth()) && p->big_bed_image_popup) {
+    if (p->big_bed_image_popup) {
+        bool was_visible = p->big_bed_image_popup->IsShown();
+        p->big_bed_image_popup->on_hide();
+        if(!p->combo_printer_bed->is_drop_down() && was_visible)
+            p->combo_printer_bed->SetFocus();     // set focus back to bed type combo. this prevents weird look if focus on other item
+    }
+}
+void Sidebar::on_change_color_mode(bool is_dark) {
+    const ModelObjectPtrs &mos = wxGetApp().model().objects;
+    for (int i = 0; i < mos.size(); i++) {
+        wxGetApp().obj_list()->update_info_items(i,nullptr,false,true);
+    }
+
+}
+
 void Sidebar::create_printer_preset()
 {
     CreatePrinterPresetDialog dlg(wxGetApp().mainframe);
     int                       res = dlg.ShowModal();
     if (wxID_OK == res) {
+        wxGetApp().load_current_presets();
         wxGetApp().mainframe->update_side_preset_ui();
         update_ui_from_settings();
         update_all_preset_comboboxes();
-        wxGetApp().load_current_presets();
         CreatePresetSuccessfulDialog success_dlg(wxGetApp().mainframe, SuccessType::PRINTER);
         int                          res = success_dlg.ShowModal();
         if (res == wxID_OK) {
@@ -6474,7 +6254,7 @@ void Sidebar::create_printer_preset()
 
 void Sidebar::init_filament_combo(PlaterPresetComboBox **combo, const int filament_idx)
 {
-    *combo = new PlaterPresetComboBox(p->m_panel_scrolled_filament_content, Slic3r::Preset::TYPE_FILAMENT);
+    *combo = new PlaterFilamentComboBox(p->m_panel_scrolled_filament_content, Slic3r::Preset::TYPE_FILAMENT);
     (*combo)->set_filament_idx(filament_idx);
 
     auto combo_and_btn_sizer = new wxBoxSizer(wxHORIZONTAL);
@@ -6487,7 +6267,7 @@ void Sidebar::init_filament_combo(PlaterPresetComboBox **combo, const int filame
 
     (*combo)->clr_picker->SetLabel(wxString::Format("%d", filament_idx + 1));
     combo_and_btn_sizer->Add((*combo)->clr_picker, 0, wxALIGN_CENTER_VERTICAL | wxRIGHT, FromDIP(SidebarProps::ElementSpacing()) - FromDIP(2)); // ElementSpacing - 2 (from combo box))
-    combo_and_btn_sizer->Add(*combo, 1, wxALL | wxEXPAND, FromDIP(2))->SetMinSize({-1, FromDIP(30)});
+    combo_and_btn_sizer->Add(*combo, 1, wxALL | wxEXPAND, FromDIP(2))->SetMinSize({-1, 30 * wxGetApp().em_unit() / 10}); // ORCA ensure height matches with PlaterPresetComboBox
 
     /* BBS hide del_btn
     ScalableButton* del_btn = new ScalableButton(p->m_panel_filament_content, wxID_ANY, "delete_filament");
@@ -6495,7 +6275,7 @@ void Sidebar::init_filament_combo(PlaterPresetComboBox **combo, const int filame
         int extruder_count = std::max(1, (int)p->combos_filament.size() - 1);
 
         update_objects_list_filament_column(std::max(1, extruder_count - 1));
-        on_filaments_change(extruder_count);
+        on_filament_count_change(extruder_count);
         wxGetApp().preset_bundle->printers.get_edited_preset().set_num_extruders(extruder_count);
         wxGetApp().preset_bundle->update_multi_material_filament_presets(size_t(-1), size_t(-1));
     });
@@ -6507,23 +6287,24 @@ void Sidebar::init_filament_combo(PlaterPresetComboBox **combo, const int filame
     edit_btn->SetToolTip(_L("Click to edit preset"));
 
     PlaterPresetComboBox* combobox = (*combo);
-    //edit_btn->Bind(wxEVT_BUTTON, [this, combobox, filament_idx](wxCommandEvent)
-    //{
-    //    p->editing_filament = -1;
-    //    if (combobox->switch_to_tab())
-    //        p->editing_filament = filament_idx; // sync with TabPresetComboxBox's m_filament_idx
-    //});
-
-    edit_btn->Bind(wxEVT_BUTTON, [this, edit_btn, filament_idx](wxCommandEvent) {
-        auto menu = p->plater->filament_action_menu(filament_idx);
-        wxPoint pt { 0, edit_btn->GetSize().GetHeight() + 10 };
-        pt = edit_btn->ClientToScreen(pt);
-        pt = wxGetApp().mainframe->ScreenToClient(pt);
-        p->m_menu_filament_id = filament_idx;
-        p->plater->PopupMenu(menu, (int) pt.x, pt.y);
+    edit_btn->Bind(wxEVT_BUTTON, [this, edit_btn, combobox, filament_idx](wxCommandEvent) {
+        bool single_or_bbl     = should_show_SEMM_buttons();
+        bool is_multi_material = p->combos_filament.size() > 1;
+        if(single_or_bbl && is_multi_material) {
+           // MULTI MATERIAL Show menu
+            auto menu = p->plater->filament_action_menu(filament_idx);
+            wxPoint pt { 0, edit_btn->GetSize().GetHeight() + FromDIP(2) };
+            pt = edit_btn->ClientToScreen(pt);
+            pt = wxGetApp().mainframe->ScreenToClient(pt);
+            p->m_menu_filament_id = filament_idx;
+            p->plater->PopupMenu(menu, (int) pt.x, pt.y);
+        }
+        else {
+            // SINGLE MATERIAL / MULTI EXTRUDER / TOOLCHANGER / IDEX Opens Dialog directly
+            p->editing_filament = filament_idx;
+            combobox->switch_to_tab();
+        }
     });
-
-
     combobox->edit_btn = edit_btn;
 
     combo_and_btn_sizer->Add(edit_btn, 0, wxALIGN_CENTER_VERTICAL | wxLEFT, FromDIP(SidebarProps::ElementSpacing()) - FromDIP(2)); // ElementSpacing - 2 (from combo box))
@@ -6535,7 +6316,7 @@ void Sidebar::init_filament_combo(PlaterPresetComboBox **combo, const int filame
     auto /***/sizer_filaments = this->p->sizer_filaments->GetItem(side)->GetSizer();
     if (side == 1 && filament_idx > 1) sizer_filaments->Remove(filament_idx / 2);
     sizer_filaments->Add(combo_and_btn_sizer, 1, wxEXPAND);
-    if (side == 0) {
+    if (side == 0 && filament_idx > 0) {
         sizer_filaments = this->p->sizer_filaments->GetItem(1)->GetSizer();
         sizer_filaments->AddStretchSpacer(1);
     }
@@ -6576,11 +6357,8 @@ void Sidebar::update_all_preset_comboboxes(bool reload_printer_view)
 
     auto p_mainframe = wxGetApp().mainframe;
     auto cfg = preset_bundle.printers.get_edited_preset().config;
-<<<<<<< snaporca-int
     const bool use_printer_agents = wxGetApp().use_printer_agents();
     const bool use_native_device_tab = preset_bundle.use_bbl_device_tab() || use_printer_agents;
-=======
->>>>>>> lixnix/main
 
     const auto& appconfig = wxGetApp().app_config;
 
@@ -6598,22 +6376,26 @@ void Sidebar::update_all_preset_comboboxes(bool reload_printer_view)
     p->combo_printer->set_show_connection_button(false);
 
     if (preset_bundle.use_bbl_network()) {
-        ams_btn->Show();
+        //only show connection button for not-BBL printer
+        //p->btn_connect_printer->Hide();
+        p->m_printer_connect->Hide();
+        //only show sync-ams button for BBL printer
+        p->m_bpButton_ams_filament->Show();
+        //update print button default value for bbl or third-party printer
         p_mainframe->set_print_button_to_default(MainFrame::PrintSelectType::ePrintPlate);
     } else {
-<<<<<<< snaporca-int
         //p->btn_connect_printer->Show();
         // ORCA: hide the physical-printer connection button when printer agents are enabled.
         // Snapmaker: the U1 connects from its Flutter device page instead.
         p->m_printer_connect->Show(!use_printer_agents && !is_snapmaker_u1);
-=======
-        ams_btn->Hide();
-        auto print_btn_type = MainFrame::PrintSelectType::eExportGcode;
->>>>>>> lixnix/main
 
-        const auto& edit_preset = preset_bundle.printers.get_edited_preset();
+        // ORCA: show/hide sync-ams button based on filament sync mode
+        auto agent = wxGetApp().getAgent();
+        if (agent && agent->get_filament_sync_mode() != FilamentSyncMode::none)
+            p->m_bpButton_ams_filament->Show();
+        else
+            p->m_bpButton_ams_filament->Hide();
 
-<<<<<<< snaporca-int
         // Orca: with "Support 3MF as gcode" (use_3mf) the local export is a .gcode.3mf bundle, so when no
         // printer host/IP is configured the default action is "Export plate sliced file" (mirrors the
         // print dropdown) instead of "Export G-code file".
@@ -6671,72 +6453,7 @@ void Sidebar::update_all_preset_comboboxes(bool reload_printer_view)
         }
 
         p_mainframe->set_print_button_to_default(print_btn_type);
-=======
-        PrinterWebView* printer_view     = PrinterWebView::if_built();
-        const bool      showing_u1_device = printer_view != nullptr && printer_view->is_u1_device_page();
-        // Non-U1: always leave path=2 for missing_connection / print_host. Keep skipping
-        // when use_new_connect already sits on the GIF (connect flow loads path=2 afterwards).
-        const bool load_non_u1_page = !is_snapmaker_u1 && reload_printer_view && (!use_new_connection || showing_u1_device);
 
-        if (load_non_u1_page) {
-
-            p->combo_printer->set_show_connection_button(true);
-            wxString url = cfg.opt_string("print_host_webui").empty() ? cfg.opt_string("print_host") : cfg.opt_string("print_host_webui");
-            wxString apikey;
-            if (url.empty()) {
-                std::string base_url = LOCALHOST_URL + std::to_string(wxGetApp().m_page_http_server.get_port());
-                url                  = wxString::Format("%s/web/orca/missing_connection.html", from_u8(base_url));
-            }
-            else {
-                if (!url.Lower().starts_with("http"))
-                    url = wxString::Format("http://%s", url);
-                const auto host_type = cfg.option<ConfigOptionEnum<PrintHostType>>("host_type")->value;
-                if (cfg.has("printhost_apikey") && (host_type != htSimplyPrint))
-                    apikey = cfg.opt_string("printhost_apikey");
-                print_btn_type = preset_bundle.is_bbl_vendor() ? MainFrame::PrintSelectType::ePrintPlate :
-                                                                 MainFrame::PrintSelectType::eSendGcode;
-
-                if (url.find("127.0.0.1") != std::string::npos) {
-                    url = wxString::FromUTF8(LOCALHOST_URL + std::to_string(wxGetApp().get_page_http_port()) + "/web/flutter_web/index.html?path=3");
-                }
-            }
-            
-            p_mainframe->load_printer_url(url, apikey);
-
-            p_mainframe->set_print_button_to_default(print_btn_type);
-        } else {
-            print_btn_type = preset_bundle.is_bbl_vendor() ? MainFrame::PrintSelectType::ePrintPlate :
-                                                             MainFrame::PrintSelectType::eSendGcode;
-            p_mainframe->set_print_button_to_default(print_btn_type);
-
-            if (is_snapmaker_u1) {
->>>>>>> lixnix/main
-
-                auto        devices     = wxGetApp().app_config->get_devices();
-                bool hasOnlineMachine = false;
-                for (const auto& device : devices) {
-                    if (device.connected) {
-                        hasOnlineMachine = true;
-                        break;
-                    }
-                }
-
-                if(hasOnlineMachine)
-                    p->combo_printer->set_show_machine_connecting_button(true);
-    
-                wxString url = wxString::FromUTF8(LOCALHOST_URL + std::to_string(wxGetApp().get_page_http_port()) +
-                                                  "/web/flutter_web/index.html?path=2");
-                auto real_url = wxGetApp().get_international_url(url);
-                
-                if (reload_printer_view && !showing_u1_device) {
-                    wxGetApp().mainframe->load_printer_url(real_url); 
-                }                   
-            }
-
-            if (!p->combo_printer->get_show_machine_connecting_button() && !is_snapmaker_u1) {
-                p->combo_printer->set_show_connection_button(true);
-            }
-        }
     }
 
     if (cfg.opt_bool("pellet_modded_printer")) {
@@ -6753,69 +6470,28 @@ void Sidebar::update_all_preset_comboboxes(bool reload_printer_view)
 
     bool support_multi_bed_types = cfg.opt_bool("support_multi_bed_types");
 
-<<<<<<< snaporca-int
     if (is_bbl_vendor || support_multi_bed_types || is_snapmaker_u1) {
         p->combo_printer_bed->Enable();
-=======
-    m_bed_type_list->Clear();
-    m_bed_type_combo_enum_values.clear();
-    if (bed_type_def && keys_map) {
-        if (is_snapmaker_u1 && !support_multi_bed_types) {
-            for (const auto& item : bed_type_def->enum_labels_u1)
-                m_bed_type_list->AppendString(_L(item));
-            for (const auto& v : bed_type_def->enum_values_u1)
-                m_bed_type_combo_enum_values.push_back(v);
-        } else if (is_snapmaker_u1 && support_multi_bed_types) {
-            for (const auto& item : bed_type_def->enum_labels_ex)
-                m_bed_type_list->AppendString(_L(item));
-            for (const auto& v : bed_type_def->enum_values_ex)
-                m_bed_type_combo_enum_values.push_back(v);
-        } else {
-            for (const auto& item : bed_type_def->enum_labels)
-                m_bed_type_list->AppendString(_L(item));
-            for (const auto& v : bed_type_def->enum_values)
-                m_bed_type_combo_enum_values.push_back(v);
-        }
-    }
-
-    auto get_key_for_bed_type = [keys_map](BedType bt) -> std::string {
-        if (!keys_map) return {};
-        for (const auto& item : *keys_map)
-            if ((BedType)item.second == bt) return item.first;
-        return {};
-    };
-    auto get_selection_index = [&]() -> int {
-        BedType curr = wxGetApp().preset_bundle->project_config.opt_enum<BedType>("curr_bed_type");
-        std::string key = get_key_for_bed_type(curr);
-        for (size_t i = 0; i < m_bed_type_combo_enum_values.size(); ++i)
-            if (m_bed_type_combo_enum_values[i] == key) return (int)i;
-        return 0;
-    };
-
-    if (is_bbl_vendor || support_multi_bed_types || is_snapmaker_u1) {
-        m_bed_type_list->Enable();
->>>>>>> lixnix/main
         // Orca: don't update bed type if loading project
         if (!p->plater->is_loading_project()) {
-            std::string printer_name = wxGetApp().preset_bundle->printers.get_selected_preset_name();
-            auto str_bed_type = wxGetApp().app_config->get_printer_setting(printer_name, "curr_bed_type");
-            
-            BedType bed_type_to_use;
-            bool is_first_time = str_bed_type.empty();
-            
-            if (!is_first_time) {
-                // This printer has saved bed type configuration
-                int bed_type_value = atoi(str_bed_type.c_str());
-                if (bed_type_value == 0)
-                    bed_type_value = 1;
-                bed_type_to_use = (BedType)bed_type_value;
+            bool has_changed = reset_bed_type_combox_choices();
+            bool flag         = m_begin_sync_printer_status && !has_changed;
+            if (!(flag)) {
+                auto str_bed_type = wxGetApp().app_config->get_printer_setting(wxGetApp().preset_bundle->printers.get_selected_preset_name(),
+                                                                               "curr_bed_type");
+                if (!str_bed_type.empty()) {
+                    int bed_type_value = atoi(str_bed_type.c_str());
+                    if (bed_type_value <= 0 || bed_type_value >= btCount) {
+                        bed_type_value = preset_bundle.printers.get_edited_preset().get_default_bed_type(&preset_bundle);
+                    }
+
+                   set_bed_type_accord_combox((BedType) bed_type_value);
+                } else {
+                    BedType bed_type = preset_bundle.printers.get_edited_preset().get_default_bed_type(&preset_bundle);
+                    set_bed_type_accord_combox(bed_type);
+                }
             } else {
-                // Orca: First time using this printer, get default bed type
-                bed_type_to_use = preset_bundle.printers.get_edited_preset().get_default_bed_type(&preset_bundle);
-                
-                // Orca: Save to app_config immediately to prevent bed type inheritance
-                wxGetApp().app_config->set("curr_bed_type", std::to_string(int(bed_type_to_use)));
-                wxGetApp().app_config->set_printer_setting(printer_name, "curr_bed_type", std::to_string(int(bed_type_to_use)));
+                BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << ":no need reset_bed_type_combox_choices";
             }
         } else {
             // Snapmaker: the U1 offers a different plate list, so it has to be in place for the project's
@@ -6829,13 +6505,12 @@ void Sidebar::update_all_preset_comboboxes(bool reload_printer_view)
                 on_bed_type_change(curr);
         }
     } else {
-        BedType default_bed_type = preset_bundle.printers.get_edited_preset().get_default_bed_type(&preset_bundle);
-        wxGetApp().preset_bundle->project_config.set_key_value("curr_bed_type", new ConfigOptionEnum<BedType>(default_bed_type));
-        m_bed_type_list->SetSelection(get_selection_index());
-        m_bed_type_list->Disable();
+        // m_bed_type_list->SelectAndNotify(btPEI - 1);
+        BedType bed_type = preset_bundle.printers.get_edited_preset().get_default_bed_type(&preset_bundle);
+        set_bed_type_accord_combox(bed_type);
+        p->combo_printer_bed->Disable();
     }
 
-<<<<<<< snaporca-int
     // ORCA Hide plate selector if not supported by printer
     p->panel_printer_bed->Show(is_bbl_vendor || support_multi_bed_types || is_snapmaker_u1);
 
@@ -6846,25 +6521,18 @@ void Sidebar::update_all_preset_comboboxes(bool reload_printer_view)
     //p->combo_printer->update();
     // Update the filament choosers to only contain the compatible presets, update the color preview,
     // update the dirty flags.
-=======
->>>>>>> lixnix/main
     if (print_tech == ptFFF) {
         for (PlaterPresetComboBox* cb : p->combos_filament)
             cb->update();
     }
 
-    if (p->combo_printer){
+    if (p->combo_printer) {
         p->combo_printer->update();
         update_printer_thumbnail();
     }
-<<<<<<< snaporca-int
 
     // Snapmaker: with the new connection flow the device tab shows the Snapmaker web page instead
     p_mainframe->show_device(use_native_device_tab && !use_new_connection);
-=======
-        
-    p_mainframe->show_device(preset_bundle.use_bbl_device_tab() && !use_new_connection);
->>>>>>> lixnix/main
     p_mainframe->m_tabpanel->SetSelection(p_mainframe->m_tabpanel->GetSelection());
 }
 
@@ -6981,7 +6649,6 @@ void Sidebar::update_presets(Preset::Type preset_type)
         }
 
         Preset& printer_preset = wxGetApp().preset_bundle->printers.get_edited_preset();
-<<<<<<< snaporca-int
 
         // Snapmaker: the canvas can still be null while the sidebar is being built
         GLCanvas3D* canvas = wxGetApp().plater()->get_current_canvas3D();
@@ -7151,17 +6818,6 @@ void Sidebar::update_presets(Preset::Type preset_type)
 
         Layout();
 
-=======
-        GLCanvas3D* canvas = wxGetApp().plater()->get_current_canvas3D();
-        if (canvas) {
-            if (auto printer_structure_opt = printer_preset.config.option<ConfigOptionEnum<PrinterStructure>>("printer_structure")) {
-                canvas->get_arrange_settings().align_to_y_axis = (printer_structure_opt->value == PrinterStructure::psI3);
-            }
-            else
-                canvas->get_arrange_settings().align_to_y_axis = false;
-        }
-
->>>>>>> lixnix/main
         break;
     }
 
@@ -7203,7 +6859,6 @@ void Sidebar::update_presets_from_to(Slic3r::Preset::Type preset_type, std::stri
     BOOST_LOG_TRIVIAL(debug) << __FUNCTION__ << boost::format(": exit!");
 }
 
-<<<<<<< snaporca-int
 BedType Sidebar::get_cur_select_bed_type() {
     int selection = p->combo_printer_bed->GetSelection();
     if (m_cur_combox_bed_types.empty())
@@ -7317,8 +6972,6 @@ bool Sidebar::reset_bed_type_combox_choices(bool is_sidebar_init)
     return true;
 }
 
-=======
->>>>>>> lixnix/main
 void Sidebar::change_top_border_for_mode_sizer(bool increase_border)
 {
     // BBS
@@ -7330,7 +6983,6 @@ void Sidebar::change_top_border_for_mode_sizer(bool increase_border)
 #endif
 }
 
-<<<<<<< snaporca-int
 
 // ---- Mixed-color filament sidebar support ----
 // The mixed rows get their own scroll area, capped by Orca's filaments_area_preferred_count
@@ -8543,42 +8195,68 @@ void Sidebar::update_filaments_counter(bool force_layout)
         m_scrolled_sizer->Layout();
 }
 
-=======
->>>>>>> lixnix/main
 void Sidebar::msw_rescale()
 {
-    SetMinSize(wxSize(42 * wxGetApp().em_unit(), -1));
+    SetMinSize(wxSize(39 * wxGetApp().em_unit(), -1));
     p->m_panel_printer_title->GetSizer()->SetMinSize(-1, 3 * wxGetApp().em_unit());
     p->m_panel_filament_title->GetSizer()
         ->SetMinSize(-1, 3 * wxGetApp().em_unit());
     p->m_printer_icon->msw_rescale();
     p->m_printerinfo_syncbtn->msw_rescale();
-<<<<<<< snaporca-int
     p->m_printer_connect->msw_rescale();
     p->m_printer_bbl_sync->msw_rescale();
-=======
->>>>>>> lixnix/main
     p->m_printer_setting->msw_rescale();
+
+    p->panel_printer_preset->SetMinSize(FromDIP(PRINTER_PANEL_SIZE));
+    p->panel_printer_preset->SetCornerRadius(FromDIP(PRINTER_PANEL_RADIUS));
+    p->image_printer->SetSize(FromDIP(PRINTER_THUMBNAIL_SIZE));
+    update_printer_thumbnail();
+    p->combo_printer->Rescale();
+    p->combo_printer->SetMaxSize(wxSize(-1, FromDIP(30))); // limiting height makes badge visible
+    p->btn_edit_printer->msw_rescale();
+
+    p->panel_nozzle_dia->SetMinSize(FromDIP(PRINTER_PANEL_SIZE));
+    p->panel_nozzle_dia->SetCornerRadius(FromDIP(PRINTER_PANEL_RADIUS));
+    p->combo_nozzle_dia->Rescale();
+
+    p->panel_printer_bed->SetMinSize(FromDIP(PRINTER_PANEL_SIZE));
+    p->panel_printer_bed->SetCornerRadius(FromDIP(PRINTER_PANEL_RADIUS));
+    p->combo_printer_bed->Rescale();
+    p->combo_printer_bed->SetMinSize(FromDIP(wxSize(18,-1))); // ORCA show only arrow
+    p->combo_printer_bed->SetMaxSize(FromDIP(wxSize(18,-1))); // ORCA show only arrow
+    bool isDual     = static_cast<wxBoxSizer *>(p->panel_printer_preset->GetSizer())->GetOrientation() == wxVERTICAL;
+    auto image_path = get_cur_select_bed_image();
+    p->image_printer_bed->SetBitmap(create_scaled_bitmap(image_path, this, PRINTER_THUMBNAIL_SIZE.GetHeight()));
+    if (p->big_bed_image_popup){ // ORCA force rebuild frame. current wxwidget version not supports wxBITMAP_SCALE_FILL flag on wxStaticBitmap
+                                 // also     wxImage scaledImage = bit_map.ConvertToImage(); scaledImage.Rescale(FromDIP(m_image_px), FromDIP(m_image_px), wxIMAGE_QUALITY_HIGH);
+                                 // didnt worked as expected and it requires use on set_bitmap. so that will try to scale everytime
+        p->big_bed_image_popup->Destroy();
+        p->big_bed_image_popup = nullptr;
+    }
+
     p->m_filament_icon->msw_rescale();
     p->m_color_mix_icon->msw_rescale();
     p->m_bpButton_add_filament->msw_rescale();
     p->m_bpButton_del_filament->msw_rescale();
     p->m_bpButton_ams_filament->msw_rescale();
     p->m_bpButton_set_filament->msw_rescale();
+    p->m_purge_mode_btn->Rescale();
     p->m_flushing_volume_btn->Rescale();
     // Batch-match button caches its text extent (messureSize) at creation DPI; without
     // Rescale() the cached size goes stale after a per-monitor DPI change (e.g. moving
     // the window to a 150% 4K screen), so render() centers the auto-rescaled font with
     // the old-DPI metrics and the label drifts/clips.
     p->m_btn_batch_match->Rescale();
-<<<<<<< snaporca-int
     set_flushing_volume_warning(is_flush_config_modified()); // ORCA reapply appearance
 
-=======
->>>>>>> lixnix/main
     //BBS
-    m_bed_type_list->Rescale();
-    m_bed_type_list->SetMinSize({-1, 3 * wxGetApp().em_unit()});
+    p->left_extruder->Rescale();
+    p->right_extruder->Rescale();
+    p->single_extruder->Rescale();
+
+    //p->btn_sync_printer->SetPaddingSize({FromDIP(6), FromDIP(12)});
+    //p->btn_sync_printer->SetMinSize(BTN_SYNC_SIZE);
+    //p->btn_sync_printer->Rescale();
 #if 0
     if (p->mode_sizer)
         p->mode_sizer->msw_rescale();
@@ -8590,9 +8268,12 @@ void Sidebar::msw_rescale()
     //                                                            //p->combo_printer
     //                                                            } )
     //    combo->msw_rescale();
-    p->combo_printer->msw_rescale();
+
     for (PlaterPresetComboBox* combo : p->combos_filament)
         combo->msw_rescale();
+
+    p->m_panel_filament_content->Layout();
+    update_filaments_area_height(); // ORCA resize after combos scaled
 
     // BBS
     //p->frequently_changed_parameters->msw_rescale();
