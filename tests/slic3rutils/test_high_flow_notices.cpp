@@ -601,7 +601,11 @@ TEST_CASE("The reason names the nozzle size of the tool head", "[HighFlow][FlowR
     CHECK(HighFlowNotices::head_nozzle_size_label(printer, 0).empty());
 }
 
-TEST_CASE("The vendor data says which nozzle sizes offer High Flow", "[HighFlow][Notices][Profiles]")
+// Hidden ([.]): this case describes the LixNix vendor data, extruder_variant_list declaring High Flow per
+// tool head in the U1 0.4 mm machine preset. SnapOrca's U1 declares it with printer_flow_support, which
+// extend_extruder_variant() does not turn into variant columns, so declared_volume_types() answers
+// Standard for every head of every preset (the ExtruderGroup flow combo reads printer_flow_support).
+TEST_CASE("The vendor data says which nozzle sizes offer High Flow", "[.][HighFlow][Notices][Profiles]")
 {
     const auto loaded = load_snapmaker_bundle();
     const HighFlowNotices::SizeOffersHighFlow shipped = HighFlowNotices::size_offers_high_flow(*loaded);
@@ -714,7 +718,13 @@ TEST_CASE("A Standard value changed without its High Flow value is named", "[Hig
     }
 }
 
-TEST_CASE("A user preset that lowers a Standard value keeps the High Flow value of its parent and is named on a High Flow tool head", "[HighFlow][Notices][Profiles]")
+// Hidden ([.]): this case describes the LixNix filament column model (filament_extruder_variant with a
+// Standard and a High Flow column per filament, filament_self_index). SnapOrca keeps the Snapmaker Orca 2.4
+// flow modes instead (filament_flow_support plus the flow keys, composed as segments by
+// filament_flow_step_size), so no shipped or user preset carries that column; the loader side of this on
+// SnapOrca's model is covered by "A user filament preset keeps its High Flow values and the parent's for what it
+// did not write" (branch snaporca-t1-highflow).
+TEST_CASE("A user preset that lowers a Standard value keeps the High Flow value of its parent and is named on a High Flow tool head", "[.][HighFlow][Notices][Profiles]")
 {
     // A user preset of the shipped SnapSpeed (0.4 mm, 20 / 40 mm3/s) saving "Max volumetric speed" 15
     // in the Standard column only. The loader keeps the parent's 40 mm3/s in the High Flow column,
@@ -805,7 +815,11 @@ TEST_CASE("The speed selector shortens its labels before it breaks the row", "[H
     CHECK(HighFlowNotices::head_selector_fit({}, {}, 1) == HighFlowNotices::SelectorFit::Long);
 }
 
-TEST_CASE("Every tool head of a U1 shows its Flow row", "[FirstRun][HighFlow][FlowRow][fr1_flow_row]")
+// Hidden ([.]): this case describes the LixNix vendor data, extruder_variant_list declaring High Flow per
+// tool head in the U1 0.4 mm machine preset. SnapOrca's U1 declares it with printer_flow_support, which
+// extend_extruder_variant() does not turn into variant columns, so declared_volume_types() answers
+// Standard for every head of every preset (the ExtruderGroup flow combo reads printer_flow_support).
+TEST_CASE("Every tool head of a U1 shows its Flow row", "[.][FirstRun][HighFlow][FlowRow][fr1_flow_row]")
 {
     const auto loaded = load_snapmaker_bundle();
     const HighFlowNotices::SizeOffersHighFlow shipped = HighFlowNotices::size_offers_high_flow(*loaded);
@@ -830,7 +844,11 @@ TEST_CASE("Every tool head of a U1 shows its Flow row", "[FirstRun][HighFlow][Fl
     }
 }
 
-TEST_CASE("A 0.4 mm tool head offers High Flow on the 0.2, 0.6 and 0.8 mm U1 presets", "[HighFlow][FlowRow][Profiles][hf_offsize_row]")
+// Hidden ([.]): this case describes the LixNix vendor data, extruder_variant_list declaring High Flow per
+// tool head in the U1 0.4 mm machine preset. SnapOrca's U1 declares it with printer_flow_support, which
+// extend_extruder_variant() does not turn into variant columns, so declared_volume_types() answers
+// Standard for every head of every preset (the ExtruderGroup flow combo reads printer_flow_support).
+TEST_CASE("A 0.4 mm tool head offers High Flow on the 0.2, 0.6 and 0.8 mm U1 presets", "[.][HighFlow][FlowRow][Profiles][hf_offsize_row]")
 {
     const auto loaded = load_snapmaker_bundle();
     const HighFlowNotices::SizeOffersHighFlow shipped = HighFlowNotices::size_offers_high_flow(*loaded);

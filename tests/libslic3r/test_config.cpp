@@ -402,7 +402,14 @@ SCENARIO("update_non_diff_values_to_base_config preserves child vectors when chi
     }
 }
 
-TEST_CASE("A user filament preset keeps a High Flow column its parent lacks", "[Config][Variant][FilamentFlow]")
+// Hidden ([.]): this case describes the LixNix filament column model (filament_extruder_variant with a
+// Standard and a High Flow column per filament, filament_self_index). SnapOrca keeps the Snapmaker Orca 2.4
+// flow modes instead (filament_flow_support plus the flow keys, composed as segments by
+// filament_flow_step_size), so no shipped or user preset carries that column; the loader side of this on
+// SnapOrca's model is covered by "The config length extension keeps one value per flow mode of a filament"
+// and "A user filament preset keeps its High Flow values and the parent's for what it did not write"
+// (branch snaporca-t1-highflow).
+TEST_CASE("A user filament preset keeps a High Flow column its parent lacks", "[.][Config][Variant][FilamentFlow]")
 {
     std::set<std::string> no_keys;
     Slic3r::DynamicPrintConfig parent;

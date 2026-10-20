@@ -1341,7 +1341,12 @@ TEST_CASE("On a plate of four nozzle sizes the 0.6 and 0.8 mm tool heads print t
 
 // High Flow rule of PerHeadProcess::head_sources: 0.20mm High Quality has no High Flow column, so
 // the High Flow head prints the High Flow column of 0.20mm Standard.
-TEST_CASE("On a plate of four nozzle sizes the High Flow tool head prints at the High Flow speeds of the preset of its size that has them", "[PerHeadProcess][Profiles][hs_high_flow_gcode]")
+// Hidden ([.]): this case describes the LixNix process column model (print_extruder_variant with a
+// Standard and a High Flow column in the shipped presets, read by the High Flow rule of PerHeadProcess).
+// SnapOrca's shipped presets keep the Snapmaker Orca 2.4 layout, process_flow_support with one
+// print_extruder_variant column, and resolve the High Flow speeds per filament flow mode
+// (get_config_idx, ConfigFlowDomain::Process), so the rule finds no High Flow column to derive from.
+TEST_CASE("On a plate of four nozzle sizes the High Flow tool head prints at the High Flow speeds of the preset of its size that has them", "[.][PerHeadProcess][Profiles][hs_high_flow_gcode]")
 {
     const std::unique_ptr<OwnerPlateSlice> slice = owner_plate_slice();
     const Preset *standard_020 = slice->bundle.prints.find_preset("0.20mm Standard @Snapmaker U1 (0.4 nozzle)", false);
@@ -1469,7 +1474,12 @@ int filament_column_int(const PresetBundle &bundle, const std::string &preset_na
 
 } // namespace
 
-TEST_CASE("A 0.4 mm High Flow tool head on the 0.6 mm printer preset prints the High Flow values of the 0.4 mm presets", "[PerHeadProcess][HighFlow][Profiles][hf_offsize_gcode]")
+// Hidden ([.]): this case describes the LixNix process column model (print_extruder_variant with a
+// Standard and a High Flow column in the shipped presets, read by the High Flow rule of PerHeadProcess).
+// SnapOrca's shipped presets keep the Snapmaker Orca 2.4 layout, process_flow_support with one
+// print_extruder_variant column, and resolve the High Flow speeds per filament flow mode
+// (get_config_idx, ConfigFlowDomain::Process), so the rule finds no High Flow column to derive from.
+TEST_CASE("A 0.4 mm High Flow tool head on the 0.6 mm printer preset prints the High Flow values of the 0.4 mm presets", "[.][PerHeadProcess][HighFlow][Profiles][hf_offsize_gcode]")
 {
     const std::unique_ptr<OwnerPlateSlice> slice = offsize_plate_slice("Snapmaker U1 (0.6 nozzle)", "0.24mm Standard @Snapmaker U1 (0.6 nozzle)");
     const Preset *standard_020 = slice->bundle.prints.find_preset("0.20mm Standard @Snapmaker U1 (0.4 nozzle)", false);
@@ -1523,7 +1533,12 @@ TEST_CASE("A 0.4 mm High Flow tool head on the 0.6 mm printer preset prints the 
           std::vector<std::string>{STANDARD, "Direct Drive High Flow", STANDARD, STANDARD});
 }
 
-TEST_CASE("A 0.4 mm High Flow tool head prints the same feed rates on the 0.6 mm and on the 0.4 mm printer preset", "[PerHeadProcess][HighFlow][Profiles][hf_offsize_same]")
+// Hidden ([.]): this case describes the LixNix process column model (print_extruder_variant with a
+// Standard and a High Flow column in the shipped presets, read by the High Flow rule of PerHeadProcess).
+// SnapOrca's shipped presets keep the Snapmaker Orca 2.4 layout, process_flow_support with one
+// print_extruder_variant column, and resolve the High Flow speeds per filament flow mode
+// (get_config_idx, ConfigFlowDomain::Process), so the rule finds no High Flow column to derive from.
+TEST_CASE("A 0.4 mm High Flow tool head prints the same feed rates on the 0.6 mm and on the 0.4 mm printer preset", "[.][PerHeadProcess][HighFlow][Profiles][hf_offsize_same]")
 {
     const std::unique_ptr<OwnerPlateSlice> on_0_6 = offsize_plate_slice("Snapmaker U1 (0.6 nozzle)", "0.24mm Standard @Snapmaker U1 (0.6 nozzle)");
     const std::unique_ptr<OwnerPlateSlice> on_0_4 = offsize_plate_slice("Snapmaker U1 (0.4 nozzle)", "0.20mm Standard @Snapmaker U1 (0.4 nozzle)");
@@ -1550,7 +1565,12 @@ TEST_CASE("A 0.4 mm High Flow tool head prints the same feed rates on the 0.6 mm
 }
 
 // A value set for one tool head on the Speed page beats the preset of its size on that head alone.
-TEST_CASE("On a plate of four nozzle sizes an outer wall speed set for the 0.8 mm tool head reaches its G-code alone", "[PerHeadProcess][Profiles][hs_mixed_plate_override]")
+// Hidden ([.]): this case describes the LixNix process column model (print_extruder_variant with a
+// Standard and a High Flow column in the shipped presets, read by the High Flow rule of PerHeadProcess).
+// SnapOrca's shipped presets keep the Snapmaker Orca 2.4 layout, process_flow_support with one
+// print_extruder_variant column, and resolve the High Flow speeds per filament flow mode
+// (get_config_idx, ConfigFlowDomain::Process), so the rule finds no High Flow column to derive from.
+TEST_CASE("On a plate of four nozzle sizes an outer wall speed set for the 0.8 mm tool head reaches its G-code alone", "[.][PerHeadProcess][Profiles][hs_mixed_plate_override]")
 {
     const std::unique_ptr<OwnerPlateSlice> slice = owner_plate_slice([](PresetBundle &bundle) {
         // Tool head 4: outer wall 40 mm/s, as the Speed page writes it (widen, the value in the
@@ -1594,7 +1614,12 @@ TEST_CASE("On a plate of four nozzle sizes an outer wall speed set for the 0.8 m
 
 // A preset chosen for the 0.6 mm head applies to that head only. Its sparse infill (150 mm/s)
 // tells it apart from the automatic 0.18mm Standard (100 mm/s).
-TEST_CASE("On a plate of four nozzle sizes a process preset chosen for the 0.6 mm tool head prints on that tool head alone", "[PerHeadProcess][Profiles][hs_chosen_plate_gcode]")
+// Hidden ([.]): this case describes the LixNix process column model (print_extruder_variant with a
+// Standard and a High Flow column in the shipped presets, read by the High Flow rule of PerHeadProcess).
+// SnapOrca's shipped presets keep the Snapmaker Orca 2.4 layout, process_flow_support with one
+// print_extruder_variant column, and resolve the High Flow speeds per filament flow mode
+// (get_config_idx, ConfigFlowDomain::Process), so the rule finds no High Flow column to derive from.
+TEST_CASE("On a plate of four nozzle sizes a process preset chosen for the 0.6 mm tool head prints on that tool head alone", "[.][PerHeadProcess][Profiles][hs_chosen_plate_gcode]")
 {
     const char *const chosen_name = "0.24mm Standard @Snapmaker U1 (0.6 nozzle)";
     const std::unique_ptr<OwnerPlateSlice> slice = owner_plate_slice([chosen_name](PresetBundle &bundle) {
@@ -2353,7 +2378,12 @@ std::string column_text(const DynamicPrintConfig &config, const std::string &key
 // On an all-0.4 plate the High Flow rule re-picks a High Flow head's speeds (0.20mm Standard), but its
 // widths stay the selected preset's (width_source null for a home-size head): 0.45 mm top surfaces
 // on every tool, also with the Standard speeds of the flow toggle.
-TEST_CASE("On an all-0.4 plate a High Flow tool head under a preset without High Flow speeds keeps that preset's line widths", "[PerHeadProcess][PerHeadWidth][Profiles][hs_all_04_widths]")
+// Hidden ([.]): this case describes the LixNix process column model (print_extruder_variant with a
+// Standard and a High Flow column in the shipped presets, read by the High Flow rule of PerHeadProcess).
+// SnapOrca's shipped presets keep the Snapmaker Orca 2.4 layout, process_flow_support with one
+// print_extruder_variant column, and resolve the High Flow speeds per filament flow mode
+// (get_config_idx, ConfigFlowDomain::Process), so the rule finds no High Flow column to derive from.
+TEST_CASE("On an all-0.4 plate a High Flow tool head under a preset without High Flow speeds keeps that preset's line widths", "[.][PerHeadProcess][PerHeadWidth][Profiles][hs_all_04_widths]")
 {
     const bool standard_speeds = GENERATE(false, true);
     CAPTURE(standard_speeds);
