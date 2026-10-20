@@ -1489,7 +1489,8 @@ if (WIN32)
 endif ()
 set (CPACK_PACKAGE_DESCRIPTION_SUMMARY "Snapmaker Orca is an open source slicer for FDM printers")
 set (CPACK_PACKAGE_HOMEPAGE_URL "https://github.com/Snapmaker/OrcaSlicer")
-set (CPACK_PACKAGE_INSTALL_DIRECTORY ${CPACK_PACKAGE_NAME})
+# SnapOrca: install next to the official Snapmaker Orca, not over it (own folder, uninstall key and menu).
+set (CPACK_PACKAGE_INSTALL_DIRECTORY "SnapOrca")
 set (CPACK_PACKAGE_ICON "${CMAKE_SOURCE_DIR}/resources/images\\\\Snapmaker_Orca.ico")
 set (CPACK_NSIS_MUI_ICON "${CPACK_PACKAGE_ICON}")
 set (CPACK_NSIS_MUI_UNIICON "${CPACK_PACKAGE_ICON}")
@@ -1499,20 +1500,21 @@ set(CPACK_NSIS_UNINSTALL_NAME "Uninstall")
 # Window caption. Keep install dir / Start Menu / registry without version.
 # CPack-generated .nsi stays ASCII. Chinese uninstall confirm is a UTF-8 BOM
 # .nsh included after "Unicode true" so language switch (SimpChinese/English) works.
-set (CPACK_NSIS_DISPLAY_NAME "${CPACK_PACKAGE_NAME}")
+set (CPACK_NSIS_DISPLAY_NAME "SnapOrca")
 set (CPACK_NSIS_PACKAGE_NAME "${CPACK_PACKAGE_NAME} V${Snapmaker_VERSION}")
 # Pre-fill the directory page with the existing install path on overwrite
 # (logic lives in cmake/nsis/SnapmakerDirPre.nsh, pulled in via MUI hook).
 file(TO_NATIVE_PATH "${CMAKE_SOURCE_DIR}/cmake/nsis/SnapmakerDirPre.nsh" _snapmaker_dirpre_nsh)
-set (CPACK_NSIS_DEFINES "!define MUI_STARTMENUPAGE_DEFAULTFOLDER \"${CPACK_PACKAGE_NAME}\"\n!include \"${_snapmaker_dirpre_nsh}\"")
+set (CPACK_NSIS_DEFINES "!define MUI_STARTMENUPAGE_DEFAULTFOLDER \"SnapOrca\"\n!include \"${_snapmaker_dirpre_nsh}\"")
 # Preinstall guard (block-while-running + old-version uninstall prompt) lives in
 # cmake/nsis/SnapmakerPreinstall.nsh.in and is included from the install section
 # via CPACK_NSIS_EXTRA_PREINSTALL_COMMANDS. That variable is set in the WIN32
 # block below (where the UTF-8 BOM .nsh is written), because the CPack-generated
 # .nsi template must stay ASCII -- the Chinese/English prompt texts therefore
 # live in the separate UTF-8 BOM .nsh instead of this inline block.
-file(READ "${CMAKE_SOURCE_DIR}/cmake/nsis/SnapmakerURLProtocols_install.nsh" CPACK_NSIS_EXTRA_INSTALL_COMMANDS)
-file(READ "${CMAKE_SOURCE_DIR}/cmake/nsis/SnapmakerURLProtocols_uninstall.nsh" _snapmaker_nsis_uninst_url)
+# SnapOrca: the Snapmaker_Orca:// link handlers belong to the official Snapmaker Orca; neither register nor remove them.
+set(CPACK_NSIS_EXTRA_INSTALL_COMMANDS "")
+set(_snapmaker_nsis_uninst_url "")
 set(_snapmaker_nsis_uninst_kill [=[
   nsExec::Exec 'taskkill /F /IM snapmaker-orca.exe /T'
   Pop $0
@@ -1536,7 +1538,7 @@ set(CPACK_NSIS_DELETE_ICONS_EXTRA [=[
   SetShellVarContext all
 ]=])
 set (CPACK_PACKAGE_CHECKSUM SHA256)
-set (CPACK_PACKAGE_INSTALL_REGISTRY_KEY "Snapmaker_Orca")
+set (CPACK_PACKAGE_INSTALL_REGISTRY_KEY "SnapOrca")
 set (CPACK_NSIS_ENABLE_UNINSTALL_BEFORE_INSTALL OFF)
 set (CPACK_NSIS_EXECUTABLES_DIRECTORY ".")
 set(CPACK_PACKAGE_EXECUTABLES "snapmaker-orca;Snapmaker Orca")

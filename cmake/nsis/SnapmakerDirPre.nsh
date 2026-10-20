@@ -9,16 +9,16 @@
 
 Function SnapmakerDirPre
   StrCmp "$IS_DEFAULT_INSTALLDIR" "1" 0 SnapmakerDirPre_done
-    ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Snapmaker_Orca" "UninstallString"
+    ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapOrca" "UninstallString"
     StrCmp $0 "" SnapmakerDirPre_hkcu SnapmakerDirPre_have
   SnapmakerDirPre_hkcu:
-    ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Snapmaker_Orca" "UninstallString"
+    ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapOrca" "UninstallString"
     StrCmp $0 "" SnapmakerDirPre_hklm_space SnapmakerDirPre_have
   SnapmakerDirPre_hklm_space:
-    ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\Snapmaker Orca" "UninstallString"
+    ReadRegStr $0 HKLM "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapOrca" "UninstallString"
     StrCmp $0 "" SnapmakerDirPre_hkcu_space SnapmakerDirPre_have
   SnapmakerDirPre_hkcu_space:
-    ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\Snapmaker Orca" "UninstallString"
+    ReadRegStr $0 HKCU "Software\Microsoft\Windows\CurrentVersion\Uninstall\SnapOrca" "UninstallString"
     StrCmp $0 "" SnapmakerDirPre_done SnapmakerDirPre_have
   SnapmakerDirPre_have:
     ; UninstallString is quoted; strip the surrounding quotes.
