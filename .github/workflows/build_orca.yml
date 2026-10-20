@@ -674,7 +674,9 @@ jobs:
           if-no-files-found: error
 
       - name: Run external slicer regression tests
-        if: runner.os == 'Linux' && inputs.arch != 'aarch64'
+        # The suite (OrcaSlicer/orca-test-repo) targets upstream's binary and
+        # profiles; in a fork it only runs with vars.EXTERNAL_REGRESSION_TESTS.
+        if: runner.os == 'Linux' && inputs.arch != 'aarch64' && (github.repository == 'OrcaSlicer/OrcaSlicer' || vars.EXTERNAL_REGRESSION_TESTS == 'true')
         continue-on-error: true
         timeout-minutes: 20
         shell: bash
