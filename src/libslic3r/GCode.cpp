@@ -1742,7 +1742,18 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
         if (tcr.priming || (new_extruder_id >= 0 && needs_toolchange)) {
             if (is_ramming)
                 gcodegen.m_wipe.reset_path(); // We don't want wiping on the ramming lines.
-            toolchange_gcode_str += gcodegen.set_extruder(new_extruder_id, tcr.print_z, false, -1,
+            // On a contact (interface) layer with tower interface features on, heat the incoming
+            // filament straight to its interface temperature during the tool change, as the Type1
+            // path does for new_filament_temp, instead of first settling at the print temperature.
+            // The tower still waits for that temperature before the contact wipe (tool_change_new).
+            int toolchange_temp_override = -1;
+            if (gcodegen.m_config.enable_tower_interface_features && tcr.is_contact && !tcr.priming && new_extruder_id >= 0) {
+                toolchange_temp_override = gcodegen.m_config.filament_tower_interface_print_temp.get_at(new_extruder_id);
+                if (toolchange_temp_override == -1)
+                    toolchange_temp_override = gcodegen.m_config.nozzle_temperature_range_high.get_at(
+                        gcodegen.get_filament_config_index(new_extruder_id));
+            }
+            toolchange_gcode_str += gcodegen.set_extruder(new_extruder_id, tcr.print_z, false, toolchange_temp_override,
                                                           WipeTower2::wait_for_temp_enabled(gcodegen.m_config)); // TODO: toolchange_z vs print_z
         }
 
@@ -13267,8 +13278,13 @@ std::string GCode::set_extruder(unsigned int new_filament_id, double print_z, bo
     // Set the new extruder to the operating temperature. With defer_temp_wait the target was
     // already raised before the tool change and the blocking wait belongs to the wipe tower
     // generator, so there is nothing left to restore here.
-    if (m_ooze_prevention.enable && !defer_temp_wait)
-        gcode += m_ooze_prevention.post_toolchange(*this);
+    // A tower interface override keeps that target instead of dropping back to the print temperature.
+    if (m_ooze_prevention.enable && !defer_temp_wait) {
+        if (toolchange_temp_override > 0 && m_config.standby_temperature_delta.value != 0)
+            gcode += m_writer.set_temperature(unsigned(toolchange_temp_override), m_config.tool_change_temprature_wait.value, int(new_filament_id));
+        else
+            gcode += m_ooze_prevention.post_toolchange(*this);
+    }
 
     // See the note on the single-extruder path above: -1 outside IMEX parallel modes.
     gcode += set_filament_pressure_advance(new_filament_id,
