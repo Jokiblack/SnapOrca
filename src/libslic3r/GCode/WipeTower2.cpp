@@ -1385,6 +1385,16 @@ void WipeTower2::set_extruder(size_t idx, const PrintConfig& config)
     float nozzle_diameter         = float(config.nozzle_diameter.get_at(idx));
     m_filpar[idx].nozzle_diameter = nozzle_diameter; // to be used in future with (non-single) multiextruder MM
 
+    // Orca: max_layer_height is per nozzle, so read it through the filament->nozzle map rather than
+    // by filament id. Zero means three quarters of the nozzle diameter, as in Slicing.cpp.
+    {
+        const std::vector<int> &filament_map = config.filament_map.values; // 1 based nozzle indices
+        const size_t nozzle_idx = idx < filament_map.size() && filament_map[idx] > 0 ? size_t(filament_map[idx] - 1) : 0;
+        const float  max_layer_height = float(config.max_layer_height.get_at(nozzle_idx));
+        m_filpar[idx].max_layer_height = max_layer_height > 0.f ? max_layer_height
+                                                                : 0.75f * float(config.nozzle_diameter.get_at(nozzle_idx));
+    }
+
     float max_vol_speed = float(get_value_at(config, config.filament_max_volumetric_speed, ConfigFlowDomain::Filament, idx));
     if (max_vol_speed != 0.f)
         m_filpar[idx].max_e_speed = (max_vol_speed / filament_area());
@@ -2735,7 +2745,7 @@ WipeTower::ToolChangeResult WipeTower2::finish_layer()
 
     // Ask our writer about how much material was consumed.
     // Skip this in case the layer is sparse and config option to not print sparse layers is enabled.
-    if (!m_no_sparse_layers || toolchanges_on_layer || first_layer) {
+    if ((!m_no_sparse_layers || toolchanges_on_layer || first_layer) && !layer_combined_away()) {
         if (m_current_tool < m_used_filament_length.size())
             m_used_filament_length[m_current_tool] += writer.get_and_reset_used_filament_length();
         m_current_height += m_layer_info->height;
@@ -2941,7 +2951,7 @@ WipeTower::ToolChangeResult WipeTower2::finish_layer_new(bool extrude_perimeter,
 
     // Ask our writer about how much material was consumed.
     // Skip this in case the layer is sparse and config option to not print sparse layers is enabled.
-    if (!m_no_sparse_layers || toolchanges_on_layer || first_layer) {
+    if ((!m_no_sparse_layers || toolchanges_on_layer || first_layer) && !layer_combined_away()) {
         if (m_current_tool < m_used_filament_length.size())
             m_used_filament_length[m_current_tool] += writer.get_and_reset_used_filament_length();
         m_current_height += m_layer_info->height; // Necessary for m_no_sparse_layers
@@ -3520,6 +3530,14 @@ void WipeTower2::generate_new(std::vector<std::vector<WipeTower::ToolChangeResul
     if (m_plan.empty())
         return;
 
+    // Before planning: the layer heights this rewrites feed the extrusion flow of every later pass.
+    // Local-Z toolchanges are not seen by the shared rule, so a plan that has any is left alone.
+    if (m_sparse_layers_combined &&
+        std::none_of(m_plan.begin(), m_plan.end(), [](const WipeTowerInfo &layer) {
+            return !layer.local_z_tool_changes.empty() || layer.local_z_reserve_slot_count > 0;
+        }))
+        combine_sparse_wipe_tower_plan(m_plan, m_filpar, m_first_layer_idx, m_current_tool);
+
     m_wipe_tower_height = m_plan.back().z;
     plan_tower_new(); // also computes the wall skip points when the gap wall is on
 
@@ -3725,6 +3743,10 @@ void WipeTower2::generate_new(std::vector<std::vector<WipeTower::ToolChangeResul
                 layer_result[insert_finish_layer_idx] = merge_tcr(layer_result[insert_finish_layer_idx], finish_layer_tcr);
             }
         }
+
+        if (layer.combined_away)
+            for (WipeTower::ToolChangeResult &tcr : layer_result)
+                tcr.combined_away = true;
 
         result.emplace_back(std::move(layer_result));
         local_z_result.emplace_back(std::move(local_z_layer_result));
@@ -4547,7 +4569,7 @@ WipeTower::ToolChangeResult WipeTower2::finish_block(const WipeTowerBlock& block
 
     // Ask our writer about how much material was consumed.
     // Skip this in case the layer is sparse and config option to not print sparse layers is enabled.
-    if (!m_no_sparse_layers || toolchanges_on_layer || first_layer) {
+    if ((!m_no_sparse_layers || toolchanges_on_layer || first_layer) && !layer_combined_away()) {
         if (filament_id < m_used_filament_length.size())
             m_used_filament_length[filament_id] += writer.get_and_reset_used_filament_length();
         m_current_height += m_layer_info->height;
@@ -4674,7 +4696,7 @@ WipeTower::ToolChangeResult WipeTower2::finish_block_solid(const WipeTowerBlock&
 
     // Ask our writer about how much material was consumed.
     // Skip this in case the layer is sparse and config option to not print sparse layers is enabled.
-    if (!m_no_sparse_layers || toolchanges_on_layer || first_layer) {
+    if ((!m_no_sparse_layers || toolchanges_on_layer || first_layer) && !layer_combined_away()) {
         if (filament_id < m_used_filament_length.size())
             m_used_filament_length[filament_id] += writer.get_and_reset_used_filament_length();
         m_current_height += m_layer_info->height;

@@ -219,6 +219,8 @@ public:
         int filament_tower_interface_print_temp = -1;
         int category = 0;
         float wipe_dist = 0.f;
+        // Tallest layer this filament's nozzle can lay down; caps the sparse layer combination.
+        float max_layer_height = 0.f;
     };
 
     const std::map<float, Polylines>& get_outer_wall() const { return m_outer_wall; }
@@ -393,6 +395,8 @@ private:
     float           m_local_z_wipe_tower_purge_lines = 3.f;
 
     bool is_first_layer() const { return size_t(m_layer_info - m_plan.begin()) == m_first_layer_idx; }
+    // A layer folded away by the sparse layer combination prints nothing, so it consumes nothing.
+    bool layer_combined_away() const { return m_layer_info != m_plan.end() && m_layer_info->combined_away; }
 
     // Purge row lattice of toolchange_Wipe(): row pitch and extrusion width.
     float wipe_row_spacing(bool first_layer) const { return (first_layer ? m_extra_flow : m_extra_spacing_wipe) * m_perimeter_width; }
@@ -460,6 +464,8 @@ private:
 		float height;	// layer height
 		float depth;	// depth of the layer based on all layers above
         bool  extruder_fill{ true };
+		// Folded into a later, thicker layer, so this one prints nothing at all.
+		bool  combined_away{false};
         float normal_toolchanges_depth() const { float sum = 0.f; for (const auto &a : tool_changes) sum += a.required_depth; return sum; }
         float local_z_toolchanges_depth() const { float sum = 0.f; for (const auto &a : local_z_tool_changes) sum += a.required_depth; return sum; }
 		float toolchanges_depth() const { return normal_toolchanges_depth() + local_z_toolchanges_depth(); }
