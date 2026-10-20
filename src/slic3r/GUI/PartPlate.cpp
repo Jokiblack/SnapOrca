@@ -3129,7 +3129,10 @@ std::vector<int> PartPlate::get_extruders(bool conside_custom_gcode, const Dynam
         int nums_extruders = 0;
         if (const ConfigOptionStrings *color_option = dynamic_cast<const ConfigOptionStrings *>(project_config.option("filament_colour"))) {
             nums_extruders = color_option->values.size();
-            const size_t total_filaments = wxGetApp().preset_bundle->mixed_filaments.total_filaments(size_t(nums_extruders));
+            // CLI mode: no wx app / preset bundle exists (see expand_plate_extruders), and no mixed filaments either.
+            const size_t total_filaments = (wxTheApp == nullptr || wxGetApp().preset_bundle == nullptr)
+                                               ? size_t(nums_extruders)
+                                               : wxGetApp().preset_bundle->mixed_filaments.total_filaments(size_t(nums_extruders));
 			if (m_model->plates_custom_gcodes.find(m_plate_index) != m_model->plates_custom_gcodes.end()) {
 				for (auto item : m_model->plates_custom_gcodes.at(m_plate_index).gcodes) {
 					if (item.type == CustomGCode::Type::ToolChange && item.extruder <= int(total_filaments))
