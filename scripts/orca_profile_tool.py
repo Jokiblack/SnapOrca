@@ -150,6 +150,13 @@ NON_PROFILE_FILES = {
     "filament_id_map.json",
     "filament_name_map.json",
     "support_recommended_params.json",
+    # Snapmaker Orca: the GUI reads these from Snapmaker/filament/ by their fixed file
+    # names (PlaterFilamentComboBox.cpp, MixedColorMatchHelpers.cpp, GUI_App.cpp,
+    # PresetUpdater.cpp); the preset loader never sees them.
+    "filament_allow_list.json",
+    "filament_compatibility.json",
+    "filament_hot_bed_nozzles.json",
+    "filaments_colours.json",
 }
 
 # Mirror PrintConfigDef::handle_legacy's ignore set in PrintConfig.cpp; a test
@@ -162,7 +169,7 @@ OBSOLETE_KEYS = {
     "tree_support_collision_resolution", "tree_support_with_infill",
     "max_volumetric_speed", "max_print_speed", "support_closing_radius",
     "remove_freq_sweep", "remove_bed_leveling", "remove_extrusion_calibration",
-    "support_transition_line_width", "support_transition_speed", "bed_temperature",
+    "support_transition_line_width", "bed_temperature",
     "bed_temperature_initial_layer", "can_switch_nozzle_type", "can_add_auxiliary_fan",
     "extra_flush_volume", "spaghetti_detector", "adaptive_layer_height",
     "z_hop_type", "z_lift_type", "bed_temperature_difference", "long_retraction_when_cut",
@@ -170,6 +177,8 @@ OBSOLETE_KEYS = {
     "top_area_threshold", "reduce_wall_solid_infill",
     "filament_load_time", "filament_unload_time", "smooth_coefficient",
     "overhang_totally_speed", "silent_mode", "overhang_speed_classic",
+    # Snapmaker Orca 2.4.1 process key that never reached the support generator.
+    "tree_support_adaptive_layer_height",
     "anisotropic_surfaces",
     # Belt printer options retired before the feature shipped (#16236).
     "belt_slice_rotation_global", "preslice_remap_x", "preslice_remap_y", "preslice_remap_z",
