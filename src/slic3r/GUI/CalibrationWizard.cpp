@@ -881,7 +881,9 @@ void PressureAdvanceWizard::on_cali_start()
             int   bed_temp             = -1;
             float max_volumetric_speed = -1;
 
-            if (!get_preset_info(item.second->config, plate_type, nozzle_temp, bed_temp, max_volumetric_speed)) {
+            if (!get_preset_info(item.second->config, plate_type,
+                                 calibration_volume_type(preset_page->get_printer_preset(curr_obj, nozzle_dia), 0),
+                                 nozzle_temp, bed_temp, max_volumetric_speed)) {
                 BOOST_LOG_TRIVIAL(error) << "CaliPreset: get preset info error";
                 continue;
             }

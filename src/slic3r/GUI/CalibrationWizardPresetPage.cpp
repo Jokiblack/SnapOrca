@@ -1441,7 +1441,7 @@ void CalibrationPresetPage::on_recommend_input_value()
                 if (speed_opt) {
                     const Preset *printer_preset = get_printer_preset(curr_obj, get_nozzle_value());
                     const FilamentVolumeType volume_type = printer_preset == nullptr ? fvtStandard :
-                        get_nozzle_volume_type(printer_preset->config, 0);
+                        ::Slic3r::get_nozzle_volume_type(printer_preset->config, 0);
                     double max_volumetric_speed = get_preset_value_at(selected_filament_preset->config, *speed_opt,
                                                                       ConfigFlowDomain::Filament, volume_type);
                     wxArrayString values;
