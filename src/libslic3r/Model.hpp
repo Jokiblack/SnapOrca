@@ -871,6 +871,12 @@ public:
         CutConnectorType    connector_type{ CutConnectorType::Plug };
         float               radius_tolerance{ 0.f };// [0.f : 1.f]
         float               height_tolerance{ 0.f };// [0.f : 1.f]
+        // Index of the part this piece was cut from, inside the object being cut. Only
+        // meaningful while a cut is in progress: the groove and contour cuts split every
+        // part into several pieces and merge them back per source part, so they need to
+        // tell which pieces belong together. Transient scratch state: not listed in
+        // serialize() below, so it is neither written to 3mf nor kept across undo/redo.
+        int                 source_part_idx{ -1 };
 
         CutInfo() = default;
         CutInfo(CutConnectorType type, float rad_tolerance, float h_tolerance, bool processed = false) :
