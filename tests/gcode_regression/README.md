@@ -88,8 +88,17 @@ salida: 0 idéntico, 1 diferencias o referencia que falta, 2 fallo de laminado. 
 modo "bootstrap" para generar los G-code la primera vez.
 
 En GitHub Actions, el artefacto `gcode-regression-diff` lleva los G-code normalizados, los diffs y
-los logs de cada caso. Para crear o actualizar las referencias desde ahí: descargar el artefacto,
-copiar `gcode/<caso>.gcode` a `reference/<caso>.gcode` y subirlo.
+los logs de cada caso. Para crear o actualizar las referencias: descargar el AppImage de la run
+(artefacto `Snapmaker_Orca_Linux_ubuntu_2404_V*`) y ejecutar el script con `--update`.
+
+### Referencias comprimidas
+
+Las referencias son el G-code ya normalizado comprimido con gzip (`reference/<caso>.gcode.gz`,
+unos 2,4 MB los 14 casos frente a 17 MB en texto), escrito con `gzip.GzipFile(filename="",
+mtime=0)`: sin nombre de fichero ni fecha, así que `--update` con el mismo binario da los mismos
+bytes y una regeneración solo cambia en git los casos que cambian de verdad. El script las
+descomprime al comparar; los diffs (`out/diff/<caso>.diff`) y los G-code del artefacto son texto
+plano. Para leer una a mano: `zcat reference/cube_1f.gcode.gz | less`.
 
 ## Estado
 
@@ -131,7 +140,7 @@ Estado: EN CURSO (se actualiza en cada vuelta de GitHub Actions).
      temprana de la CLI (`m_config.validate` antes de cargar presets). La CLI no compone el proceso
      por cabezal (PerHeadProcess es de la aplicación), pero los anchos de línea del proceso de la U1
      son porcentajes del diámetro, así que el G-code sí cambia.
-   * `README.md`, `.gitignore` (`out/`), `reference/` (14 G-code normalizados).
+   * `README.md`, `.gitignore` (`out/`), `reference/` (14 G-code normalizados, `.gcode.gz`).
 4. `.github/workflows/build_all.yml`: job `gcode_regression_linux` (ubuntu-24.04, o
    `orca-lnx-server` con `SELF_HOSTED`), `needs: build_linux`: descarga el artefacto
    `Snapmaker_Orca_Linux_ubuntu_2404_[PV]*` (el x86_64, sin sufijo `_aarch64`), `--appimage-extract`,
@@ -173,13 +182,17 @@ Estado: EN CURSO (se actualiza en cada vuelta de GitHub Actions).
      experimento sin falda daba G-code y segfault al salir).
    * Con eso, los 14 casos laminan (2 s cada uno) y dos ejecuciones (una desde el squashfs-root,
      otra extrayendo el .AppImage) dan G-code IDÉNTICO: determinista. Referencias generadas con
-     `--update` desde ese AppImage (17 MB en total).
+     `--update` desde ese AppImage (17 MB en texto; guardadas como `.gcode.gz` deterministas,
+     2,4 MB, a petición del coordinador; comprobado que `--update` reproduce los mismos bytes y que
+     una referencia alterada da FALLO con diff unificado en texto plano).
    * Comprobaciones de contenido: `cubes_4f_tower`/`painted_4f` llevan torre (`;TYPE:Prime tower`)
      y cambios `T0..T3`; `cubes_4f_notower` cambia de herramienta sin torre; los `*_mixed` llevan
      `nozzle_diameter = 0.4,0.6,0.4,0.6` y `;WIDTH:0.75` en el extrusor de 0,6 (0,5 con 0,4);
      los de soporte llevan `;TYPE:Support`/`Support interface` con el `support_type`/`support_style`
      pedidos.
-2. Run siguiente con referencias + arreglo del job: (pendiente)
+2. Run 39509135516 (commit 70147377, referencias en texto + arreglo del job): cancelada al poco de
+   empezar para pasar las referencias a `.gcode.gz`.
+3. Run siguiente (referencias `.gcode.gz`): (pendiente)
 
 ### Qué NO se ha podido verificar todavía
 

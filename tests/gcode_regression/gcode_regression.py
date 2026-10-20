@@ -24,6 +24,7 @@ Opciones de la CLI (src/Snapmaker_Orca.cpp y src/libslic3r/Config.cpp, read_cli)
 
 import argparse
 import difflib
+import gzip
 import json
 import os
 import re
@@ -470,20 +471,30 @@ def normalize(path, slicer_root=None):
     return "\n".join(out) + "\n"
 
 
+def write_reference(path, text):
+    """Referencia comprimida y reproducible byte a byte: gzip sin nombre de fichero ni fecha (mtime=0)."""
+    with open(path, "wb") as raw:
+        with gzip.GzipFile(filename="", mode="wb", fileobj=raw, compresslevel=9, mtime=0) as z:
+            z.write(text.encode("utf-8"))
+
+
+def read_reference(path):
+    with gzip.open(path, "rb") as z:
+        return z.read().decode("utf-8")
+
+
 def compare(name, generated, reference_dir, update, allow_missing, diff_dir):
-    ref = os.path.join(reference_dir, name + ".gcode")
+    ref = os.path.join(reference_dir, name + ".gcode.gz")
     text = normalize(generated)
     if update:
         os.makedirs(reference_dir, exist_ok=True)
-        with open(ref, "w", newline="\n") as f:
-            f.write(text)
+        write_reference(ref, text)
         print("  [%s] referencia escrita (%d líneas)" % (name, text.count("\n")))
         return True
     if not os.path.isfile(ref):
         print("  [%s] SIN REFERENCIA (%s)" % (name, "se ignora" if allow_missing else "fallo"))
         return allow_missing
-    with open(ref, encoding="utf-8", newline="") as f:
-        ref_text = f.read()
+    ref_text = read_reference(ref)
     if ref_text == text:
         print("  [%s] IDÉNTICO (%d líneas)" % (name, text.count("\n")))
         return True
