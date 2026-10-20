@@ -2018,8 +2018,17 @@ bool DynamicConfig::read_cli(int argc, const char* const argv[], t_config_option
                 // unescaped by the calling shell.
                 const std::string vector_value = opt_base->type() == coBools ? normalize_cli_bool_value(value) : value;
                 bool deserialized = false;
+                // Snapmaker: deserialize() skips nil items of a non-nullable vector (to load Snapmaker
+                // projects and profiles), but on the command line a nil there is still an invalid value.
+                bool nil_in_non_nullable = false;
+                if (! opt_base->nullable() && opt_base->type() != coStrings) {
+                    std::vector<std::string> items;
+                    boost::split(items, vector_value, boost::is_any_of(","));
+                    nil_in_non_nullable = std::any_of(items.begin(), items.end(),
+                                                      [](const std::string &item) { return boost::trim_copy(item) == "nil"; });
+                }
                 try {
-                    deserialized = opt_vector->deserialize(vector_value, true);
+                    deserialized = ! nil_in_non_nullable && opt_vector->deserialize(vector_value, true);
                 } catch (const std::exception &ex) {
                     // e.g. "nil" deserialized into a non-nullable vector option throws instead of
                     // returning false - treat that the same as any other invalid value here.

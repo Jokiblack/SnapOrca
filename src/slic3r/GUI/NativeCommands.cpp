@@ -618,7 +618,7 @@ std::vector<NativeCommand> build_command_catalog()
         wxGetApp().check_new_version_sf(true, 1);
         return AppActionRunResult{AppActionRunResult::Level::Success};
     });
-    add_with_icon("help_about", L("About OrcaSlicer"), L("Help"), "info", [](const std::string&) {
+    add_with_icon("help_about", L("About OrcaSlicer"), L("Help"), "Snapmaker_Orca_about", [](const std::string&) {
         Slic3r::GUI::about();
         return AppActionRunResult{AppActionRunResult::Level::Success};
     });

@@ -5862,30 +5862,26 @@ void GCode::_print_first_layer_extruder_temperatures(GCodeOutputStream &file, Pr
                 file.write(m_writer.set_temperature(temp, wait, first_printing_extruder_id));
         } else {
             // Set temperatures of all the printing extruders.
-            // Snapmaker: the active (first printing) tool is set last, so that a waiting command ends on the
-            // tool that starts printing (Snapmaker U1 toolchanger).
+            // Snapmaker: when waiting, the first printing tool is set last, so that the wait ends on the
+            // tool that starts printing (Snapmaker U1 toolchanger). Without a wait the upstream order is kept.
             int target_temp = -1;
-            int target_tool = -1;
             for (unsigned int tool_id : print.extruders()) {
                 int temp = print.config().nozzle_temperature_initial_layer.get_at(filament_flow_index((int)tool_id));
-                bool is_active = true;
                 if (m_ooze_prevention.enable && tool_id != first_printing_extruder_id) {
-                    is_active = false;
                     if (print.config().idle_temperature.get_at(tool_id) == 0)
                         temp += print.config().standby_temperature_delta.value;
                     else
                         temp = print.config().idle_temperature.get_at(tool_id);
                 }
                 if (temp > 0) {
-                    if (is_active) {
+                    if (wait && tool_id == first_printing_extruder_id)
                         target_temp = temp;
-                        target_tool = int(tool_id);
-                    } else
+                    else
                         file.write(m_writer.set_temperature(temp, wait, tool_id));
                 }
             }
-            if (target_temp != -1 && target_tool != -1)
-                file.write(m_writer.set_temperature(target_temp, wait, target_tool));
+            if (target_temp > 0)
+                file.write(m_writer.set_temperature(target_temp, wait, first_printing_extruder_id));
         }
     }
 }
@@ -10274,7 +10270,10 @@ static std::string serialize_gcode_config_option(const DynamicPrintConfig &confi
         filament_count = volume_types->values.size();
     else if (step_sizes != nullptr)
         filament_count = step_sizes->values.size();
-    if (filament_count == 0)
+    // The flow-variant metadata must describe every filament; a config whose metadata is shorter
+    // (left at its one-element default) holds plain per-filament values, so dump them unchanged.
+    const auto *colours = config.option<ConfigOptionStrings>("filament_colour");
+    if (filament_count == 0 || (colours != nullptr && filament_count < colours->values.size()))
         return config.opt_serialize(key);
 
     const auto *source_vector = static_cast<const ConfigOptionVectorBase *>(source);

@@ -1636,6 +1636,8 @@ TEST_CASE("The build height check counts the raft", "[Print][validate][Regressio
     DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
     config.set_deserialize_strict({
         { "printable_height", 100. },
+        // Snapmaker defaults this to off, which rounds the 0.1 mm raft gap up to a whole layer.
+        { "independent_support_layer_height", 1 },
         { "raft_layers", 3 },
         { "layer_height", 0.2 },
         { "initial_layer_print_height", 0.2 },
