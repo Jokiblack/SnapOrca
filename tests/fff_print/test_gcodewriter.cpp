@@ -1779,3 +1779,24 @@ TEST_CASE("Initial filament start G-code tolerates a list shorter than the filam
 
     REQUIRE_NOTHROW(Slic3r::Test::gcode(print));
 }
+
+// A travel emitted before the first tool is selected (filament() is null: start G-code
+// moves, the move to the first object, a priming travel) has to take its speed from the
+// base process column instead of the active filament. Bambu Studio 0d348ad10 fixed a
+// null filament dereference here; SnapOrca keeps the column in the cached slot
+// process_config_index() returns, so this is the guard against reintroducing the lookup.
+TEST_CASE("Travel before the initial tool selection uses the base process configuration", "[GCodeWriter]")
+{
+    GCodeWriter writer;
+    writer.config.travel_speed.values               = { 150.0 };
+    writer.config.travel_speed_z.values             = { 0.0 };
+    writer.config.initial_layer_travel_speed.values = { FloatOrPercent(100., true) };
+    writer.set_extruders({ 0, 1 });
+
+    REQUIRE(writer.filament() == nullptr);
+    // 150 mm/s = F9000, on every travel path GCode::travel_to can take.
+    REQUIRE_THAT(writer.travel_to_xy(Vec2d(10.0, 20.0)), Catch::Matchers::ContainsSubstring("F9000"));
+    REQUIRE_THAT(writer.travel_to_z(0.2), Catch::Matchers::ContainsSubstring("F9000"));
+    REQUIRE_THAT(writer.travel_to_xyz(Vec3d(30.0, 40.0, 0.4)), Catch::Matchers::ContainsSubstring("F9000"));
+    REQUIRE(writer.filament() == nullptr);
+}
