@@ -581,12 +581,15 @@ private:
      */
     void draw_circles();
 
-    // a base support area carried by less than this fraction of itself is treated as floating and dropped
+    // a base support area carried by less than this fraction of itself is treated as floating and dropped,
+    // unless the support below carries a part of it as wide as the thinnest printable branch
     static constexpr double MIN_CARRIED_RATIO = 0.3;
     // An interface layer is drawn as the whole overhang and bridges across the branch tips under it, so the
     // fraction of itself it rests on is small by design and says nothing about whether it prints. Ask only
     // that it be anchored at all. Pruning a region also takes away what the regions above it stood on, so
     // holding an interface to the base threshold does not stay local: it takes the branch above it down too.
+    // This concession is measured against the support below only; an interface resting on the model instead
+    // has to clear MIN_CARRIED_RATIO, the same bar as a base standing on that ledge.
     static constexpr double MIN_CARRIED_RATIO_INTERFACE = 0.02;
 
     /*!
