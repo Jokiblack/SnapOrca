@@ -10,6 +10,7 @@
 #include "I18N.hpp"
 #include "libslic3r/AppConfig.hpp"
 #include "libslic3r/Format/DRC.hpp"
+#include "libslic3r/MeshDiagnostics.hpp"
 #include <wx/gdicmn.h>
 #include <wx/arrstr.h>
 #include "slic3r/GUI/Widgets/Label.hpp"
@@ -1101,6 +1102,9 @@ wxBoxSizer *PreferencesDialog::create_item_checkbox(wxString title, wxString too
         if (param == "allow_filament_temp_mixing" && wxGetApp().plater())
             wxGetApp().plater()->notify_filament_usage_changed();
 
+        if (param == "detect_reversed_faces")
+            Slic3r::set_reversed_faces_detection(checkbox->GetValue());
+
         if (param == PRIVACY_POLICY_FLAGS)
             {
             app_config->set("app", PRIVACY_POLICY_FLAGS, checkbox->GetValue());
@@ -1789,6 +1793,14 @@ void PreferencesDialog::create_items()
 
     auto item_recent_models    = create_item_checkbox(_L("Add STL/STEP files to recent files list"), "", "recent_models");
     g_sizer->Add(item_recent_models);
+
+    // Snapmaker Orca: reversed-face detection on import, a warning in the object list (Bambu Studio 2.8.4).
+    auto item_reversed_faces   = create_item_checkbox(_L("Detect reversed faces when importing models"),
+        _L("If enabled, every imported mesh is checked for faces wound inwards (reversed normals), which can print as hollows "
+           "or missing walls, and the object list shows a warning icon with \"Fix Model\" as the repair. "
+           "The check adds to the import time of large models.\nDefault: disabled."),
+        "detect_reversed_faces");
+    g_sizer->Add(item_reversed_faces);
 
     auto item_gcodes_warning   = create_item_checkbox(_L("Don't warn when loading 3MF with modified G-code"), "", "no_warn_when_modified_gcodes");
     g_sizer->Add(item_gcodes_warning);

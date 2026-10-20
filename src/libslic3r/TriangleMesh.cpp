@@ -3,6 +3,7 @@
 #include "Polygon.hpp"
 #include "TriangleMeshSlicer.hpp"
 #include "MeshSplitImpl.hpp"
+#include "MeshDiagnostics.hpp"
 #include "ClipperUtils.hpp"
 #include "Geometry.hpp"
 #include "Geometry/ConvexHull.hpp"
@@ -64,6 +65,9 @@ static void fill_initial_stats(const indexed_triangle_set &its, TriangleMeshStat
     const std::vector<Vec3i32> face_neighbors = its_face_neighbors(its);
     out.number_of_parts = its_number_of_patches(its, face_neighbors);
     out.open_edges      = its_num_open_edges(face_neighbors);
+    // Optional, see the "detect_reversed_faces" preference: an edge scan plus a ray test from outside
+    // the bounding box, which costs a noticeable share of the import time of large meshes.
+    out.has_reversed_faces = reversed_faces_detection_enabled() && its_quick_diagnostics(its).has_reversed_faces;
 }
 
 TriangleMesh::TriangleMesh(const std::vector<Vec3f> &vertices, const std::vector<Vec3i32> &faces) : its { faces, vertices }
@@ -375,6 +379,10 @@ void TriangleMesh::flip_triangles()
 {
     its_flip_triangles(its);
     m_stats.volume = - m_stats.volume;
+    // A global flip keeps the topology, only the orientation test has to run again: a mesh imported
+    // inside out is flagged by the constructor and cleared here once the importer turns it outward.
+    if (reversed_faces_detection_enabled())
+        m_stats.has_reversed_faces = its_quick_diagnostics(its).has_reversed_faces;
 }
 
 void TriangleMesh::align_to_origin()

@@ -61,6 +61,9 @@ struct TriangleMeshStats {
 
     // Mesh errors, remaining.
     int           open_edges                = 0;
+    // Faces wound inwards (visible back faces), see its_detect_reversed_faces(). Only filled while
+    // reversed_faces_detection_enabled(); stays false otherwise.
+    bool          has_reversed_faces        = false;
 
     // Mesh errors, fixed.
     RepairedMeshErrors repaired_errors;
@@ -80,6 +83,7 @@ struct TriangleMeshStats {
         out.size                    = out.max - out.min;
         out.number_of_parts         = this->number_of_parts     + rhs.number_of_parts;
         out.open_edges              = this->open_edges          + rhs.open_edges;
+        out.has_reversed_faces      = this->has_reversed_faces  || rhs.has_reversed_faces;
         out.volume                  = this->volume              + rhs.volume;
         out.repaired_errors.merge(rhs.repaired_errors);
         return out;
