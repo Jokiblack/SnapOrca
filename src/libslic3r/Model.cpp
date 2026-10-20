@@ -2995,7 +2995,10 @@ std::vector<int> ModelVolume::get_extruders() const
 
     std::vector<int> volume_extruders = mmuseg_extruders;
     int volume_extruder_id = this->extruder_id();
-    if (m_mmuseg_extruders_has_0_extruder) {
+    // Slicing ignores MMU paint on non-model-part volumes (modifiers), so their own extruder is always
+    // used even when every facet is painted; otherwise it is never registered and G-code export
+    // accesses an unallocated filament slot (BBS 660a7442e).
+    if (!this->is_model_part() || m_mmuseg_extruders_has_0_extruder) {
         // extruder_id == 0 means "default", which is equivalent to extruder 1 for statistics.
         int effective_id = (volume_extruder_id > 0) ? volume_extruder_id : 1;
         volume_extruders.push_back(effective_id);
