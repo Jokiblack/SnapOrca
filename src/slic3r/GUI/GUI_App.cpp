@@ -51,6 +51,7 @@
 #include <filesystem>
 #include <ctime>
 #include "libslic3r/AppConfig.hpp"
+#include "libslic3r/DataDirMigration.hpp"
 #include <ios>
 #include <chrono>
 #include <functional>
@@ -2863,6 +2864,7 @@ void GUI_App::init_app_config()
 	// Windows : "C:\Users\username\AppData\Roaming\Slic3r" or "C:\Documents and Settings\username\Application Data\Slic3r"
 	// Mac : "~/Library/Application Support/Slic3r"
 
+    std::vector<std::string> data_dir_migration_log;
     if (data_dir().empty()) {
         // Orca: check if data_dir folder exists in application folder use it if it exists
         // Note:wxStandardPaths::Get().GetExecutablePath() return following paths
@@ -2896,6 +2898,10 @@ void GUI_App::init_app_config()
                 migrate_flatpak_legacy_datadir(data_dir_path);
                 set_data_dir(data_dir_path.string());
             #endif
+            // SnapOrca: on the first launch, seed the new folder with the user's presets and app
+            // config from the official Snapmaker Orca folder next to it (copied, never moved).
+            data_dir_migration_log = migrate_legacy_data_dir(data_dir_path.parent_path() / SLIC3R_APP_KEY, SLIC3R_APP_KEY ".conf",
+                                                             data_dir_path, SLIC3R_APP_DATA_KEY ".conf");
             if (!boost::filesystem::exists(data_dir_path)){
                 boost::filesystem::create_directory(data_dir_path);
             }
@@ -2927,6 +2933,8 @@ void GUI_App::init_app_config()
 #endif
 
     BOOST_LOG_TRIVIAL(info) << boost::format("gui mode, Current OrcaSlicer Version %1% build %2%") % SoftFever_VERSION % build_commit_label;
+    for (const std::string &line : data_dir_migration_log)
+        BOOST_LOG_TRIVIAL(info) << "[DataDirMigration] " << line;
 
     //BBS: remove GCodeViewer as seperate APP logic
 	if (!app_config)
