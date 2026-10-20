@@ -1069,8 +1069,10 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
                     // fall back to the upstream per-extruder column otherwise.
                     const PrintConfig  &print_config  = layer.object()->print()->config();
                     const unsigned int  filament_id   = params.extruder > 0 ? params.extruder - 1 : 0;
+                    // Same test as GCode::uses_process_flow_variants() and GCodeWriter::process_config_index(),
+                    // so the infill pattern sees the speed the G-code generator will use.
                     const auto         *flow_support  = print_config.option<ConfigOptionStrings>("process_flow_support");
-                    const size_t        speed_idx     = (flow_support != nullptr && ! flow_support->values.empty()) ?
+                    const size_t        speed_idx     = (flow_support != nullptr && flow_support->values.size() > 1) ?
                         get_config_idx(print_config, ConfigFlowDomain::Process, filament_id) :
                         layer.get_extruder_id(params.extruder);
                     if (params.extrusion_role == erBridgeInfill)
