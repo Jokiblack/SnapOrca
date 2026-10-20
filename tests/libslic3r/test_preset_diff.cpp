@@ -1,11 +1,8 @@
 #include <catch2/catch_all.hpp>
 
-<<<<<<< snaporca-int
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/generators/catch_generators.hpp>
-=======
 #include "libslic3r/FilamentFlowColumns.hpp"
->>>>>>> lixnix/main
 #include "libslic3r/Preset.hpp"
 #include "libslic3r/PrintConfig.hpp"
 

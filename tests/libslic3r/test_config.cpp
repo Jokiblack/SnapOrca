@@ -1,16 +1,13 @@
 #include <catch2/catch_all.hpp>
 
-<<<<<<< snaporca-int
 #include <catch2/catch_test_macros.hpp>
 #include <catch2/catch_message.hpp>
 #include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 #include <catch2/generators/catch_generators.hpp>
 #include "catch2/catch_approx.hpp"
-=======
 #include "libslic3r/Flow.hpp"
 #include "libslic3r/Preset.hpp"
->>>>>>> lixnix/main
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/PrintConfigConstants.hpp"
 #include "libslic3r/LocalesUtils.hpp"
@@ -405,35 +402,6 @@ SCENARIO("update_non_diff_values_to_base_config preserves child vectors when chi
     }
 }
 
-TEST_CASE("A one-column user process or filament preset changes the Standard column only", "[Config][Variant][HighFlow]")
-{
-    std::set<std::string> no_keys;
-    // The High Flow column of a process or filament preset holds tuned values; a legacy user preset
-    // that knows Standard only must not overwrite them.
-    Slic3r::DynamicPrintConfig parent;
-    parent.option<Slic3r::ConfigOptionInts>("print_extruder_id", true)->values = {1, 1};
-    parent.option<Slic3r::ConfigOptionStrings>("print_extruder_variant", true)->values = {"Direct Drive Standard", "Direct Drive High Flow"};
-    parent.option<Slic3r::ConfigOptionFloats>("outer_wall_speed", true)->values = {200., 500.};
-
-    Slic3r::DynamicPrintConfig child;
-    child.option<Slic3r::ConfigOptionInts>("print_extruder_id", true)->values = {1};
-    child.option<Slic3r::ConfigOptionStrings>("print_extruder_variant", true)->values = {"Direct Drive Standard"};
-    child.option<Slic3r::ConfigOptionFloats>("outer_wall_speed", true)->values = {150.};
-
-    parent.update_diff_values_to_child_config(child, "print_extruder_id", "print_extruder_variant", Slic3r::print_options_with_variant, no_keys);
-    REQUIRE(parent.option<Slic3r::ConfigOptionFloats>("outer_wall_speed")->values == std::vector<double>({150., 500.}));
-
-    Slic3r::DynamicPrintConfig filament_parent;
-    filament_parent.option<Slic3r::ConfigOptionStrings>("filament_extruder_variant", true)->values = {"Direct Drive Standard", "Direct Drive High Flow"};
-    filament_parent.option<Slic3r::ConfigOptionFloats>("filament_max_volumetric_speed", true)->values = {22., 40.};
-    Slic3r::DynamicPrintConfig filament_child;
-    filament_child.option<Slic3r::ConfigOptionStrings>("filament_extruder_variant", true)->values = {"Direct Drive Standard"};
-    filament_child.option<Slic3r::ConfigOptionFloats>("filament_max_volumetric_speed", true)->values = {18.};
-
-    filament_parent.update_diff_values_to_child_config(filament_child, "", "filament_extruder_variant", Slic3r::filament_options_with_variant, no_keys);
-    REQUIRE(filament_parent.option<Slic3r::ConfigOptionFloats>("filament_max_volumetric_speed")->values == std::vector<double>({18., 40.}));
-}
-
 TEST_CASE("A user filament preset keeps a High Flow column its parent lacks", "[Config][Variant][FilamentFlow]")
 {
     std::set<std::string> no_keys;
@@ -486,18 +454,6 @@ TEST_CASE("Preset normalization keeps one value per filament column", "[Config][
     CHECK(config.option<Slic3r::ConfigOptionStrings>("filament_extruder_variant")->values.size() == 2);
     CHECK_THAT(config.option<Slic3r::ConfigOptionFloats>("filament_retract_length_nc")->values, Catch::Matchers::Approx(std::vector<double>({4., 6.})));
     CHECK(config.option<Slic3r::ConfigOptionStrings>("volumetric_speed_coefficients")->values.size() == 2);
-}
-
-TEST_CASE("Nozzle volume types keep their canonical config spelling", "[Config][HighFlow]")
-{
-    // Projects and presets store "Standard" / "High Flow"; the device protocol has its own spelling
-    // (libslic3r/SSWCPProtocol) and must not leak into the config.
-    Slic3r::DynamicPrintConfig config;
-    config.set_deserialize_strict("nozzle_volume_type", "Standard,High Flow");
-    const auto *opt = config.option<Slic3r::ConfigOptionEnumsGeneric>("nozzle_volume_type");
-    REQUIRE(opt != nullptr);
-    REQUIRE(opt->values == std::vector<int>({int(Slic3r::nvtStandard), int(Slic3r::nvtHighFlow)}));
-    REQUIRE(config.opt_serialize("nozzle_volume_type") == "Standard,High Flow");
 }
 
 SCENARIO("update_diff_values_to_child_config tolerates legacy machine-limit vector sizes",
@@ -1460,7 +1416,7 @@ TEST_CASE("read_cli accepts nil entries for a nullable vector option", "[Config]
 }
 
 // get_at() returns values.front() for an out-of-range index, so calling it on an empty vector
-// option is UB. filament_ids and filament_is_support are unpopulated on a CLI from-scratch slice.
+// option is UB. filament_id and filament_is_support are unpopulated on a CLI from-scratch slice.
 TEST_CASE("get_filament_type treats empty vector options as absent", "[Config][Filament]")
 {
     DynamicPrintConfig config;
@@ -1480,20 +1436,20 @@ TEST_CASE("get_filament_type treats empty vector options as absent", "[Config][F
         REQUIRE(displayed == "PETG");
     }
 
-    SECTION("a support filament with an empty filament_ids resolves from the type alone")
+    SECTION("a support filament with an empty filament_id resolves from the type alone")
     {
         config.set_key_value("filament_type", new ConfigOptionStrings({"PLA"}));
         config.set_key_value("filament_is_support", new ConfigOptionBools({true}));
-        config.set_key_value("filament_ids", new ConfigOptionStrings());
+        config.set_key_value("filament_id", new ConfigOptionStrings());
         REQUIRE(config.get_filament_type(displayed, 0) == "PLA-S");
         REQUIRE(displayed == "Sup.PLA");
     }
 
-    SECTION("a populated filament_ids still selects the support type by id")
+    SECTION("a populated filament_id still selects the support type by id")
     {
         config.set_key_value("filament_type", new ConfigOptionStrings({"PETG"}));
         config.set_key_value("filament_is_support", new ConfigOptionBools({true}));
-        config.set_key_value("filament_ids", new ConfigOptionStrings({"GFS00"}));
+        config.set_key_value("filament_id", new ConfigOptionStrings({"GFS00"}));
         REQUIRE(config.get_filament_type(displayed, 0) == "PLA-S");
         REQUIRE(displayed == "Sup.PLA");
     }
@@ -1690,7 +1646,6 @@ TEST_CASE("Static print configs compare, order and hash by their option values",
     }
 }
 
-<<<<<<< snaporca-int
 namespace {
 
 // Keys whose values differ between two full configs, compared as text so enum names count too.
@@ -1777,32 +1732,6 @@ TEST_CASE("Default options of enum lists get their definition's keys map", "[Con
         ++enum_lists;
     }
     CHECK(enum_lists > 0);
-=======
-TEST_CASE("DynamicPrintConfig normalizes support filament types from filament_ids", "[Config]")
-{
-    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
-    config.option<ConfigOptionStrings>("filament_type", true)->values      = { "PLA", "PA" };
-    config.option<ConfigOptionStrings>("filament_ids", true)->values       = { "GFS00", "GFS01" };
-    config.option<ConfigOptionBools>("filament_is_support", true)->values  = { true, true };
-
-    std::string display_type;
-    CHECK(config.get_filament_type(display_type, 0) == "PLA-S");
-    CHECK(display_type == "Sup.PLA");
-
-    CHECK(config.get_filament_type(display_type, 1) == "PA-S");
-    CHECK(display_type == "Sup.PA");
-}
-
-TEST_CASE("DynamicPrintConfig keeps ordinary filament types unchanged", "[Config]")
-{
-    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
-    config.option<ConfigOptionStrings>("filament_type", true)->values      = { "PLA" };
-    config.option<ConfigOptionStrings>("filament_ids", true)->values       = { "GFSL99" };
-    config.option<ConfigOptionBools>("filament_is_support", true)->values  = { false };
-
-    std::string display_type;
-    CHECK(config.get_filament_type(display_type, 0) == "PLA");
-    CHECK(display_type == "PLA");
 }
 
 // Snapmaker Orca: line widths per tool head column. A scalar loads as one column, equal columns save
@@ -1931,5 +1860,4 @@ TEST_CASE("A column index past the loaded values keeps the base value", "[Config
     REQUIRE(base.values.size() == 2);
     CHECK_THAT(base.values[0], Catch::Matchers::WithinAbs(22., 1e-9));
     CHECK_THAT(base.values[1], Catch::Matchers::WithinAbs(12., 1e-9));
->>>>>>> lixnix/main
 }

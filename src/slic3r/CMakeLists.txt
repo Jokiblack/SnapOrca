@@ -65,8 +65,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/BonjourDialog.hpp
     GUI/BuildCommit.cpp
     GUI/BuildCommit.hpp
-    GUI/SnapLogWiring.cpp
-    GUI/SnapLogWiring.hpp
     GUI/CrealityDiscoveryDialog.cpp
     GUI/CrealityDiscoveryDialog.hpp
     GUI/calib_dlg.cpp
@@ -171,8 +169,16 @@ set(SLIC3R_GUI_SOURCES
     GUI/Field.hpp
     GUI/FilamentColorUtils.cpp
     GUI/FilamentColorUtils.hpp
+    GUI/FilamentGroupDialog.cpp
+    GUI/FilamentGroupDialog.hpp
     GUI/FileArchiveDialog.cpp
     GUI/FileArchiveDialog.hpp
+    GUI/FlowTypeHelper.cpp
+    GUI/FlowTypeHelper.hpp
+    GUI/HighFlowCompat.cpp
+    GUI/HighFlowCompat.hpp
+    GUI/HighFlowNotices.cpp
+    GUI/HighFlowNotices.hpp
     GUI/filamentsync/FilamentColorMapBox.cpp
     GUI/filamentsync/FilamentColorMapBox.hpp
     GUI/filamentsync/FilamentColorMapBoxGroup.cpp
@@ -246,10 +252,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/SequentialPrintClearance.hpp
     GUI/GLModel.cpp
     GUI/GLModel.hpp
-    GUI/MeshLodCache.cpp
-    GUI/MeshLodCache.hpp
-    GUI/MeshLodPool.cpp
-    GUI/MeshLodPool.hpp
     GUI/GLSelectionRectangle.cpp
     GUI/GLSelectionRectangle.hpp
     GUI/GLShader.cpp
@@ -293,10 +295,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/GUI_Preview.hpp
     GUI/GUI_Utils.cpp
     GUI/GUI_Utils.hpp
-    GUI/HighFlowCompat.cpp
-    GUI/HighFlowCompat.hpp
-    GUI/HighFlowNotices.cpp
-    GUI/HighFlowNotices.hpp
     GUI/HintNotification.cpp
     GUI/HintNotification.hpp
     GUI/ThermalPreconditioningDialog.cpp
@@ -460,11 +458,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/NotificationManager.hpp
     GUI/OAuthDialog.cpp
     GUI/OAuthDialog.hpp
-<<<<<<< snaporca-int
-=======
-    # Snapmaker: MixedFilamentDialog.cpp/.hpp are listed with the upstream
-    # mixed-filament group above; the remaining Mixed* files are fork-only.
->>>>>>> lixnix/main
     GUI/MixedFilamentBatchDialog.cpp
     GUI/MixedFilamentBatchDialog.hpp
     GUI/MixedGradientSelector.hpp
@@ -512,6 +505,12 @@ set(SLIC3R_GUI_SOURCES
     GUI/ExportPresetBundleDialog.hpp
     GUI/PresetComboBoxes.cpp
     GUI/PresetComboBoxes.hpp
+    GUI/FilamentDropDown.cpp
+    GUI/FilamentDropDown.hpp
+    GUI/FilamentSort.cpp
+    GUI/FilamentSort.hpp
+    GUI/PlaterFilamentComboBox.cpp
+    GUI/PlaterFilamentComboBox.hpp
     GUI/PresetHints.cpp
     GUI/PresetHints.hpp
     GUI/PrinterCloudAuthDialog.cpp
@@ -583,6 +582,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/SingleChoiceDialog.hpp
     GUI/SliceInfoPanel.cpp
     GUI/SliceInfoPanel.hpp
+    GUI/SliceModePopup.cpp
+    GUI/SliceModePopup.hpp
     GUI/SlicingProgressNotification.cpp
     GUI/SlicingProgressNotification.hpp
     GUI/StagedBuild.hpp
@@ -742,28 +743,6 @@ set(SLIC3R_GUI_SOURCES
     GUI/WebUrlDialog.hpp
     GUI/wxMediaCtrl3.cpp
     GUI/wxMediaCtrl3.h
-    GUI/SMPhysicalPrinterDialog.hpp
-    GUI/SMPhysicalPrinterDialog.cpp
-    GUI/SSWCP.cpp
-    GUI/SSWCP.hpp
-    GUI/WebSocketDebugServer.cpp
-    GUI/WebSocketDebugServer.hpp
-    GUI/DownloadManager.cpp
-    GUI/DownloadManager.hpp
-    GUI/GenericDownloadDialog.cpp
-    GUI/GenericDownloadDialog.hpp
-    GUI/Timelapse/TimelapseDownloadPopup.cpp
-    GUI/Timelapse/TimelapseDownloadPopup.hpp
-    GUI/WebPresetDialog.hpp
-    GUI/WebPresetDialog.cpp
-    GUI/WebSMUserLoginDialog.cpp
-    GUI/WebSMUserLoginDialog.hpp
-    GUI/WebDeviceDialog.cpp
-    GUI/WebDeviceDialog.hpp
-    GUI/WebPreprintDialog.hpp
-    GUI/WebPreprintDialog.cpp
-    GUI/WebUrlDialog.cpp
-    GUI/WebUrlDialog.hpp
     plugin/PythonInterpreter.cpp
     plugin/PythonInterpreter.hpp
     plugin/PythonPluginBridge.cpp
@@ -864,9 +843,6 @@ set(SLIC3R_GUI_SOURCES
     Utils/Flashforge.hpp
     Utils/FontConfigHelp.cpp
     Utils/FontConfigHelp.hpp
-    # Snapmaker Orca: available physical memory, for the render LOD (upstream #737)
-    Utils/CpuMemory.cpp
-    Utils/CpuMemory.hpp
     Utils/Frustum.cpp
     Utils/Frustum.hpp
     Utils/HexFile.cpp
@@ -892,9 +868,6 @@ set(SLIC3R_GUI_SOURCES
     Utils/ICameraSignalingChannel.hpp
     Utils/OrcaCloudServiceAgent.cpp
     Utils/OrcaCloudServiceAgent.hpp
-    Utils/OtaPackageDigest.cpp
-    Utils/OtaPackageDigest.hpp
-    Utils/OtaUpdateRules.hpp
     Utils/OrcaPrinterAgent.cpp
     Utils/OrcaPrinterAgent.hpp
     Utils/QidiPrinterAgent.cpp
@@ -944,11 +917,8 @@ set(SLIC3R_GUI_SOURCES
     Utils/MQTT.cpp
     Utils/MoonRaker.cpp
     Utils/MoonRaker.hpp
-<<<<<<< snaporca-int
     Utils/MoonrakerGeneric.cpp
     Utils/MoonrakerGeneric.hpp
-=======
->>>>>>> lixnix/main
     Utils/TimeSyncManager.cpp
     Utils/TimeSyncManager.hpp
     Utils/TimeoutMap.hpp
@@ -1029,22 +999,6 @@ configure_file(${CMAKE_CURRENT_SOURCE_DIR}/GeneratedConfig.hpp.in
                ${CMAKE_CURRENT_BINARY_DIR}/GeneratedConfig.hpp
                @ONLY)
 
-# Snapmaker Orca: the SnapLog build switches reach GUI/SnapLogWiring.cpp through a generated header
-# of their own, so GeneratedConfig.hpp.in stays as mainline ships it. Changing either cache value
-# rebuilds that one translation unit.
-string(STRIP "${SNAP_LOG_HMAC_SECRET}" SNAP_LOG_HMAC_SECRET_CONFIG)
-if (SNAP_LOG_HMAC_SECRET_CONFIG MATCHES "[\"\\\\\n\r]")
-    message(FATAL_ERROR "SNAP_LOG_HMAC_SECRET must not contain quotes, backslashes or line breaks")
-endif ()
-if (SLIC3R_SNAPLOG)
-    set(SLIC3R_SNAPLOG_ENABLED 1)
-else ()
-    set(SLIC3R_SNAPLOG_ENABLED 0)
-endif ()
-configure_file(${CMAKE_CURRENT_SOURCE_DIR}/SnapLogBuildConfig.hpp.in
-               ${CMAKE_CURRENT_BINARY_DIR}/SnapLogBuildConfig.hpp
-               @ONLY)
-
 if (WIN32)
     add_library(libslic3r_gui STATIC
         ${SLIC3R_GUI_SOURCES}
@@ -1056,21 +1010,8 @@ if (WIN32)
 else ()
     add_library(libslic3r_gui STATIC ${SLIC3R_GUI_SOURCES})
 endif ()
-<<<<<<< snaporca-int
 target_include_directories(libslic3r_gui PRIVATE Utils ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)
 # Snapmaker: MQTT client (src/mqtt) used by the Snapmaker printer connection.
-=======
-# Snapmaker Orca: Utils/SnapLogClient.{hpp,cpp} are byte-identical copies from Snapmaker upstream and
-# are never edited here, so their warnings stay warnings instead of failing the -Werror build.
-if ((NOT MSVC OR IS_CLANG_CL) AND ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU" OR "${CMAKE_CXX_COMPILER_ID}" MATCHES "Clang"))
-    set_source_files_properties(Utils/SnapLogClient.cpp PROPERTIES COMPILE_OPTIONS "-Wno-error")
-endif ()
-
-# Snapmaker: ${CMAKE_CURRENT_SOURCE_DIR}/.. exposes src/common_func, src/bury_cfg, src/sentry_wrapper
-target_include_directories(libslic3r_gui PRIVATE Utils ${CMAKE_CURRENT_BINARY_DIR} ${CMAKE_CURRENT_SOURCE_DIR}/..)
-
-# Snapmaker: vendored Paho MQTT stack (src/mqtt)
->>>>>>> lixnix/main
 target_link_libraries(libslic3r_gui paho-mqttpp3-static)
 target_include_directories(libslic3r_gui PRIVATE ${PAHO_MQTT_CPP_PATH}/include)
 target_include_directories(libslic3r_gui PRIVATE ${PAHO_MQTT_C_PATH}/src)
@@ -1103,11 +1044,7 @@ else()
     set(_opengl_link_lib OpenGL::GL)
 endif()
 
-<<<<<<< snaporca-int
 target_link_libraries(libslic3r_gui libslic3r cereal::cereal imgui imguizmo minilzo libvgcode md4c-html glad ${_opengl_link_lib} hidapi mdns ${wxWidgets_LIBRARIES} glfw libcurl OpenSSL::SSL OpenSSL::Crypto LibDataChannel::LibDataChannel noise::noise nanosvg pybind11::embed)
-=======
-target_link_libraries(libslic3r_gui libslic3r cereal::cereal imgui imguizmo minilzo libvgcode md4c-html glad ${_opengl_link_lib} hidapi mdns ${wxWidgets_LIBRARIES} glfw libcurl OpenSSL::SSL OpenSSL::Crypto LibDataChannel::LibDataChannel noise::noise pybind11::embed nanosvg)
->>>>>>> lixnix/main
 
 if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
     # Linux finds wxWidgets in module mode, whose include dirs and definitions
@@ -1232,15 +1169,10 @@ endif()
 if (ORCA_BUILD_PYTHON_STUBGEN_MODULE)
     add_library(orca_stubgen MODULE
         plugin/PythonPluginBridge.cpp
-        # Snapmaker: fork-side symbols referenced by libslic3r_gui (Sentry, bury, common)
-        ../sentry_wrapper/SentryWrapper.cpp
-        ../bury_cfg/bury_point.cpp
-        ../common_func/common_func.cpp
     )
 
     target_compile_definitions(orca_stubgen PRIVATE
         ORCA_PYTHON_STUBGEN_MODULE
-        BURY_EXPORTS
     )
 
     target_include_directories(orca_stubgen PRIVATE
