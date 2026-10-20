@@ -20,6 +20,7 @@
 #include "libslic3r/Config.hpp"
 #include "libslic3r/PrintBase.hpp"
 #include "libslic3r/TriangleMesh.hpp"
+#include "libslic3r/TriangleSelector.hpp"
 #include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
 
@@ -1733,6 +1734,75 @@ TEST_CASE("Applying the same model again keeps the filament shrinkage compensati
     CHECK_THAT(width(), Catch::Matchers::WithinAbs(20. * 100. / 90., 0.01));
     print.apply(model, config);
     CHECK_THAT(width(), Catch::Matchers::WithinAbs(20. * 100. / 90., 0.01));
+}
+
+// The filament shrinkage compensation is baked into the PrintObject transformation (trafo_sliced()), which the
+// part contours, the support enforcer/blocker volumes and the painted support projections all slice with, so
+// they stay on top of each other. A compensation applied to the contours alone after slicing leaves the painted
+// supports and the support volumes smaller and off-centre, and the supports vanish (Bambu Studio d0550488d).
+TEST_CASE("Painted supports and support volumes follow the filament shrinkage compensation", "[Print][Support][Regression]")
+{
+    // A 20 mm cube with a filament that shrinks to 90 % is sliced 20 * 100 / 90 wide; so is everything painted on it.
+    const double scale = 100. / 90.;
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_deserialize_strict({
+        { "filament_shrink", "90%" },
+        { "xy_contour_compensation", 0. },
+        { "raft_layers", 0 },
+    });
+
+    Model model;
+    ModelObject *object = model.add_object();
+    ModelVolume *part   = object->add_volume(cube(20.));
+    // Paint the whole bottom face of the cube as a support enforcer.
+    {
+        TriangleSelector            selector(part->mesh());
+        const indexed_triangle_set &its = part->mesh().its;
+        for (size_t f = 0; f < its.indices.size(); ++ f) {
+            const Vec3f &a = its.vertices[its.indices[f](0)], &b = its.vertices[its.indices[f](1)], &c = its.vertices[its.indices[f](2)];
+            if ((b - a).cross(c - a).normalized().z() < -0.5f)
+                selector.set_facet(int(f), EnforcerBlockerType::ENFORCER);
+        }
+        REQUIRE(part->supported_facets.set(selector));
+    }
+    // A 10 mm support enforcer volume centred on the part, resting on the bed (add_volume centres its mesh on its offset).
+    ModelVolume *enforcer = object->add_volume(TriangleMesh(its_make_cube(10., 10., 10.)));
+    enforcer->set_type(ModelVolumeType::SUPPORT_ENFORCER);
+    enforcer->set_offset(Vec3d(part->get_offset().x(), part->get_offset().y(), 5.));
+    object->add_instance()->set_offset(Vec3d(90., 90., 0.));
+    object->ensure_on_bed();
+
+    Print print;
+    print.apply(model, config);
+    print.process();
+
+    const PrintObject &print_object = *print.objects().front();
+    // A layer inside the enforcer volume, clear of the first-layer compensations.
+    const size_t      layer_id = print_object.layer_count() / 4;
+    const BoundingBox part_box = get_extents(print_object.get_layer(int(layer_id))->lslices);
+    REQUIRE_THAT(unscale<double>(part_box.size().x()), Catch::Matchers::WithinAbs(20. * scale, 0.01));
+
+    // The enforcer volume is scaled like the part and keeps its centre.
+    const std::vector<Polygons> enforcers = print_object.slice_support_enforcers();
+    REQUIRE(enforcers.size() == print_object.layer_count());
+    REQUIRE(! enforcers[layer_id].empty());
+    const BoundingBox enforcer_box = get_extents(enforcers[layer_id]);
+    CHECK_THAT(unscale<double>(enforcer_box.size().x()), Catch::Matchers::WithinAbs(10. * scale, 0.01));
+    CHECK_THAT(unscale<double>(enforcer_box.size().y()), Catch::Matchers::WithinAbs(10. * scale, 0.01));
+    CHECK_THAT(unscale<double>((enforcer_box.center() - part_box.center()).x()), Catch::Matchers::WithinAbs(0., 0.01));
+    CHECK_THAT(unscale<double>((enforcer_box.center() - part_box.center()).y()), Catch::Matchers::WithinAbs(0., 0.01));
+
+    // The painted bottom face projects onto the lowest layers, as wide as the compensated part and centred on it.
+    std::vector<Polygons> painted;
+    print_object.project_and_append_custom_facets(false, EnforcerBlockerType::ENFORCER, painted);
+    REQUIRE(painted.size() == print_object.layer_count());
+    auto first_painted = std::find_if(painted.begin(), painted.end(), [](const Polygons &polys) { return ! polys.empty(); });
+    REQUIRE(first_painted != painted.end());
+    const BoundingBox painted_box = get_extents(*first_painted);
+    CHECK_THAT(unscale<double>(painted_box.size().x()), Catch::Matchers::WithinAbs(20. * scale, 0.01));
+    CHECK_THAT(unscale<double>(painted_box.size().y()), Catch::Matchers::WithinAbs(20. * scale, 0.01));
+    CHECK_THAT(unscale<double>((painted_box.center() - part_box.center()).x()), Catch::Matchers::WithinAbs(0., 0.01));
+    CHECK_THAT(unscale<double>((painted_box.center() - part_box.center()).y()), Catch::Matchers::WithinAbs(0., 0.01));
 }
 
 TEST_CASE("Height ranges and modifiers count for the filament shrinkage compensation", "[Print][Regression]")
