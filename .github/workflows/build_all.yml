@@ -1,34 +1,20 @@
 name: Build all
 
 on:
+  # SnapOrca: every push to main or a release branch builds, with no paths
+  # filter. A branch created at a commit the repository already has (e.g.
+  # pushing release/bambu at the tip of an already pushed branch) is a push
+  # with no changed files, which a paths filter never matches, so the build
+  # was silently not started.
   push:
     branches:
      - main
-     - release/*
-    paths:
-     - 'deps/**'
-     - 'deps_src/**'
-     - 'cmake/**'
-     - 'src/**'
-     - '**/CMakeLists.txt'
-     - 'version.inc'
-     - 'localization/**'
-     - 'resources/**'
-     - ".github/workflows/build_*.yml"
-     - ".github/workflows/unit_tests*.yml"
-     - 'build_linux.sh'
-     - 'build_win.bat'
-     - 'scripts/test_build_win.ps1'
-     - 'build_release_macos.sh'
-     - 'scripts/build_preset_cache.*'
-     - 'scripts/flatpak/**'
-     - 'scripts/msix/**'
-     - 'tests/**'
+     - release/**
 
   pull_request:
     branches:
      - main
-     - release/*
+     - release/**
     paths:
      - 'deps/**'
      - 'deps_src/**'
