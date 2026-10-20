@@ -216,7 +216,7 @@ struct SupportParameters {
             if (is_tree(object_config.support_type)) {
                 // Align with Bambu Studio:
                 // Organic for normal cases, Hybrid for variable layer height or soluble interface
-                if (object.model_object()->has_custom_layering() || this->soluble_interface) {
+                if (object.model_object()->has_custom_layering() || this->zero_gap_interface_top || this->zero_gap_interface_bottom) {
                     support_style = smsTreeHybrid;
                 } else {
                     support_style = smsTreeOrganic;

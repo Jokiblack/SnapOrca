@@ -45,7 +45,7 @@
 #include <queue>
 #include "SurfaceCollection.hpp"
 
-namespace Slic3r { enum class EnforcerBlockerType : int8_t; }
+namespace Slic3r { enum class EnforcerBlockerType : int16_t; }
 
 //#define MM_SEGMENTATION_DEBUG_GRAPH
 //#define MM_SEGMENTATION_DEBUG_REGIONS

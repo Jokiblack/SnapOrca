@@ -135,76 +135,6 @@ static Polygon chamfer_polygon(Polygon& polygon, double chamfer_dis = 2., double
     return res;
 }
 
-static Polygon rounding_polygon(Polygon& polygon, double rounding = 2., double angle_tol  = 30. / 180. * PI)
-{
-    if (polygon.points.size() < 3)
-        return polygon;
-    Polygon res;
-    res.points.reserve(polygon.points.size() * 2);
-    int    mod           = polygon.points.size();
-    double cos_angle_tol = abs(std::cos(angle_tol));
-
-    for (int i = 0; i < polygon.points.size(); i++) {
-        Vec2d  a      = unscaled(polygon.points[(i - 1 + mod) % mod]);
-        Vec2d  b      = unscaled(polygon.points[i]);
-        Vec2d  c      = unscaled(polygon.points[(i + 1) % mod]);
-        double ab_len = (a - b).norm();
-        double bc_len = (b - c).norm();
-        Vec2d  ab     = (b - a) / ab_len;
-        Vec2d  bc     = (c - b) / bc_len;
-        assert(ab_len != 0);
-        assert(bc_len != 0);
-        float cosangle = ab.dot(bc);
-        cosangle       = std::clamp(cosangle, -1.f, 1.f);
-        bool is_ccw    = cross2(ab, bc) > 0;
-        if (abs(cosangle) < cos_angle_tol) {
-            float real_rounding_dis = std::min({rounding, ab_len / 2.1, bc_len / 2.1}); // 2.1 to ensure the points do not coincide
-            Vec2d left              = b - ab * real_rounding_dis;
-            Vec2d right             = b + bc * real_rounding_dis;
-            // Point r_left            = scaled(left);
-            // Point r_right            = scaled(right);
-            // std::cout << " r_left  " << r_left[0] << " " << r_left[1] << std::endl;
-            // std::cout << " r_right  " << r_right[0] << " " << r_right[1] << std::endl;
-            {
-                float half_angle = std::acos(cosangle) / 2.f;
-                // std::cout << " half_angle  " << cos(half_angle) << std::endl;
-
-                Vec2d dir  = (right - left).normalized();
-                dir        = Vec2d{-dir[1], dir[0]};
-                dir        = is_ccw ? dir : -dir;
-                double dis = real_rounding_dis / sin(half_angle);
-                // std::cout << " dis  " << dis << std::endl;
-
-                Vec2d      center = b + dir * dis;
-                double     radius = (left - center).norm();
-                ArcSegment arc(scaled(center), scaled(radius), scaled(left), scaled(right),
-                               is_ccw ? ArcDirection::Arc_Dir_CCW : ArcDirection::Arc_Dir_CW);
-                int        n = arc_fit_size;
-                // std::cout << "start  " << arc.start_point[0] << " " << arc.start_point[1] << std::endl;
-                // std::cout << "end  " << arc.end_point[0] << " " << arc.end_point[1] << std::endl;
-                // std::cout << "start angle   " << arc.polar_start_theta << " end angle " << arc.polar_end_theta << std::endl;
-                for (int j = 0; j < n; j++) {
-                    float cur_angle = arc.polar_start_theta + (float) j / n * arc.angle_radians;
-                    // std::cout << " cur_angle " << cur_angle << std::endl;
-                    if (cur_angle > 2 * PI)
-                        cur_angle -= 2 * PI;
-                    else if (cur_angle < 0)
-                        cur_angle += 2 * PI;
-                    Point tmp = arc.center + Point{arc.radius * std::cos(cur_angle), arc.radius * std::sin(cur_angle)};
-                    // std::cout << "j = " << j << std::endl;
-                    // std::cout << "tmp  = " << tmp[0]<<" "<<tmp[1] << std::endl;
-                    res.points.push_back(tmp);
-                }
-            }
-            res.points.push_back(scaled(right));
-        } else
-            res.points.push_back(polygon.points[i]);
-    }
-    res.remove_duplicate_points();
-    res.points.shrink_to_fit();
-    return res;
-}
-
 static Polygon rounding_rectangle(Polygon& polygon, double rounding = 2., double angle_tol = 30. / 180. * PI)
 {
     if (polygon.points.size() < 3)
@@ -3976,7 +3906,7 @@ Polygon WipeTower2::generate_support_wall_new(WipeTowerWriter2& writer,
         return wall_polygon;
 
     if (skip_points) {
-        result_wall = contrust_gap_for_skip_points(wall_polygon, m_wall_skip_points[m_cur_layer_id], m_wipe_tower_width, 2.5 * m_perimeter_width, insert_skip_polygon);
+        result_wall = construct_gap_for_skip_points(wall_polygon, m_wall_skip_points[m_cur_layer_id], m_wipe_tower_width, 2.5 * m_perimeter_width, insert_skip_polygon);
     }
     else {
         result_wall.push_back(to_polyline(wall_polygon));
@@ -4016,7 +3946,7 @@ Polygon WipeTower2::generate_support_rib_wall(WipeTowerWriter2&                 
         return wall_polygon;
 
     if (!skip_points.empty()) {
-        result_wall = contrust_gap_for_skip_points(wall_polygon, skip_points, m_wipe_tower_width, 2.5 * m_perimeter_width,
+        result_wall = construct_gap_for_skip_points(wall_polygon, skip_points, m_wipe_tower_width, 2.5 * m_perimeter_width,
                                                    insert_skip_polygon);
     } else {
         result_wall.push_back(to_polyline(wall_polygon));
@@ -4106,7 +4036,7 @@ Polygon WipeTower2::generate_support_cone_wall(
     Polygon   insert_skip_polygon;
 
     if (!skip_points.empty()) {
-        result_wall = contrust_gap_for_skip_points(poly, skip_points, m_wipe_tower_width,
+        result_wall = construct_gap_for_skip_points(poly, skip_points, m_wipe_tower_width,
                                                    2.5 * m_perimeter_width, insert_skip_polygon);
     } else {
         result_wall.push_back(to_polyline(poly));

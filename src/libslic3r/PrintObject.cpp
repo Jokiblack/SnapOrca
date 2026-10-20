@@ -89,7 +89,7 @@
 #include "TriangleMesh.hpp"
 #include "BeltBrim.hpp"
 
-namespace Slic3r { enum class EnforcerBlockerType : int8_t; }
+namespace Slic3r { enum class EnforcerBlockerType : int16_t; }
 
 using namespace std::literals;
 

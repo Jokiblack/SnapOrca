@@ -700,23 +700,6 @@ ToolOrdering::ToolOrdering(const PrintObject &object, unsigned int first_extrude
     this->mark_skirt_layers(object.print()->config(), max_layer_height);
 }
 
-bool ToolOrdering::insert_wipe_tower_extruder()
-{
-    if(!m_print_config_ptr->enable_prime_tower)
-        return false;
-    // In case that wipe_tower_extruder is set to non-zero, we must make sure that the extruder will be in the list.
-    bool changed = false;
-    if (m_print_config_ptr->wipe_tower_filament != 0) {
-        for (LayerTools& lt : m_layer_tools) {
-            if (lt.wipe_tower_partitions > 0) {
-                lt.extruders.emplace_back(m_print_config_ptr->wipe_tower_filament - 1);
-                sort_remove_duplicates(lt.extruders);
-                changed = true;
-            }
-        }  
-    }
-    return changed;
-}
 
 // For the use case when all objects are printed at once.
 // (print->config().print_sequence == PrintSequence::ByObject is false).

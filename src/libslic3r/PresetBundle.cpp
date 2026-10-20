@@ -8601,7 +8601,7 @@ void PresetBundle::parse_vendor_json(VendorRead& read)
     }
 
     if (vendor_name == ORCA_FILAMENT_LIBRARY && filament_subfiles.empty()) {
-        const fs::path vendor_dir   = fs::path(path) / vendor_name;
+        const fs::path vendor_dir   = fs::path(dir) / vendor_name;
         const fs::path filament_dir = vendor_dir / "filament";
 
         // OrcaFilamentLibrary keeps its profiles on disk but ships an empty manifest. Load the shared
