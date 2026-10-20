@@ -31,6 +31,7 @@
 #endif /* __WXGTK2__ */
 
 #include <glad/gl.h>
+#define NANOSVG_IMPLEMENTATION
 #include "nanosvg/nanosvg.h"
 #define NANOSVGRAST_IMPLEMENTATION
 #include "nanosvg/nanosvgrast.h"
