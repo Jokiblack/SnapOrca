@@ -157,6 +157,10 @@ public:
     //BBS:
     void set_current_position_clear(bool clear) { m_is_current_pos_clear = clear; };
     bool is_current_position_clear() const { return m_is_current_pos_clear; };
+    // BBS: while a mixed-color sublayer is being printed, a travel whose target Z is lower
+    // than the current Z is split into an XY move followed by the Z descent, instead of a
+    // diagonal G1 XYZ that could drag the nozzle across the surface just printed.
+    void set_avoid_z_descent_travel(bool v) { m_avoid_z_descent_travel = v; }
     //BBS:
     static bool full_gcode_comment;
     //SoftFever
@@ -203,6 +207,8 @@ protected:
     LiftType        m_to_lift_type;
     bool            m_is_first_layer = true;
     bool            m_is_current_pos_clear = false;
+    // Only true while GCode prints a mixed-color sublayer; see set_avoid_z_descent_travel().
+    bool            m_avoid_z_descent_travel = false;
     double          m_current_speed;
 
     std::string _travel_to_z(double z, const std::string &comment);
