@@ -21,7 +21,7 @@ namespace pt = boost::property_tree;
 
 namespace Slic3r {
 
-MoonrakerGeneric::Moonraker(DynamicPrintConfig *config)
+MoonrakerGeneric::MoonrakerGeneric(DynamicPrintConfig *config)
     : m_host(config->opt_string("print_host"))
     , m_apikey(config->opt_string("printhost_apikey"))
     , m_cafile(config->opt_string("printhost_cafile"))
