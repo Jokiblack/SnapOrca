@@ -95,6 +95,7 @@ Fill* Fill::new_from_type(const InfillPattern type)
     // BBS: for bottom and top surface only
     // Orca: Replace BBS implementation with Prusa implementation
     case ipMonotonicLine:       return new FillMonotonicLines();
+    case ipGlobalMonotonicLine: return new FillGlobalMonotonicLine();
     case ipZigZag:              return new FillZigZag();
     case ipCrossZag:            return new FillCrossZag();
     case ipLockedZag:           return new FillLockedZag();

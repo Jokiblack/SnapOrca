@@ -137,6 +137,8 @@ enum InfillPattern : int {
     ipSupportBase, ipConcentricInternal,
     // Ironing only: Archimedean spiral printed from the center outwards.
     ipIroningArchimedeanSpiral,
+    // Monotonic line swept strictly column by column, see FillGlobalMonotonicLine.
+    ipGlobalMonotonicLine,
     ipCount,
 };
 
@@ -146,6 +148,7 @@ inline bool is_separable_infill_pattern(InfillPattern pattern)
     switch (pattern) {
     case ipMonotonic:
     case ipMonotonicLine:
+    case ipGlobalMonotonicLine:
     case ipRectilinear:
     case ipAlignedRectilinear:
     case ipZigZag:

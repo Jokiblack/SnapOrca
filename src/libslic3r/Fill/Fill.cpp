@@ -670,7 +670,8 @@ void split_solid_surface(size_t layer_id, const SurfaceFill &fill, ExPolygons &n
 
     const bool line_based_pattern =
         fill.params.pattern == ipRectilinear || fill.params.pattern == ipMonotonic ||
-        fill.params.pattern == ipMonotonicLine || fill.params.pattern == ipAlignedRectilinear;
+        fill.params.pattern == ipMonotonicLine || fill.params.pattern == ipGlobalMonotonicLine ||
+        fill.params.pattern == ipAlignedRectilinear;
 
     // ORCA: For non-line patterns, split by a geometric "core" so only thin areas get rerouted.
     if (!line_based_pattern) {
@@ -969,7 +970,8 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
                         params.pattern = region_config.internal_solid_infill_pattern.value;
                         params.density = 100.f;
                     } else {
-                        if (region_config.top_surface_pattern == ipMonotonic || region_config.top_surface_pattern == ipMonotonicLine)
+                        if (region_config.top_surface_pattern == ipMonotonic || region_config.top_surface_pattern == ipMonotonicLine ||
+                            region_config.top_surface_pattern == ipGlobalMonotonicLine)
                             params.pattern = ipMonotonic;
                         else
                             params.pattern = ipRectilinear;
@@ -1250,7 +1252,7 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
 	        	// Produce another solid fill.
 		        params.extruder 	 = layerm.extruder(frSolidInfill);
                 const auto top_pattern = layerm.region().config().top_surface_pattern;
-                if(top_pattern == ipMonotonic || top_pattern == ipMonotonicLine)
+                if(top_pattern == ipMonotonic || top_pattern == ipMonotonicLine || top_pattern == ipGlobalMonotonicLine)
                     params.pattern = top_pattern;
                 else
                     params.pattern 		 = ipRectilinear;
@@ -1589,6 +1591,7 @@ Polylines Layer::generate_sparse_infill_polylines_for_anchoring(const FillAdapti
         case ipRectilinear:
         case ipMonotonic:
         case ipMonotonicLine:
+        case ipGlobalMonotonicLine:
         case ipAlignedRectilinear:
         case ipGrid:
         case ipLateralLattice:

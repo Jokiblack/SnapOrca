@@ -31,6 +31,10 @@ public:
     bool is_self_crossing() override { return false; }
 
 protected:
+    // Bambu: when true, the monotonic lines are reordered into a strict left to right sweep of the
+    // columns, alternating the direction per column.
+    virtual bool global_monotonic_sweep() const { return false; }
+
     // Fill by single directional lines, interconnect the lines along perimeters.
 	bool fill_surface_by_lines(const Surface *surface, const FillParams &params, float angleBase, float pattern_shift, Polylines &polylines_out);
 
@@ -180,6 +184,19 @@ public:
     ~FillMonotonicLines() override = default;
     Polylines fill_surface(const Surface *surface, const FillParams &params) override;
     bool no_sort() const override { return true; }
+};
+
+// Bambu: monotonic line with the same geometry, spacing and wall overlap, but the columns are swept
+// strictly from one side to the other, alternating direction per column, so no column is printed
+// after a later one (no turnback marks on the top surface).
+class FillGlobalMonotonicLine : public FillMonotonicLines
+{
+public:
+    Fill* clone() const override { return new FillGlobalMonotonicLine(*this); }
+    ~FillGlobalMonotonicLine() override = default;
+
+protected:
+    bool global_monotonic_sweep() const override { return true; }
 };
 
 //Orca: Replaced with FillMonotonicLines, inheriting from FillRectilinear

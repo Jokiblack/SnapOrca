@@ -11149,6 +11149,7 @@ bool GCode::_needSAFC(const ExtrusionPath &path)
         InfillPattern::ipAlignedRectilinear,
         InfillPattern::ipMonotonic,
         InfillPattern::ipMonotonicLine,
+        InfillPattern::ipGlobalMonotonicLine,
     };
 
     return std::any_of(std::begin(supported_patterns), std::end(supported_patterns), [&](const InfillPattern pattern) {
