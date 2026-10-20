@@ -199,8 +199,11 @@ WCP_Logger::~WCP_Logger()
         delete socket;
 }
 
-extern json m_ProfileJson;
-extern std::mutex m_ProfileJson_mutex;
+// Snapmaker kept the setup-wizard profile JSON as a global in WebGuideDialog.cpp; upstream 2.5
+// made it a GuideFrame member, rebuilt from the installed presets each time the wizard opens.
+// Keep a local copy so device discovery still records newly-seen model/nozzle pairs here.
+json m_ProfileJson;
+std::mutex m_ProfileJson_mutex;
 
 std::vector<std::string> load_thumbnails(const std::string& file, size_t image_count)
 {
