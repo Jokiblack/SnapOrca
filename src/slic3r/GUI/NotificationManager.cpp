@@ -2257,63 +2257,6 @@ void NotificationManager::close_flushing_volume_error_notification(NotificationT
     }
 }
 
-void NotificationManager::push_pla_petg_mix_warning(const std::string& text)
-{
-    for (std::unique_ptr<PopNotification> &notification : m_pop_notifications) {
-        if (notification->get_type() == NotificationType::SlicingWarning &&
-            notification->compare_text(_u8L("Warning:") + "\n" + text) &&
-            !notification->is_finished()) {
-            // A live instance (shown, or hidden by the user) is kept; one that is closing or
-            // finished, e.g. after reset_pla_petg_mix_warning(), is recreated.
-            return;
-        }
-    }
-    NotificationData data{ NotificationType::SlicingWarning,
-                           NotificationLevel::WarningNotificationLevel,
-                           0,
-                           _u8L("Warning:") + "\n" + text,
-                           _u8L("Wiki"),
-                           // PLA/PETG mutual-support printing guide on Snapmaker wiki.
-                           // Chinese UI gets the zh page (zh_TW included: no separate wiki page),
-                           // every other language falls back to the en page.
-                           [](wxEvtHandler*) {
-                               wxString lang = wxGetApp().current_language_code().BeforeFirst('_');
-                               std::string url = lang == "zh"
-                                   ? "https://wiki.snapmaker.com/zh/snapmaker_u1/printing_guides/pla_and_petg"
-                                   : "https://wiki.snapmaker.com/en/snapmaker_u1/printing_guides/pla_and_petg";
-                               wxGetApp().open_browser_with_warning_dialog(url);
-                               return false; // keep the warning on screen; only X or a data change dismisses it
-                           } };
-    auto notification = std::make_unique<NotificationManager::PlaPetgMixNotification>(data, m_id_provider, m_evt_handler);
-    push_notification_data(std::move(notification), 0);
-}
-
-void NotificationManager::close_pla_petg_mix_warning(const std::string& text)
-{
-    // Called when the data changes so the PLA/PETG combo no longer applies.
-    // Use real_close() to truly remove it (not the X-close Hidden state), so that if the
-    // combo re-appears later the warning is recreated and shown again.
-    for (std::unique_ptr<PopNotification> &notification : m_pop_notifications) {
-        if (notification->get_type() == NotificationType::SlicingWarning &&
-            notification->compare_text(_u8L("Warning:") + "\n" + text)) {
-            if (auto* n = dynamic_cast<PlaPetgMixNotification*>(notification.get()))
-                n->real_close();
-            else
-                notification->close();
-        }
-    }
-}
-
-void NotificationManager::reset_pla_petg_mix_warning()
-{
-    for (std::unique_ptr<PopNotification> &notification : m_pop_notifications) {
-        if (auto* n = dynamic_cast<PlaPetgMixNotification*>(notification.get())) {
-            if (n->get_state() == PopNotification::EState::Hidden)
-                n->real_close();
-        }
-    }
-}
-
 void NotificationManager::set_all_slicing_errors_gray(bool g)
 {
 	for (std::unique_ptr<PopNotification> &notification : m_pop_notifications) {
@@ -2344,8 +2287,8 @@ void NotificationManager::close_slicing_errors_and_warnings()
 {
 	for (std::unique_ptr<PopNotification> &notification : m_pop_notifications) {
 		if (notification->get_type() == NotificationType::SlicingError || notification->get_type() == NotificationType::SlicingWarning) {
-			// The PLA/PETG mix warning follows its own lifecycle, not batch sweeps
-			// on re-slicing or project reset.
+			// Snapmaker: PlaPetgMixNotification is managed by its own lifecycle,
+			// not by batch sweeps on re-slicing or project reset.
 			if (dynamic_cast<PlaPetgMixNotification*>(notification.get()))
 				continue;
 			notification->close();
@@ -2371,8 +2314,9 @@ void NotificationManager::close_notification_of_type(const NotificationType type
 {
 	for (std::unique_ptr<PopNotification> &notification : m_pop_notifications) {
 		if (notification->get_type() == type) {
-			// The PLA/PETG mix warning is closed only by push/close_pla_petg_mix_warning,
-			// not by batch SlicingWarning cleanup during slicing or project reset.
+			// Snapmaker: PlaPetgMixNotification is managed by the dedicated
+			// push/close_pla_petg_mix_warning lifecycle, not by batch
+			// SlicingWarning cleanup during slicing or project reset.
 			if (dynamic_cast<PlaPetgMixNotification*>(notification.get()))
 				continue;
 			notification->close();
