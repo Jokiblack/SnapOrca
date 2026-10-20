@@ -9,7 +9,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Snapmaker Orca\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-20 21:31+0200\n"
+"POT-Creation-Date: 2026-10-20 22:22+0200\n"
 "PO-Revision-Date: 2025-03-27 19:32+0800\n"
 "Last-Translator: 5idereal <hi@5idereal.cc>\n"
 "Language-Team: \n"
@@ -19408,6 +19408,12 @@ msgstr ""
 msgid "Enable clumping detection"
 msgstr "啟用結塊偵測"
 
+msgid "Order-independent overlap carving"
+msgstr ""
+
+msgid "When enabled, overlapping model parts are carved by bounding-box size: the smaller part always carves the larger one, with the same result on every layer, so a small part embedded in a larger one is not removed. When disabled, the parts are compared by their area in each layer."
+msgstr ""
+
 # AI Translated
 msgid "Clumping detection layers"
 msgstr "結塊偵測層數"
@@ -20224,6 +20230,12 @@ msgstr "減小填充回抽"
 msgid "Don't retract when the travel is entirely within an infill area. That means the oozing can't been seen. This can reduce times of retraction for complex model and save printing time, but make slicing and G-code generating slower. Note that Z-hop is also not performed in areas where retraction is skipped."
 msgstr "當空駛完全位於填充區域內時不回抽，因為漏料不會被看見。對於複雜模型，這可減少回抽次數並節省列印時間，但會使切片與 G-code 產生變慢。請注意，在略過回抽的區域也不會執行 Z 抬升。"
 
+msgid "Retract on long travel along walls"
+msgstr ""
+
+msgid "When \"Reduce infill retraction\" skips the retraction of a travel inside an infill area, still retract if the travel runs close to a wall (within one wall line width) for longer than the retraction minimum travel distance. This avoids stringing and oozing marks along the walls, especially when \"Avoid crossing walls\" routes the travel along them."
+msgstr ""
+
 msgid "This option will drop the temperature of the inactive extruders to prevent oozing."
 msgstr "這個選項會降低未使用噴頭的溫度，以防止材料滲出。"
 
@@ -20861,6 +20873,18 @@ msgstr "背面"
 
 msgid "Random"
 msgstr "隨機"
+
+msgid "Seam placement away from overhangs (experimental)"
+msgstr ""
+
+msgid "Penalize seam candidates close to overhangs, so that the seam is placed away from them. It has no effect with the Random seam position."
+msgstr ""
+
+msgid "Z overrides X/Y"
+msgstr ""
+
+msgid "When the top Z distance clashes with the support/object XY distance, give priority to generating supports beneath overhangs, leaving a gap to the model as large as the top Z distance. When disabled, the gap between supports and the model always follows the support/object XY distance. Only recommended with hybrid tree supports."
+msgstr ""
 
 msgid "Staggered inner seams"
 msgstr "交錯的內牆接縫"

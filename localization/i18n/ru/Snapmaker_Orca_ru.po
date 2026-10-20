@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: Snapmaker Orca V2.3.0 Official Release\n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-20 21:31+0200\n"
+"POT-Creation-Date: 2026-10-20 22:22+0200\n"
 "PO-Revision-Date: 2025-07-06 21:08+0700\n"
 "Last-Translator: \n"
 "Language-Team: Andylg <andylg@yandex.ru>\n"
@@ -19192,6 +19192,12 @@ msgstr ""
 msgid "Enable clumping detection"
 msgstr "Обнаружение налипания пластика на сопло"
 
+msgid "Order-independent overlap carving"
+msgstr ""
+
+msgid "When enabled, overlapping model parts are carved by bounding-box size: the smaller part always carves the larger one, with the same result on every layer, so a small part embedded in a larger one is not removed. When disabled, the parts are compared by their area in each layer."
+msgstr ""
+
 msgid "Clumping detection layers"
 msgstr "Слои обнаружения"
 
@@ -20013,6 +20019,12 @@ msgstr ""
 "\n"
 "Внимание: при недостаточной скорости перемещения подтёки приводят к недоэкструзии на шве. Отключите эту настройку, если на поверхности детали присутствуют дефекты локальной недоэкструзии."
 
+msgid "Retract on long travel along walls"
+msgstr ""
+
+msgid "When \"Reduce infill retraction\" skips the retraction of a travel inside an infill area, still retract if the travel runs close to a wall (within one wall line width) for longer than the retraction minimum travel distance. This avoids stringing and oozing marks along the walls, especially when \"Avoid crossing walls\" routes the travel along them."
+msgstr ""
+
 msgid "This option will drop the temperature of the inactive extruders to prevent oozing."
 msgstr "Эта опция снижает температуру неактивных экструдеров для предотвращения течи материала из сопла."
 
@@ -20646,6 +20658,18 @@ msgstr "Сзади"
 
 msgid "Random"
 msgstr "Случайно"
+
+msgid "Seam placement away from overhangs (experimental)"
+msgstr ""
+
+msgid "Penalize seam candidates close to overhangs, so that the seam is placed away from them. It has no effect with the Random seam position."
+msgstr ""
+
+msgid "Z overrides X/Y"
+msgstr ""
+
+msgid "When the top Z distance clashes with the support/object XY distance, give priority to generating supports beneath overhangs, leaving a gap to the model as large as the top Z distance. When disabled, the gap between supports and the model always follows the support/object XY distance. Only recommended with hybrid tree supports."
+msgstr ""
 
 msgid "Staggered inner seams"
 msgstr "Смещение внутренних швов"
