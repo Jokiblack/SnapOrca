@@ -7123,6 +7123,16 @@ void PrintConfigDef::init_fff_params()
                      "It has no effect with the Random seam position.");
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("top_z_overrides_xy_distance", coBool);
+    def->label = L("Z overrides X/Y");
+    def->category = L("Support");
+    def->tooltip = L("When the top Z distance clashes with the support/object XY distance, give priority to generating supports "
+                     "beneath overhangs, leaving a gap to the model as large as the top Z distance. When disabled, the gap "
+                     "between supports and the model always follows the support/object XY distance. "
+                     "Only recommended with hybrid tree supports.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
     // Snapmaker Orca: end of the options ported from Bambu Studio.
 
     def = this->add("staggered_inner_seams", coBool);

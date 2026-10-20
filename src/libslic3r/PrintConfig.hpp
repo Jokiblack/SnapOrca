@@ -1420,6 +1420,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionEnum<SeamPosition>,  seam_position))
     // Snapmaker Orca: options ported from Bambu Studio (seam / tree supports).
     ((ConfigOptionBool,                seam_placement_away_from_overhangs))
+    ((ConfigOptionBool,                top_z_overrides_xy_distance))
     ((ConfigOptionBool,                staggered_inner_seams))
     ((ConfigOptionFloat,               slice_closing_radius))
     ((ConfigOptionEnum<SlicingMode>,   slicing_mode))

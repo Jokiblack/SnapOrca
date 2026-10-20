@@ -88,12 +88,15 @@ struct TreeSupportMeshGroupSettings {
             bottom_interface_layers * this->layer_height :
             0;
         this->support_material_buildplate_only = config.support_on_build_plate_only;
+        this->support_top_distance      = scaled<coord_t>(slicing_params.gap_support_object);
+        this->support_bottom_distance   = scaled<coord_t>(slicing_params.gap_object_support);
         this->support_xy_distance       = scaled<coord_t>(config.support_object_xy_distance.value);
+        // Bambu "Z overrides X/Y": the XY distance is limited to the top Z distance (at least 0.2 mm).
+        if (config.top_z_overrides_xy_distance)
+            this->support_xy_distance = std::min(this->support_xy_distance, std::max(this->support_top_distance, scaled<coord_t>(0.2)));
         this->support_xy_distance_1st_layer = scaled<coord_t>(config.support_object_first_layer_gap.value);
         // Separation of interfaces, it is likely smaller than support_xy_distance.
         this->support_xy_distance_overhang = std::min(this->support_xy_distance, scaled<coord_t>(0.5 * external_perimeter_width));
-        this->support_top_distance      = scaled<coord_t>(slicing_params.gap_support_object);
-        this->support_bottom_distance   = scaled<coord_t>(slicing_params.gap_object_support);
         this->support_roof_enable       = config.support_interface_top_layers.value > 0;
         this->support_roof_layers       = config.support_interface_top_layers.value;
         this->support_floor_enable      = bottom_interface_layers > 0;
