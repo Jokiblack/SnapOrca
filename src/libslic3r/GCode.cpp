@@ -10379,6 +10379,11 @@ void GCode::append_full_config(const Print &print, std::string &str)
     cfg.erase("print_extruder_source_flow");
     cfg.erase("print_extruder_flow_count");
     cfg.erase("extruder_layer_height_planned");
+    // The options ported from OrcaFS-NeotkoCM stay out of the dump while they hold their default, so that
+    // registering them keeps the G-code byte-identical; a project that sets one still records it here.
+    for (const std::string &key : print_config_def.neotko_option_keys())
+        if (const ConfigOption *opt = cfg.option(key); opt != nullptr && *opt == *print_config_def.get(key)->default_value)
+            cfg.erase(key);
     { // correct the flush_volumes_matrix with flush_multiplier values
         // Fast purge mode uses flush_multiplier_fast; Default is inert.
         std::vector<double> temp_cfg_flush_multiplier = (print.config().prime_volume_mode == PrimeVolumeMode::pvmFast)

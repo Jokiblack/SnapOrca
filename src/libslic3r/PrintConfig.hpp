@@ -48,6 +48,20 @@ namespace Slic3r {
 
 class DynamicPrintConfig;
 
+// Ported from OrcaFS-NeotkoCM: values shared by the ColorStitch options and their engine.
+// Fill angle of the ColorStitch and PathBlend surfaces; COLORSTITCH_ANGLE_AUTO follows the infill rotation.
+static constexpr int COLORSTITCH_DEFAULT_ANGLE_DEG = 45;
+static constexpr int COLORSTITCH_ANGLE_AUTO        = -1;
+// interlayer_colormix_surface / multipass_surface / pathblend_surface.
+static constexpr int kColormixSurface_Both        = 0;
+static constexpr int kColormixSurface_Top         = 1;
+static constexpr int kColormixSurface_Penultimate = 2;
+// surface_color_mix_lane_mode.
+static constexpr int kLaneMode_Default    = 0;
+static constexpr int kLaneMode_GeoSort    = 1;
+static constexpr int kLaneMode_LaneQuant  = 2;
+static constexpr int kLaneMode_DirCluster = 3;
+
 enum GCodeFlavor : unsigned char {
     gcfMarlinLegacy, 
     gcfKlipper, 
@@ -939,10 +953,14 @@ public:
     // BBS
     const std::vector<std::string>& filament_option_keys() const { return m_filament_option_keys; }
     const std::vector<std::string>& filament_retract_keys() const { return m_filament_retract_keys; }
+    // Keys registered by init_neotko_params(), sorted.
+    const std::vector<std::string>& neotko_option_keys() const { return m_neotko_option_keys; }
 
 private:
     void init_common_params();
     void init_fff_params();
+    // Options of the features ported from OrcaFS-NeotkoCM, defined in PrintConfigNeotko.cpp.
+    void init_neotko_params();
     void init_extruder_option_keys();
     void init_sla_params();
 
@@ -954,6 +972,7 @@ private:
 
     std::vector<std::string>    m_filament_option_keys;
     std::vector<std::string>    m_filament_retract_keys;
+    std::vector<std::string>    m_neotko_option_keys;
 };
 
 // The one and only global definition of SLic3r configuration options.
@@ -1341,17 +1360,39 @@ private: \
 #define PRINT_CONFIG_CLASS_DERIVED_HASH(r, data, elem) boost::hash_combine(seed, static_cast<const elem*>(this)->hash());
 #define PRINT_CONFIG_CLASS_DERIVED_EQUAL(r, data, elem) \
     if (! (*static_cast<const elem*>(this) == static_cast<const elem&>(rhs))) return false;
+#define PRINT_CONFIG_CLASS_DERIVED_LESS(r, data, elem) \
+    if (static_cast<const elem&>(*this) < static_cast<const elem&>(rhs)) return true; \
+    if (static_cast<const elem&>(rhs) < static_cast<const elem&>(*this)) return false;
+#define PRINT_CONFIG_CLASS_DERIVED_APPLY_TO_ITEM(r, data, elem) \
+    static_cast<const elem&>(*this).elem::apply_to(static_cast<elem&>(*dst));
+// Its parents each apply themselves to a target member by member, so this one keeps the lookup by name.
+#define PRINT_CONFIG_CLASS_DERIVED_APPLY_TO_BY_NAME(CLASS_NAME, CLASSES_PARENTS_TUPLE) return false;
+// A class made only of parents that apply themselves member by member, and no options of its own,
+// applies itself onto a config of its type by letting each parent do it.
+#define PRINT_CONFIG_CLASS_DERIVED_APPLY_TO_BY_PARENTS(CLASS_NAME, CLASSES_PARENTS_TUPLE) \
+    auto *dst = dynamic_cast<CLASS_NAME*>(&target); \
+    if (dst == nullptr) \
+        return false; \
+    BOOST_PP_SEQ_FOR_EACH(PRINT_CONFIG_CLASS_DERIVED_APPLY_TO_ITEM, _, BOOST_PP_TUPLE_TO_SEQ(CLASSES_PARENTS_TUPLE)) \
+    return true;
+#define PRINT_CONFIG_CLASS_DERIVED_NO_EXTRA_MEMBERS(CLASS_NAME, CLASSES_PARENTS_TUPLE)
+// Ordered like its parents in turn, so that it can key a sorted container as a plain class can.
+#define PRINT_CONFIG_CLASS_DERIVED_LESS_BY_PARENTS(CLASS_NAME, CLASSES_PARENTS_TUPLE) \
+    bool operator<(const CLASS_NAME &rhs) const throw() \
+    { \
+        BOOST_PP_SEQ_FOR_EACH(PRINT_CONFIG_CLASS_DERIVED_LESS, _, BOOST_PP_TUPLE_TO_SEQ(CLASSES_PARENTS_TUPLE)) \
+        return false; \
+    }
 
 // Generic version, with or without new parameters. Don't use this directly.
-#define PRINT_CONFIG_CLASS_DERIVED_DEFINE1(CLASS_NAME, CLASSES_PARENTS_TUPLE, PARAMETER_DEFINITION, PARAMETER_VISIT) \
+#define PRINT_CONFIG_CLASS_DERIVED_DEFINE1(CLASS_NAME, CLASSES_PARENTS_TUPLE, PARAMETER_DEFINITION, PARAMETER_VISIT, APPLY_TO, EXTRA_MEMBERS) \
 class CLASS_NAME : PRINT_CONFIG_CLASS_DERIVED_CLASS_LIST(CLASSES_PARENTS_TUPLE) { \
     STATIC_PRINT_CONFIG_CACHE_DERIVED(CLASS_NAME) \
     CLASS_NAME() : PRINT_CONFIG_CLASS_DERIVED_INITIALIZER(CLASSES_PARENTS_TUPLE, 0) { assert(s_cache_##CLASS_NAME.initialized()); *this = s_cache_##CLASS_NAME.defaults(); } \
 public: \
     PARAMETER_DEFINITION \
     template<typename F> void for_each_option_pair(const CLASS_NAME &rhs, F &&f) const { PARAMETER_VISIT } \
-    /* Its parents each apply themselves to a target member by member, so this one keeps the lookup by name. */ \
-    bool apply_to(ConfigBase &/*target*/) const override { return false; } \
+    bool apply_to(ConfigBase &target) const override { (void)target; APPLY_TO(CLASS_NAME, CLASSES_PARENTS_TUPLE) } \
     size_t hash() const throw() \
     { \
         size_t seed = 0; \
@@ -1367,6 +1408,7 @@ public: \
         return eq; \
     } \
     bool operator!=(const CLASS_NAME &rhs) const throw() { return ! (*this == rhs); } \
+    EXTRA_MEMBERS(CLASS_NAME, CLASSES_PARENTS_TUPLE) \
 protected: \
     CLASS_NAME(int) : PRINT_CONFIG_CLASS_DERIVED_INITIALIZER(CLASSES_PARENTS_TUPLE, 1) {} \
     void initialize(StaticCacheBase &cache, const char* base_ptr) { \
@@ -1376,12 +1418,19 @@ protected: \
 };
 // Variant without adding new parameters.
 #define PRINT_CONFIG_CLASS_DERIVED_DEFINE0(CLASS_NAME, CLASSES_PARENTS_TUPLE) \
-    PRINT_CONFIG_CLASS_DERIVED_DEFINE1(CLASS_NAME, CLASSES_PARENTS_TUPLE, BOOST_PP_EMPTY(), BOOST_PP_EMPTY())
+    PRINT_CONFIG_CLASS_DERIVED_DEFINE1(CLASS_NAME, CLASSES_PARENTS_TUPLE, BOOST_PP_EMPTY(), BOOST_PP_EMPTY(), \
+        PRINT_CONFIG_CLASS_DERIVED_APPLY_TO_BY_NAME, PRINT_CONFIG_CLASS_DERIVED_NO_EXTRA_MEMBERS)
 // Variant with adding new parameters.
 #define PRINT_CONFIG_CLASS_DERIVED_DEFINE(CLASS_NAME, CLASSES_PARENTS_TUPLE, PARAMETER_DEFINITION_SEQ) \
     PRINT_CONFIG_CLASS_DERIVED_DEFINE1(CLASS_NAME, CLASSES_PARENTS_TUPLE, \
         BOOST_PP_SEQ_FOR_EACH(PRINT_CONFIG_CLASS_ELEMENT_DEFINITION, _, PARAMETER_DEFINITION_SEQ), \
-        BOOST_PP_SEQ_FOR_EACH(PRINT_CONFIG_CLASS_ELEMENT_VISIT, _, PARAMETER_DEFINITION_SEQ))
+        BOOST_PP_SEQ_FOR_EACH(PRINT_CONFIG_CLASS_ELEMENT_VISIT, _, PARAMETER_DEFINITION_SEQ), \
+        PRINT_CONFIG_CLASS_DERIVED_APPLY_TO_BY_NAME, PRINT_CONFIG_CLASS_DERIVED_NO_EXTRA_MEMBERS)
+// Variant that only joins plain classes, splitting one option list that is too long for a single
+// BOOST_PP sequence. It keeps the member by member apply_to() and the operator< of its parents.
+#define PRINT_CONFIG_CLASS_COMPOSED_DEFINE(CLASS_NAME, CLASSES_PARENTS_TUPLE) \
+    PRINT_CONFIG_CLASS_DERIVED_DEFINE1(CLASS_NAME, CLASSES_PARENTS_TUPLE, BOOST_PP_EMPTY(), BOOST_PP_EMPTY(), \
+        PRINT_CONFIG_CLASS_DERIVED_APPLY_TO_BY_PARENTS, PRINT_CONFIG_CLASS_DERIVED_LESS_BY_PARENTS)
 
 // This object is mapped to Perl as Slic3r::Config::PrintObject.
 PRINT_CONFIG_CLASS_DEFINE(
@@ -1566,11 +1615,34 @@ PRINT_CONFIG_CLASS_DEFINE(
     // Serialized as compact "phys:slot,phys:slot" (1-based filament slots, matches UI).
     // Empty string means "use first_filament_for_physical_head defaults everywhere".
     ((ConfigOptionString,              imex_head_filament_map))
+
+    // Ported from OrcaFS-NeotkoCM. Defined in PrintConfigNeotko.cpp, which says which feature uses each one.
+    ((ConfigOptionInt,                 mmu_segmented_region_extra_walls))
+    ((ConfigOptionInt,                 mmu_segmented_region_surface_depth))
+    ((ConfigOptionInts,                mmu_segmented_region_extra_walls_per_color))
+    ((ConfigOptionInts,                mmu_segmented_region_surface_depth_per_color))
+    ((ConfigOptionBool,                support_cross_object_avoidance))
+    ((ConfigOptionEnum<InfillPattern>, penultimate_solid_infill_pattern))
+    ((ConfigOptionPercent,             penultimate_solid_infill_density))
+    ((ConfigOptionInt,                 penultimate_top_layers))
+    ((ConfigOptionFloat,               penultimate_infill_speed))
+    ((ConfigOptionString,              neotko_hae_xy_contour))
+    ((ConfigOptionString,              neotko_hae_xy_hole))
+    ((ConfigOptionString,              neotko_hae_infill_width))
+    ((ConfigOptionString,              neotko_hae_outer_wall_width))
+    ((ConfigOptionString,              neotko_hae_inner_wall_width))
+    ((ConfigOptionString,              neotko_hae_fuzzy_thickness))
+    ((ConfigOptionString,              neotko_hae_fuzzy_point_distance))
+    ((ConfigOptionString,              neotko_hae_fuzzy_scale))
+    ((ConfigOptionString,              neotko_hae_fuzzy_octaves))
+    ((ConfigOptionString,              neotko_hae_fuzzy_persistence))
 )
 
 // This object is mapped to Perl as Slic3r::Config::PrintRegion.
+// PrintRegionConfig joins this class and PrintRegionNeotkoConfig: a single option list
+// would exceed the 256 elements a BOOST_PP sequence can hold.
 PRINT_CONFIG_CLASS_DEFINE(
-    PrintRegionConfig,
+    PrintRegionConfigBase,
 
     ((ConfigOptionInts,  print_extruder_id))
     ((ConfigOptionStrings,  print_extruder_variant))
@@ -1779,6 +1851,165 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloat, zaa_min_z))
     ((ConfigOptionFloat, zaa_minimize_perimeter_height))
     )
+
+// Region options of the features ported from OrcaFS-NeotkoCM. Defined in PrintConfigNeotko.cpp,
+// which says which feature uses each one.
+PRINT_CONFIG_CLASS_DEFINE(
+    PrintRegionNeotkoConfig,
+
+    // A1 Bridging infill extra expansion
+    ((ConfigOptionFloat,             bridge_expansion_extra))
+    // A2 Overhang Shadow
+    ((ConfigOptionBool,              overhang_shadow_inner_wall))
+    ((ConfigOptionPercent,           overhang_shadow_speed_ratio))
+    ((ConfigOptionPercent,           overhang_shadow_distance))
+    // B4 Support Zones (per modifier volume)
+    ((ConfigOptionString,            neotko_support_zone_gesture))
+    ((ConfigOptionFloat,             neotko_zone_lean_deg))
+    ((ConfigOptionBool,              neotko_zone_roof_only))
+    ((ConfigOptionBool,              neotko_zone_solid))
+    ((ConfigOptionBool,              neotko_zone_land_only))
+    ((ConfigOptionBool,              neotko_support_cut))
+    // S2-S4 Sandwich / ColorStitch / MultiPass / PathBlend
+    ((ConfigOptionFloat,             multipass_prime_volume))
+    ((ConfigOptionBool,              interlayer_colormix_enabled))
+    ((ConfigOptionInt,               interlayer_colormix_surface))
+    ((ConfigOptionInt,               interlayer_colormix_tool_a))
+    ((ConfigOptionInt,               interlayer_colormix_tool_b))
+    ((ConfigOptionInt,               interlayer_colormix_tool_c))
+    ((ConfigOptionInt,               interlayer_colormix_tool_d))
+    ((ConfigOptionFloat,             interlayer_colormix_min_length))
+    ((ConfigOptionString,            interlayer_colormix_pattern_top))
+    ((ConfigOptionString,            interlayer_colormix_pattern_penultimate))
+    ((ConfigOptionInt,               interlayer_colormix_mode))
+    ((ConfigOptionInt,               interlayer_colormix_pct_a))
+    ((ConfigOptionInt,               interlayer_colormix_pct_b))
+    ((ConfigOptionInt,               interlayer_colormix_easing))
+    ((ConfigOptionFloat,             interlayer_colormix_gamma))
+    ((ConfigOptionInt,               interlayer_colormix_min_surface_lines))
+    ((ConfigOptionFloat,             interlayer_colormix_overlap))
+    ((ConfigOptionBool,              interlayer_colormix_invert))
+    ((ConfigOptionInt,               interlayer_colormix_repetitions))
+    ((ConfigOptionInt,               interlayer_colormix_penu_mode))
+    ((ConfigOptionInt,               interlayer_colormix_penu_pct_a))
+    ((ConfigOptionInt,               interlayer_colormix_penu_pct_b))
+    ((ConfigOptionInt,               interlayer_colormix_penu_easing))
+    ((ConfigOptionFloat,             interlayer_colormix_penu_gamma))
+    ((ConfigOptionInt,               interlayer_colormix_penu_min_surface_lines))
+    ((ConfigOptionFloat,             interlayer_colormix_penu_overlap))
+    ((ConfigOptionBool,              interlayer_colormix_penu_invert))
+    ((ConfigOptionInt,               interlayer_colormix_penu_repetitions))
+    ((ConfigOptionInt,               interlayer_colormix_penu_band_count_a))
+    ((ConfigOptionInt,               interlayer_colormix_penu_band_count_b))
+    ((ConfigOptionInt,               interlayer_colormix_penu_band_count_c))
+    ((ConfigOptionInt,               interlayer_colormix_penu_band_count_d))
+    ((ConfigOptionInt,               interlayer_colormix_penu_tool_a))
+    ((ConfigOptionInt,               interlayer_colormix_penu_tool_b))
+    ((ConfigOptionInt,               interlayer_colormix_penu_tool_c))
+    ((ConfigOptionInt,               interlayer_colormix_penu_tool_d))
+    ((ConfigOptionInt,               interlayer_colormix_band_count_a))
+    ((ConfigOptionInt,               interlayer_colormix_band_count_b))
+    ((ConfigOptionInt,               interlayer_colormix_band_count_c))
+    ((ConfigOptionInt,               interlayer_colormix_band_count_d))
+    ((ConfigOptionFloat,             interlayer_colormix_band_mm_a))
+    ((ConfigOptionFloat,             interlayer_colormix_band_mm_b))
+    ((ConfigOptionFloat,             interlayer_colormix_band_mm_c))
+    ((ConfigOptionFloat,             interlayer_colormix_band_mm_d))
+    ((ConfigOptionFloat,             interlayer_colormix_penu_band_mm_a))
+    ((ConfigOptionFloat,             interlayer_colormix_penu_band_mm_b))
+    ((ConfigOptionFloat,             interlayer_colormix_penu_band_mm_c))
+    ((ConfigOptionFloat,             interlayer_colormix_penu_band_mm_d))
+    ((ConfigOptionFloat,             interlayer_colormix_gradient_span_mm))
+    ((ConfigOptionFloat,             interlayer_colormix_penu_gradient_span_mm))
+    ((ConfigOptionInt,               interlayer_colormix_top_zone))
+    ((ConfigOptionInt,               interlayer_colormix_penu_zone))
+    ((ConfigOptionInt,               interlayer_colormix_filament_filter))
+    ((ConfigOptionBool,              interlayer_colormix_use_virtual))
+    ((ConfigOptionInt,               interlayer_colormix_angle))
+    ((ConfigOptionInt,               interlayer_colormix_penu_angle))
+    ((ConfigOptionInt,               surface_color_mix_lane_mode))
+    ((ConfigOptionInt,               colorstitch_monotonic_replan))
+    ((ConfigOptionBool,              colorstitch_monotonic_split))
+    ((ConfigOptionBool,              multipass_enabled))
+    ((ConfigOptionInt,               multipass_surface))
+    ((ConfigOptionInt,               multipass_num_passes))
+    ((ConfigOptionInt,               multipass_tool_1))
+    ((ConfigOptionInt,               multipass_tool_2))
+    ((ConfigOptionInt,               multipass_tool_3))
+    ((ConfigOptionFloat,             multipass_width_ratio_1))
+    ((ConfigOptionFloat,             multipass_width_ratio_2))
+    ((ConfigOptionFloat,             multipass_width_ratio_3))
+    ((ConfigOptionBool,              multipass_vary_pattern))
+    ((ConfigOptionInt,               multipass_angle_1))
+    ((ConfigOptionInt,               multipass_angle_2))
+    ((ConfigOptionInt,               multipass_angle_3))
+    ((ConfigOptionInt,               multipass_pa_mode))
+    ((ConfigOptionFloat,             multipass_pa_value))
+    ((ConfigOptionInt,               multipass_fan_1))
+    ((ConfigOptionInt,               multipass_fan_2))
+    ((ConfigOptionInt,               multipass_fan_3))
+    ((ConfigOptionInt,               multipass_speed_pct_1))
+    ((ConfigOptionInt,               multipass_speed_pct_2))
+    ((ConfigOptionInt,               multipass_speed_pct_3))
+    ((ConfigOptionString,            multipass_gcode_start_1))
+    ((ConfigOptionString,            multipass_gcode_start_2))
+    ((ConfigOptionString,            multipass_gcode_start_3))
+    ((ConfigOptionString,            multipass_gcode_end_1))
+    ((ConfigOptionString,            multipass_gcode_end_2))
+    ((ConfigOptionString,            multipass_gcode_end_3))
+    ((ConfigOptionBool,              multipass_perimeter_override))
+    ((ConfigOptionBool,              penultimate_multipass_enabled))
+    ((ConfigOptionInt,               penultimate_multipass_num_passes))
+    ((ConfigOptionInt,               penultimate_multipass_tool_1))
+    ((ConfigOptionInt,               penultimate_multipass_tool_2))
+    ((ConfigOptionInt,               penultimate_multipass_tool_3))
+    ((ConfigOptionFloat,             penultimate_multipass_width_ratio_1))
+    ((ConfigOptionFloat,             penultimate_multipass_width_ratio_2))
+    ((ConfigOptionFloat,             penultimate_multipass_width_ratio_3))
+    ((ConfigOptionInt,               penultimate_multipass_angle_1))
+    ((ConfigOptionInt,               penultimate_multipass_angle_2))
+    ((ConfigOptionInt,               penultimate_multipass_angle_3))
+    ((ConfigOptionString,            penultimate_multipass_gcode_start_1))
+    ((ConfigOptionString,            penultimate_multipass_gcode_start_2))
+    ((ConfigOptionString,            penultimate_multipass_gcode_start_3))
+    ((ConfigOptionString,            penultimate_multipass_gcode_end_1))
+    ((ConfigOptionString,            penultimate_multipass_gcode_end_2))
+    ((ConfigOptionString,            penultimate_multipass_gcode_end_3))
+    ((ConfigOptionBool,              penultimate_multipass_vary_pattern))
+    ((ConfigOptionInt,               penultimate_multipass_fan_1))
+    ((ConfigOptionInt,               penultimate_multipass_fan_2))
+    ((ConfigOptionInt,               penultimate_multipass_fan_3))
+    ((ConfigOptionInt,               penultimate_multipass_speed_pct_1))
+    ((ConfigOptionInt,               penultimate_multipass_speed_pct_2))
+    ((ConfigOptionInt,               penultimate_multipass_speed_pct_3))
+    ((ConfigOptionBool,              multipass_path_gradient))
+    ((ConfigOptionInt,               path_gradient_segments))
+    ((ConfigOptionInt,               path_gradient_min_flow_pct))
+    ((ConfigOptionInt,               pathblend_num_passes))
+    ((ConfigOptionInt,               pathblend_tool_1))
+    ((ConfigOptionInt,               pathblend_tool_2))
+    ((ConfigOptionInt,               pathblend_tool_3))
+    ((ConfigOptionInt,               pathblend_tool_4))
+    ((ConfigOptionFloat,             pathblend_layer_ratio_1))
+    ((ConfigOptionFloat,             pathblend_layer_ratio_2))
+    ((ConfigOptionFloat,             pathblend_layer_ratio_3))
+    ((ConfigOptionFloat,             pathblend_layer_ratio_4))
+    ((ConfigOptionFloat,             pathblend_min_ratio))
+    ((ConfigOptionFloat,             pathblend_max_ratio))
+    ((ConfigOptionInt,               pathblend_ease_mode))
+    ((ConfigOptionInt,               pathblend_surface))
+    ((ConfigOptionBool,              pathblend_invert_gradient))
+    ((ConfigOptionInt,               pathblend_fill_angle))
+    ((ConfigOptionString,            pathblend_top))
+    ((ConfigOptionString,            pathblend_penu))
+    ((ConfigOptionString,            neotko_surface_passes_top))
+    ((ConfigOptionString,            neotko_surface_passes_penu))
+)
+
+PRINT_CONFIG_CLASS_COMPOSED_DEFINE(
+    PrintRegionConfig,
+    (PrintRegionConfigBase, PrintRegionNeotkoConfig)
+)
 
 // Whether a periodic modifier overlays this layer. Disabled modifiers are always "active",
 // so callers can write: cfg.periodic_modifier && !periodic_modifier_active(cfg, layer_id).
@@ -2238,6 +2469,8 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
     ((ConfigOptionBool,               ooze_prevention))
     ((ConfigOptionString,             filename_format))
     ((ConfigOptionStrings,            post_process))
+    // Ported from OrcaFS-NeotkoCM (Expert G-code Reprocessor rules), see PrintConfigNeotko.cpp.
+    ((ConfigOptionString,             expert_gcode_reprocessor_rules))
     ((ConfigOptionFloat,              mixed_color_layer_height_a))
     ((ConfigOptionFloat,              mixed_color_layer_height_b))
     ((ConfigOptionBool,               mixed_filament_gradient_mode))
@@ -2600,6 +2833,13 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE0(
 #undef PRINT_CONFIG_CLASS_DERIVED_DEFINE
 #undef PRINT_CONFIG_CLASS_DERIVED_DEFINE0
 #undef PRINT_CONFIG_CLASS_DERIVED_DEFINE1
+#undef PRINT_CONFIG_CLASS_COMPOSED_DEFINE
+#undef PRINT_CONFIG_CLASS_DERIVED_LESS
+#undef PRINT_CONFIG_CLASS_DERIVED_APPLY_TO_ITEM
+#undef PRINT_CONFIG_CLASS_DERIVED_APPLY_TO_BY_NAME
+#undef PRINT_CONFIG_CLASS_DERIVED_APPLY_TO_BY_PARENTS
+#undef PRINT_CONFIG_CLASS_DERIVED_NO_EXTRA_MEMBERS
+#undef PRINT_CONFIG_CLASS_DERIVED_LESS_BY_PARENTS
 #undef PRINT_CONFIG_CLASS_DERIVED_HASH
 #undef PRINT_CONFIG_CLASS_DERIVED_EQUAL
 #undef PRINT_CONFIG_CLASS_DERIVED_INITCACHE_ITEM

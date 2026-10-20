@@ -1497,6 +1497,53 @@ bool PrintObject::invalidate_state_by_config_options(
             if (has_extruder_layer_heights(m_print->config()))
                 steps.emplace_back(posSlice);
         }
+        // Options ported from OrcaFS-NeotkoCM (PrintConfigNeotko.cpp), with the steps NeotkoCM gives them.
+        // The ones not listed here (Penultimate Top Layers, the Sandwich) fall through to invalidate_all_steps(), as there.
+        if (opt_key == "neotko_support_zone_gesture") {
+            // Descriptive only: the engine never reads it, and the zone's mesh invalidates what it changes.
+            continue;
+        }
+        if (opt_key == "overhang_shadow_inner_wall" || opt_key == "overhang_shadow_speed_ratio" || opt_key == "overhang_shadow_distance") {
+            invalidated |= m_print->invalidate_step(psGCodeExport);
+            continue;
+        }
+        if (opt_key == "neotko_hae_xy_contour" || opt_key == "neotko_hae_xy_hole"
+         || opt_key == "mmu_segmented_region_extra_walls" || opt_key == "mmu_segmented_region_surface_depth"
+         || opt_key == "mmu_segmented_region_extra_walls_per_color" || opt_key == "mmu_segmented_region_surface_depth_per_color") {
+            steps.emplace_back(posSlice);
+            continue;
+        }
+        if (opt_key == "neotko_hae_infill_width") {
+            // Read both by the sparse infill flow and by the gap fill sizing in PerimeterGenerator.
+            steps.emplace_back(posPerimeters);
+            continue;
+        }
+        if (opt_key == "neotko_hae_outer_wall_width" || opt_key == "neotko_hae_inner_wall_width") {
+            steps.emplace_back(posPerimeters);
+            steps.emplace_back(posPrepareInfill);
+            continue;
+        }
+        if (opt_key == "neotko_hae_fuzzy_thickness" || opt_key == "neotko_hae_fuzzy_point_distance"
+         || opt_key == "neotko_hae_fuzzy_scale" || opt_key == "neotko_hae_fuzzy_octaves" || opt_key == "neotko_hae_fuzzy_persistence") {
+            steps.emplace_back(posPerimeters);
+            steps.emplace_back(posSupportMaterial);
+            continue;
+        }
+        if (opt_key == "bridge_expansion_extra") {
+            // Read by LayerRegion::process_external_surfaces(), which runs in posPrepareInfill.
+            steps.emplace_back(posPrepareInfill);
+            continue;
+        }
+        if (opt_key == "penultimate_solid_infill_pattern") {
+            steps.emplace_back(posInfill);
+            continue;
+        }
+        if (opt_key == "support_cross_object_avoidance"
+         || opt_key == "neotko_zone_lean_deg" || opt_key == "neotko_zone_roof_only" || opt_key == "neotko_zone_solid"
+         || opt_key == "neotko_zone_land_only" || opt_key == "neotko_support_cut") {
+            steps.emplace_back(posSupportMaterial);
+            continue;
+        }
         if (   opt_key == "brim_width"
             || opt_key == "leading_brim_length"
             || opt_key == "extra_brim_width"

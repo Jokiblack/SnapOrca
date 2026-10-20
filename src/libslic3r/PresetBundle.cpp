@@ -364,6 +364,9 @@ static std::vector<std::string> s_project_options {
     "dithering_local_z_infill",
     "dithering_local_z_direct_multicolor",
     "dithering_step_painted_zones_only",
+    // Ported from OrcaFS-NeotkoCM: the Expert G-code Reprocessor rules travel with the project.
+    // Not added to s_project_options_published: a published project must not rewrite the receiver's G-code.
+    "expert_gcode_reprocessor_rules",
 };
 
 // Project options applied when loading a "published" 3MF project: s_project_options minus the
@@ -707,11 +710,11 @@ std::string PresetBundle::find_preset_vendor(const std::string &preset_name, Pre
 }
 
 PresetBundle::PresetBundle()
-    : prints(Preset::TYPE_PRINT, Preset::print_options(), static_cast<const PrintRegionConfig &>(FullPrintConfig::defaults()))
-    , filaments(Preset::TYPE_FILAMENT, Preset::filament_options(), static_cast<const PrintRegionConfig &>(FullPrintConfig::defaults()), ORCA_DEFAULT_FILAMENT_PLACEHOLDER)
+    : prints(Preset::TYPE_PRINT, Preset::print_options(), static_cast<const PrintRegionConfigBase &>(FullPrintConfig::defaults()))
+    , filaments(Preset::TYPE_FILAMENT, Preset::filament_options(), static_cast<const PrintRegionConfigBase &>(FullPrintConfig::defaults()), ORCA_DEFAULT_FILAMENT_PLACEHOLDER)
     , sla_materials(Preset::TYPE_SLA_MATERIAL, Preset::sla_material_options(), static_cast<const SLAMaterialConfig &>(SLAFullPrintConfig::defaults()))
     , sla_prints(Preset::TYPE_SLA_PRINT, Preset::sla_print_options(), static_cast<const SLAPrintObjectConfig &>(SLAFullPrintConfig::defaults()))
-    , printers(Preset::TYPE_PRINTER, Preset::printer_options(), static_cast<const PrintRegionConfig &>(FullPrintConfig::defaults()), "Default Printer")
+    , printers(Preset::TYPE_PRINTER, Preset::printer_options(), static_cast<const PrintRegionConfigBase &>(FullPrintConfig::defaults()), "Default Printer")
     , physical_printers(PhysicalPrinter::printer_options())
 {
     // The following keys are handled by the UI, they do not have a counterpart in any StaticPrintConfig derived classes,

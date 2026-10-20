@@ -433,12 +433,15 @@ set(lisbslic3r_sources
     PublishSettings.cpp
     PublishSettings.hpp
     PrintApply.cpp
+    NeoDebug.cpp
+    NeoDebug.hpp
     PrintBase.cpp
     PrintBase.hpp
     MaterialType.cpp
     MaterialType.hpp
     PrintConfig.cpp
     PrintConfig.hpp
+    PrintConfigNeotko.cpp
     Print.cpp
     Print.hpp
     PrintObject.cpp

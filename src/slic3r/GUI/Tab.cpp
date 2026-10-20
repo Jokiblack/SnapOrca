@@ -5273,7 +5273,7 @@ static void sync_plate_bed_type_to_global(DynamicPrintConfig& config)
 TabPrintModel::TabPrintModel(ParamsPanel* parent, std::vector<std::string> const & keys)
     : TabPrint(parent, Preset::TYPE_MODEL)
     , m_keys(intersect(Preset::print_options(), keys))
-    , m_prints(Preset::TYPE_MODEL, Preset::print_options(), static_cast<const PrintRegionConfig&>(FullPrintConfig::defaults()))
+    , m_prints(Preset::TYPE_MODEL, Preset::print_options(), static_cast<const PrintRegionConfigBase&>(FullPrintConfig::defaults()))
 {
     m_opt_status_value = osInitValue | osSystemValue;
     m_is_default_preset = true;

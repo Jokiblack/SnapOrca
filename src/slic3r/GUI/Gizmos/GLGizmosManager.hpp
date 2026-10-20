@@ -102,6 +102,18 @@ public:
         Assembly,
         Simplify,
         BrimEars,
+        // Gizmos ported from OrcaFS-NeotkoCM. Until their batch lands each one is a GLGizmoNeotkoStub,
+        // which is never shown; once ported, they only show with the "Experimental features (Neotko)" preference.
+        ColorStitchPainter,
+
+        AlignStack,
+
+        PrecisionALH,
+
+        HeightAdaptiveEffects,
+
+        SupportZones,
+
         //SlaSupports,
         // BBS
         //FaceRecognition,

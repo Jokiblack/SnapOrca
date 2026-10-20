@@ -381,6 +381,11 @@ void AppConfig::set_defaults()
     if (get("zoom_to_mouse").empty())
         set_bool("zoom_to_mouse", false);
 
+    // Gizmos and panels of the features ported from OrcaFS-NeotkoCM. Off by default. It only shows
+    // their interface: slicing never reads it, each feature acts on its own options.
+    if (get("neotko_features").empty())
+        set_bool("neotko_features", false);
+
 #ifdef SLIC3R_CAD
     // Experimental parametric Design tab. Off by default: the tab is not created at all
     // until this is turned on, so nothing it builds reaches an unsuspecting user.

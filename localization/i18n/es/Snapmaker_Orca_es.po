@@ -39158,6 +39158,994 @@ msgstr ""
 "¿Sabía que, al imprimir materiales propensos a deformarse como el ABS, aumentar adecuadamente la temperatura de la cama puede reducir la probabilidad de deformación?"
 
 # AI Translated
+msgid "Bridging infill extra expansion"
+msgstr "Expansión extra del relleno de puente"
+
+# AI Translated
+msgid ""
+"Extra distance the bridging infill grows into the surrounding solid area of the same part, on top of the automatic expansion. The bridge then starts over solid material, so it is already anchored when it begins to span. A large value lets the bridge take over the whole surrounding region.\n"
+"0 = automatic expansion only."
+msgstr ""
+"Distancia adicional que el relleno de puente se extiende sobre la zona sólida que lo rodea en la misma pieza, además de la expansión automática. Así el puente empieza sobre material sólido y ya está anclado cuando empieza a cruzar el hueco. Con un valor grande el puente ocupa toda la zona que lo rodea.\n"
+"0 = solo la expansión automática."
+
+# AI Translated
+msgid "Slow down inner walls next to overhangs"
+msgstr "Reducir velocidad de perímetros internos junto a voladizos"
+
+# AI Translated
+msgid "Give the inner wall a share of the slowdown its overhanging neighbour gets, so the bead that holds up the overhanging outer wall is printed as carefully as the overhang itself. Requires \"Slow down for overhangs\" and has no effect when the outer wall is printed first."
+msgstr "Aplica al perímetro interno parte de la reducción de velocidad que recibe su vecino en voladizo, para que el cordón que sostiene el perímetro externo en voladizo se imprima con el mismo cuidado. Requiere \"Disminuir velocidad en voladizos\" y no tiene efecto si el perímetro externo se imprime primero."
+
+# AI Translated
+msgid "Inner wall slowdown"
+msgstr "Reducción en el perímetro interno"
+
+# AI Translated
+msgid "How much of the neighbouring wall's overhang treatment the inner wall borrows. 100 grades the inner wall as if it were the overhanging wall itself, overhang fan included; 0 disables the effect."
+msgstr "Cuánto del tratamiento de voladizo del perímetro vecino toma el perímetro interno. 100 lo trata como si fuera el propio perímetro en voladizo, incluido el ventilador de voladizos; 0 desactiva el efecto."
+
+# AI Translated
+msgid "Inner wall reach"
+msgstr "Alcance en el perímetro interno"
+
+# AI Translated
+msgid "How far outwards to look for the overhanging wall, as a percentage of the line width. 100 is the wall right next to this one; larger values reach deeper into the walls."
+msgstr "Hasta dónde se busca hacia fuera el perímetro en voladizo, como porcentaje del ancho de línea. 100 es el perímetro inmediatamente contiguo; valores mayores llegan más adentro."
+
+# AI Translated
+msgid "Expert G-code Reprocessor rules"
+msgstr "Reglas del reprocesador experto de G-code"
+
+# AI Translated
+msgid "Internal JSON list of the Expert G-code Reprocessor rules. Edited from its panel in the preview; not meant to be edited directly."
+msgstr "Lista JSON interna con las reglas del reprocesador experto de G-code. Se edita desde su panel en la vista previa; no está pensada para editarse a mano."
+
+# AI Translated
+msgid "PerObject Support"
+msgstr "Soporte por objeto"
+
+# AI Translated
+msgid "Support avoids the other objects on the plate, keeping the support/object XY distance from them, instead of being generated through them. Useful when separate objects touch or overlap. Only works when all objects are printed at once (by layer)."
+msgstr "El soporte evita los demás objetos de la placa y mantiene con ellos la distancia XY entre soporte y objeto, en lugar de generarse a través de ellos. Útil cuando objetos separados se tocan o se solapan. Solo funciona al imprimir todos los objetos a la vez (por capas)."
+
+# AI Translated
+msgid "Height adaptive XY contour compensation curve"
+msgstr "Curva de compensación XY de contorno según la altura"
+
+# AI Translated
+msgid "Height adaptive XY hole compensation curve"
+msgstr "Curva de compensación XY de agujeros según la altura"
+
+# AI Translated
+msgid "Height adaptive sparse infill line width curve"
+msgstr "Curva de ancho de línea del relleno poco denso según la altura"
+
+# AI Translated
+msgid "Height adaptive outer wall line width curve"
+msgstr "Curva de ancho de línea del perímetro externo según la altura"
+
+# AI Translated
+msgid "Height adaptive inner wall line width curve"
+msgstr "Curva de ancho de línea del perímetro interno según la altura"
+
+# AI Translated
+msgid "Height adaptive fuzzy skin thickness curve"
+msgstr "Curva de grosor de la piel rugosa según la altura"
+
+# AI Translated
+msgid "Height adaptive fuzzy skin point distance curve"
+msgstr "Curva de distancia entre puntos de la piel rugosa según la altura"
+
+# AI Translated
+msgid "Height adaptive fuzzy skin noise scale curve"
+msgstr "Curva de escala del ruido de la piel rugosa según la altura"
+
+# AI Translated
+msgid "Height adaptive fuzzy skin noise octaves curve"
+msgstr "Curva de octavas del ruido de la piel rugosa según la altura"
+
+# AI Translated
+msgid "Height adaptive fuzzy skin noise persistence curve"
+msgstr "Curva de persistencia del ruido de la piel rugosa según la altura"
+
+# AI Translated
+msgid "Extra walls on segmented regions"
+msgstr "Perímetros extra en regiones segmentadas"
+
+# AI Translated
+msgid "Adds this many walls to the painted (multi-material) regions only, on top of the object's wall count. Keeps a small painted mark solid without thickening every wall of the object. 0 disables it."
+msgstr "Añade este número de perímetros solo a las regiones pintadas (multimaterial), además de los perímetros del objeto. Mantiene maciza una marca pintada pequeña sin engrosar todos los perímetros del objeto. 0 lo desactiva."
+
+# AI Translated
+msgid "Surface depth of painted regions"
+msgstr "Profundidad de superficie de las regiones pintadas"
+
+# AI Translated
+msgid "Extends a painted top or bottom surface this many layers into the object as solid infill of the painted color, following the painted outline. 0 disables it."
+msgstr "Prolonga una superficie superior o inferior pintada este número de capas hacia el interior del objeto, como relleno sólido del color pintado y siguiendo el contorno pintado. 0 lo desactiva."
+
+# AI Translated
+msgid "Extra walls per painted color"
+msgstr "Perímetros extra por color pintado"
+
+# AI Translated
+msgid "Per-color override of \"Extra walls on segmented regions\", indexed by paint color slot. 0 uses the global value."
+msgstr "Valor por color de \"Perímetros extra en regiones segmentadas\", indexado por la ranura del color pintado. 0 usa el valor global."
+
+# AI Translated
+msgid "Surface depth per painted color"
+msgstr "Profundidad de superficie por color pintado"
+
+# AI Translated
+msgid "Per-color override of \"Surface depth of painted regions\", indexed by paint color slot. 0 uses the global value."
+msgstr "Valor por color de \"Profundidad de superficie de las regiones pintadas\", indexado por la ranura del color pintado. 0 usa el valor global."
+
+# AI Translated
+msgid "Support zone gesture"
+msgstr "Gesto de la zona de soporte"
+
+# AI Translated
+msgid "Support zone lean angle"
+msgstr "Inclinación de la zona de soporte"
+
+# AI Translated
+msgid "Support zone: only under unsupported surface"
+msgstr "Zona de soporte: solo bajo superficie sin apoyo"
+
+# AI Translated
+msgid "Support zone: print the whole block"
+msgstr "Zona de soporte: imprimir el bloque entero"
+
+# AI Translated
+msgid "Support zone: only land at the end"
+msgstr "Zona de soporte: apoyar solo al final"
+
+# AI Translated
+msgid "Support cut"
+msgstr "Corte de soporte"
+
+# AI Translated
+msgid "Penultimate top layers"
+msgstr "Capas penúltimas superiores"
+
+# AI Translated
+msgid "Number of solid infill layers right below the top surface layers that get their own pattern, density and speed. 0 disables them."
+msgstr "Número de capas de relleno sólido justo debajo de las capas de superficie superior que usan su propio patrón, densidad y velocidad. 0 las desactiva."
+
+# AI Translated
+msgid "Penultimate solid infill density"
+msgstr "Densidad del relleno sólido penúltimo"
+
+# AI Translated
+msgid "Density of the penultimate solid infill layers, for a smoother transition between sparse infill and the top surface."
+msgstr "Densidad de las capas de relleno sólido penúltimas, para una transición más suave entre el relleno poco denso y la superficie superior."
+
+# AI Translated
+msgid "Penultimate solid infill pattern"
+msgstr "Patrón del relleno sólido penúltimo"
+
+# AI Translated
+msgid "Line pattern of the penultimate solid infill layers. Keep Monotonic line when using PathBlend or ColorStitch on them."
+msgstr "Patrón de líneas de las capas de relleno sólido penúltimas. Deje Líneas monotónicas si usa PathBlend o ColorStitch en ellas."
+
+# AI Translated
+msgid "Penultimate infill speed"
+msgstr "Velocidad del relleno penúltimo"
+
+# AI Translated
+msgid "Speed of the penultimate solid infill layers. 0 uses the top surface speed."
+msgstr "Velocidad de las capas de relleno sólido penúltimas. 0 usa la velocidad de la superficie superior."
+
+# AI Translated
+msgid "Sandwich purge"
+msgstr "Purga del sándwich"
+
+# AI Translated
+msgid "Volume purged on the wipe tower before each tool change between Sandwich sublayers (MultiPass, ColorStitch and PathBlend). 0 disables it. Only used by the Sandwich."
+msgstr "Volumen que se purga en la torre de purga antes de cada cambio de herramienta entre subcapas del sándwich (MultiPass, ColorStitch y PathBlend). 0 lo desactiva. Solo lo usa el sándwich."
+
+# AI Translated
+msgid "Enable Surface ColorStitch"
+msgstr "Activar ColorStitch de superficie"
+
+# AI Translated
+msgid "Distributes the lines of the top and/or penultimate surfaces across several tools to create a mixed-color effect."
+msgstr "Reparte las líneas de las superficies superior y/o penúltima entre varias herramientas para crear un efecto de mezcla de colores."
+
+# AI Translated
+msgid "Surface effects"
+msgstr "Efectos de superficie"
+
+# AI Translated
+msgid ""
+"0 = top and penultimate surfaces\n"
+"1 = top surface only\n"
+"2 = penultimate surfaces only"
+msgstr ""
+"0 = superficies superior y penúltima\n"
+"1 = solo superficie superior\n"
+"2 = solo superficies penúltimas"
+
+# AI Translated
+msgid "First tool (A)"
+msgstr "Primera herramienta (A)"
+
+# AI Translated
+msgid "Extruder index, starting at 0 (T0 to T3)."
+msgstr "Índice del extrusor, empezando en 0 (T0 a T3)."
+
+# AI Translated
+msgid "Second tool (B)"
+msgstr "Segunda herramienta (B)"
+
+# AI Translated
+msgid "Third tool (C, -1 = off)"
+msgstr "Tercera herramienta (C, -1 = desactivada)"
+
+# AI Translated
+msgid "Fourth tool (D, -1 = off)"
+msgstr "Cuarta herramienta (D, -1 = desactivada)"
+
+# AI Translated
+msgid "Minimum line length (ColorStitch)"
+msgstr "Longitud mínima de línea (ColorStitch)"
+
+# AI Translated
+msgid "Lines shorter than this are printed with the region's own extruder instead of being split by tool. 0 colors every line."
+msgstr "Las líneas más cortas que este valor se imprimen con el extrusor de la región en lugar de repartirse por herramienta. 0 colorea todas las líneas."
+
+# AI Translated
+msgid "Top surface tool sequence"
+msgstr "Secuencia de herramientas de la superficie superior"
+
+# AI Translated
+msgid "Tool sequence of the top surface lines, digits 1 to 4 for T0 to T3. \"12\" alternates T0 and T1; \"1221\" prints T0, T1, T1, T0 and repeats."
+msgstr "Secuencia de herramientas de las líneas de la superficie superior, con los dígitos 1 a 4 para T0 a T3. \"12\" alterna T0 y T1; \"1221\" imprime T0, T1, T1, T0 y repite."
+
+# AI Translated
+msgid "Penultimate surface tool sequence"
+msgstr "Secuencia de herramientas de la superficie penúltima"
+
+# AI Translated
+msgid "Tool sequence of the penultimate surface lines, in the same format as the top surface one."
+msgstr "Secuencia de herramientas de las líneas de la superficie penúltima, con el mismo formato que la de la superficie superior."
+
+# AI Translated
+msgid "Pattern mode"
+msgstr "Modo del patrón"
+
+# AI Translated
+msgid ""
+"How the tool of each line is chosen.\n"
+"0 = tool sequence\n"
+"1 = two-color dithered gradient\n"
+"2 = three-color dithered gradient\n"
+"3 = bands counted in lines\n"
+"4 = bands measured in millimeters"
+msgstr ""
+"Cómo se elige la herramienta de cada línea.\n"
+"0 = secuencia de herramientas\n"
+"1 = degradado difuminado de dos colores\n"
+"2 = degradado difuminado de tres colores\n"
+"3 = bandas contadas en líneas\n"
+"4 = bandas medidas en milímetros"
+
+# AI Translated
+msgid "Tool A share"
+msgstr "Proporción de la herramienta A"
+
+# AI Translated
+msgid "Share of the lines given to tool A in the gradient modes. Tool B, or tools B and C, get the rest."
+msgstr "Proporción de líneas asignadas a la herramienta A en los modos de degradado. La herramienta B, o las herramientas B y C, reciben el resto."
+
+# AI Translated
+msgid "Tool B share (three colors)"
+msgstr "Proporción de la herramienta B (tres colores)"
+
+# AI Translated
+msgid "Share of the lines given to tool B in the three-color gradient. Tool C gets what tools A and B leave."
+msgstr "Proporción de líneas asignadas a la herramienta B en el degradado de tres colores. La herramienta C recibe lo que dejan A y B."
+
+# AI Translated
+msgid "Gradient easing"
+msgstr "Curva del degradado"
+
+# AI Translated
+msgid ""
+"Shape of the gradient across the surface.\n"
+"0 = linear\n"
+"1 = ease in\n"
+"2 = ease out\n"
+"3 = ease in and out\n"
+"4 = gamma\n"
+"5 = hard bands"
+msgstr ""
+"Forma del degradado a lo largo de la superficie.\n"
+"0 = lineal\n"
+"1 = aceleración al inicio\n"
+"2 = aceleración al final\n"
+"3 = suave en ambos extremos\n"
+"4 = gamma\n"
+"5 = bandas sin difuminar"
+
+# AI Translated
+msgid "Gradient gamma"
+msgstr "Gamma del degradado"
+
+# AI Translated
+msgid "Gamma exponent of the gradient when the easing is Gamma. 1 is linear."
+msgstr "Exponente gamma del degradado cuando la curva es Gamma. 1 es lineal."
+
+# AI Translated
+msgid "Minimum surface lines"
+msgstr "Líneas mínimas de la superficie"
+
+# AI Translated
+msgid "Surfaces with fewer lines than this are printed with tool A only instead of a gradient. 0 never falls back."
+msgstr "Las superficies con menos líneas que este valor se imprimen solo con la herramienta A en lugar de con un degradado. 0 nunca recurre a ello."
+
+# AI Translated
+msgid "Color overlap"
+msgstr "Solapamiento de colores"
+
+# AI Translated
+msgid "How much each color spreads into its neighbour's zone in the gradient modes. 0 gives hard zones, 1 a strong overlap."
+msgstr "Cuánto se extiende cada color en la zona de su vecino en los modos de degradado. 0 da zonas nítidas y 1 un solapamiento fuerte."
+
+# AI Translated
+msgid "Invert gradient direction"
+msgstr "Invertir el sentido del degradado"
+
+# AI Translated
+msgid "Reverses the generated gradient or band sequence. No effect with a tool sequence."
+msgstr "Invierte la secuencia de degradado o de bandas generada. No tiene efecto con una secuencia de herramientas."
+
+# AI Translated
+msgid "Gradient repetitions"
+msgstr "Repeticiones del degradado"
+
+# AI Translated
+msgid "How many times the gradient repeats across the surface."
+msgstr "Cuántas veces se repite el degradado a lo largo de la superficie."
+
+# AI Translated
+msgid "Pattern mode (penultimate)"
+msgstr "Modo del patrón (penúltima)"
+
+# AI Translated
+msgid "Tool A share (penultimate)"
+msgstr "Proporción de la herramienta A (penúltima)"
+
+# AI Translated
+msgid "Tool B share (penultimate)"
+msgstr "Proporción de la herramienta B (penúltima)"
+
+# AI Translated
+msgid "Gradient easing (penultimate)"
+msgstr "Curva del degradado (penúltima)"
+
+# AI Translated
+msgid "Gradient gamma (penultimate)"
+msgstr "Gamma del degradado (penúltima)"
+
+# AI Translated
+msgid "Minimum surface lines (penultimate)"
+msgstr "Líneas mínimas de la superficie (penúltima)"
+
+# AI Translated
+msgid "Color overlap (penultimate)"
+msgstr "Solapamiento de colores (penúltima)"
+
+# AI Translated
+msgid "Invert gradient direction (penultimate)"
+msgstr "Invertir el sentido del degradado (penúltima)"
+
+# AI Translated
+msgid "Gradient repetitions (penultimate)"
+msgstr "Repeticiones del degradado (penúltima)"
+
+# AI Translated
+msgid "Band A lines (penultimate)"
+msgstr "Líneas de la banda A (penúltima)"
+
+# AI Translated
+msgid "Band B lines (penultimate)"
+msgstr "Líneas de la banda B (penúltima)"
+
+# AI Translated
+msgid "Band C lines (penultimate)"
+msgstr "Líneas de la banda C (penúltima)"
+
+# AI Translated
+msgid "Band D lines (penultimate)"
+msgstr "Líneas de la banda D (penúltima)"
+
+# AI Translated
+msgid "First tool (A, penultimate)"
+msgstr "Primera herramienta (A, penúltima)"
+
+# AI Translated
+msgid "Second tool (B, penultimate)"
+msgstr "Segunda herramienta (B, penúltima)"
+
+# AI Translated
+msgid "Third tool (C, penultimate)"
+msgstr "Tercera herramienta (C, penúltima)"
+
+# AI Translated
+msgid "Fourth tool (D, penultimate)"
+msgstr "Cuarta herramienta (D, penúltima)"
+
+# AI Translated
+msgid "Band A lines"
+msgstr "Líneas de la banda A"
+
+# AI Translated
+msgid "Consecutive lines of each band in the bands mode. 0 skips that tool."
+msgstr "Líneas consecutivas de cada banda en el modo de bandas. 0 omite esa herramienta."
+
+# AI Translated
+msgid "Band B lines"
+msgstr "Líneas de la banda B"
+
+# AI Translated
+msgid "Band C lines"
+msgstr "Líneas de la banda C"
+
+# AI Translated
+msgid "Band D lines"
+msgstr "Líneas de la banda D"
+
+# AI Translated
+msgid "Band A width"
+msgstr "Ancho de la banda A"
+
+# AI Translated
+msgid "Width of each band across the fill lines in the millimeter bands mode, rounded to whole lines. 0 skips that tool."
+msgstr "Ancho de cada banda, medido en perpendicular a las líneas de relleno, en el modo de bandas en milímetros; se redondea a líneas enteras. 0 omite esa herramienta."
+
+# AI Translated
+msgid "Band B width"
+msgstr "Ancho de la banda B"
+
+# AI Translated
+msgid "Band C width"
+msgstr "Ancho de la banda C"
+
+# AI Translated
+msgid "Band D width"
+msgstr "Ancho de la banda D"
+
+# AI Translated
+msgid "Band A width (penultimate)"
+msgstr "Ancho de la banda A (penúltima)"
+
+# AI Translated
+msgid "Band B width (penultimate)"
+msgstr "Ancho de la banda B (penúltima)"
+
+# AI Translated
+msgid "Band C width (penultimate)"
+msgstr "Ancho de la banda C (penúltima)"
+
+# AI Translated
+msgid "Band D width (penultimate)"
+msgstr "Ancho de la banda D (penúltima)"
+
+# AI Translated
+msgid "Gradient scale"
+msgstr "Escala del degradado"
+
+# AI Translated
+msgid ""
+"How the gradient is laid out.\n"
+"-1 = by line index\n"
+"0 = across the whole surface, by the real position of each line\n"
+"More than 0 = repeated every this many millimeters"
+msgstr ""
+"Cómo se distribuye el degradado.\n"
+"-1 = por índice de línea\n"
+"0 = a lo largo de toda la superficie, según la posición real de cada línea\n"
+"Más de 0 = repetido cada este número de milímetros"
+
+# AI Translated
+msgid "Gradient scale (penultimate)"
+msgstr "Escala del degradado (penúltima)"
+
+# AI Translated
+msgid "Top surface zone"
+msgstr "Zona de superficie superior"
+
+# AI Translated
+msgid ""
+"Which top surfaces get the effect.\n"
+"0 = all top surfaces\n"
+"1 = only the topmost one"
+msgstr ""
+"Qué superficies superiores reciben el efecto.\n"
+"0 = todas las superficies superiores\n"
+"1 = solo la más alta"
+
+# AI Translated
+msgid "Penultimate surface zone"
+msgstr "Zona de superficie penúltima"
+
+# AI Translated
+msgid ""
+"Which penultimate surfaces get the effect.\n"
+"0 = all penultimate surfaces\n"
+"1 = only the one right below the topmost top surface"
+msgstr ""
+"Qué superficies penúltimas reciben el efecto.\n"
+"0 = todas las superficies penúltimas\n"
+"1 = solo la que está justo debajo de la superficie superior más alta"
+
+# AI Translated
+msgid "Filament filter"
+msgstr "Filtro de filamento"
+
+# AI Translated
+msgid "Only apply the effect to regions whose solid infill uses this filament, starting at 1. 0 applies it to every filament."
+msgstr "Aplica el efecto solo a las regiones cuyo relleno sólido usa este filamento, empezando en 1. 0 lo aplica a todos los filamentos."
+
+# AI Translated
+msgid "Use mixed filaments"
+msgstr "Usar filamentos mezclados"
+
+# AI Translated
+msgid "Lets digits 5 to 9 of the tool sequence refer to mixed (virtual) filaments."
+msgstr "Permite que los dígitos 5 a 9 de la secuencia de herramientas se refieran a filamentos mezclados (virtuales)."
+
+# AI Translated
+msgid "Infill angle override"
+msgstr "Ángulo de relleno forzado"
+
+# AI Translated
+msgid "Fill line direction on the layers where ColorStitch is active. -1 follows the usual infill rotation, which turns 90 degrees every other layer."
+msgstr "Dirección de las líneas de relleno en las capas con ColorStitch. -1 sigue la rotación habitual del relleno, que gira 90 grados cada dos capas."
+
+# AI Translated
+msgid "Infill angle override (penultimate)"
+msgstr "Ángulo de relleno forzado (penúltima)"
+
+# AI Translated
+msgid "Line distribution mode"
+msgstr "Modo de reparto de líneas"
+
+# AI Translated
+msgid ""
+"How the slots of the pattern are mapped to the lines.\n"
+"0 = by line index\n"
+"1 = sorted by position\n"
+"2 = by lane\n"
+"3 = by direction, then by lane"
+msgstr ""
+"Cómo se asignan las posiciones del patrón a las líneas.\n"
+"0 = por índice de línea\n"
+"1 = ordenadas por posición\n"
+"2 = por carril\n"
+"3 = por dirección y después por carril"
+
+# AI Translated
+msgid "Monotonic line replan"
+msgstr "Replanificación de líneas monotónicas"
+
+# AI Translated
+msgid "Test option: anchoring of the contour connector at acute corners of the Monotonic line pattern. 0 keeps the usual behavior."
+msgstr "Opción de prueba: anclaje del conector de contorno en las esquinas agudas del patrón de líneas monotónicas. 0 mantiene el comportamiento habitual."
+
+# AI Translated
+msgid "ColorStitch on continuous Monotonic"
+msgstr "ColorStitch en monotónico continuo"
+
+# AI Translated
+msgid "Splits each continuous Monotonic path into runs of one color, so ColorStitch also works on that pattern. Only affects surfaces with ColorStitch."
+msgstr "Divide cada recorrido monotónico continuo en tramos de un solo color, para que ColorStitch funcione también con ese patrón. Solo afecta a las superficies con ColorStitch."
+
+# AI Translated
+msgid "Enable MultiPass blend"
+msgstr "Activar mezcla MultiPass"
+
+# AI Translated
+msgid "Prints the top and/or penultimate surface again in several thinner passes with different tools, blending their colors."
+msgstr "Vuelve a imprimir la superficie superior y/o penúltima en varias pasadas más finas con herramientas distintas, mezclando sus colores."
+
+# AI Translated
+msgid "Apply MultiPass to"
+msgstr "Aplicar MultiPass a"
+
+# AI Translated
+msgid "Number of MultiPass passes"
+msgstr "Número de pasadas MultiPass"
+
+# AI Translated
+msgid "1 to 3 passes. A single pass with a reduced ratio prints one light surface layer."
+msgstr "De 1 a 3 pasadas. Una sola pasada con un ratio reducido imprime una capa de superficie ligera."
+
+# AI Translated
+msgid "Pass 1 tool"
+msgstr "Herramienta de la pasada 1"
+
+# AI Translated
+msgid "Pass 2 tool"
+msgstr "Herramienta de la pasada 2"
+
+# AI Translated
+msgid "Pass 3 tool"
+msgstr "Herramienta de la pasada 3"
+
+# AI Translated
+msgid "Extruder index, starting at 0. -1 turns the pass off."
+msgstr "Índice del extrusor, empezando en 0. -1 desactiva la pasada."
+
+# AI Translated
+msgid "Pass 1 layer ratio"
+msgstr "Ratio de capa de la pasada 1"
+
+# AI Translated
+msgid "Share of the layer height printed by this pass. The ratios of the active passes should add up to about 1."
+msgstr "Parte de la altura de capa que imprime esta pasada. Los ratios de las pasadas activas deberían sumar aproximadamente 1."
+
+# AI Translated
+msgid "Pass 2 layer ratio"
+msgstr "Ratio de capa de la pasada 2"
+
+# AI Translated
+msgid "Pass 3 layer ratio"
+msgstr "Ratio de capa de la pasada 3"
+
+# AI Translated
+msgid "Alternate pass direction"
+msgstr "Alternar el sentido de las pasadas"
+
+# AI Translated
+msgid "Each pass runs in the opposite direction to the previous one."
+msgstr "Cada pasada recorre el sentido contrario a la anterior."
+
+# AI Translated
+msgid "Pass 1 fill angle"
+msgstr "Ángulo de relleno de la pasada 1"
+
+# AI Translated
+msgid "Fill angle of the pass. -1 follows the top surface fill angle."
+msgstr "Ángulo de relleno de la pasada. -1 sigue el ángulo de relleno de la superficie superior."
+
+# AI Translated
+msgid "Pass 2 fill angle"
+msgstr "Ángulo de relleno de la pasada 2"
+
+# AI Translated
+msgid "Pass 3 fill angle"
+msgstr "Ángulo de relleno de la pasada 3"
+
+# AI Translated
+msgid "Pressure advance during MultiPass"
+msgstr "Avance de presión durante MultiPass"
+
+# AI Translated
+msgid ""
+"0 = unchanged\n"
+"1 = use the value below\n"
+"2 = set it to 0"
+msgstr ""
+"0 = sin cambios\n"
+"1 = usar el valor de abajo\n"
+"2 = ponerlo a 0"
+
+# AI Translated
+msgid "Pressure advance value during MultiPass"
+msgstr "Valor del avance de presión durante MultiPass"
+
+# AI Translated
+msgid "Pass 1 fan speed"
+msgstr "Velocidad del ventilador de la pasada 1"
+
+# AI Translated
+msgid "Fan PWM value (0 to 255) during the pass. -1 leaves it unchanged."
+msgstr "Valor PWM del ventilador (0 a 255) durante la pasada. -1 no lo cambia."
+
+# AI Translated
+msgid "Pass 2 fan speed"
+msgstr "Velocidad del ventilador de la pasada 2"
+
+# AI Translated
+msgid "Pass 3 fan speed"
+msgstr "Velocidad del ventilador de la pasada 3"
+
+# AI Translated
+msgid "Pass 1 speed"
+msgstr "Velocidad de la pasada 1"
+
+# AI Translated
+msgid "Speed factor applied with M220 during the pass. 100 leaves it unchanged."
+msgstr "Factor de velocidad aplicado con M220 durante la pasada. 100 no la cambia."
+
+# AI Translated
+msgid "Pass 2 speed"
+msgstr "Velocidad de la pasada 2"
+
+# AI Translated
+msgid "Pass 3 speed"
+msgstr "Velocidad de la pasada 3"
+
+# AI Translated
+msgid "Pass 1 start G-code"
+msgstr "G-code inicial de la pasada 1"
+
+# AI Translated
+msgid "Pass 2 start G-code"
+msgstr "G-code inicial de la pasada 2"
+
+# AI Translated
+msgid "Pass 3 start G-code"
+msgstr "G-code inicial de la pasada 3"
+
+# AI Translated
+msgid "Pass 1 end G-code"
+msgstr "G-code final de la pasada 1"
+
+# AI Translated
+msgid "Pass 2 end G-code"
+msgstr "G-code final de la pasada 2"
+
+# AI Translated
+msgid "Pass 3 end G-code"
+msgstr "G-code final de la pasada 3"
+
+# AI Translated
+msgid "Perimeter override"
+msgstr "Sustitución de perímetros"
+
+# AI Translated
+msgid "Prints the perimeters once per MultiPass sublayer with that sublayer's tool instead of once at the layer height, so the walls blend like the surface."
+msgstr "Imprime los perímetros una vez por cada subcapa MultiPass con la herramienta de esa subcapa en lugar de una vez a la altura de la capa, para que los perímetros se mezclen como la superficie."
+
+# AI Translated
+msgid "Enable penultimate MultiPass"
+msgstr "Activar MultiPass en la penúltima"
+
+# AI Translated
+msgid "MultiPass for the penultimate surfaces with its own settings, independent of the top surface ones."
+msgstr "MultiPass para las superficies penúltimas con sus propios ajustes, independientes de los de la superficie superior."
+
+# AI Translated
+msgid "Number of penultimate passes"
+msgstr "Número de pasadas en la penúltima"
+
+# AI Translated
+msgid "Pass 1 tool (penultimate)"
+msgstr "Herramienta de la pasada 1 (penúltima)"
+
+# AI Translated
+msgid "Pass 2 tool (penultimate)"
+msgstr "Herramienta de la pasada 2 (penúltima)"
+
+# AI Translated
+msgid "Pass 3 tool (penultimate)"
+msgstr "Herramienta de la pasada 3 (penúltima)"
+
+# AI Translated
+msgid "Pass 1 layer ratio (penultimate)"
+msgstr "Ratio de capa de la pasada 1 (penúltima)"
+
+# AI Translated
+msgid "Pass 2 layer ratio (penultimate)"
+msgstr "Ratio de capa de la pasada 2 (penúltima)"
+
+# AI Translated
+msgid "Pass 3 layer ratio (penultimate)"
+msgstr "Ratio de capa de la pasada 3 (penúltima)"
+
+# AI Translated
+msgid "Alternate pass direction (penultimate)"
+msgstr "Alternar el sentido de las pasadas (penúltima)"
+
+# AI Translated
+msgid "Pass 1 fill angle (penultimate)"
+msgstr "Ángulo de relleno de la pasada 1 (penúltima)"
+
+# AI Translated
+msgid "Pass 2 fill angle (penultimate)"
+msgstr "Ángulo de relleno de la pasada 2 (penúltima)"
+
+# AI Translated
+msgid "Pass 3 fill angle (penultimate)"
+msgstr "Ángulo de relleno de la pasada 3 (penúltima)"
+
+# AI Translated
+msgid "Pass 1 fan speed (penultimate)"
+msgstr "Velocidad del ventilador de la pasada 1 (penúltima)"
+
+# AI Translated
+msgid "Pass 2 fan speed (penultimate)"
+msgstr "Velocidad del ventilador de la pasada 2 (penúltima)"
+
+# AI Translated
+msgid "Pass 3 fan speed (penultimate)"
+msgstr "Velocidad del ventilador de la pasada 3 (penúltima)"
+
+# AI Translated
+msgid "Pass 1 speed (penultimate)"
+msgstr "Velocidad de la pasada 1 (penúltima)"
+
+# AI Translated
+msgid "Pass 2 speed (penultimate)"
+msgstr "Velocidad de la pasada 2 (penúltima)"
+
+# AI Translated
+msgid "Pass 3 speed (penultimate)"
+msgstr "Velocidad de la pasada 3 (penúltima)"
+
+# AI Translated
+msgid "Pass 1 start G-code (penultimate)"
+msgstr "G-code inicial de la pasada 1 (penúltima)"
+
+# AI Translated
+msgid "Pass 2 start G-code (penultimate)"
+msgstr "G-code inicial de la pasada 2 (penúltima)"
+
+# AI Translated
+msgid "Pass 3 start G-code (penultimate)"
+msgstr "G-code inicial de la pasada 3 (penúltima)"
+
+# AI Translated
+msgid "Pass 1 end G-code (penultimate)"
+msgstr "G-code final de la pasada 1 (penúltima)"
+
+# AI Translated
+msgid "Pass 2 end G-code (penultimate)"
+msgstr "G-code final de la pasada 2 (penúltima)"
+
+# AI Translated
+msgid "Pass 3 end G-code (penultimate)"
+msgstr "G-code final de la pasada 3 (penúltima)"
+
+# AI Translated
+msgid "Path gradient blend"
+msgstr "Mezcla en degradado por trayectoria"
+
+# AI Translated
+msgid "With MultiPass, varies height and flow along each top surface path so the two passes blend in a gradient."
+msgstr "Con MultiPass, varía la altura y el flujo a lo largo de cada trayectoria de la superficie superior para que las dos pasadas se mezclen en degradado."
+
+# AI Translated
+msgid "Path gradient segments"
+msgstr "Segmentos del degradado por trayectoria"
+
+# AI Translated
+msgid "Reserved, not used."
+msgstr "Reservado, no se usa."
+
+# AI Translated
+msgid "Path gradient minimum flow"
+msgstr "Flujo mínimo del degradado por trayectoria"
+
+# AI Translated
+msgid "Minimum flow at the low end of a PathBlend pass, so that it never extrudes nothing."
+msgstr "Flujo mínimo en el extremo bajo de una pasada PathBlend, para que nunca deje de extruir."
+
+# AI Translated
+msgid "PathBlend passes"
+msgstr "Pasadas de PathBlend"
+
+# AI Translated
+msgid "Number of gradient passes, one per tool."
+msgstr "Número de pasadas del degradado, una por herramienta."
+
+# AI Translated
+msgid "PathBlend tool 1"
+msgstr "Herramienta 1 de PathBlend"
+
+# AI Translated
+msgid "PathBlend tool 2"
+msgstr "Herramienta 2 de PathBlend"
+
+# AI Translated
+msgid "PathBlend tool 3"
+msgstr "Herramienta 3 de PathBlend"
+
+# AI Translated
+msgid "PathBlend tool 4"
+msgstr "Herramienta 4 de PathBlend"
+
+# AI Translated
+msgid "PathBlend layer ratio 1"
+msgstr "Ratio de capa 1 de PathBlend"
+
+# AI Translated
+msgid "Layer height ratio of the pass at its active end."
+msgstr "Ratio de altura de capa de la pasada en su extremo activo."
+
+# AI Translated
+msgid "PathBlend layer ratio 2"
+msgstr "Ratio de capa 2 de PathBlend"
+
+# AI Translated
+msgid "PathBlend layer ratio 3"
+msgstr "Ratio de capa 3 de PathBlend"
+
+# AI Translated
+msgid "PathBlend layer ratio 4"
+msgstr "Ratio de capa 4 de PathBlend"
+
+# AI Translated
+msgid "PathBlend minimum ratio"
+msgstr "Ratio mínimo de PathBlend"
+
+# AI Translated
+msgid "Minimum extrusion ratio of the leading pass, so that it never extrudes nothing."
+msgstr "Ratio de extrusión mínimo de la pasada principal, para que nunca deje de extruir."
+
+# AI Translated
+msgid "PathBlend maximum ratio"
+msgstr "Ratio máximo de PathBlend"
+
+# AI Translated
+msgid "Maximum extrusion ratio of the dominant pass at its peak; the other pass fills the rest."
+msgstr "Ratio de extrusión máximo de la pasada dominante en su punto más alto; la otra pasada completa el resto."
+
+# AI Translated
+msgid "PathBlend gradient curve"
+msgstr "Curva del degradado de PathBlend"
+
+# AI Translated
+msgid ""
+"0 = linear\n"
+"1 = ease in\n"
+"2 = ease out\n"
+"3 = ease in and out"
+msgstr ""
+"0 = lineal\n"
+"1 = aceleración al inicio\n"
+"2 = aceleración al final\n"
+"3 = suave en ambos extremos"
+
+# AI Translated
+msgid "PathBlend surface"
+msgstr "Superficie de PathBlend"
+
+# AI Translated
+msgid "Reverse PathBlend colors"
+msgstr "Invertir los colores de PathBlend"
+
+# AI Translated
+msgid "Swaps which tool dominates each side of the gradient. The height always rises in the same direction."
+msgstr "Intercambia qué herramienta domina cada lado del degradado. La altura siempre sube en el mismo sentido."
+
+# AI Translated
+msgid "PathBlend fill angle"
+msgstr "Ángulo de relleno de PathBlend"
+
+# AI Translated
+msgid "Fill line direction on PathBlend surfaces. It shapes the gradient itself, not only the finish. -1 follows the usual infill rotation."
+msgstr "Dirección de las líneas de relleno en las superficies con PathBlend. Da forma al propio degradado, no solo al acabado. -1 sigue la rotación habitual del relleno."
+
+# AI Translated
+msgid "PathBlend settings (top)"
+msgstr "Ajustes de PathBlend (superior)"
+
+# AI Translated
+msgid "PathBlend settings (penultimate)"
+msgstr "Ajustes de PathBlend (penúltima)"
+
+# AI Translated
+msgid "Sandwich pass stack (top)"
+msgstr "Pila de pasadas del sándwich (superior)"
+
+# AI Translated
+msgid "Sandwich pass stack (penultimate)"
+msgstr "Pila de pasadas del sándwich (penúltima)"
+
+# AI Translated
+msgid "Experimental features (Neotko)"
+msgstr "Funciones experimentales (Neotko)"
+
+# AI Translated
+msgid "Shows the tools and panels of the features ported from OrcaFS-NeotkoCM. They are experimental. This only shows their interface: a project slices the same whether it is on or off."
+msgstr "Muestra las herramientas y paneles de las funciones portadas de OrcaFS-NeotkoCM, que son experimentales. Solo muestra su interfaz: un proyecto se lamina igual con la opción activada o desactivada."
+
+# AI Translated
 #~ msgid "Note: Inconsistent nozzle diameters. Current version does not support mixed diameter printing. Please select one nozzle for this print."
 #~ msgstr "Nota: los diámetros de boquilla no coinciden. La versión actual no admite imprimir con diámetros mezclados. Seleccione una sola boquilla para esta impresión."
 

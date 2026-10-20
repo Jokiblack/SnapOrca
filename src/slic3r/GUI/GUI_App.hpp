@@ -481,6 +481,9 @@ private:
     // always keeps Snapmaker's own connect/send flow (SSWCP, WebPreprintDialog) and Flutter device
     // page, so printer agents never take it over.
     bool            use_printer_agents() const;
+    // "Experimental features (Neotko)" preference: whether the gizmos and panels of the features ported
+    // from OrcaFS-NeotkoCM are shown. Interface only, slicing never depends on it.
+    bool            neotko_features_enabled() const { return this->app_config && this->app_config->get_bool("neotko_features"); }
 #ifdef SLIC3R_CAD
     inline bool     is_enable_cad_feature() { return this->app_config && this->app_config->get_bool("enable_cad_feature"); }
     inline bool     is_auto_close_sketch_loops() { return !this->app_config

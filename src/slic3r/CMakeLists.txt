@@ -209,6 +209,25 @@ set(SLIC3R_GUI_SOURCES
     GUI/Gizmos/GLGizmoAlignment.hpp
     GUI/Gizmos/GLGizmoBrimEars.cpp
     GUI/Gizmos/GLGizmoBrimEars.hpp
+    # Ported from OrcaFS-NeotkoCM; the gizmos start as placeholders that their batch replaces.
+    GUI/Gizmos/GizmoNeotkoStyle.hpp
+    GUI/Gizmos/GLGizmoNeotkoStub.hpp
+
+    GUI/Gizmos/GLGizmoAlignStack.cpp
+    GUI/Gizmos/GLGizmoAlignStack.hpp
+
+    GUI/Gizmos/GLGizmoColorStitchPainter.cpp
+    GUI/Gizmos/GLGizmoColorStitchPainter.hpp
+
+    GUI/Gizmos/GLGizmoHeightAdaptiveEffects.cpp
+    GUI/Gizmos/GLGizmoHeightAdaptiveEffects.hpp
+
+    GUI/Gizmos/GLGizmoPrecisionALH.cpp
+    GUI/Gizmos/GLGizmoPrecisionALH.hpp
+
+    GUI/Gizmos/GLGizmoSupportZones.cpp
+    GUI/Gizmos/GLGizmoSupportZones.hpp
+
     GUI/Gizmos/GLGizmoCut.cpp
     GUI/Gizmos/GLGizmoCut.hpp
     GUI/Gizmos/GLGizmoEmboss.cpp

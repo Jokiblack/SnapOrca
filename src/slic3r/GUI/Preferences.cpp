@@ -1885,6 +1885,12 @@ void PreferencesDialog::create_items()
         SPEED_DIAL_RECENT_COUNT_MAX);
     g_sizer->Add(item_speed_dial_recents);
 
+    auto item_neotko_features = create_item_checkbox(_L("Experimental features (Neotko)"),
+        _L("Shows the tools and panels of the features ported from OrcaFS-NeotkoCM. They are experimental. "
+           "This only shows their interface: a project slices the same whether it is on or off."),
+        "neotko_features", _L("(Requires restart)"));
+    g_sizer->Add(item_neotko_features);
+
 #ifdef SLIC3R_CAD
     auto item_cad_feature      = create_item_checkbox(_L("CAD feature (experimental)"),
         _L("With this option enabled, the Design tab is shown, where models can be built and edited "

@@ -831,7 +831,11 @@ bool Print::invalidate_state_by_config_options(const ConfigOptionResolver & /* n
         "use_3mf"
     };
 
-    static std::unordered_set<std::string> steps_ignore;
+    static std::unordered_set<std::string> steps_ignore = {
+        // Ported from OrcaFS-NeotkoCM: the Expert G-code Reprocessor rules are applied to a copy of the
+        // finished G-code in BackgroundSlicingProcess::finalize_gcode(), never by Print.
+        "expert_gcode_reprocessor_rules"
+    };
 
     std::vector<PrintStep> steps;
     std::vector<PrintObjectStep> osteps;

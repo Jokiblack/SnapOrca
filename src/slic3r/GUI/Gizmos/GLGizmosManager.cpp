@@ -28,6 +28,11 @@
 #include "slic3r/GUI/Gizmos/GLGizmoSVG.hpp"
 #include "slic3r/GUI/Gizmos/GLGizmoMeshBoolean.hpp"
 #include "slic3r/GUI/Gizmos/GLGizmoAssembly.hpp"
+#include "slic3r/GUI/Gizmos/GLGizmoColorStitchPainter.hpp"
+#include "slic3r/GUI/Gizmos/GLGizmoAlignStack.hpp"
+#include "slic3r/GUI/Gizmos/GLGizmoPrecisionALH.hpp"
+#include "slic3r/GUI/Gizmos/GLGizmoHeightAdaptiveEffects.hpp"
+#include "slic3r/GUI/Gizmos/GLGizmoSupportZones.hpp"
 #include <initializer_list>
 #include <wx/timer.h>
 #include <vector>
@@ -215,6 +220,26 @@ void GLGizmosManager::switch_gizmos_icon_filename()
         case (EType::BrimEars):
             gizmo->set_icon_filename(m_is_dark ? "toolbar_brimears_dark.svg" : "toolbar_brimears.svg");
             break;
+        // Gizmos ported from OrcaFS-NeotkoCM.
+        case (EType::ColorStitchPainter):
+            gizmo->set_icon_filename(m_is_dark ? "mmu_colorstitch_dark.svg" : "mmu_colorstitch.svg");
+            break;
+
+        case (EType::AlignStack):
+            gizmo->set_icon_filename(m_is_dark ? "toolbar_align_stack_dark.svg" : "toolbar_align_stack.svg");
+            break;
+
+        case (EType::PrecisionALH):
+            gizmo->set_icon_filename(m_is_dark ? "toolbar_precision_alh_dark.svg" : "toolbar_precision_alh.svg");
+            break;
+
+        case (EType::HeightAdaptiveEffects):
+            gizmo->set_icon_filename(m_is_dark ? "toolbar_height_adaptive_effects_dark.svg" : "toolbar_height_adaptive_effects.svg");
+            break;
+
+        case (EType::SupportZones):
+            gizmo->set_icon_filename(m_is_dark ? "toolbar_support_zones_dark.svg" : "toolbar_support_zones.svg");
+            break;
         }
 
     }
@@ -260,6 +285,16 @@ bool GLGizmosManager::init()
     m_gizmos.emplace_back(new GLGizmoAssembly(m_parent, m_is_dark ? "toolbar_assembly_dark.svg" : "toolbar_assembly.svg", EType::Assembly));
     m_gizmos.emplace_back(new GLGizmoSimplify(m_parent, "reduce_triangles.svg", EType::Simplify));
     m_gizmos.emplace_back(new GLGizmoBrimEars(m_parent, m_is_dark ? "toolbar_brimears_dark.svg" : "toolbar_brimears.svg", EType::BrimEars));
+    // Gizmos ported from OrcaFS-NeotkoCM, one per batch (S4, B3, A6, B1, B4).
+    m_gizmos.emplace_back(new GLGizmoColorStitchPainter(m_parent, m_is_dark ? "mmu_colorstitch_dark.svg" : "mmu_colorstitch.svg", EType::ColorStitchPainter));
+
+    m_gizmos.emplace_back(new GLGizmoAlignStack(m_parent, m_is_dark ? "toolbar_align_stack_dark.svg" : "toolbar_align_stack.svg", EType::AlignStack));
+
+    m_gizmos.emplace_back(new GLGizmoPrecisionALH(m_parent, m_is_dark ? "toolbar_precision_alh_dark.svg" : "toolbar_precision_alh.svg", EType::PrecisionALH));
+
+    m_gizmos.emplace_back(new GLGizmoHeightAdaptiveEffects(m_parent, m_is_dark ? "toolbar_height_adaptive_effects_dark.svg" : "toolbar_height_adaptive_effects.svg", EType::HeightAdaptiveEffects));
+
+    m_gizmos.emplace_back(new GLGizmoSupportZones(m_parent, m_is_dark ? "toolbar_support_zones_dark.svg" : "toolbar_support_zones.svg", EType::SupportZones));
     //m_gizmos.emplace_back(new GLGizmoSlaSupports(m_parent, "sla_supports.svg", sprite_id++));
     //m_gizmos.emplace_back(new GLGizmoFaceDetector(m_parent, "face recognition.svg", sprite_id++));
     //m_gizmos.emplace_back(new GLGizmoHollow(m_parent, "hollow.svg", sprite_id++));

@@ -17,7 +17,7 @@ struct FilamentTestCollection : public PresetCollection
 {
     FilamentTestCollection()
         : PresetCollection(Preset::TYPE_FILAMENT, Preset::filament_options(),
-                           static_cast<const PrintRegionConfig &>(FullPrintConfig::defaults()))
+                           static_cast<const PrintRegionConfigBase &>(FullPrintConfig::defaults()))
     {}
 };
 

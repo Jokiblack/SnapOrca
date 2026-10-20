@@ -230,6 +230,7 @@ src/libslic3r/BeltPurge.cpp
 src/libslic3r/AppConfig.cpp
 src/libslic3r/PrintBase.cpp
 src/libslic3r/PrintConfig.cpp
+src/libslic3r/PrintConfigNeotko.cpp
 src/libslic3r/Zipper.cpp
 src/libslic3r/PrintObject.cpp
 src/libslic3r/PrintObjectSlice.cpp
@@ -338,6 +339,11 @@ src/slic3r/GUI/GUI_Utils.cpp
 src/slic3r/GUI/Gizmos/GLGizmoEmboss.hpp
 src/slic3r/GUI/Gizmos/GLGizmoTextureDisplacement.cpp
 src/slic3r/GUI/Gizmos/GLGizmoTextureDisplacement.hpp
+src/slic3r/GUI/Gizmos/GLGizmoAlignStack.cpp
+src/slic3r/GUI/Gizmos/GLGizmoColorStitchPainter.cpp
+src/slic3r/GUI/Gizmos/GLGizmoHeightAdaptiveEffects.cpp
+src/slic3r/GUI/Gizmos/GLGizmoPrecisionALH.cpp
+src/slic3r/GUI/Gizmos/GLGizmoSupportZones.cpp
 src/slic3r/GUI/Gizmos/GizmoObjectManipulation.hpp
 src/slic3r/GUI/Jobs/SLAImportDialog.hpp
 src/slic3r/GUI/Jobs/TextureDisplacementBakeJob.cpp
