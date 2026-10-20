@@ -66,7 +66,8 @@ struct SeamCandidate {
                 float local_ccw_angle,
                 EnforcedBlockedSeamPoint type) :
                                                  position(pos), perimeter(perimeter), visibility(0.0f), overhang(0.0f), embedded_distance(0.0f), local_ccw_angle(
-                                                                                                                                                     local_ccw_angle), type(type), central_enforcer(false) {
+                                                                                                                                                     local_ccw_angle), type(type), central_enforcer(false),
+                                                 overhang_degree(0.0f), extra_overhang_point(0.0f) {
   }
   const Vec3f position;
   // pointer to Perimeter loop of this point. It is shared across all points of the loop
@@ -80,6 +81,11 @@ struct SeamCandidate {
   float local_ccw_angle;
   EnforcedBlockedSeamPoint type;
   bool central_enforcer; //marks this candidate as central point of enforced segment on the perimeter - important for alignment
+  // Bambu (seam_placement_away_from_overhangs): how far the point hangs over the layer below, in extrusion widths.
+  float overhang_degree;
+  // Bambu (seam_placement_away_from_overhangs): extra penalty of points along the perimeter close to an overhang.
+  // Stays 0 when the option is disabled.
+  float extra_overhang_point;
 };
 
 struct SeamCandidateCoordinateFunctor {
@@ -136,6 +142,12 @@ public:
 
   // For long polygon sides, if they are close to the custom seam drawings, they are oversampled with this step size
   static constexpr float enforcer_oversampling_distance = 0.2f;
+  // Bambu (seam_placement_away_from_overhangs): long polygon sides are oversampled near both ends and in the middle,
+  // so that a seam pushed away from an overhang at a corner still finds candidates on the side.
+  static constexpr float end_point_oversampling_threshold = 4.0f;
+  static constexpr float end_point_oversampling_distance  = 1.5f;
+  // Bambu (seam_placement_away_from_overhangs): length along the perimeter, in mm, the overhang penalty spreads to.
+  static constexpr float overhang_penalty_spread_distance = 1.0f;
 
   // When searching for seam clusters for alignment:
   // following value describes, how much worse score can point have and still be picked into seam cluster instead of original seam point on the same layer

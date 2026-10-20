@@ -2437,6 +2437,8 @@ void TreeSupport::draw_circles()
     // so behavior there is unchanged.
     BeltFloorContext belt_ctx;
     const bool belt_floor_active = belt_ctx.init(m_slicing_params, *m_print_config);
+    // Bambu "Z overrides X/Y": roofs keep the top Z distance to the model instead of the XY distance.
+    const bool z_overrides = m_object_config->top_z_overrides_xy_distance.value;
 
     if (m_object->support_layer_count() <= m_raft_layers)
         return;
@@ -2570,8 +2572,9 @@ void TreeSupport::draw_circles()
                             // Replace the circle area with the expanded overhang (aligns with Bambu)
                             // This produces a single coherent polygon instead of circle+overhang fragments
                             area = std::move(overhang_expanded);
-                            // Apply collision avoidance to the overhang area
-                            area = diff_clipped(area, get_collision(node.is_sharp_tail && node.distance_to_top <= 0));
+                            // Apply collision avoidance to the overhang area. With "Z overrides X/Y" the
+                            // interface keeps the top Z distance to the model instead of the XY distance.
+                            area = diff_clipped(area, get_collision(z_overrides || (node.is_sharp_tail && node.distance_to_top <= 0)));
                             if (!area.empty()) has_circle_node = true;
                         }
                     }
@@ -2610,15 +2613,16 @@ void TreeSupport::draw_circles()
                 //m_object->print()->set_status(65, (boost::format( _u8L("Support: generate polygons at layer %d")) % layer_nr).str());
 
                 // join roof segments
-                roof_areas     = diff_clipped(closing_ex(roof_areas, line_width_scaled), get_collision(false));
+                roof_areas     = diff_clipped(closing_ex(roof_areas, line_width_scaled), get_collision(z_overrides));
                 roof_areas     = intersection_ex(roof_areas, m_machine_border);
                 roof_areas     = union_ex(roof_areas); // Snapmaker: merge fragments into continuous surfaces (align with Bambu)
-                roof_base_areas = diff_clipped(closing_ex(roof_base_areas, line_width_scaled), get_collision(false));
+                roof_base_areas = diff_clipped(closing_ex(roof_base_areas, line_width_scaled), get_collision(z_overrides));
                 roof_base_areas = intersection_ex(roof_base_areas, m_machine_border);
                 if (!roof_base_areas.empty() && !roof_areas.empty())
                     roof_base_areas = diff_ex(roof_base_areas,
                         ClipperUtils::clip_clipper_polygons_with_subject_bbox(roof_areas, get_extents(roof_base_areas)));
-                roof_1st_layer = diff_clipped(offset2_ex(roof_1st_layer, line_width_scaled, -line_width_scaled), get_collision(false));
+                roof_1st_layer = diff_clipped(offset2_ex(roof_1st_layer, line_width_scaled, -line_width_scaled),
+                                              z_overrides ? offset_ex(get_collision(true), line_width_scaled / 2) : get_collision(false));
                 roof_1st_layer = union_ex(roof_1st_layer); // merge fragments into continuous transition surface
 
                 // roof_areas and roof_1st_layer may intersect.

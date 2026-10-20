@@ -3503,6 +3503,7 @@ void TabPrint::build()
 
         optgroup = page->new_optgroup(L("Seam"), L"param_seam");
         optgroup->append_single_option_line("seam_position", "quality_settings_seam#seam-position");
+        optgroup->append_single_option_line("seam_placement_away_from_overhangs", "quality_settings_seam#seam-position");
         optgroup->append_single_option_line("staggered_inner_seams", "quality_settings_seam#staggered-inner-seams");
         optgroup->append_single_option_line("seam_gap","quality_settings_seam#seam-gap");
         optgroup->append_single_option_line("seam_slope_type", "quality_settings_seam#scarf-joint-seam");
@@ -3874,6 +3875,7 @@ void TabPrint::build()
         //optgroup->append_single_option_line("support_interface_loop_pattern", "support_settings_advanced");
 
         optgroup->append_single_option_line("support_object_xy_distance", "support_settings_advanced#supportobject-xy-distance");
+        optgroup->append_single_option_line("top_z_overrides_xy_distance", "support_settings_advanced#supportobject-xy-distance");
         optgroup->append_single_option_line("support_object_first_layer_gap", "support_settings_advanced#supportobject-first-layer-gap");
         optgroup->append_single_option_line("bridge_no_support", "support_settings_advanced#dont-support-bridges");
         optgroup->append_single_option_line("max_bridge_length", "support_settings_advanced#max-bridge-length");

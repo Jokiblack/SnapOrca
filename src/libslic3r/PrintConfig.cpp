@@ -7132,6 +7132,26 @@ void PrintConfigDef::init_fff_params()
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionEnum<SeamPosition>(spAligned));
 
+    // Snapmaker Orca: options ported from Bambu Studio (seam / tree supports).
+    def = this->add("seam_placement_away_from_overhangs", coBool);
+    def->label = L("Seam placement away from overhangs (experimental)");
+    def->category = L("Quality");
+    def->tooltip = L("Penalize seam candidates close to overhangs, so that the seam is placed away from them. "
+                     "It has no effect with the Random seam position.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("top_z_overrides_xy_distance", coBool);
+    def->label = L("Z overrides X/Y");
+    def->category = L("Support");
+    def->tooltip = L("When the top Z distance clashes with the support/object XY distance, give priority to generating supports "
+                     "beneath overhangs, leaving a gap to the model as large as the top Z distance. When disabled, the gap "
+                     "between supports and the model always follows the support/object XY distance. "
+                     "Only recommended with hybrid tree supports.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+    // Snapmaker Orca: end of the options ported from Bambu Studio.
+
     def = this->add("staggered_inner_seams", coBool);
     def->label = L("Staggered inner seams");
     def->category = L("Quality");
