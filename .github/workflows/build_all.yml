@@ -61,6 +61,8 @@ jobs:
   # build_win.bat ships a test suite. Run it before the Windows builds.
   check_build_script:
     name: Windows build script tests
+    # Don't run scheduled builds on forks:
+    if: ${{ github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer' }}
     runs-on: windows-latest
     steps:
       - name: Checkout
@@ -230,7 +232,8 @@ jobs:
   publish_test_results:
     name: Publish Test Results
     needs: [unit_tests_linux_x86_64, unit_tests_linux_aarch64, unit_tests_windows_x64, unit_tests_windows_arm64, unit_tests_macos_arm64, unit_tests_flatpak_x86_64, unit_tests_flatpak_aarch64]
-    if: ${{ !cancelled() }}
+    # Don't run scheduled builds on forks:
+    if: ${{ !cancelled() && (github.event_name != 'schedule' || github.repository == 'OrcaSlicer/OrcaSlicer') }}
     runs-on: ubuntu-latest
     steps:
       - name: Download Test Results
