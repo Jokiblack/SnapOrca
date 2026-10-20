@@ -6169,7 +6169,7 @@ void Sidebar::update_all_preset_comboboxes(bool reload_printer_view)
 
     auto p_mainframe = wxGetApp().mainframe;
     auto cfg = preset_bundle.printers.get_edited_preset().config;
-    const bool use_printer_agents = wxGetApp().app_config->get_bool("use_printer_agents");
+    const bool use_printer_agents = wxGetApp().use_printer_agents();
     const bool use_native_device_tab = preset_bundle.use_bbl_device_tab() || use_printer_agents;
 
     const auto& appconfig = wxGetApp().app_config;
@@ -6198,7 +6198,7 @@ void Sidebar::update_all_preset_comboboxes(bool reload_printer_view)
     } else {
         //p->btn_connect_printer->Show();
         // ORCA: hide the physical-printer connection button when printer agents are enabled.
-        // Snapmaker: the U1 connects through the button drawn inside the printer combo instead.
+        // Snapmaker: the U1 connects from its Flutter device page instead.
         p->m_printer_connect->Show(!use_printer_agents && !is_snapmaker_u1);
 
         // ORCA: show/hide sync-ams button based on filament sync mode
@@ -6227,10 +6227,10 @@ void Sidebar::update_all_preset_comboboxes(bool reload_printer_view)
                     break;
                 }
             }
+            // Snapmaker: the U1 connects from its Flutter device page; the combo only shows the
+            // "connected" badge, never the generic connection button (PhysicalPrinterDialog).
             if (has_online_machine)
                 p->combo_printer->set_show_machine_connecting_button(true);
-            else
-                p->combo_printer->set_show_connection_button(true);
 
             if (reload_printer_view && !showing_u1_device) {
                 wxString url = wxString::FromUTF8(LOCALHOST_URL + std::to_string(wxGetApp().get_page_http_port()) +
@@ -6454,7 +6454,7 @@ void Sidebar::update_presets(Preset::Type preset_type)
         bool is_dual_extruder = extruder_variants->size() == 2;
         // why: agent mode drives the native device tab, so the sidebar lays out like BBL
         // (no physical-printer connect button).
-        p->layout_printer(preset_bundle.use_bbl_network() || wxGetApp().app_config->get_bool("use_printer_agents"),
+        p->layout_printer(preset_bundle.use_bbl_network() || wxGetApp().use_printer_agents(),
                           isBBL && is_dual_extruder);
 
         // Update nozzle titles from printer config (e.g. "Main Nozzle" / "Auxiliary Nozzle" for N6)
@@ -21977,7 +21977,7 @@ void Plater::priv::on_action_print_plate(SimpleEvent&)
     }
 
     PresetBundle& preset_bundle = *wxGetApp().preset_bundle;
-    if (preset_bundle.use_bbl_network() || wxGetApp().app_config->get_bool("use_printer_agents")) {
+    if (preset_bundle.use_bbl_network() || wxGetApp().use_printer_agents()) {
         open_machine_select_dialog(partplate_list.get_curr_plate_index());
     } else {
         q->send_gcode_legacy(PLATE_CURRENT_IDX, nullptr);
@@ -22030,7 +22030,7 @@ void Plater::priv::on_tab_selection_changing(wxBookCtrlEvent& e)
     sidebar_layout.show = new_name == TAB_ID_PREPARE || new_name == TAB_ID_PREVIEW;
     update_sidebar();
     int old_sel = e.GetOldSelection();
-    const bool use_printer_agents = wxGetApp().app_config->get_bool("use_printer_agents");
+    const bool use_printer_agents = wxGetApp().use_printer_agents();
     const bool use_native_device_tab = wxGetApp().preset_bundle &&
         (wxGetApp().preset_bundle->use_bbl_device_tab() || use_printer_agents);
     if (use_native_device_tab && new_name == TAB_ID_MONITOR && wxGetApp().app_config->get("use_new_connect") != "true") { // Snapmaker: new connect flow has its own device page
@@ -22048,7 +22048,10 @@ void Plater::priv::on_tab_selection_changing(wxBookCtrlEvent& e)
         // Pointer test, not a name lookup: in printer-agents mode this page is TAB_ID_MONITOR_WEB
         // while the native Device tab holds TAB_ID_MONITOR, and in legacy-web mode it holds
         // TAB_ID_MONITOR itself.
-        const bool selecting_web_device_tab = main_frame->m_printer_view_page &&
+        // Snapmaker: only the printer-agents web tab reloads from the preset/discovered machine here. In
+        // legacy-web mode the page may be a Flutter device page (U1 path=2, local path=3), which
+        // load_printer_url() would replace with the raw host web UI; the branch below keeps it in sync.
+        const bool selecting_web_device_tab = main_frame->m_printer_view_page && new_name == TAB_ID_MONITOR_WEB &&
             main_frame->m_tabpanel->GetPage(new_sel) == main_frame->m_printer_view_page;
         if (selecting_web_device_tab) {
             // Use the selected discovered machine when the preset has no host.
@@ -22125,7 +22128,7 @@ void Plater::priv::on_action_print_all(SimpleEvent&)
     }
 
     PresetBundle& preset_bundle = *wxGetApp().preset_bundle;
-    if (preset_bundle.use_bbl_network() || wxGetApp().app_config->get_bool("use_printer_agents")) {
+    if (preset_bundle.use_bbl_network() || wxGetApp().use_printer_agents()) {
         open_machine_select_dialog(PLATE_ALL_IDX);
     } else {
         q->send_gcode_legacy(PLATE_ALL_IDX, nullptr);
@@ -29458,9 +29461,12 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
     // if physical_printer is selected, send gcode for this printer
     // DynamicPrintConfig* physical_printer_config = wxGetApp().preset_bundle->physical_printers.get_selected_printer_config();
 
-    // Orca: the use_3mf printer option makes us send a .gcode.3mf to the printer
-    const auto* use_3mf_opt = wxGetApp().preset_bundle->printers.get_edited_preset().config.option<ConfigOptionBool>("use_3mf");
-    const bool  use_3mf     = use_3mf_opt != nullptr && use_3mf_opt->value;
+    // Orca: the use_3mf printer option makes us send a .gcode.3mf to the printer.
+    // Snapmaker: the U1 / new-connect path below always uploads the plate's plain .gcode, so its name must stay .gcode.
+    const auto& edited_printer_config = wxGetApp().preset_bundle->printers.get_edited_preset().config;
+    const bool  snapmaker_send = wxGetApp().app_config->get("use_new_connect") == "true" || is_snapmaker_u1_printer(edited_printer_config);
+    const auto* use_3mf_opt = edited_printer_config.option<ConfigOptionBool>("use_3mf");
+    const bool  use_3mf     = use_3mf_opt != nullptr && use_3mf_opt->value && !snapmaker_send;
 
     auto prepare_upload_filename_for_dialog = [this, use_3mf](fs::path output_file) {
         output_file = fs::path(Slic3r::fold_utf8_to_ascii(output_file.string()));

@@ -207,6 +207,9 @@ void PrinterWebView::create_browser()
 
 void PrinterWebView::reset_browser()
 {
+    // Snapmaker: drop the SSWCP jobs and subscriptions bound to the old webview before it goes away,
+    // as the destructor does; otherwise their replies run script on a destroyed webview.
+    SSWCP::on_webview_delete(m_browser);
     m_browser->Destroy(); // also removes it from the sizer
     create_browser();
     GetSizer()->Add(m_browser, wxSizerFlags().Expand().Proportion(1));

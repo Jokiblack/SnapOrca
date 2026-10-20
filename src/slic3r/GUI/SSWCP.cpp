@@ -199,9 +199,10 @@ WCP_Logger::~WCP_Logger()
         delete socket;
 }
 
-// Snapmaker kept the setup-wizard profile JSON as a global in WebGuideDialog.cpp; upstream 2.5
-// made it a GuideFrame member, rebuilt from the installed presets each time the wizard opens.
-// Keep a local copy so device discovery still records newly-seen model/nozzle pairs here.
+// Profile JSON shared with WebPresetDialog (declared extern there): device discovery records
+// newly-seen model/nozzle pairs here and SSWCP_MqttAgent_Instance::m_dialog->SaveProfile() installs
+// them. Snapmaker defined it in WebGuideDialog.cpp; upstream 2.5 made the wizard's copy a GuideFrame
+// member, so the setup wizard no longer sees these entries (it rebuilds its own on open).
 json m_ProfileJson;
 std::mutex m_ProfileJson_mutex;
 

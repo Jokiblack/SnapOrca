@@ -477,6 +477,10 @@ private:
     void            CleanUp() override;
     bool            initialized() const { return m_initialized; }
     inline bool     is_enable_multi_machine() { return this->app_config&& this->app_config->get("enable_multi_machine") == "true"; }
+    // The "use_printer_agents" preference as it applies to the selected printer. Snapmaker: the U1
+    // always keeps Snapmaker's own connect/send flow (SSWCP, WebPreprintDialog) and Flutter device
+    // page, so printer agents never take it over.
+    bool            use_printer_agents() const;
 #ifdef SLIC3R_CAD
     inline bool     is_enable_cad_feature() { return this->app_config && this->app_config->get_bool("enable_cad_feature"); }
     inline bool     is_auto_close_sketch_loops() { return !this->app_config

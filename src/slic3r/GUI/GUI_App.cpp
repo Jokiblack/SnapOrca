@@ -4628,6 +4628,16 @@ void GUI_App::set_live_printer_agent(std::shared_ptr<IPrinterAgent> agent)
     sidebar().update_all_preset_comboboxes();
 }
 
+bool GUI_App::use_printer_agents() const
+{
+    if (app_config == nullptr || !app_config->get_bool("use_printer_agents"))
+        return false;
+    if (preset_bundle == nullptr)
+        return true;
+    const auto* printer_model = preset_bundle->printers.get_edited_preset().config.option<ConfigOptionString>("printer_model");
+    return !(printer_model && boost::icontains(printer_model->value, "Snapmaker") && boost::icontains(printer_model->value, "U1"));
+}
+
 std::string GUI_App::resolve_printer_agent_id(const std::string& stored_id) const
 {
     if (!stored_id.empty())
