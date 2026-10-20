@@ -1348,19 +1348,25 @@ void WipeTower2::set_extruder(size_t idx, const PrintConfig& config)
     m_filpar[idx].pressure_advance = get_value_at(config, config.enable_pressure_advance, ConfigFlowDomain::Filament, idx) ?
                                          float(get_value_at(config, config.pressure_advance, ConfigFlowDomain::Filament, idx)) : -1.f;
     {
-        // Snapmaker Orca: the tower prints this filament's lines with the speeds of its own flow
-        // variant, not with the initial tool's. 0 (autospeed): 30 mm/s first layer, 80 mm/s above.
-        FilamentParameters &f = m_filpar[idx];
-        f.travel_speed        = float(get_value_at(config, config.travel_speed, ConfigFlowDomain::Process, (unsigned int) idx));
-        f.first_layer_speed   = float(get_value_at(config, config.initial_layer_speed, ConfigFlowDomain::Process, (unsigned int) idx));
+        // Snapmaker Orca: the tower prints this filament's lines with the speeds of the tool head
+        // that holds it, not with the initial tool's. The column is the slot of set_filament_slots
+        // (one per tool head, or per tool head x volume type, Print::process_slot_of_filament);
+        // without one, the flow-variant column of a flow-variant process preset, else column 0.
+        // 0 (autospeed): 30 mm/s first layer, 80 mm/s above.
+        FilamentParameters &f    = m_filpar[idx];
+        const size_t        slot = idx < m_filament_slot.size() ? m_filament_slot[idx] :
+                                                                  get_config_idx(config, ConfigFlowDomain::Process, (unsigned int) idx);
+        auto value_at = [slot](const ConfigOptionFloatsNullable &values) {
+            return values.values.empty() ? 0.f : float(values.get_at(slot));
+        };
+        f.travel_speed      = float(config.travel_speed.get_at(slot));
+        f.first_layer_speed = float(config.initial_layer_speed.get_at(slot));
         if (f.first_layer_speed == 0.f) // just to make sure autospeed doesn't break it.
             f.first_layer_speed = 30.f;
-        f.infill_speed = m_region_infill_speed.values.empty() ? 0.f :
-                             float(get_value_at(config, m_region_infill_speed, ConfigFlowDomain::Process, (unsigned int) idx));
+        f.infill_speed = value_at(m_region_infill_speed);
         if (f.infill_speed == 0.f)
             f.infill_speed = 80.f;
-        f.perimeter_speed = m_region_perimeter_speed.values.empty() ? 0.f :
-                                float(get_value_at(config, m_region_perimeter_speed, ConfigFlowDomain::Process, (unsigned int) idx));
+        f.perimeter_speed = value_at(m_region_perimeter_speed);
         if (f.perimeter_speed == 0.f)
             f.perimeter_speed = 80.f;
     }

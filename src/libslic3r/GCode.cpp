@@ -5376,10 +5376,15 @@ static bool overhang_fan_enabled(const PrintConfig &config, bool cooling_markers
 
 size_t GCode::process_slot_of(int filament_id) const
 {
-    // Snapmaker: the process vectors of SnapOrca are laid out per flow variant (standard / high flow,
-    // resolved by get_nozzle_config_index() and GCodeWriter::process_config_index() through
-    // ConfigFlowDomain::Process), so the per tool head slot is the extruder column, as before.
-    return get_extruder_id(filament_id);
+    // Snapmaker: a flow-variant process preset (process_flow_support with several variants) lays its
+    // vectors out per flow variant and is resolved by get_nozzle_config_index() and
+    // GCodeWriter::process_config_index() through ConfigFlowDomain::Process; the slot stays the
+    // extruder column there. Otherwise the table has one column per tool head (print_extruder_id /
+    // print_extruder_variant, composed by PerHeadProcess), and the slot is the column of the tool
+    // head that holds the filament on the current layer, as the walls and infill read it.
+    if (this->uses_process_flow_variants() || m_print == nullptr)
+        return get_extruder_id(filament_id);
+    return m_print->process_slot_of_filament((unsigned int) std::max(0, filament_id), (int) m_cur_layer_idx);
 }
 
 // Process all layers of all objects (non-sequential mode) with a parallel pipeline:

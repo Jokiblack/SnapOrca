@@ -882,6 +882,78 @@ TEST_CASE("The writer and the prime tower read the travel and first-layer speeds
     }
 }
 
+// Two filaments on two tool heads under a manual map, on a table with two columns per head whose
+// column is not the head's index: every reader of the process table (walls, the writer's travels,
+// the prime tower) takes the column of the tool head that holds the filament.
+TEST_CASE("A filament mapped to another tool head prints its walls, travels and prime tower purges at that head's column", "[PerHeadProcess][PerHeadOverride][pho_mapped_head_columns]")
+{
+    DynamicPrintConfig config = flow_columns_config();
+    per_type_process(config);
+    with_prime_tower(config);
+    // Slots: (1,S) (1,HF) (2,S) (2,HF) (3,S) (3,HF) (4,S) (4,HF). Tool head 1: outer wall 60, first
+    // layer 20, travel 200; tool head 2: 120, 40 and 400.
+    const std::vector<double> outer_wall_speed    = {60., 60., 120., 120., 200., 200., 200., 200.};
+    const std::vector<double> initial_layer_speed = {20., 20., 40., 40., 50., 50., 50., 50.};
+    const std::vector<double> travel_speed        = {200., 200., 400., 400., 300., 300., 300., 300.};
+    set_slot_values(config, "outer_wall_speed", outer_wall_speed);
+    set_slot_values(config, "initial_layer_speed", initial_layer_speed);
+    set_slot_values(config, "travel_speed", travel_speed);
+    {
+        auto *option = dynamic_cast<ConfigOptionVectorBase *>(config.option("initial_layer_travel_speed"));
+        const std::unique_ptr<ConfigOption> parsed(option->clone());
+        REQUIRE(parsed->deserialize("100%"));
+        for (size_t slot = 0; slot < HEADS * 2; ++slot)
+            option->set_at(parsed.get(), slot, 0);
+    }
+    set_slot_values(config, "travel_speed_z", std::vector<double>(HEADS * 2, 0.));
+    // Filament 1 on tool head 2 (slot 2), filament 2 on tool head 1 (slot 0).
+    config.set_key_value("filament_map_mode", new ConfigOptionEnum<FilamentMapMode>(fmmManual));
+    config.set_key_value("filament_map", new ConfigOptionInts({2, 1, 3, 4}));
+    const std::map<int, size_t> slot_of_tool = {{0, 2}, {1, 0}};
+    const double max_purge_speed = config.opt_float("wipe_tower_max_purge_speed");
+
+    const std::unique_ptr<TwoHeadSlice> slice = two_head_slice(config);
+    const std::string                  &gcode = slice->gcode;
+
+    SECTION("the slot of a filament is the column of its tool head") {
+        for (const auto &[tool, slot] : slot_of_tool)
+            CHECK(slice->print.process_slot_of_filament((unsigned int) tool, 0) == slot);
+    }
+    SECTION("the outer walls run at the speed of the tool head's column: 120 mm/s for T0, 60 mm/s for T1") {
+        const auto rates = feature_feedrates(gcode);
+        for (const auto &[tool, slot] : slot_of_tool) {
+            REQUIRE(rates.count(tool) == 1);
+            REQUIRE(rates.at(tool).count("Outer wall") == 1);
+            INFO("tool " << tool << " outer wall: " << joined(rates.at(tool).at("Outer wall")));
+            CHECK(rates.at(tool).at("Outer wall") == std::set<int>{int(std::lround(outer_wall_speed[slot] * 60.))});
+        }
+    }
+    SECTION("the writer travels each tool at the travel speed of its tool head's column and at no other head's") {
+        const TravelFacts facts = travel_facts(gcode);
+        for (const auto &[tool, slot] : slot_of_tool) {
+            REQUIRE(facts.writer_travels.count(tool) == 1);
+            const std::set<int> &rates = facts.writer_travels.at(tool);
+            INFO("tool " << tool << " travel feed rates: " << joined(rates));
+            CHECK(rates.count(int(std::lround(travel_speed[slot] * 60.))) == 1);
+            for (size_t other = 0; other < travel_speed.size(); ++other)
+                if (travel_speed[other] != travel_speed[slot])
+                    CHECK(rates.count(int(std::lround(travel_speed[other] * 60.))) == 0);
+        }
+    }
+    SECTION("the prime tower purges a tool on the first layer at the first layer speed of its tool head's column") {
+        const std::vector<WipeBlock> blocks = wipe_blocks(gcode);
+        bool first_layer_seen = false;
+        for (const WipeBlock &block : blocks) {
+            if (block.layer > 1 || slot_of_tool.count(block.tool) == 0)
+                continue;
+            first_layer_seen = true;
+            INFO("tool " << block.tool << " on layer " << block.layer);
+            CHECK(block.first_feedrate == first_wipe_feedrate(initial_layer_speed[slot_of_tool.at(block.tool)], true, max_purge_speed));
+        }
+        CHECK(first_layer_seen);
+    }
+}
+
 namespace {
 
 // The acceleration (SET_VELOCITY_LIMIT ACCEL=, Klipper) in force at the extruding moves of the
