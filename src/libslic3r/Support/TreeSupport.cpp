@@ -3887,7 +3887,10 @@ void TreeSupport::smooth_nodes()
         }
     }
     
-    float max_move = scale_(m_object_config->support_line_width / 2);
+    // SnapOrca: support_line_width may be a percentage of the nozzle (the U1 profiles use one);
+    // reading the raw value would take "105%" as 105 mm.
+    float max_move = scale_(m_object_config->get_abs_value("support_line_width",
+                                                           m_object->print()->config().nozzle_diameter.get_at(0)) / 2);
     // if the branch is very tall, the tip also needs extra wall
     float thresh_tall_branch = 100;
     float thresh_dist_to_top = 30;
@@ -4098,7 +4101,7 @@ void TreeSupport::generate_contact_points()
     const coordf_t point_spread = scale_(config.tree_support_branch_distance.value);
     const coordf_t max_bridge_length = scale_(config.max_bridge_length.value);
     coord_t    radius_scaled         = scale_(base_radius);
-    const coordf_t extrusion_width = config.line_width.value;
+    const coordf_t extrusion_width = config.get_abs_value("line_width", m_object->print()->config().nozzle_diameter.get_at(0)); // may be a % of the nozzle
     coordf_t       xy_expansion    = scale_(config.support_expansion.value);
     // SupportParameters::soluble_interface is gone in Orca 2.5; keep the Snapmaker meaning (zero top Z distance).
     const bool soluble_interface = config.support_top_z_distance.value == 0.;

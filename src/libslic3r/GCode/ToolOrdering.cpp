@@ -831,7 +831,8 @@ std::vector<unsigned int> ToolOrdering::generate_first_layer_tool_order(const Pr
         for(auto layer : object->layers()){
             for(auto layerm : layer->regions()){
                 for(auto& expoly : layerm->raw_slices){
-                    if (!offset_ex(expoly, -0.2 * scale_(print.config().initial_layer_line_width)).empty()) {
+                    // SnapOrca: initial_layer_line_width may be a % of the nozzle (the U1 profiles use one).
+                    if (!offset_ex(expoly, -0.2 * scale_(print.config().get_abs_value("initial_layer_line_width", print.config().nozzle_diameter.get_at(0)))).empty()) {
                         target_layer = layer;
                         break;
                     }

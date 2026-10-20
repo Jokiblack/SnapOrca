@@ -253,7 +253,8 @@ static std::vector<std::pair<TreeSupportSettings, std::vector<size_t>>> group_me
     const coordf_t radius_sample_resolution = g_config_tree_support_collision_resolution;
 
     // calc the extrudable expolygons of each layer
-    const coordf_t extrusion_width = config.line_width.value;
+    // SnapOrca: line_width may be a percentage of the nozzle (the U1 profiles use one).
+    const coordf_t extrusion_width = config.get_abs_value("line_width", print_object.print()->config().nozzle_diameter.get_at(0));
     const coordf_t extrusion_width_scaled = scale_(extrusion_width);
     tbb::parallel_for(tbb::blocked_range<size_t>(0, print_object.layer_count()),
         [&](const tbb::blocked_range<size_t>& range) {
