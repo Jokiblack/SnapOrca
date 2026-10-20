@@ -3901,9 +3901,16 @@ void TreeSupport::smooth_nodes()
         }
     }
     
-    // Snapmaker Orca: the width is a column per tool head, read at the support head; the raw
-    // number as the scalar read (a percent read as a number, the pre-existing quirk).
-    float max_move = scale_(Flow::width_at(m_object_config->support_line_width, support_head(m_object, m_object_config->support_filament, false)).value / 2);
+    // SnapOrca: the width is a column per tool head, read at the support head, and may be a % of
+    // that head's nozzle (the U1 profiles use one); the raw number would take "105%" as 105 mm.
+    float max_move = 0.f;
+    {
+        float        support_nozzle = 0.f;
+        const size_t head           = support_head(m_object, m_object_config->support_filament, false, &support_nozzle);
+        if (support_nozzle <= 0.f)
+            support_nozzle = float(m_object->print()->config().nozzle_diameter.get_at(head));
+        max_move = scale_(m_object_config->get_abs_value_at("support_line_width", head, support_nozzle) / 2);
+    }
     // if the branch is very tall, the tip also needs extra wall
     float thresh_tall_branch = 100;
     float thresh_dist_to_top = 30;
@@ -4266,9 +4273,8 @@ void TreeSupport::generate_contact_points()
     const coordf_t point_spread = scale_(config.tree_support_branch_distance.value);
     const coordf_t max_bridge_length = scale_(config.max_bridge_length.value);
     coord_t    radius_scaled         = scale_(base_radius);
-    // Snapmaker Orca: the width is a column per tool head; the first column's raw number, as the
-    // scalar read (a percent read as a number, the pre-existing quirk).
-    const coordf_t extrusion_width = Flow::width_at(config.line_width, 0).value;
+    // SnapOrca: the first tool head's column, as a % of its nozzle when the profile gives one.
+    const coordf_t extrusion_width = config.get_abs_value_at("line_width", 0, m_object->print()->config().nozzle_diameter.get_at(0));
     coordf_t       xy_expansion    = scale_(config.support_expansion.value);
     // SupportParameters::soluble_interface is gone in Orca 2.5; keep the Snapmaker meaning (zero top Z distance).
     const bool soluble_interface = config.support_top_z_distance.value == 0.;

@@ -253,9 +253,13 @@ static std::vector<std::pair<TreeSupportSettings, std::vector<size_t>>> group_me
     const coordf_t radius_sample_resolution = g_config_tree_support_collision_resolution;
 
     // calc the extrudable expolygons of each layer
-    // Snapmaker Orca: the width is a column per tool head, read at the support head; the raw
-    // number as the scalar read (a percent read as a number, the pre-existing quirk).
-    const coordf_t extrusion_width = Flow::width_at(config.line_width, support_head(&print_object, config.support_filament, false)).value;
+    // SnapOrca: the width is a column per tool head, read at the support head, and may be a % of
+    // that head's nozzle (the U1 profiles use one).
+    float          support_nozzle  = 0.f;
+    const size_t   width_head      = support_head(&print_object, config.support_filament, false, &support_nozzle);
+    if (support_nozzle <= 0.f)
+        support_nozzle = float(print_object.print()->config().nozzle_diameter.get_at(width_head));
+    const coordf_t extrusion_width = config.get_abs_value_at("line_width", width_head, support_nozzle);
     const coordf_t extrusion_width_scaled = scale_(extrusion_width);
     tbb::parallel_for(tbb::blocked_range<size_t>(0, print_object.layer_count()),
         [&](const tbb::blocked_range<size_t>& range) {
