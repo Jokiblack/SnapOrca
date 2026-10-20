@@ -400,7 +400,7 @@ void GenericDownloadDialog::show_error_page(const std::string& error_msg)
 {
     m_simplebook_status->SetSelection(2);
     
-    SetTitle(_L("Donwload failed"));
+    SetTitle(_L("Download failed"));
 
     // Display simple error message: filename + "Download failed"
     wxString filename = wxString::FromUTF8(m_file_name.c_str());

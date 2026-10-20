@@ -3125,7 +3125,7 @@ void SSWCP_MachineOption_Instance::sw_UploadFiletoMachine() {
                 .on_error([=](std::string body, std::string error, unsigned status) {
                     handle_general_fail();
                     wxGetApp().CallAfter([filename]() {
-                        MessageDialog msg_window(nullptr, " " + filename + _L(" upload failed") + "\n", _L("UpLoad Failed"),
+                        MessageDialog msg_window(nullptr, wxString::Format(_L("%s upload failed"), filename) + "\n", _L("Upload Failed"),
                                                  wxICON_QUESTION | wxOK);
                         msg_window.ShowModal();
                     });
@@ -3139,8 +3139,8 @@ void SSWCP_MachineOption_Instance::sw_UploadFiletoMachine() {
                             send_to_js();
 
 
-                            MessageDialog msg_window(nullptr, " " + filename + _L(" has already been uploaded") + "\n",
-                                                     _L("UpLoad Successfully"), wxICON_QUESTION | wxOK);
+                            MessageDialog msg_window(nullptr, wxString::Format(_L("%s uploaded successfully"), filename) + "\n",
+                                                     _L("Upload Successful"), wxICON_QUESTION | wxOK);
                             msg_window.ShowModal();
                             finish_job();
                         });
@@ -3219,7 +3219,7 @@ void SSWCP_MachineOption_Instance::sw_DownloadMachineFile() {
                 .on_error([=](std::string body, std::string error, unsigned status) {
                     handle_general_fail();
                     wxGetApp().CallAfter([filename]() {
-                        MessageDialog msg_window(nullptr, " " + filename + _L(" download failed") + "\n", _L("DownLoad Failed"),
+                        MessageDialog msg_window(nullptr, wxString::Format(_L("%s download failed"), filename) + "\n", _L("Download Failed"),
                                                  wxICON_QUESTION | wxOK);
                         msg_window.ShowModal();
                     });
@@ -3236,8 +3236,8 @@ void SSWCP_MachineOption_Instance::sw_DownloadMachineFile() {
                         file.close();
 
                         wxGetApp().CallAfter([=]() {
-                            MessageDialog msg_window(nullptr, " " + filename + _L(" has already been downloaded") + "\n",
-                                                     _L("DownLoad Successfully"), wxICON_QUESTION | wxOK);
+                            MessageDialog msg_window(nullptr, wxString::Format(_L("%s downloaded successfully"), filename) + "\n",
+                                                     _L("Download Successful"), wxICON_QUESTION | wxOK);
                             msg_window.ShowModal();
                         });
                     } catch (std::exception& e) {

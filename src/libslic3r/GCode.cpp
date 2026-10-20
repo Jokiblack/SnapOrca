@@ -993,56 +993,6 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
         return bed_polygons;
     }
 
-    // With skip points enabled the Type2 tower wall has an opening at each toolchange's
-    // entry (tcr.start_pos): route the approach around the tower's bounding box so the
-    // nozzle enters through that opening instead of dragging across the printed wall
-    // (append_tcr parity). Emits only the waypoints leading up to the opening — the
-    // caller still travels to start_wipe_pos itself. Returns an empty string when the
-    // gap wall is off (option off or cone wall) or the approach already starts inside
-    // the tower: such hops never cross the wall and must stay direct.
-    std::string WipeTowerIntegration::travel_to_tower_gap(GCode &gcodegen, const Point &route_start, const Point &start_wipe_pos) const
-    {
-        if (!WipeTower2::use_gap_wall(gcodegen.m_config))
-            return {};
-        const Vec2f plate_origin_2d(m_plate_origin(0), m_plate_origin(1));
-        // Transform tower-local corners exactly like the tcr points; a rotated tower gets a
-        // conservative axis-aligned envelope from the result.
-        auto tower_polygon = [&](const BoundingBoxf &bbx) {
-            Polygon poly = scaled(bbx).polygon();
-            for (Point &p : poly.points)
-                p = wipe_tower_point_to_object_point(gcodegen, transform_wt2_pt(unscale(p).cast<float>()) + plate_origin_2d);
-            return poly;
-        };
-        // The avoid envelope covers the first-layer brim (and rib flare), which a travel may
-        // cross freely: early-out only when the approach already starts over the tower body
-        // itself, so a start between the wall and the brim edge still gets routed in through
-        // the wall opening. Test the rotated polygon, not its bounding box — at angles off the
-        // axes the box's corner triangles cover most of the brim ring.
-        const float body_width = gcodegen.m_config.wipe_tower_wall_type.value == WipeTowerWallType::wtwRib ? m_wipe_tower_depth : m_right;
-        if (tower_polygon(BoundingBoxf(Vec2d(0., 0.), Vec2d(body_width, m_wipe_tower_depth))).contains(route_start))
-            return {};
-
-        const Polygons bed       = shared_printable_area(gcodegen);
-        BoundingBox    avoid_bbx = get_extents(tower_polygon(m_wipe_tower_bbx));
-        // The inflated corners must stay on the bed for the router to generate a route at all:
-        // clamp the box against the bed shrunk by the clearance the router adds, so a tower
-        // parked near the bed edge is still routed along the clamped side instead of always
-        // travelling straight across the tower.
-        BoundingBox clamp_bbx = get_extents(bed);
-        clamp_bbx.offset(-(scaled(wipe_tower_routing_clearance) + SCALED_EPSILON));
-        avoid_bbx.min = avoid_bbx.min.cwiseMax(clamp_bbx.min);
-        avoid_bbx.max = avoid_bbx.max.cwiseMin(clamp_bbx.max);
-        if (avoid_bbx.min.x() >= avoid_bbx.max.x() || avoid_bbx.min.y() >= avoid_bbx.max.y())
-            return {};
-
-        Polyline    travel_polyline = generate_path_to_wipe_tower(route_start, start_wipe_pos, avoid_bbx, bed);
-        std::string gcode;
-        // The polyline's last point is start_wipe_pos itself — emitted by the caller.
-        for (size_t i = 0; i + 1 < travel_polyline.points.size(); ++i)
-            gcode += gcodegen.travel_to(travel_polyline.points[i], erMixed, "Travel to a Wipe Tower");
-        return gcode;
-    }
-
     // A folded tower layer is thicker than the object layer it sits on, so the height process_layer
     // emitted is not the tower's. Both writers declare one, but each hardcodes a tag dialect - Type 1
     // forces s_IsBBLPrinter and writes "; LAYER_HEIGHT:", Type 2 writes ";HEIGHT:" - and the processor
@@ -1742,7 +1692,18 @@ static std::vector<Vec2d> get_path_of_change_filament(const Print& print)
         if (tcr.priming || (new_extruder_id >= 0 && needs_toolchange)) {
             if (is_ramming)
                 gcodegen.m_wipe.reset_path(); // We don't want wiping on the ramming lines.
-            toolchange_gcode_str += gcodegen.set_extruder(new_extruder_id, tcr.print_z, false, -1,
+            // On a contact (interface) layer with tower interface features on, heat the incoming
+            // filament straight to its interface temperature during the tool change, as the Type1
+            // path does for new_filament_temp, instead of first settling at the print temperature.
+            // The tower still waits for that temperature before the contact wipe (tool_change_new).
+            int toolchange_temp_override = -1;
+            if (gcodegen.m_config.enable_tower_interface_features && tcr.is_contact && !tcr.priming && new_extruder_id >= 0) {
+                toolchange_temp_override = gcodegen.m_config.filament_tower_interface_print_temp.get_at(new_extruder_id);
+                if (toolchange_temp_override == -1)
+                    toolchange_temp_override = gcodegen.m_config.nozzle_temperature_range_high.get_at(
+                        gcodegen.get_filament_config_index(new_extruder_id));
+            }
+            toolchange_gcode_str += gcodegen.set_extruder(new_extruder_id, tcr.print_z, false, toolchange_temp_override,
                                                           WipeTower2::wait_for_temp_enabled(gcodegen.m_config)); // TODO: toolchange_z vs print_z
         }
 
@@ -13284,8 +13245,13 @@ std::string GCode::set_extruder(unsigned int new_filament_id, double print_z, bo
     // Set the new extruder to the operating temperature. With defer_temp_wait the target was
     // already raised before the tool change and the blocking wait belongs to the wipe tower
     // generator, so there is nothing left to restore here.
-    if (m_ooze_prevention.enable && !defer_temp_wait)
-        gcode += m_ooze_prevention.post_toolchange(*this);
+    // A tower interface override keeps that target instead of dropping back to the print temperature.
+    if (m_ooze_prevention.enable && !defer_temp_wait) {
+        if (toolchange_temp_override > 0 && m_config.standby_temperature_delta.value != 0)
+            gcode += m_writer.set_temperature(unsigned(toolchange_temp_override), m_config.tool_change_temprature_wait.value, int(new_filament_id));
+        else
+            gcode += m_ooze_prevention.post_toolchange(*this);
+    }
 
     // See the note on the single-extruder path above: -1 outside IMEX parallel modes.
     gcode += set_filament_pressure_advance(new_filament_id,
