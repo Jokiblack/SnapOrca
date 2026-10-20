@@ -133,6 +133,11 @@ USER_DIR = "user"
 # authoritative "G*" cloud ids. No vendor is exempt from the filament_id rule.
 RESERVED_VENDORS = {"BBL"}
 
+# Snapmaker Orca: the frozen list of ids Snapmaker Orca 2.4 shipped that do not follow
+# the id rules and are kept on purpose (see the file's description). Each entry exempts
+# one file with exactly that id, so a new preset is still held to the rules.
+ID_EXCEPTIONS_PATH = os.path.join(SCRIPTS_DIR, "profile_id_exceptions.json")
+
 # The profile types that carry a setting_id; the subdir name is also the type
 # name, matching Preset::get_type_string() on the C++ side.
 PROFILE_SUBDIRS = ("filament", "process", "machine")
@@ -528,6 +533,64 @@ def iter_profile_files(vendor_dir):
                     yield os.path.join(root, name), sub
 
 
+@functools.lru_cache(maxsize=None)
+def _id_exceptions():
+    """vendor -> {"setting_id": {sub_path: id}, "filament_id": {sub_path: id}} from
+    ID_EXCEPTIONS_PATH; empty when the file is absent."""
+    try:
+        data = load_json(ID_EXCEPTIONS_PATH)
+    except FileNotFoundError:
+        return {}
+    out = {}
+    for vendor, kinds in (data.get("vendors") or {}).items():
+        out[vendor] = {kind: dict(kinds.get(kind) or {}) for kind in ("setting_id", "filament_id")}
+    return out
+
+
+def _vendor_sub_path(path, profiles_dir, vendor):
+    """A file's path inside its vendor folder, "/"-joined - the key of ID_EXCEPTIONS_PATH."""
+    return posixpath.normpath(os.path.relpath(
+        str(path), os.path.join(str(profiles_dir), vendor)).replace(os.sep, "/"))
+
+
+def is_legacy_id(vendor, sub_path, kind, value):
+    """The id `value` of `kind` ("setting_id" / "filament_id") in <vendor>/<sub_path> is
+    one ID_EXCEPTIONS_PATH keeps: listed for that very file with that very value."""
+    return bool(value) and _id_exceptions().get(vendor, {}).get(kind, {}).get(
+        posixpath.normpath(sub_path)) == value
+
+
+def legacy_ids(vendor):
+    """Every id ID_EXCEPTIONS_PATH keeps for a vendor, of both kinds."""
+    kinds = _id_exceptions().get(vendor, {})
+    return set(kinds.get("setting_id", {}).values()) | set(kinds.get("filament_id", {}).values())
+
+
+def check_id_exceptions(profiles_dir):
+    """Every entry of ID_EXCEPTIONS_PATH names an existing file of a bundle in this tree
+    that still carries that id, so the list only ever shrinks. Returns the error count.
+    A tree without the vendor (a test tree, a partial copy) is not judged."""
+    errors = 0
+    vendors = set(list_profile_dirs(profiles_dir))
+    for vendor, kinds in sorted(_id_exceptions().items()):
+        if vendor not in vendors:
+            continue
+        for kind, entries in sorted(kinds.items()):
+            for sub_path, value in sorted(entries.items()):
+                path = os.path.join(str(profiles_dir), vendor, *sub_path.split("/"))
+                try:
+                    data = load_json(path)
+                except (OSError, ValueError):
+                    data = None
+                if isinstance(data, dict) and data.get(kind) == value:
+                    continue
+                print_error(
+                    f'{os.path.basename(ID_EXCEPTIONS_PATH)}: {vendor}/{sub_path} no longer '
+                    f'carries {kind} "{value}"; remove the entry (the list may only shrink)')
+                errors += 1
+    return errors
+
+
 def load_vendor_filaments(profiles_dir, vendor):
     """Load a vendor's filament presets from its index's filament_list.
 
@@ -549,11 +612,18 @@ def load_vendor_filaments(profiles_dir, vendor):
             errors.append(f"unreadable filament profile {rel}: {e}")
             continue
         name = data.get("name", entry.get("name"))
+        sub_path = posixpath.normpath(entry.get("sub_path", "").replace("\\", "/"))
+        sid = data.get("setting_id")
         presets[name] = {
             "name": name,
             "file": rel,
             "path": path,
+            "sub_path": sub_path,
             "filament_id": data.get("filament_id"),
+            # Snapmaker Orca: PresetBundle::commit_vendor_preset gives a system filament
+            # that resolves no filament_id its own setting_id instead. Mirrored only for
+            # the ids ID_EXCEPTIONS_PATH keeps, so a new preset still needs a minted id.
+            "legacy_setting_id": sid if is_legacy_id(vendor, sub_path, "setting_id", sid) else None,
             "inherits": data.get("inherits"),
             "instantiation": str(data.get("instantiation", "")).lower() == "true",
             "compatible_printers": data.get("compatible_printers") or [],
@@ -596,6 +666,9 @@ def resolve_filament_id(name, filaments, ofl_filaments, seen=None, in_ofl=False)
     if rec.get("filament_id"):
         return rec["filament_id"], "own" if len(seen) == 1 else "inherited", entry
     parent = rec.get("inherits")
+    # Snapmaker Orca: after its own filament_id and its parent's, a system filament
+    # takes its own setting_id (PresetBundle::commit_vendor_preset), for bases too.
+    own_fallback = None if in_ofl else rec.get("legacy_setting_id")
     if parent:
         fid, src, sub_entry = resolve_filament_id(parent, filaments, ofl_filaments, seen, in_ofl)
         if fid or in_ofl:
@@ -604,8 +677,13 @@ def resolve_filament_id(name, filaments, ofl_filaments, seen=None, in_ofl=False)
         # OFL map at each vendor hop's inherits; retry this hop's parent in OFL.
         if parent in ofl_filaments:
             fid, src, _ = resolve_filament_id(parent, filaments, ofl_filaments, set(), True)
-            return fid, src, parent
+            if fid or not own_fallback:
+                return fid, src, parent
+        if own_fallback:
+            return own_fallback, "setting_id", entry
         return fid, src, sub_entry
+    if own_fallback:
+        return own_fallback, "setting_id", entry
     return None, "missing", entry
 
 
@@ -749,7 +827,9 @@ def check_filament_ids(profiles_dir=PROFILES_DIR, map_path=BAMBU_MAP_PATH):
     """Validate filament_id state across every vendor. Returns the error count.
 
     1. Format: every id occurring in the tree (declared or effective) must
-       match ^OF[0-9A-Za-z]{6}$. No exceptions, not even BBL.
+       match ^OF[0-9A-Za-z]{6}$. Not even BBL is exempt; only the ids
+       ID_EXCEPTIONS_PATH keeps (Snapmaker Orca 2.4's) are, including the
+       setting_ids the loader uses as filament_id (resolve_filament_id).
     2. Identity: the id is a function of the triple alone, and there is no
        second acceptable value. (a) A declared id must equal the one id the
        declarer's own triple mints; (b) the id an instantiated preset inherits
@@ -776,8 +856,9 @@ def check_filament_ids(profiles_dir=PROFILES_DIR, map_path=BAMBU_MAP_PATH):
 
     # -- 1. format ----------------------------------------------------------
     for vendor in sorted(analysis["vendor_ids"]):
+        kept = legacy_ids(vendor)
         for fid in sorted(analysis["vendor_ids"][vendor]):
-            if OF_ID_RE.match(fid):
+            if OF_ID_RE.match(fid) or fid in kept:
                 continue
             print_error(
                 f'filament_id "{fid}" ({vendor}) is not a minted "OF" id; new '
@@ -958,6 +1039,7 @@ def check_setting_id_uniqueness(profiles_dir):
             if not isinstance(data, dict):
                 continue
             rel = os.path.relpath(path, profiles_dir).replace(os.sep, "/")
+            sub_path = _vendor_sub_path(path, profiles_dir, vendor)
             # Rule 5: catch the misspelled "settings_id" key.
             if "settings_id" in data:
                 errors += 1
@@ -965,6 +1047,12 @@ def check_setting_id_uniqueness(profiles_dir):
                     f'profile {rel} uses the misspelled key "settings_id" '
                     f'(should be "setting_id"); run {SETTING_ID_CMD}')
             sid = data.get("setting_id")
+            if is_legacy_id(vendor, sub_path, "setting_id", sid):
+                # Kept as Snapmaker Orca 2.4 shipped it (ID_EXCEPTIONS_PATH). Rules 2-4
+                # do not apply: Snapmaker gives every nozzle size of a filament one id on
+                # purpose, the loader's filament_id when the preset declares none. A
+                # preset outside the list still gets a minted, hence unique, id.
+                continue
             if data.get("instantiation") != "true":
                 # Rule 3: base/template profiles must not carry a setting_id.
                 if sid:
@@ -1367,6 +1455,9 @@ def check_filament_id_length(profiles_dir, vendor):
             continue
 
         filament_id = data.get("filament_id")
+        if is_legacy_id(vendor, _vendor_sub_path(file_path, profiles_path, vendor),
+                        "filament_id", filament_id):
+            continue  # kept as Snapmaker Orca 2.4 shipped it (ID_EXCEPTIONS_PATH)
         if filament_id and len(filament_id) > 8 and file_path.resolve() in referenced:
             print_error(f'Filament id too long "{filament_id}": {rel}')
             error += 1
@@ -2079,6 +2170,7 @@ def check_profiles(profiles_dir=PROFILES_DIR, vendors=None, strict=False):
     errors_found += check_setting_id_uniqueness(profiles_dir)
     errors_found += check_machine_model_name_uniqueness(profiles_dir)
     errors_found += check_filament_ids(profiles_dir)
+    errors_found += check_id_exceptions(profiles_dir)
 
     print("\n==================== SUMMARY ====================")
     print_info(f"Checked vendors     : {len(checked)}")
@@ -2330,7 +2422,8 @@ def generate_filament_ids(profiles_dir=PROFILES_DIR, vendors=None, dry_run=False
             analysis["declarer_triples"], key=lambda x: (x[0], x[1]["file"])):
         want = generate_filament_id(*triple)
         if (fid == want or (wanted is not None and vendor not in wanted)
-                or triple in colliding):
+                or triple in colliding
+                or is_legacy_id(vendor, rec["sub_path"], "filament_id", fid)):
             continue
         missing = _incomplete_triple(triple)
         if missing:
@@ -2468,6 +2561,11 @@ def generate_setting_ids(profiles_dir=PROFILES_DIR, vendors=None, dry_run=False,
                 continue
 
             sid = data.get("setting_id")
+            if is_legacy_id(vendor, _vendor_sub_path(path, profiles_dir, vendor),
+                            "setting_id", sid):
+                sid_kept = True
+            else:
+                sid_kept = False
             # Strictly "true", exactly as check_setting_id_uniqueness tests it:
             # a preset the validator calls a base profile must not be given an id
             # here, or the two would fight over it forever.
@@ -2485,7 +2583,9 @@ def generate_setting_ids(profiles_dir=PROFILES_DIR, vendors=None, dry_run=False,
                     # no setting_id and nothing able to give it one.
                     edits.append(("assigned", 'restore its value as "setting_id"',
                                   lambda text, new=typo: insert_setting_id(text, new)))
-            if not instantiated:
+            if sid_kept:
+                pass  # kept as Snapmaker Orca 2.4 shipped it (ID_EXCEPTIONS_PATH)
+            elif not instantiated:
                 if sid is not None:
                     edits.append(("stripped", "strip the base profile's setting_id",
                                   lambda text, old=sid: delete_key_line(
