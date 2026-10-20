@@ -1661,6 +1661,7 @@ static std::vector<std::string> s_Preset_print_options{
     "small_area_infill_flow_compensation",
     "small_area_infill_flow_compensation_model",
     "enable_wrapping_detection",
+    "enable_order_independent_overlap_carving",
     "seam_slope_type",
     "seam_slope_conditional",
     "scarf_angle_threshold",
