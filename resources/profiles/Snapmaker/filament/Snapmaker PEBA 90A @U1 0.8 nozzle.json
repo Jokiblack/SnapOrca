@@ -4,6 +4,7 @@
   "instantiation": "true",
   "name": "Snapmaker PEBA 90A @U1 0.8 nozzle",
   "inherits": "Snapmaker PEBA 90A @U1 base",
+  "setting_id": "sfNzfVL9KD570s9X",
   "filament_id": "SNPPEBA001",
   "compatible_printers": [
     "Snapmaker U1 (0.8 nozzle)"

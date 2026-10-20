@@ -1,6 +1,7 @@
 {
   "type": "filament",
   "from": "system",
+  "setting_id": "aLc96W1kXgRB96lU",
   "instantiation": "true",
   "name": "Snapmaker PLA Glow @U1 0.6 nozzle",
   "inherits": "Snapmaker PLA Glow @U1 base",

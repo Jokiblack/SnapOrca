@@ -4,6 +4,7 @@
   "instantiation": "true",
   "name": "Snapmaker PLA Rainbow @U1 0.4 nozzle",
   "inherits": "Snapmaker PLA Rainbow @U1 base",
+  "setting_id": "qYyRkESQAJeePfCq",
   "filament_id": "SNPPRB001",
   "compatible_printers": [
     "Snapmaker U1 (0.4 nozzle)"

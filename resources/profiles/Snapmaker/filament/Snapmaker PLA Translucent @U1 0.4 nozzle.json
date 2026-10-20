@@ -1,6 +1,7 @@
 {
     "type": "filament",
     "from": "system",
+    "setting_id": "RqtrcLcy124ICGEc",
     "instantiation": "true",
     "name": "Snapmaker PLA Translucent @U1 0.4 nozzle",
     "inherits": "Snapmaker PLA Translucent @U1 base",

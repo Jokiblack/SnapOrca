@@ -1,6 +1,7 @@
 {
   "type": "filament",
   "from": "system",
+  "setting_id": "k6UQJJASzFSfePqN",
   "instantiation": "true",
   "name": "Snapmaker PETG Translucent @U1 0.4 nozzle",
   "inherits": "Snapmaker PETG Translucent @U1 base",
