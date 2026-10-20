@@ -2579,9 +2579,6 @@ wxBoxSizer* MainFrame::create_side_tools()
             }
             p->Popup(m_print_btn);
         }
-
-        p->Popup(m_print_btn);
-         }
     );
 
     /*

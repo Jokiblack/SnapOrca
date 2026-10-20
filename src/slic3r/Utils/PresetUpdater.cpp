@@ -626,7 +626,11 @@ void PresetUpdater::priv::sync_resources(std::string http_url, std::map<std::str
                 } else {
                     BOOST_LOG_TRIVIAL(error) << "[Orca Updater]: get version of settings failed, body=" << body;
                 }
-            } 
+            } catch (std::exception &e) {
+                BOOST_LOG_TRIVIAL(error) << (boost::format("[Orca Updater]: get version of settings failed, exception=%1% body=%2%") % e.what() % body).str();
+            } catch (...) {
+                BOOST_LOG_TRIVIAL(error) << "[Orca Updater]: get version of settings failed, body=" << body;
+            }
         })
         .on_error([&](std::string body, std::string error, unsigned status) {
             BOOST_LOG_TRIVIAL(error) << boost::format("[Orca Updater]: status=%1%, error=%2%, body=%3%") % status % error % body;
