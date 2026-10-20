@@ -18,10 +18,8 @@
 #include "wxExtensions.hpp"
 #include "Widgets/StateHandler.hpp"
 #include "Widgets/PopupWindow.hpp"
+// DD_ITEM_STYLE_DISABLED / DD_ITEM_STYLE_DIMMED come from DropDown.hpp.
 #include "Widgets/DropDown.hpp"
-
-constexpr int DD_ITEM_STYLE_DISABLED   = 0x0002;
-constexpr int DD_ITEM_STYLE_DIMMED     = 0x0004;
 
 /** @brief Draws the grouped, two-level filament preset popup. */
 class FilamentDropDown : public PopupWindow

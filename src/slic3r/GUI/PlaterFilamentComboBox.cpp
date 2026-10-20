@@ -6,6 +6,7 @@
 
 #include <wx/tokenzr.h>
 #include <wx/scrolwin.h>
+#include <wx/popupwin.h>
 #include <wx/weakref.h>
 
 #include <algorithm>
@@ -590,8 +591,10 @@ void PlaterFilamentComboBox::show_popup()
         return;
 
     // Dismiss a flat popup opened before this handler took ownership.
+    // DropDown::Dismiss is protected; the public wxPopupTransientWindow entry still
+    // dispatches to it virtually.
     if (GetDropDown().IsShown())
-        GetDropDown().Dismiss();
+        static_cast<wxPopupTransientWindow &>(GetDropDown()).Dismiss();
 
     if (m_popup_visible)
     {
