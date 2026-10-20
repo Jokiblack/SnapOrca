@@ -133,6 +133,11 @@ USER_DIR = "user"
 # authoritative "G*" cloud ids. No vendor is exempt from the filament_id rule.
 RESERVED_VENDORS = {"BBL"}
 
+# Snapmaker Orca: the frozen list of ids Snapmaker Orca 2.4 shipped that do not follow
+# the id rules and are kept on purpose (see the file's description). Each entry exempts
+# one file with exactly that id, so a new preset is still held to the rules.
+ID_EXCEPTIONS_PATH = os.path.join(SCRIPTS_DIR, "profile_id_exceptions.json")
+
 # The profile types that carry a setting_id; the subdir name is also the type
 # name, matching Preset::get_type_string() on the C++ side.
 PROFILE_SUBDIRS = ("filament", "process", "machine")
@@ -150,6 +155,13 @@ NON_PROFILE_FILES = {
     "filament_id_map.json",
     "filament_name_map.json",
     "support_recommended_params.json",
+    # Snapmaker Orca: the GUI reads these from Snapmaker/filament/ by their fixed file
+    # names (PlaterFilamentComboBox.cpp, MixedColorMatchHelpers.cpp, GUI_App.cpp,
+    # PresetUpdater.cpp); the preset loader never sees them.
+    "filament_allow_list.json",
+    "filament_compatibility.json",
+    "filament_hot_bed_nozzles.json",
+    "filaments_colours.json",
 }
 
 # Mirror PrintConfigDef::handle_legacy's ignore set in PrintConfig.cpp; a test
@@ -162,7 +174,7 @@ OBSOLETE_KEYS = {
     "tree_support_collision_resolution", "tree_support_with_infill",
     "max_volumetric_speed", "max_print_speed", "support_closing_radius",
     "remove_freq_sweep", "remove_bed_leveling", "remove_extrusion_calibration",
-    "support_transition_line_width", "support_transition_speed", "bed_temperature",
+    "support_transition_line_width", "bed_temperature",
     "bed_temperature_initial_layer", "can_switch_nozzle_type", "can_add_auxiliary_fan",
     "extra_flush_volume", "spaghetti_detector", "adaptive_layer_height",
     "z_hop_type", "z_lift_type", "bed_temperature_difference", "long_retraction_when_cut",
@@ -176,6 +188,15 @@ OBSOLETE_KEYS = {
     "preslice_remap_global", "belt_support_z_offset_mode", "first_layer_plane",
     "first_layer_plane_offset", "belt_preslice_global", "gcode_back_transform",
     "belt_support_floor_mode", "first_layer_plane_thickness",
+}
+
+# Snapmaker Orca: keys handle_legacy ignores that normalize and check still leave in the
+# profiles. tree_support_adaptive_layer_height is the Snapmaker Orca 2.4.1 process key
+# that never reached the support generator; mainline OrcaSlicer defines it and its
+# vendor profiles (Creality, Anycubic, Artillery, ...) write it, so stripping it would
+# rewrite upstream bundles on every sync for no effect on what loads.
+LOADER_IGNORED_KEPT_KEYS = {
+    "tree_support_adaptive_layer_height",
 }
 
 # Keys renamed at some point, whose old and new spellings must never co-exist:
@@ -226,6 +247,63 @@ def _variant_scheme():
         "filament": ("filament_extruder_variant",
                      dict.fromkeys(members("filament_options_with_variant"), 1)),
     }
+
+
+@functools.lru_cache(maxsize=None)
+def _flow_variant_scheme():
+    """Snapmaker Orca's second variant axis: per config preset type, the key that
+    declares the preset's flow variants and the keys that hold one value per
+    declared flow variant (standard / high_flow / ...).
+
+    Read from PrintConfig.cpp - flow_support_key() and the initializers of
+    filament_flow_variant_options(), process_flow_variant_options() and
+    machine_flow_variant_options() - so membership is the engine's own.
+    Preset::normalize sizes such a key to the number of entries of the declaration
+    (filament_flow_support, process_flow_support, printer_flow_support), and
+    get_config_idx() / get_value_at() read the entry of the flow type of the tool
+    head, so a preset that declares two flow variants holds two values there.
+    """
+    with open(PRINT_CONFIG_CPP, encoding="utf-8") as f:
+        source = f.read()
+
+    def options(function):
+        match = re.search(r"&\s*" + function + r"\(\)\s*\{.*?\{(.*?)\};",
+                          source, re.DOTALL)
+        if match is None:
+            raise RuntimeError(f"{PRINT_CONFIG_CPP} no longer defines {function}")
+        body = re.sub(r"//[^\n]*|/\*.*?\*/", "", match.group(1), flags=re.DOTALL)
+        return frozenset(re.findall(r'"([^"\n]+)"', body))
+
+    return {
+        "filament": ("filament_flow_support", options("filament_flow_variant_options")),
+        "process": ("process_flow_support", options("process_flow_variant_options")),
+        "machine": ("printer_flow_support", options("machine_flow_variant_options")),
+    }
+
+
+def _flow_count(ptype, key, config):
+    """How many flow variants `key` holds a value for in a composed config: the
+    entries of the preset's flow declaration when the key is a flow-variant option
+    of its type and the declaration is written, else 1.
+
+    A flow-variant option may also state one value per extruder variant for every
+    declared flow: Preset::normalize pads it with that value and
+    PresetBundle::full_config copies entry 0 to the flows it does not reach, so
+    both widths are what the engine reads (see _variant_widths)."""
+    support_key, flow_keys = _flow_variant_scheme()[ptype]
+    if key not in flow_keys or support_key not in config:
+        return 1
+    return max(1, len(_as_list(config[support_key][0])))
+
+
+def _variant_widths(ptype, key, stride, config, variant_length):
+    """(the full width, every width the engine reads) of a variant key in a
+    composed config: one value per extruder variant x stride, times the flow
+    variants it holds; a flow-variant option may also state the value once for
+    every flow (_flow_count)."""
+    base = variant_length * stride
+    need = base * _flow_count(ptype, key, config)
+    return need, {base, need}
 
 
 @functools.lru_cache(maxsize=None)
@@ -455,6 +533,64 @@ def iter_profile_files(vendor_dir):
                     yield os.path.join(root, name), sub
 
 
+@functools.lru_cache(maxsize=None)
+def _id_exceptions():
+    """vendor -> {"setting_id": {sub_path: id}, "filament_id": {sub_path: id}} from
+    ID_EXCEPTIONS_PATH; empty when the file is absent."""
+    try:
+        data = load_json(ID_EXCEPTIONS_PATH)
+    except FileNotFoundError:
+        return {}
+    out = {}
+    for vendor, kinds in (data.get("vendors") or {}).items():
+        out[vendor] = {kind: dict(kinds.get(kind) or {}) for kind in ("setting_id", "filament_id")}
+    return out
+
+
+def _vendor_sub_path(path, profiles_dir, vendor):
+    """A file's path inside its vendor folder, "/"-joined - the key of ID_EXCEPTIONS_PATH."""
+    return posixpath.normpath(os.path.relpath(
+        str(path), os.path.join(str(profiles_dir), vendor)).replace(os.sep, "/"))
+
+
+def is_legacy_id(vendor, sub_path, kind, value):
+    """The id `value` of `kind` ("setting_id" / "filament_id") in <vendor>/<sub_path> is
+    one ID_EXCEPTIONS_PATH keeps: listed for that very file with that very value."""
+    return bool(value) and _id_exceptions().get(vendor, {}).get(kind, {}).get(
+        posixpath.normpath(sub_path)) == value
+
+
+def legacy_ids(vendor):
+    """Every id ID_EXCEPTIONS_PATH keeps for a vendor, of both kinds."""
+    kinds = _id_exceptions().get(vendor, {})
+    return set(kinds.get("setting_id", {}).values()) | set(kinds.get("filament_id", {}).values())
+
+
+def check_id_exceptions(profiles_dir):
+    """Every entry of ID_EXCEPTIONS_PATH names an existing file of a bundle in this tree
+    that still carries that id, so the list only ever shrinks. Returns the error count.
+    A tree without the vendor (a test tree, a partial copy) is not judged."""
+    errors = 0
+    vendors = set(list_profile_dirs(profiles_dir))
+    for vendor, kinds in sorted(_id_exceptions().items()):
+        if vendor not in vendors:
+            continue
+        for kind, entries in sorted(kinds.items()):
+            for sub_path, value in sorted(entries.items()):
+                path = os.path.join(str(profiles_dir), vendor, *sub_path.split("/"))
+                try:
+                    data = load_json(path)
+                except (OSError, ValueError):
+                    data = None
+                if isinstance(data, dict) and data.get(kind) == value:
+                    continue
+                print_error(
+                    f'{os.path.basename(ID_EXCEPTIONS_PATH)}: {vendor}/{sub_path} no longer '
+                    f'carries {kind} "{value}"; remove the entry (the list may only shrink)')
+                errors += 1
+    return errors
+
+
 def load_vendor_filaments(profiles_dir, vendor):
     """Load a vendor's filament presets from its index's filament_list.
 
@@ -476,11 +612,18 @@ def load_vendor_filaments(profiles_dir, vendor):
             errors.append(f"unreadable filament profile {rel}: {e}")
             continue
         name = data.get("name", entry.get("name"))
+        sub_path = posixpath.normpath(entry.get("sub_path", "").replace("\\", "/"))
+        sid = data.get("setting_id")
         presets[name] = {
             "name": name,
             "file": rel,
             "path": path,
+            "sub_path": sub_path,
             "filament_id": data.get("filament_id"),
+            # Snapmaker Orca: PresetBundle::commit_vendor_preset gives a system filament
+            # that resolves no filament_id its own setting_id instead. Mirrored only for
+            # the ids ID_EXCEPTIONS_PATH keeps, so a new preset still needs a minted id.
+            "legacy_setting_id": sid if is_legacy_id(vendor, sub_path, "setting_id", sid) else None,
             "inherits": data.get("inherits"),
             "instantiation": str(data.get("instantiation", "")).lower() == "true",
             "compatible_printers": data.get("compatible_printers") or [],
@@ -523,6 +666,9 @@ def resolve_filament_id(name, filaments, ofl_filaments, seen=None, in_ofl=False)
     if rec.get("filament_id"):
         return rec["filament_id"], "own" if len(seen) == 1 else "inherited", entry
     parent = rec.get("inherits")
+    # Snapmaker Orca: after its own filament_id and its parent's, a system filament
+    # takes its own setting_id (PresetBundle::commit_vendor_preset), for bases too.
+    own_fallback = None if in_ofl else rec.get("legacy_setting_id")
     if parent:
         fid, src, sub_entry = resolve_filament_id(parent, filaments, ofl_filaments, seen, in_ofl)
         if fid or in_ofl:
@@ -531,8 +677,13 @@ def resolve_filament_id(name, filaments, ofl_filaments, seen=None, in_ofl=False)
         # OFL map at each vendor hop's inherits; retry this hop's parent in OFL.
         if parent in ofl_filaments:
             fid, src, _ = resolve_filament_id(parent, filaments, ofl_filaments, set(), True)
-            return fid, src, parent
+            if fid or not own_fallback:
+                return fid, src, parent
+        if own_fallback:
+            return own_fallback, "setting_id", entry
         return fid, src, sub_entry
+    if own_fallback:
+        return own_fallback, "setting_id", entry
     return None, "missing", entry
 
 
@@ -676,7 +827,9 @@ def check_filament_ids(profiles_dir=PROFILES_DIR, map_path=BAMBU_MAP_PATH):
     """Validate filament_id state across every vendor. Returns the error count.
 
     1. Format: every id occurring in the tree (declared or effective) must
-       match ^OF[0-9A-Za-z]{6}$. No exceptions, not even BBL.
+       match ^OF[0-9A-Za-z]{6}$. Not even BBL is exempt; only the ids
+       ID_EXCEPTIONS_PATH keeps (Snapmaker Orca 2.4's) are, including the
+       setting_ids the loader uses as filament_id (resolve_filament_id).
     2. Identity: the id is a function of the triple alone, and there is no
        second acceptable value. (a) A declared id must equal the one id the
        declarer's own triple mints; (b) the id an instantiated preset inherits
@@ -703,8 +856,9 @@ def check_filament_ids(profiles_dir=PROFILES_DIR, map_path=BAMBU_MAP_PATH):
 
     # -- 1. format ----------------------------------------------------------
     for vendor in sorted(analysis["vendor_ids"]):
+        kept = legacy_ids(vendor)
         for fid in sorted(analysis["vendor_ids"][vendor]):
-            if OF_ID_RE.match(fid):
+            if OF_ID_RE.match(fid) or fid in kept:
                 continue
             print_error(
                 f'filament_id "{fid}" ({vendor}) is not a minted "OF" id; new '
@@ -885,6 +1039,7 @@ def check_setting_id_uniqueness(profiles_dir):
             if not isinstance(data, dict):
                 continue
             rel = os.path.relpath(path, profiles_dir).replace(os.sep, "/")
+            sub_path = _vendor_sub_path(path, profiles_dir, vendor)
             # Rule 5: catch the misspelled "settings_id" key.
             if "settings_id" in data:
                 errors += 1
@@ -892,6 +1047,12 @@ def check_setting_id_uniqueness(profiles_dir):
                     f'profile {rel} uses the misspelled key "settings_id" '
                     f'(should be "setting_id"); run {SETTING_ID_CMD}')
             sid = data.get("setting_id")
+            if is_legacy_id(vendor, sub_path, "setting_id", sid):
+                # Kept as Snapmaker Orca 2.4 shipped it (ID_EXCEPTIONS_PATH). Rules 2-4
+                # do not apply: Snapmaker gives every nozzle size of a filament one id on
+                # purpose, the loader's filament_id when the preset declares none. A
+                # preset outside the list still gets a minted, hence unique, id.
+                continue
             if data.get("instantiation") != "true":
                 # Rule 3: base/template profiles must not carry a setting_id.
                 if sid:
@@ -1294,6 +1455,9 @@ def check_filament_id_length(profiles_dir, vendor):
             continue
 
         filament_id = data.get("filament_id")
+        if is_legacy_id(vendor, _vendor_sub_path(file_path, profiles_path, vendor),
+                        "filament_id", filament_id):
+            continue  # kept as Snapmaker Orca 2.4 shipped it (ID_EXCEPTIONS_PATH)
         if filament_id and len(filament_id) > 8 and file_path.resolve() in referenced:
             print_error(f'Filament id too long "{filament_id}": {rel}')
             error += 1
@@ -1798,11 +1962,15 @@ def check_variant_arrays(profiles_dir, vendor, strict=False):
             if key not in data and not strict:
                 continue
             value, path = config[key]
-            width, need = len(_as_list(value)), variant_length * stride
-            if width == need:
+            flows = _flow_count(ptype, key, config)
+            need, accepted = _variant_widths(ptype, key, stride, config, variant_length)
+            width = len(_as_list(value))
+            if width in accepted:
                 continue
+            flow_note = (f" and {flows} flow variants ({_flow_variant_scheme()[ptype][0]})"
+                         if flows > 1 else "")
             print_error(f'{rel}: "{key}" has {width} values for variant length {variant_length}'
-                        f"{' (' + reason + ')' if reason else ''} at stride {stride}, "
+                        f"{' (' + reason + ')' if reason else ''}{flow_note} at stride {stride}, "
                         f"which takes {need}"
                         f"{'' if key in data else ' (it comes from ' + path[0] + ')'}")
             errors += 1
@@ -2002,6 +2170,7 @@ def check_profiles(profiles_dir=PROFILES_DIR, vendors=None, strict=False):
     errors_found += check_setting_id_uniqueness(profiles_dir)
     errors_found += check_machine_model_name_uniqueness(profiles_dir)
     errors_found += check_filament_ids(profiles_dir)
+    errors_found += check_id_exceptions(profiles_dir)
 
     print("\n==================== SUMMARY ====================")
     print_info(f"Checked vendors     : {len(checked)}")
@@ -2253,7 +2422,8 @@ def generate_filament_ids(profiles_dir=PROFILES_DIR, vendors=None, dry_run=False
             analysis["declarer_triples"], key=lambda x: (x[0], x[1]["file"])):
         want = generate_filament_id(*triple)
         if (fid == want or (wanted is not None and vendor not in wanted)
-                or triple in colliding):
+                or triple in colliding
+                or is_legacy_id(vendor, rec["sub_path"], "filament_id", fid)):
             continue
         missing = _incomplete_triple(triple)
         if missing:
@@ -2391,6 +2561,11 @@ def generate_setting_ids(profiles_dir=PROFILES_DIR, vendors=None, dry_run=False,
                 continue
 
             sid = data.get("setting_id")
+            if is_legacy_id(vendor, _vendor_sub_path(path, profiles_dir, vendor),
+                            "setting_id", sid):
+                sid_kept = True
+            else:
+                sid_kept = False
             # Strictly "true", exactly as check_setting_id_uniqueness tests it:
             # a preset the validator calls a base profile must not be given an id
             # here, or the two would fight over it forever.
@@ -2408,7 +2583,9 @@ def generate_setting_ids(profiles_dir=PROFILES_DIR, vendors=None, dry_run=False,
                     # no setting_id and nothing able to give it one.
                     edits.append(("assigned", 'restore its value as "setting_id"',
                                   lambda text, new=typo: insert_setting_id(text, new)))
-            if not instantiated:
+            if sid_kept:
+                pass  # kept as Snapmaker Orca 2.4 shipped it (ID_EXCEPTIONS_PATH)
+            elif not instantiated:
                 if sid is not None:
                     edits.append(("stripped", "strip the base profile's setting_id",
                                   lambda text, old=sid: delete_key_line(
@@ -2836,6 +3013,39 @@ def topological_sort(profiles):
     return result
 
 
+# Snapmaker Orca: bundles whose index order is curated rather than canonical. The setup
+# wizard lists a vendor's printer models in machine_model_list order (WebGuideDialog;
+# resources/web/guide/21/common.js keeps it within a vendor), and Snapmaker lists the U1
+# first. update-index keeps the order such an index already has, as long as it puts every
+# parent before its children; it drops the entries whose file is gone or repeated and
+# appends the new files in canonical order.
+KEEP_INDEX_ORDER_VENDORS = {"Snapmaker"}
+
+
+def _keep_index_order(current, canonical):
+    """`canonical` (topologically sorted entries) in the order of `current` (the index
+    as it stands): the listed entries in their listed order, then the others in
+    canonical order. Falls back to `canonical` when that order would list a child
+    before its parent."""
+    by_key = {(e["name"], e["sub_path"]): e for e in canonical}
+    names = {e["name"] for e in canonical}
+    ordered, seen = [], set()
+    for entry in current or []:
+        sub_path = posixpath.normpath(str(entry.get("sub_path", "")).replace("\\", "/"))
+        key = (entry.get("name"), sub_path)
+        if key in by_key and key not in seen:
+            seen.add(key)
+            ordered.append(by_key[key])
+    ordered += [e for e in canonical if (e["name"], e["sub_path"]) not in seen]
+    placed = set()
+    for entry in ordered:
+        if any(parent in names and parent not in placed
+               for parent in profile_dependencies(entry)):
+            return canonical
+        placed.add(entry["name"])
+    return ordered
+
+
 def build_index_sections(profiles_dir, vendor, profile_types=None):
     """The *_list sections update-index would write for one bundle, from its own files.
 
@@ -2856,6 +3066,12 @@ def build_index_sections(profiles_dir, vendor, profile_types=None):
     problems = []
     unplaceable = {}
     by_name = defaultdict(list)
+    current = {}
+    if vendor in KEEP_INDEX_ORDER_VENDORS:
+        try:
+            current = load_json(os.path.join(profiles_dir, vendor + ".json"))
+        except (ValueError, OSError):
+            current = {}
     for profile_type in (profile_types or PROFILE_TYPES):
         entries = []
         for path in _walk_json(os.path.join(vendor_dir, _profile_subdir(profile_type))):
@@ -2888,9 +3104,12 @@ def build_index_sections(profiles_dir, vendor, profile_types=None):
             by_name[name].append(entry["sub_path"])
             entries.append(entry)
 
+        ordered = topological_sort(entries)
+        if vendor in KEEP_INDEX_ORDER_VENDORS:
+            ordered = _keep_index_order(current.get(profile_type + "_list"), ordered)
         # inherits/include were ordering input only; the index holds name and sub_path
         sections[profile_type + "_list"] = [{"name": e["name"], "sub_path": e["sub_path"]}
-                                            for e in topological_sort(entries)]
+                                            for e in ordered]
 
     for rel, found in sorted(unplaceable.items()):
         problems.append(f'{rel}: type {found!r} is not one of {list(PROFILE_TYPES)}, so it '
@@ -3019,9 +3238,11 @@ def fix_variant_arrays(profiles_dir=PROFILES_DIR, vendors=None, dry_run=False, s
                     if key not in config or key in VARIANT_LAYOUT_KEYS:
                         continue
                     value, path = config[key]
-                    values, need = _as_list(value), variant_length * stride
+                    values = _as_list(value)
+                    need, accepted = _variant_widths(ptype, key, stride, config,
+                                                     variant_length)
                     if key in data:
-                        if len(values) != need and instantiated and vendor in scope:
+                        if len(values) not in accepted and instantiated and vendor in scope:
                             fitted = fit(rel, key, values, need, stride)
                             if fitted:
                                 writes[rel][key] = fitted

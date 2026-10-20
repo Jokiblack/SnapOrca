@@ -137,7 +137,9 @@ class TestObsoleteKeys(unittest.TestCase):
             source, re.DOTALL)
         self.assertIsNotNone(match, "Could not locate the loader's obsolete-key set")
         keys = re.sub(r"//[^\n]*|/\*.*?\*/", "", match.group(1), flags=re.DOTALL)
-        self.assertEqual(apt.OBSOLETE_KEYS, set(re.findall(r'"([^"\n]+)"', keys)))
+        loader = set(re.findall(r'"([^"\n]+)"', keys))
+        self.assertEqual(apt.OBSOLETE_KEYS | apt.LOADER_IGNORED_KEPT_KEYS, loader)
+        self.assertFalse(apt.OBSOLETE_KEYS & apt.LOADER_IGNORED_KEPT_KEYS)
 
 
 class TestVariantScheme(unittest.TestCase):
@@ -432,6 +434,31 @@ class TestUpdateIndex(TreeCase):
         # inherits is ordering input only; it never lands in the index.
         for entry in self.t.read_index("V")["filament_list"]:
             self.assertEqual(sorted(entry), ["name", "sub_path"])
+
+    def test_a_curated_index_keeps_its_order(self):
+        # Snapmaker Orca: KEEP_INDEX_ORDER_VENDORS keep the order their index lists
+        # (the setup wizard shows the U1 first); gone and repeated entries are dropped,
+        # new files appended in canonical order.
+        for name in ("A250", "U1", "Z9"):
+            self.t.write("Snapmaker", f"machine/{name}.json",
+                         {"type": "machine_model", "name": name})
+        self.t.write("Snapmaker", "filament/base.json", {"type": "filament", "name": "base"})
+        self.t.write("Snapmaker", "filament/kid.json",
+                     {"type": "filament", "name": "kid", "inherits": "base"})
+        index = self.t.read_index("Snapmaker")
+        index["machine_model_list"] = [{"name": n, "sub_path": f"machine/{n}.json"}
+                                       for n in ("U1", "Gone", "A250", "U1")]
+        # A child before its parent cannot be kept: canonical order instead.
+        index["filament_list"] = [{"name": "kid", "sub_path": "filament/kid.json"},
+                                  {"name": "base", "sub_path": "filament/base.json"}]
+        self.t.write_index("Snapmaker", index)
+        rc, out = self.run_command("update-index")
+        self.assertEqual(rc, 0, out)
+        index = self.t.read_index("Snapmaker")
+        self.assertEqual([e["name"] for e in index["machine_model_list"]], ["U1", "A250", "Z9"])
+        self.assertEqual([e["name"] for e in index["filament_list"]], ["base", "kid"])
+        rc, out = self.run_command("update-index", "--dry-run")
+        self.assertIn("0 vendor index(es) would be rebuilt", out)
 
     def test_include_targets_are_listed_before_their_users(self):
         # The loader resolves include like inherits: in one pass over the list, so
@@ -998,6 +1025,38 @@ class TestFixVariant(TreeCase):
         self.assertEqual(errors, 1, out)
         self.assertIn('P.json: "outer_wall_speed" has 1 values for variant length 2 at stride 1, '
                       'which takes 2', out)
+
+    def test_a_flow_variant_option_holds_one_value_per_declared_flow(self):
+        # Snapmaker Orca: process_flow_support / filament_flow_support declare a second
+        # variant axis; its options hold one value per flow, or one for every flow.
+        self.preset("process/P.json", instantiation="true",
+                    process_flow_support=["standard", "high_flow"],
+                    outer_wall_speed=["200", "500"], inner_wall_speed=["300"],
+                    sparse_infill_speed=["1", "2", "3"], line_width=["0.4", "0.4"])
+        self.preset("filament/F.json", instantiation="true",
+                    filament_flow_support=["standard", "high_flow"],
+                    nozzle_temperature=["220", "230"], long_retractions_when_ec=["0", "0"])
+        errors, out = self.width_errors()
+        self.assertEqual(errors, 3, out)
+        self.assertIn('P.json: "sparse_infill_speed" has 3 values for variant length 1 (no '
+                      'print_extruder_variant, so the single default variant) and 2 flow '
+                      'variants (process_flow_support) at stride 1, which takes 2', out)
+        # Not flow-variant options: one value per extruder variant only.
+        self.assertIn('P.json: "line_width" has 2 values', out)
+        self.assertIn('F.json: "long_retractions_when_ec" has 2 values', out)
+        self.assertNotIn("outer_wall_speed", out)
+        self.assertNotIn("inner_wall_speed", out)
+        self.assertNotIn("nozzle_temperature", out)
+
+    def test_the_flow_variant_options_are_read_from_the_engine(self):
+        scheme = apt._flow_variant_scheme()
+        self.assertEqual(scheme["filament"][0], "filament_flow_support")
+        self.assertIn("pressure_advance", scheme["filament"][1])
+        self.assertNotIn("long_retractions_when_ec", scheme["filament"][1])
+        self.assertEqual(scheme["process"][0], "process_flow_support")
+        self.assertIn("outer_wall_speed", scheme["process"][1])
+        self.assertNotIn("line_width", scheme["process"][1])
+        self.assertEqual(scheme["machine"], ("printer_flow_support", frozenset()))
 
     def test_one_value_is_padded_to_every_variant(self):
         self.preset("machine/M.json", instantiation="true", nozzle_diameter=["0.4"] * 3,

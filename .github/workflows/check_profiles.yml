@@ -70,7 +70,10 @@ jobs:
         run: |
           set -o pipefail
           base="${{ runner.temp }}/v2.4.2"
-          git fetch --no-tags --depth=1 origin refs/tags/v2.4.2:refs/tags/v2.4.2
+          # SnapOrca: the fork does not carry OrcaSlicer's release tags, so take v2.4.2 from
+          # OrcaSlicer when origin lacks it; the map is defined against OrcaSlicer 2.4.2.
+          git fetch --no-tags --depth=1 origin refs/tags/v2.4.2:refs/tags/v2.4.2 \
+            || git fetch --no-tags --depth=1 https://github.com/OrcaSlicer/OrcaSlicer.git refs/tags/v2.4.2:refs/tags/v2.4.2
           mkdir -p "$base"
           git archive v2.4.2 resources/profiles | tar -x -C "$base"
           python3 ./scripts/orca_profile_tool.py legacy-compat --base "$base/resources/profiles" --check 2>&1 | tee ${{ runner.temp }}/legacy_compat.log
