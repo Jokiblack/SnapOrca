@@ -280,7 +280,7 @@ jobs:
         timeout-minutes: 90
         run: |
           python3 -I tests/gcode_regression/gcode_regression.py \
-            --slicer appimage/squashfs-root --out gcode-regression-out --allow-missing
+            --slicer appimage/squashfs-root --out gcode-regression-out
       - name: Upload G-code and diffs
         if: ${{ !cancelled() }}
         uses: actions/upload-artifact@v7

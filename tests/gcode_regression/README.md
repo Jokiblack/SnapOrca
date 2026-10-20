@@ -79,13 +79,15 @@ python3 -I tests/gcode_regression/gcode_regression.py --slicer squashfs-root --u
 Con un AppImage o un `squashfs-root` el script lanza `bin/snapmaker-orca` directamente con
 `LD_LIBRARY_PATH=<raíz>/lib/orca-runtime:<raíz>/lib`, sin `AppRun` (que aborta si faltan las
 bibliotecas OpenGL del sistema). El binario sigue necesitando `libOpenGL.so.0` y `libEGL.so.1`
-del sistema: en Ubuntu, `sudo apt-get install libopengl0 libegl1 libgl1`. No necesita pantalla.
+del sistema, y además GTK, WebKitGTK y GStreamer: la lista de paquetes de Ubuntu 24.04 está en el
+paso "Install runtime libraries" del job en `build_all.yml`. No necesita pantalla.
 
 Salida en `tests/gcode_regression/out/` (o `--out`): `models/`, `run/<caso>/plate_1.gcode`,
 `run/<caso>.cmd` y `.log`, `gcode/<caso>.gcode` (normalizado), `diff/<caso>.diff`. Código de
 salida: 0 idéntico, 1 diferencias o referencia que falta, 2 fallo de laminado. Con
-`--allow-missing` (lo que usa la integración continua) una referencia ausente no es un fallo:
-modo "bootstrap" para generar los G-code la primera vez.
+`--allow-missing` una referencia ausente no es un fallo: modo "bootstrap" para generar los G-code
+la primera vez de un caso nuevo. La integración continua no lo usa: un caso sin referencia la hace
+fallar.
 
 En GitHub Actions, el artefacto `gcode-regression-diff` lleva los G-code normalizados, los diffs y
 los logs de cada caso. Para crear o actualizar las referencias: descargar el AppImage de la run
@@ -144,7 +146,7 @@ Estado: EN CURSO (se actualiza en cada vuelta de GitHub Actions).
 4. `.github/workflows/build_all.yml`: job `gcode_regression_linux` (ubuntu-24.04, o
    `orca-lnx-server` con `SELF_HOSTED`), `needs: build_linux`: descarga el artefacto
    `Snapmaker_Orca_Linux_ubuntu_2404_[PV]*` (el x86_64, sin sufijo `_aarch64`), `--appimage-extract`,
-   ejecuta el script con `--allow-missing` y sube `gcode-regression-diff` (G-code normalizados,
+   ejecuta el script y sube `gcode-regression-diff` (G-code normalizados,
    diffs, `.cmd` y `.log`) siempre. Con referencias, cualquier diferencia hace fallar el job.
 
 ### Verificación
