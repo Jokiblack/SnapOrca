@@ -688,6 +688,11 @@ void AppConfig::set_defaults()
         set_bool("sync_system_preset", true);
     }
 
+    // Snapmaker Orca: vendor profiles only through the Snapmaker OTA channel (LixNix); off by default.
+    if (get("vendor_profiles_snapmaker_ota_only").empty()) {
+        set_bool("vendor_profiles_snapmaker_ota_only", false);
+    }
+
     if (get("backup_switch").empty() || get("version") < "01.06.00.00") {
         set_bool("backup_switch", true);
     }

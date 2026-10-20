@@ -2004,6 +2004,13 @@ void PresetUpdater::check_vendor_update(const std::string& vendor_id)
 {
     if (!p->enabled_config_update) return;
     if (vendor_id.empty()) return;
+    // Snapmaker Orca (LixNix 75e34b1a8): with the preference on, vendor profile updates come only
+    // through the Snapmaker OTA channel (sync_config); the mainline Orca profile CDN is not asked.
+    // Off by default, so the behaviour is unchanged unless the user opts in.
+    if (AppConfig* app_config = GUI::wxGetApp().app_config; app_config != nullptr && app_config->get_bool("vendor_profiles_snapmaker_ota_only")) {
+        BOOST_LOG_TRIVIAL(info) << "[Orca Updater] vendor update check for " << vendor_id << " skipped: profiles update through Snapmaker OTA only";
+        return;
+    }
 
     if (!p->checked_vendors.insert(vendor_id).second)
         return;

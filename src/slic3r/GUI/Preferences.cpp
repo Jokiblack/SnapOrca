@@ -2332,6 +2332,13 @@ void PreferencesDialog::create_items()
     auto item_system_sync      = create_item_checkbox(_L("Update built-in presets automatically."), "", "sync_system_preset");
     g_sizer->Add(item_system_sync);
 
+    // Snapmaker Orca (LixNix 75e34b1a8): off by default; on, PresetUpdater::check_vendor_update() skips the Orca profile CDN.
+    auto item_ota_only_profiles = create_item_checkbox(
+        _L("Vendor profile updates only through Snapmaker OTA"),
+        _L("Skips the OrcaSlicer profile server when checking for printer profile updates: the built-in profiles then only change with the Snapmaker preset package or with the application itself. The new version notice is not affected."),
+        "vendor_profiles_snapmaker_ota_only");
+    g_sizer->Add(item_ota_only_profiles);
+
     auto item_token_storage    = create_item_checkbox(_L("Use encrypted file for token storage"),
                                                       _L("Store authentication tokens in an encrypted file instead of the system keychain. (Requires restart)"),
                                                       SETTING_USE_ENCRYPTED_TOKEN_FILE);

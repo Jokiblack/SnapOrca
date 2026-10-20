@@ -39162,6 +39162,22 @@ msgid "Simplify distant objects"
 msgstr "Simplificar los objetos lejanos"
 
 # AI Translated
+msgid "Vendor profile updates only through Snapmaker OTA"
+msgstr "Actualizar los perfiles de fabricante solo por OTA de Snapmaker"
+
+# AI Translated
+msgid ""
+"Skips the OrcaSlicer profile server when checking for printer profile "
+"updates: the built-in profiles then only change with the Snapmaker preset "
+"package or with the application itself. The new version notice is not "
+"affected."
+msgstr ""
+"Omite el servidor de perfiles de OrcaSlicer al buscar actualizaciones de los "
+"perfiles de impresora: los perfiles integrados solo cambian entonces con el "
+"paquete de preajustes de Snapmaker o con la propia aplicación. El aviso de "
+"versión nueva no se ve afectado."
+
+# AI Translated
 msgid ""
 "Draws objects that are small on screen from a reduced copy of their mesh, "
 "which speeds up large plates. Selected objects, slicing, picking, measuring, "
