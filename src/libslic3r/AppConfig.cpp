@@ -1966,11 +1966,11 @@ std::string AppConfig::config_path()
 {
 #ifdef USE_JSON_CONFIG
     std::string path = (m_mode == EAppMode::Editor) ?
-        (boost::filesystem::path(Slic3r::data_dir()) / (SLIC3R_APP_KEY ".conf")).make_preferred().string() :
+        (boost::filesystem::path(Slic3r::data_dir()) / (SLIC3R_APP_DATA_KEY ".conf")).make_preferred().string() :
         (boost::filesystem::path(Slic3r::data_dir()) / (GCODEVIEWER_APP_KEY ".conf")).make_preferred().string();
 #else
     std::string path = (m_mode == EAppMode::Editor) ?
-        (boost::filesystem::path(Slic3r::data_dir()) / (SLIC3R_APP_KEY ".ini")).make_preferred().string() :
+        (boost::filesystem::path(Slic3r::data_dir()) / (SLIC3R_APP_DATA_KEY ".ini")).make_preferred().string() :
         (boost::filesystem::path(Slic3r::data_dir()) / (GCODEVIEWER_APP_KEY ".ini")).make_preferred().string();
 #endif
 
