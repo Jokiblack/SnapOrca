@@ -5395,7 +5395,8 @@ int CLI::run(int argc, char **argv)
                     float tower_brim_width = m_print_config.option<ConfigOptionFloat>("prime_tower_brim_width", true)->value;
                     if (tower_brim_width < 0.f) tower_brim_width = 8.f; // auto: object heights unknown here, 8 mm is the auto cap
                     const float tower_margin = WIPE_TOWER_MARGIN + tower_brim_width;
-                    int plate_width = 0, plate_depth = 0, plate_height = 0;
+                    int plate_width = 0, plate_depth = 0;
+                    double plate_height = 0;
                     partplate_list.get_plate_size(plate_width, plate_depth, plate_height);
 
                     // set the default position: x the same with print config(left), y at the middle of the plate
@@ -5543,11 +5544,14 @@ int CLI::run(int argc, char **argv)
                     //prepare the wipe tower
                     auto printer_structure_opt = m_print_config.option<ConfigOptionEnum<PrinterStructure>>("printer_structure");
                     // set the default position, the same with print config(left top)
+                    // Snapmaker: the tower defaults to the middle of the plate depth (no Y constant).
+                    int plate_width = 0, plate_depth = 0;
+                    double plate_height = 0;
+                    partplate_list.get_plate_size(plate_width, plate_depth, plate_height);
                     float x = WIPE_TOWER_DEFAULT_X_POS;
-                    float y = WIPE_TOWER_DEFAULT_Y_POS;
+                    float y = plate_depth * 0.5f;
                     if (printer_structure_opt && printer_structure_opt->value == PrinterStructure::psI3) {
                         x = I3_WIPE_TOWER_DEFAULT_X_POS;
-                        y = I3_WIPE_TOWER_DEFAULT_Y_POS;
                     }
                     if (x < WIPE_TOWER_MARGIN) {
                         x = WIPE_TOWER_MARGIN;
@@ -5715,7 +5719,8 @@ int CLI::run(int argc, char **argv)
                         float tower_brim_width = m_print_config.option<ConfigOptionFloat>("prime_tower_brim_width", true)->value;
                         if (tower_brim_width < 0.f) tower_brim_width = 8.f; // auto: object heights unknown here, 8 mm is the auto cap
                         const float tower_margin          = WIPE_TOWER_MARGIN + tower_brim_width;
-                        int plate_width = 0, plate_depth = 0, plate_height = 0;
+                        int plate_width = 0, plate_depth = 0;
+                        double plate_height = 0;
                         partplate_list.get_plate_size(plate_width, plate_depth, plate_height);
                         // set the default position: x the same with print config(left), y at the middle of the plate
                         float x = WIPE_TOWER_DEFAULT_X_POS;
@@ -5821,7 +5826,8 @@ int CLI::run(int argc, char **argv)
                         float y;
                         if (duplicate_count > 0) {
                             auto printer_structure_opt = m_print_config.option<ConfigOptionEnum<PrinterStructure>>("printer_structure");
-                            int plate_width = 0, plate_depth = 0, plate_height = 0;
+                            int plate_width = 0, plate_depth = 0;
+                            double plate_height = 0;
                             partplate_list.get_plate_size(plate_width, plate_depth, plate_height);
                             x = WIPE_TOWER_DEFAULT_X_POS;
                             y = plate_depth * 0.5f;
