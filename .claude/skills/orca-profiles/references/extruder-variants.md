@@ -288,6 +288,15 @@ has `N = 1`; the loader cuts a list-less machine to its first variant and, with
 (`printer_extruder_options` plus `extruder_offset` and `extruder_colour`) and `extruder_variant_list`
 itself hold `E` values.
 
+Snapmaker Orca adds a second axis, flow variants: a preset that writes `filament_flow_support`,
+`process_flow_support` or `printer_flow_support` (for example `["standard", "high_flow"]`, `F = 2`)
+holds `N × F` values in each option that `filament_flow_variant_options()`,
+`process_flow_variant_options()` or `machine_flow_variant_options()` in `PrintConfig.cpp` lists for its
+type, one per declared flow, and `get_value_at()` reads the entry of the tool head's flow type. Such an
+option may also state `N` values, one for every flow: `Preset::normalize` and
+`PresetBundle::full_config` give the other flows that value. `check` accepts both widths; options
+outside those lists keep `N`.
+
 ### Sizing examples
 
 **One extruder, two nozzle volume types**: `E = 1`, `V_1 = 2`, so `S = 2`; stride-1 keys hold 2

@@ -238,6 +238,63 @@ def _variant_scheme():
 
 
 @functools.lru_cache(maxsize=None)
+def _flow_variant_scheme():
+    """Snapmaker Orca's second variant axis: per config preset type, the key that
+    declares the preset's flow variants and the keys that hold one value per
+    declared flow variant (standard / high_flow / ...).
+
+    Read from PrintConfig.cpp - flow_support_key() and the initializers of
+    filament_flow_variant_options(), process_flow_variant_options() and
+    machine_flow_variant_options() - so membership is the engine's own.
+    Preset::normalize sizes such a key to the number of entries of the declaration
+    (filament_flow_support, process_flow_support, printer_flow_support), and
+    get_config_idx() / get_value_at() read the entry of the flow type of the tool
+    head, so a preset that declares two flow variants holds two values there.
+    """
+    with open(PRINT_CONFIG_CPP, encoding="utf-8") as f:
+        source = f.read()
+
+    def options(function):
+        match = re.search(r"&\s*" + function + r"\(\)\s*\{.*?\{(.*?)\};",
+                          source, re.DOTALL)
+        if match is None:
+            raise RuntimeError(f"{PRINT_CONFIG_CPP} no longer defines {function}")
+        body = re.sub(r"//[^\n]*|/\*.*?\*/", "", match.group(1), flags=re.DOTALL)
+        return frozenset(re.findall(r'"([^"\n]+)"', body))
+
+    return {
+        "filament": ("filament_flow_support", options("filament_flow_variant_options")),
+        "process": ("process_flow_support", options("process_flow_variant_options")),
+        "machine": ("printer_flow_support", options("machine_flow_variant_options")),
+    }
+
+
+def _flow_count(ptype, key, config):
+    """How many flow variants `key` holds a value for in a composed config: the
+    entries of the preset's flow declaration when the key is a flow-variant option
+    of its type and the declaration is written, else 1.
+
+    A flow-variant option may also state one value per extruder variant for every
+    declared flow: Preset::normalize pads it with that value and
+    PresetBundle::full_config copies entry 0 to the flows it does not reach, so
+    both widths are what the engine reads (see _variant_widths)."""
+    support_key, flow_keys = _flow_variant_scheme()[ptype]
+    if key not in flow_keys or support_key not in config:
+        return 1
+    return max(1, len(_as_list(config[support_key][0])))
+
+
+def _variant_widths(ptype, key, stride, config, variant_length):
+    """(the full width, every width the engine reads) of a variant key in a
+    composed config: one value per extruder variant x stride, times the flow
+    variants it holds; a flow-variant option may also state the value once for
+    every flow (_flow_count)."""
+    base = variant_length * stride
+    need = base * _flow_count(ptype, key, config)
+    return need, {base, need}
+
+
+@functools.lru_cache(maxsize=None)
 def _variant_names():
     """The parts a variant string is built from, read from PrintConfig.cpp.
 
@@ -1807,11 +1864,15 @@ def check_variant_arrays(profiles_dir, vendor, strict=False):
             if key not in data and not strict:
                 continue
             value, path = config[key]
-            width, need = len(_as_list(value)), variant_length * stride
-            if width == need:
+            flows = _flow_count(ptype, key, config)
+            need, accepted = _variant_widths(ptype, key, stride, config, variant_length)
+            width = len(_as_list(value))
+            if width in accepted:
                 continue
+            flow_note = (f" and {flows} flow variants ({_flow_variant_scheme()[ptype][0]})"
+                         if flows > 1 else "")
             print_error(f'{rel}: "{key}" has {width} values for variant length {variant_length}'
-                        f"{' (' + reason + ')' if reason else ''} at stride {stride}, "
+                        f"{' (' + reason + ')' if reason else ''}{flow_note} at stride {stride}, "
                         f"which takes {need}"
                         f"{'' if key in data else ' (it comes from ' + path[0] + ')'}")
             errors += 1
@@ -3028,9 +3089,11 @@ def fix_variant_arrays(profiles_dir=PROFILES_DIR, vendors=None, dry_run=False, s
                     if key not in config or key in VARIANT_LAYOUT_KEYS:
                         continue
                     value, path = config[key]
-                    values, need = _as_list(value), variant_length * stride
+                    values = _as_list(value)
+                    need, accepted = _variant_widths(ptype, key, stride, config,
+                                                     variant_length)
                     if key in data:
-                        if len(values) != need and instantiated and vendor in scope:
+                        if len(values) not in accepted and instantiated and vendor in scope:
                             fitted = fit(rel, key, values, need, stride)
                             if fitted:
                                 writes[rel][key] = fitted
