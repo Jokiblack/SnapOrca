@@ -11455,7 +11455,23 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &path_d
                 ? NOZZLE_CONFIG(ironing_speed)
                 : m_config.filament_ironing_speed.get_at(filament_idx);
         } else if (path.role() == erBottomSurface) {
-            speed = NOZZLE_CONFIG(initial_layer_infill_speed);
+            // BBS: gate the first-layer infill speed so it only applies to the layer that actually
+            // touches the bed, matching the wall side where initial_layer_speed is also gated.
+            // A bottom hanging over a void is stBottomBridge and already printed as erBridgeInfill.
+            // What can still arrive here on a non-bed layer is stBottom:
+            //   1. The first object layer printed over a raft with a Z gap (gap_raft_object > 0):
+            //      it bridges the air gap above the raft interface, so it needs bridge speed.
+            //   2. A bottom resting on solid below with no gap (gapless soluble raft interface, or a
+            //      region bottom lying on another region's solid with interface_shells): it prints at
+            //      the regular solid-infill speed.
+            if (path_on_first_layer) {
+                speed = NOZZLE_CONFIG(initial_layer_infill_speed);
+            } else if (object_layer_over_raft() && m_layer != nullptr &&
+                       m_layer->object()->slicing_parameters().gap_raft_object > 0) {
+                speed = NOZZLE_CONFIG(bridge_speed);
+            } else {
+                speed = NOZZLE_CONFIG(internal_solid_infill_speed);
+            }
         } else if (path.role() == erGapFill) {
             speed = NOZZLE_CONFIG(gap_infill_speed);
         } else if (path.role() == erSupportMaterial) {
