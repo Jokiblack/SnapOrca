@@ -10,16 +10,22 @@
 #include "libslic3r/PrintConfig.hpp"
 #include "libslic3r/Preset.hpp"
 #include "libslic3r/PresetBundle.hpp"
+#include "libslic3r/GCodeReader.hpp"
+#include "libslic3r/Layer.hpp"
 
 #include "test_helpers.hpp"
 #include "test_utils.hpp"
 
 #include "libslic3r/TriangleMesh.hpp"
 #include "libslic3r/Point.hpp"
+#include <algorithm>
 #include <cstddef>
+#include <cstdlib>
 #include <fstream>
 #include <ios>
+#include <limits>
 #include <string>
+#include <string_view>
 #include <vector>
 #include <catch2/matchers/catch_matchers.hpp>
 #include <catch2/matchers/catch_matchers_floating_point.hpp>
@@ -209,4 +215,106 @@ TEST_CASE("An exported G-code's settings load back as the settings it was sliced
     REQUIRE(multiplier.size() == 1);
     CHECK_THAT(matrix[1] * multiplier[0], Catch::Matchers::WithinAbs(140., 1e-6));
     CHECK(bundle.project_config.option<ConfigOptionEnum<PrimeVolumeMode>>("prime_volume_mode")->value == PrimeVolumeMode::pvmFast);
+}
+
+namespace {
+
+// What the object's first extrusions see after the raft, printed with filament 2, hands over to
+// filament 1 in a spiral vase print.
+struct SpiralRaftToolChange
+{
+    double first_model_extrusion_z { -1. };
+    double highest_z_before_model  { 0. };
+    double nominal_model_layer_z   { 0. };
+    double lowest_model_extrusion_z { std::numeric_limits<double>::max() };
+};
+
+SpiralRaftToolChange spiral_raft_tool_change(const std::string &change_filament_gcode)
+{
+    // The raft is filament 2's only job; the object prints every feature with filament 1, so the
+    // one tool change of the print sits between the raft and the first object layer. Spiral mode
+    // keeps its usual single wall and no infill; one bottom shell layer keeps that first object
+    // layer a normal (non-spiral) layer, so its Z is the layer's nominal print_z.
+    DynamicPrintConfig config = Test::multifilament_config(2, {
+        { "spiral_mode",                 true },
+        { "wall_loops",                  1 },
+        { "top_shell_layers",            0 },
+        { "bottom_shell_layers",         1 },
+        { "sparse_infill_density",       "0%" },
+        { "enable_support",              true },
+        { "raft_layers",                 2 },
+        { "support_filament",            2 },
+        { "support_interface_filament",  2 },
+        { "outer_wall_filament_id",      1 },
+        { "inner_wall_filament_id",      1 },
+        { "sparse_infill_filament_id",   1 },
+        { "internal_solid_filament_id",  1 },
+        { "bottom_surface_filament_id",  1 },
+        { "enable_prime_tower",          false },
+        { "skirt_loops",                 0 },
+        { "brim_type",                   "no_brim" },
+        { "change_filament_gcode",       change_filament_gcode },
+    });
+
+    Print print;
+    Model model;
+    Test::init_print({ Test::TestMesh::cube_20x20x20 }, print, model, config);
+    std::string gcode = Test::gcode(print);
+    // The settings footer echoes change_filament_gcode, which must not be read as moves.
+    const size_t footer_start = gcode.find("; CONFIG_BLOCK_START");
+    if (footer_start != std::string::npos)
+        gcode.erase(footer_start);
+
+    SpiralRaftToolChange result;
+    result.nominal_model_layer_z = print.objects().front()->layers().front()->print_z;
+    int  current_tool   = -1;
+    bool raft_tool_seen = false;
+    GCodeReader reader;
+    reader.apply_config(config);
+    reader.parse_buffer(gcode, [&result, &current_tool, &raft_tool_seen](GCodeReader &self, const GCodeReader::GCodeLine &line) {
+        const std::string_view cmd = line.cmd();
+        if (cmd.size() > 1 && cmd.front() == 'T') {
+            current_tool = std::atoi(std::string(cmd.substr(1)).c_str());
+            raft_tool_seen |= current_tool == 1;
+        }
+        const bool model_extrusion = raft_tool_seen && current_tool == 0 && line.extruding(self) && line.dist_XY(self) > 0.;
+        if (result.first_model_extrusion_z < 0.) {
+            result.highest_z_before_model = std::max(result.highest_z_before_model, double(self.z()));
+            if (model_extrusion)
+                result.first_model_extrusion_z = self.z();
+        }
+        if (model_extrusion)
+            result.lowest_model_extrusion_z = std::min(result.lowest_model_extrusion_z, double(self.z()));
+    });
+    return result;
+}
+
+} // namespace
+
+// After the raft's tool change the head must come back down to the first object layer before it
+// extrudes, whatever Z change_filament_gcode left the head at. Bambu Studio 77b9dd94d restored the
+// layer Z in the spiral-vase travel branch; SnapOrca routes every travel through travel_to_xyz
+// with the layer's nominal Z, which restores it on the way to the first point.
+TEST_CASE("Spiral vase restores the object layer Z after a raft tool change", "[GCode][SpiralVase][Regression]")
+{
+    SECTION("tool change ends at a clearance Z above the whole print") {
+        const SpiralRaftToolChange result = spiral_raft_tool_change("G1 X5 F12000\nG1 Z{max_layer_z + 3.0} F1200\nT[next_extruder]\n");
+        REQUIRE(result.first_model_extrusion_z >= 0.);
+        CHECK(result.highest_z_before_model >= result.nominal_model_layer_z + 2.);
+        CHECK_THAT(result.first_model_extrusion_z, Catch::Matchers::WithinAbs(result.nominal_model_layer_z, 1e-3));
+        CHECK(result.lowest_model_extrusion_z >= result.nominal_model_layer_z - 1e-3);
+    }
+    SECTION("tool change leaves the XY position unknown at a clearance Z") {
+        const SpiralRaftToolChange result = spiral_raft_tool_change("G1 Z{max_layer_z + 3.0} F1200\nT[next_extruder]\n");
+        REQUIRE(result.first_model_extrusion_z >= 0.);
+        CHECK(result.highest_z_before_model >= result.nominal_model_layer_z + 2.);
+        CHECK_THAT(result.first_model_extrusion_z, Catch::Matchers::WithinAbs(result.nominal_model_layer_z, 1e-3));
+        CHECK(result.lowest_model_extrusion_z >= result.nominal_model_layer_z - 1e-3);
+    }
+    SECTION("tool change does not alter Z") {
+        const SpiralRaftToolChange result = spiral_raft_tool_change("T[next_extruder]\n");
+        REQUIRE(result.first_model_extrusion_z >= 0.);
+        CHECK_THAT(result.first_model_extrusion_z, Catch::Matchers::WithinAbs(result.nominal_model_layer_z, 1e-3));
+        CHECK(result.lowest_model_extrusion_z >= result.nominal_model_layer_z - 1e-3);
+    }
 }
