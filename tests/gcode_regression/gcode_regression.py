@@ -536,9 +536,11 @@ def main(argv=None):
     os.makedirs(datadir)
     gcode_dir = os.path.join(out, "gcode")
     diff_dir = os.path.join(out, "diff")
-    shutil.rmtree(gcode_dir, ignore_errors=True)
-    shutil.rmtree(diff_dir, ignore_errors=True)
-    os.makedirs(gcode_dir)
+    os.makedirs(gcode_dir, exist_ok=True)
+    for n in names:  # solo se borran los restos de los casos que se van a laminar
+        for p in (os.path.join(gcode_dir, n + ".gcode"), os.path.join(diff_dir, n + ".diff")):
+            if os.path.isfile(p):
+                os.remove(p)
     print("slicer:     %s" % slicer)
     print("perfiles:   %s" % os.path.abspath(args.profiles))
     print("referencia: %s" % args.reference)
