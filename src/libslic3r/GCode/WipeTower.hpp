@@ -131,6 +131,8 @@ public:
 
         // Is this a priming extrusion? (If so, the wipe tower rotation & translation will not be applied later)
         bool                    priming;
+        bool is_tool_change{ false };
+        Vec2f tool_change_start_pos;
 
 
         // Pass a polyline so that normal G-code generator can do a wipe for us.
@@ -153,6 +155,8 @@ public:
         // But if finish_layer_tcr is before tool_change_tcr, we have to travel to the wipe tower before
         // executing the gcode finish_layer_tcr.
         bool is_finish_first = false;
+        bool is_contact = false;
+        NozzleChangeResult nozzle_change_result;
 
 
         // Orca: folded into a later, thicker layer, so the emitter drops it. Set by the tower, so
