@@ -1,5 +1,7 @@
 #include <algorithm>
 #include <cctype>
+#include <cmath>
+#include <cstdlib>
 #include <limits>
 #include <sstream>
 #include <catch2/catch_all.hpp>
@@ -468,15 +470,16 @@ TEST_CASE("A tower printed without a tool change is still validated against the 
     CHECK_THAT(print.validate().string, Catch::Matchers::ContainsSubstring("printable area"));
 }
 
-// Snapmaker Orca: a tool changer (two 0.4 heads, no single extruder multi-material purging) purges
+// Snapmaker Orca: a tool changer (three 0.4 heads, no single extruder multi-material purging) purges
 // prime_volume per tool change. The flush options (flush_into_infill & co.) only reach the tower
 // planner through toolchanger_flush_into_objects; off, the tower takes the whole prime volume.
 //
-// Three filaments on every layer of a 30 mm cube at 0.2 mm (150 layers): outer wall 1, inner wall 2,
-// sparse infill 3 at 25 % (about 40 mm3 of overridable infill per layer), so each layer carries two
-// tool changes and the second one cannot hide behind the tower's own walls (save_on_last_wipe only
-// subsidizes the first change of a layer). prime_volume 45 mm3, minimal purge 15 mm3: with the option
-// on, up to 30 mm3 of each change goes into the infill and the tower keeps at least 15 mm3.
+// A 30 mm cube at 0.2 mm: outer wall 1, inner wall 2, sparse infill 3 at 25 %. With flush_into_infill
+// the sparse infill is overridable, so ToolOrdering does not load filament 3 for it and every layer
+// runs on heads 1 and 2 only, one tool change per layer. The infill is then printed by whichever of
+// the two the layer ends with; when that head is the one just loaded and its wall is already down,
+// the planner may count that infill as purge. prime_volume 45 mm3, minimal purge 15 mm3: such a
+// change keeps 15 mm3 on the tower and hands the other 30 mm3 to the infill.
 static DynamicPrintConfig toolchanger_flush_config(bool flush_into_objects_on_toolchanger)
 {
     DynamicPrintConfig config = multifilament_config(3, {
@@ -518,12 +521,21 @@ static DynamicPrintConfig toolchanger_flush_config(bool flush_into_objects_on_to
 
 struct ToolchangerPurgeResult
 {
-    int    toolchanges     = 0;   // tool changes the tower printed
-    int    gcode_tool_cmds = 0;   // "T<n>" commands in the exported G-code
-    float  tower_purge     = 0.f; // mm3 purged on the tower, all tool changes
-    float  min_purge       = 0.f; // smallest tower purge of any tool change, mm3
-    size_t overridden_layers = 0; // layers on which some object extrusion was claimed for purging
+    int                 toolchanges = 0; // tool changes the tower printed
+    std::vector<int>    tools;           // "T<n>" selections in the exported G-code, in order
+    std::vector<double> toolchange_e;    // filament fed in each tower tool change block, mm
+    double              tower_e = 0.;    // filament fed for the whole prime tower, mm
 };
+
+// Filament fed by an extrusion move (relative E, as multifilament_config sets), 0 for anything else.
+static double fed_filament(const std::string &line)
+{
+    if (line.rfind("G1 ", 0) != 0 && line.rfind("G2 ", 0) != 0 && line.rfind("G3 ", 0) != 0)
+        return 0.;
+    const std::string move = line.substr(0, line.find(';'));
+    const size_t      e    = move.find(" E");
+    return e == std::string::npos ? 0. : std::max(0., std::strtod(move.c_str() + e + 2, nullptr));
+}
 
 static ToolchangerPurgeResult slice_toolchanger_purge(const DynamicPrintConfig &config)
 {
@@ -537,52 +549,75 @@ static ToolchangerPurgeResult slice_toolchanger_purge(const DynamicPrintConfig &
 
     ToolchangerPurgeResult result;
     result.toolchanges = print.wipe_tower_data().number_of_toolchanges;
-    result.min_purge   = std::numeric_limits<float>::max();
-    for (const std::vector<WipeTower::ToolChangeResult> &layer : print.wipe_tower_data().tool_changes)
-        for (const WipeTower::ToolChangeResult &tcr : layer)
-            if (tcr.is_tool_change) {
-                result.tower_purge += tcr.purge_volume;
-                result.min_purge = std::min(result.min_purge, tcr.purge_volume);
-            }
-    for (const LayerTools &lt : print.wipe_tower_data().tool_ordering.layer_tools())
-        if (const_cast<LayerTools &>(lt).wiping_extrusions().is_anything_overridden())
-            ++result.overridden_layers;
 
-    // Count the tool selections in the G-code body (the config block repeats the toolchange
-    // G-code template, so it is cut off first).
+    // Walk the G-code body (the config block repeats the toolchange G-code template, so it is cut
+    // off first): tool selections, the filament of each tower tool change and of the whole tower.
     const std::string body = gcode_text.substr(0, gcode_text.find("; CONFIG_BLOCK_START"));
     std::istringstream stream(body);
     std::string line;
-    while (std::getline(stream, line))
+    bool in_toolchange = false;
+    bool in_tower      = false;
+    while (std::getline(stream, line)) {
         if (line.size() >= 2 && line[0] == 'T' && std::isdigit(static_cast<unsigned char>(line[1])))
-            ++result.gcode_tool_cmds;
+            result.tools.push_back(std::atoi(line.c_str() + 1));
+        else if (line.rfind(";TYPE:", 0) == 0)
+            in_tower = line == ";TYPE:Prime tower";
+        else if (line.find("CP TOOLCHANGE START") != std::string::npos) {
+            in_toolchange = true;
+            result.toolchange_e.push_back(0.);
+        } else if (line.find("CP TOOLCHANGE END") != std::string::npos)
+            in_toolchange = false;
+        else if (const double fed = fed_filament(line); fed > 0.) {
+            if (in_toolchange)
+                result.toolchange_e.back() += fed;
+            if (in_tower)
+                result.tower_e += fed;
+        }
+    }
     return result;
 }
 
 TEST_CASE("A tool changer purges the whole prime volume on the tower unless told to flush into objects", "[WipeTower]")
 {
-    const ToolchangerPurgeResult off = slice_toolchanger_purge(toolchanger_flush_config(false));
-    const ToolchangerPurgeResult on  = slice_toolchanger_purge(toolchanger_flush_config(true));
+    const DynamicPrintConfig     config_off = toolchanger_flush_config(false);
+    const ToolchangerPurgeResult off        = slice_toolchanger_purge(config_off);
+    const ToolchangerPurgeResult on         = slice_toolchanger_purge(toolchanger_flush_config(true));
 
-    // 150 layers with two changes each (the loaded tool starts the next layer): 299 changes
-    // after the first layer's own, and the exported G-code selects a tool just as often.
-    REQUIRE(off.toolchanges >= 290);
+    // Filament length of the purge a flushed change leaves to the infill: prime_volume minus the
+    // minimal purge the tower always keeps, over the filament cross section.
+    const double filament_diameter = config_off.opt<ConfigOptionFloats>("filament_diameter")->get_at(0);
+    const double prime_volume      = config_off.opt_float("prime_volume");
+    const double minimal_purge     = config_off.opt<ConfigOptionFloats>("filament_minimal_purge_on_wipe_tower")->get_at(0);
+    const double filament_area     = PI * filament_diameter * filament_diameter / 4.;
+    const double handed_to_infill  = (prime_volume - minimal_purge) / filament_area;
+
+    // Flushing into the infill only shortens purges: the tool changes, their number and their order
+    // in the exported G-code, stay the same, and each one prints its own tower block.
+    REQUIRE(off.toolchanges > 0);
+    REQUIRE(off.toolchange_e.size() == off.tools.size());
     CHECK(on.toolchanges == off.toolchanges);
-    CHECK(on.gcode_tool_cmds == off.gcode_tool_cmds);
+    CHECK(on.tools == off.tools);
+    REQUIRE(on.toolchange_e.size() == off.toolchange_e.size());
 
-    // Off: no object extrusion is ever claimed and every tool change purges at least the
-    // minimal purge; the tower's own walls can only subsidize the first change of a layer, so
-    // the second one purges the full 45 mm3 and the total is above 30 mm3 per change.
-    CHECK(off.overridden_layers == 0);
-    CHECK(off.min_purge >= 15.f - 1e-3f);
-    CHECK(off.tower_purge > 30.f * float(off.toolchanges));
+    // Off, every tower block that purges at all feeds at least the whole prime volume.
+    const size_t short_off = std::count_if(off.toolchange_e.begin(), off.toolchange_e.end(),
+                                           [&](double e) { return e > 0. && e < prime_volume / filament_area; });
+    CHECK(short_off == 0);
 
-    // On: the infill of the cube takes purge on (nearly) every layer, the tower keeps the
-    // minimal 15 mm3 per change as a floor and purges clearly less in total.
-    CHECK(on.overridden_layers >= 140);
-    CHECK(on.min_purge >= 15.f - 1e-3f);
-    CHECK(on.tower_purge < off.tower_purge);
-    CHECK(on.tower_purge < 0.8f * off.tower_purge);
+    // On, change by change, the tower block either keeps its full purge or gives up the share above the
+    // minimal purge (the wipe moves are laid in whole lines, hence the tolerance), never more.
+    size_t untouched = 0;
+    size_t flushed   = 0;
+    for (size_t i = 0; i < off.toolchange_e.size(); ++i) {
+        const double handed = off.toolchange_e[i] - on.toolchange_e[i];
+        if (std::abs(handed) < 1e-3)
+            ++untouched;
+        else if (std::abs(handed - handed_to_infill) < 0.05 * handed_to_infill)
+            ++flushed;
+    }
+    CHECK(untouched + flushed == off.toolchange_e.size());
+    CHECK(flushed > 0);
+    CHECK(on.tower_e < off.tower_e);
 }
 
 TEST_CASE("Flushing into objects on a tool changer is off by default", "[WipeTower]")
