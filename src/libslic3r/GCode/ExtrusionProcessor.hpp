@@ -546,7 +546,12 @@ public:
                                                            bool								   slowdown_for_curled_edges,
                                                            // Overlap at or below which the overhang fan switches on; negative when the fan
                                                            // does not depend on overlap.
-                                                           float                               fan_overlap_threshold = -1.0f)
+                                                           float                               fan_overlap_threshold = -1.0f,
+                                                           // Overhang Shadow (ported from OrcaFS-NeotkoCM by Neotko, NEOTKO_OVERHANGSHADOW_TAG):
+                                                           // share of the outboard wall's slowdown this path borrows, and how far outboard
+                                                           // that wall sits, in mm. A ratio of 0 leaves the path exactly as before.
+                                                           float                               overhang_shadow_ratio = 0.f,
+                                                           float                               overhang_shadow_reach = 0.f)
     {
         size_t                               speed_sections_count = std::min(overlaps.values.size(), speeds.values.size());
         std::vector<std::pair<float, float>> speed_sections;
@@ -638,6 +643,11 @@ public:
                                                                smallest_distance_with_lower_speed, effective_speed, fan_overlap_threshold,
                                                                known_distance);
         const auto width_inv = 1.0f / path.width;
+        // Overhang Shadow: curr.distance is the signed distance to the previous layer's boundary (negative inside,
+        // positive overhanging). The wall outboard of this one is graded on distance + reach, so shifting this
+        // point's distance by ratio * reach grades it that share of the way towards its neighbour: at 100% exactly
+        // as the wall it has to hold up. Away from an overhang the distance is deeply negative and nothing changes.
+        const float overhang_shadow_shift = overhang_shadow_ratio * overhang_shadow_reach;
         std::vector<ProcessedPoint> processed_points;
         processed_points.reserve(extended_points.size());
         for (size_t i = 0; i < extended_points.size(); i++) {
@@ -705,7 +715,16 @@ public:
             	extrusion_speed       = std::min(curled_speed, extrusion_speed); // adjust extrusion speed based on what is smallest - the calculated overhang speed or the artificial curled speed
             }
             
-            float overlap = std::min(1 - (curr.distance+artificial_distance_to_curled_lines) * width_inv, 1 - (next.distance+artificial_distance_to_curled_lines) * width_inv);
+            // Overhang Shadow: slowest wins, as with the curled slowdown, and the overhang fan reads the shifted
+            // overlap too. Only runs with a shift, so the stock speed and overlap are untouched otherwise.
+            float artificial_distance = artificial_distance_to_curled_lines;
+            if (overhang_shadow_shift > 0.f) {
+                extrusion_speed     = std::min(extrusion_speed, std::min(calculate_speed(curr.distance + overhang_shadow_shift),
+                                                                         calculate_speed(next.distance + overhang_shadow_shift)));
+                artificial_distance = std::max(artificial_distance, overhang_shadow_shift);
+            }
+
+            float overlap = std::min(1 - (curr.distance+artificial_distance) * width_inv, 1 - (next.distance+artificial_distance) * width_inv);
 
             processed_points.push_back({Point3(scaled(curr.position)), extrusion_speed, overlap});
         }

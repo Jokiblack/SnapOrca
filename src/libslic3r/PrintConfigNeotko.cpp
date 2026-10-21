@@ -46,7 +46,7 @@ void PrintConfigDef::init_neotko_params()
     // ---- A2 Overhang Shadow ----
     // Batch A2. PrintRegionConfig, read only by GCode::_extrude() (estimate_extrusion_quality), so they only
     // invalidate psGCodeExport. overhang_shadow_inner_wall is the switch: while it is off the other two do nothing.
-    // Neotko mode: comAdvanced (Speed tab).
+    // comAdvanced, as in Neotko; Speed tab, Overhang speed group.
 
     def = this->add("overhang_shadow_inner_wall", coBool);
     def->label = L("Slow down inner walls next to overhangs");
@@ -54,7 +54,7 @@ void PrintConfigDef::init_neotko_params()
     def->tooltip = L("Give the inner wall a share of the slowdown its overhanging neighbour gets, so the bead that "
                      "holds up the overhanging outer wall is printed as carefully as the overhang itself. Requires "
                      "\"Slow down for overhangs\" and has no effect when the outer wall is printed first.");
-    def->mode = comDevelop;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("overhang_shadow_speed_ratio", coPercent);
@@ -66,7 +66,7 @@ void PrintConfigDef::init_neotko_params()
     def->sidetext = "%";
     def->min = 0;
     def->max = 100;
-    def->mode = comDevelop;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionPercent(30));
 
     def = this->add("overhang_shadow_distance", coPercent);
@@ -77,7 +77,7 @@ void PrintConfigDef::init_neotko_params()
     def->sidetext = "%";
     def->min = 0;
     def->max = 1000;
-    def->mode = comDevelop;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionPercent(200));
 
     // ---- A4 Expert G-code Reprocessor ----

@@ -1382,6 +1382,19 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
 
     toggle_line("slowdown_for_curled_perimeters", has_overhang_speed, variant_index);
 
+    // Overhang Shadow (ported from OrcaFS-NeotkoCM by Neotko): shown with the "Experimental features (Neotko)"
+    // preference, it needs "Slow down for overhangs", and its ratio and reach do nothing while it is off.
+    {
+        const bool show_shadow = wxGetApp().neotko_features_enabled();
+        for (auto el : {"overhang_shadow_inner_wall", "overhang_shadow_speed_ratio", "overhang_shadow_distance"})
+            toggle_line(el, show_shadow);
+        toggle_field("overhang_shadow_inner_wall", has_overhang_speed);
+        const bool shadow_on = has_overhang_speed && config->has("overhang_shadow_inner_wall") &&
+                               config->opt_bool("overhang_shadow_inner_wall");
+        for (auto el : {"overhang_shadow_speed_ratio", "overhang_shadow_distance"})
+            toggle_field(el, shadow_on);
+    }
+
     toggle_line("flush_into_objects", !is_global_config);
 
     toggle_line("support_interface_not_for_body",config->opt_int("support_interface_filament")&&!config->opt_int("support_filament"));
