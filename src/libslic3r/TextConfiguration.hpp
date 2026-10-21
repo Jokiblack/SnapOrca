@@ -45,6 +45,14 @@ struct FontProp
     // Distiguish projection per glyph
     bool per_glyph;
 
+    // Typographic Spacing (ported from OrcaFS-NeotkoCM by Neotko, AGPL-3.0).
+    // Apply the kerning pairs stored in the font ('kern' table: Microsoft v0 and Apple v1.0,
+    // plus GPOS pair adjustments read by stb_truetype) so pairs like "AV" or "To" close up.
+    // Independent from char_gap, which is uniform tracking.
+    // When not set kerning is off and the geometry is exactly the historical one.
+    // Stored in .3mf as attribute "neotko_font_kerning" only when enabled.
+    std::optional<bool> use_font_kerning;
+
     // NOTE: way of serialize to 3mf force that zero must be default value
     enum class HorizontalAlign { left = 0, center, right };
     enum class VerticalAlign { top = 0, center, bottom };
@@ -82,6 +90,7 @@ struct FontProp
             char_gap == other.char_gap && 
             line_gap == other.line_gap &&
             per_glyph == other.per_glyph &&
+            use_font_kerning == other.use_font_kerning &&
             align == other.align &&
             is_approx(size_in_mm, other.size_in_mm) && 
             is_approx(boldness, other.boldness) &&
@@ -97,6 +106,8 @@ struct FontProp
         cereal::save(ar, boldness);
         cereal::save(ar, skew);
         cereal::save(ar, collection_number);
+        // Typographic Spacing: appended at the end, this archive is only the in-memory undo/redo stack
+        cereal::save(ar, use_font_kerning);
     }
     template<class Archive> void load(Archive &ar)
     {
@@ -106,6 +117,7 @@ struct FontProp
         cereal::load(ar, boldness);
         cereal::load(ar, skew);
         cereal::load(ar, collection_number);
+        cereal::load(ar, use_font_kerning);
     }
 };
 
