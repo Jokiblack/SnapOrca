@@ -295,6 +295,28 @@ struct PrintInstance
 
 typedef std::vector<PrintInstance> PrintInstances;
 
+// Support Zones (ported from OrcaFS-NeotkoCM by Neotko): one support zone sliced on its own.
+// A zone is a SUPPORT_ENFORCER volume made by the Support Zones gizmo (SupportZones::is_support_zone()).
+// Besides marking what to support, its shape below the object is the corridor the column follows
+// on its way down.
+struct SupportZoneSlices
+{
+    // Position among the zones of the object (order of ModelObject::volumes): a deterministic priority.
+    size_t                 priority { 0 };
+    const ModelVolume     *model_volume { nullptr };
+    // Lean the zone was drawn with, in degrees; never 0 (SUPPORT_ZONE_DEFAULT_LEAN_DEG when unset).
+    double                 lean_deg { 0. };
+    // The block is the column: every layer adds the section of the block, not only the contact.
+    bool                   solid { false };
+    // The zone only lands on its last few layers, not on every ledge it crosses.
+    bool                   land_only { false };
+    // Indexed by object layer, like slice_support_volumes().
+    std::vector<Polygons>  slices;
+    // Layers where the block ends upwards (its roof), computed against the layer above shifted by
+    // the lean of the block, so that the side of a leaning block is not taken for a roof.
+    std::vector<char>      roof_layer;
+};
+
 class PrintObjectRegions
 {
 public:
@@ -424,6 +446,13 @@ public:
     // Whoever will get a non-const pointer to PrintObject will be able to modify its layers.
     LayerPtrs&                   layers()               { return m_layers; }
     SupportLayerPtrs&            support_layers()       { return m_support_layers; }
+
+    // Support Zones: generate() warns when painted zones are sliced with a style other than Snug.
+    void push_support_zone_style_warning(const std::string &message)
+    {
+        this->active_step_add_warning(PrintStateBase::WarningLevel::NON_CRITICAL, message,
+                                      PrintStateBase::SlicingDefaultNotification);
+    }
 
     /*!
      * \brief Remove short bridges from the overhang contact regions so that they are
@@ -651,6 +680,12 @@ public:
     std::vector<Polygons>       slice_support_volumes(const ModelVolumeType model_volume_type) const;
     std::vector<Polygons>       slice_support_blockers() const { return this->slice_support_volumes(ModelVolumeType::SUPPORT_BLOCKER); }
     std::vector<Polygons>       slice_support_enforcers() const { return this->slice_support_volumes(ModelVolumeType::SUPPORT_ENFORCER); }
+    // Support Zones: the zone volumes sliced one by one (no union across volumes, identity kept).
+    // Empty when the object has no zone, so the support generator keeps its usual path.
+    std::vector<SupportZoneSlices> slice_support_zones() const;
+    // Support Zones: the SUPPORT_BLOCKER volumes marked as cut (neotko_support_cut), united, per
+    // object layer. Empty if there is none.
+    std::vector<Polygons>       slice_support_cutters() const;
     // Preserve each connected region and its holes for perimeter clipping.
     std::vector<ExPolygons>     slice_single_volume_regions(const ModelVolume* volume) const;
 

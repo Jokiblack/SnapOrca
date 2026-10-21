@@ -2214,7 +2214,11 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
             model_object.assign_copy(model_object_new);
         } else {
             model_object_status.print_object_regions_status = ModelObjectStatus::PrintObjectRegionsStatus::Valid;
-            if (supports_differ || model_custom_supports_data_changed(model_object, model_object_new)) {
+            // Support Zones (ported from OrcaFS-NeotkoCM by Neotko, s286 F3): the recipe of a zone or a
+            // cut lives in the config of its support volume, which supports_differ does not compare.
+            // model_support_volume_config_changed() needs the same support volume list, so it goes after supports_differ.
+            if (supports_differ || model_custom_supports_data_changed(model_object, model_object_new) ||
+                model_support_volume_config_changed(model_object, model_object_new)) {
                 // First stop background processing before shuffling or deleting the ModelVolumes in the ModelObject's list.
                 if (supports_differ) {
                     this->call_cancel_callback();
@@ -2264,6 +2268,8 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
             //FIXME What to do with m_material_id?
 			model_volume_list_copy_configs(model_object /* dst */, model_object_new /* src */, ModelVolumeType::MODEL_PART);
 			model_volume_list_copy_configs(model_object /* dst */, model_object_new /* src */, ModelVolumeType::PARAMETER_MODIFIER);
+			// Support Zones: the zone and cut settings of the support volumes.
+			model_volume_list_copy_configs(model_object /* dst */, model_object_new /* src */, { ModelVolumeType::SUPPORT_ENFORCER, ModelVolumeType::SUPPORT_BLOCKER });
 			// Synchronize Precise Seam modifier volumes
 			model_volume_list_copy_configs(model_object /* dst */, model_object_new /* src */, precise_seam_types);
             layer_height_ranges_copy_configs(model_object.layer_config_ranges /* dst */, model_object_new.layer_config_ranges /* src */);

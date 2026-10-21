@@ -155,6 +155,8 @@ set(lisbslic3r_sources
     Feature/Interlocking/InterlockingGenerator.hpp
     Feature/Interlocking/VoxelUtils.cpp
     Feature/Interlocking/VoxelUtils.hpp
+    Feature/SupportZones/SupportZoneProbe.cpp
+    Feature/SupportZones/SupportZoneProbe.hpp
     FileParserError.hpp
     FilamentColorLibrary.cpp
     FilamentColorLibrary.hpp

@@ -1240,9 +1240,13 @@ void GLVolumeCollection::render(GLVolumeCollection::ERenderType       type,
     GLShaderProgram* edges_shader = GUI::OpenGLManager::get_gl_info().is_core_profile() ? GUI::wxGetApp().get_shader("dashed_thick_lines") : GUI::wxGetApp().get_shader("flat");
 #endif // SLIC3R_OPENGL_ES
 
+    // Support Zones: see set_transparent_depth_write(). On by default, so nothing changes unless asked.
+    const bool no_depth_write = (type == ERenderType::Transparent) && ! m_transparent_depth_write;
     if (type == ERenderType::Transparent) {
         glsafe(::glEnable(GL_BLEND));
         glsafe(::glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+        if (no_depth_write)
+            glsafe(::glDepthMask(GL_FALSE));
     }
 
     glsafe(::glCullFace(GL_BACK));
@@ -1409,8 +1413,11 @@ void GLVolumeCollection::render(GLVolumeCollection::ERenderType       type,
     if (disable_cullface)
         glsafe(::glEnable(GL_CULL_FACE));
 
-    if (type == ERenderType::Transparent)
+    if (type == ERenderType::Transparent) {
         glsafe(::glDisable(GL_BLEND));
+        if (no_depth_write)
+            glsafe(::glDepthMask(GL_TRUE));
+    }
 }
 
 bool GLVolumeCollection::check_wipe_tower_outside_state(const Slic3r::BuildVolume &build_volume, int plate_id) const

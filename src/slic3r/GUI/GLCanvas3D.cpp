@@ -24,6 +24,7 @@
 #include "slic3r/GUI/IMSlider.hpp"
 #include "libslic3r/Preset.hpp"
 #include "libslic3r/Model.hpp"
+#include "libslic3r/Feature/SupportZones/SupportZoneProbe.hpp"
 #include <memory>
 #include "slic3r/GUI/SceneRaycaster.hpp"
 #include "slic3r/GUI/Camera.hpp"
@@ -2890,7 +2891,15 @@ void GLCanvas3D::_render_scene(const Camera& camera, const Size& cnv_size)
         m_frame_profiler.mark("objects");
         _render_sla_slices();
         _render_selection();
+        // Support Zones: the markers go before the transparent pass, which would otherwise hide them
+        // behind the translucent zone block; while the gizmo ghosts the part (no depth writes in
+        // the transparent pass) they go after it, so the ghost does not wash them out.
+        const bool support_zones_ghosted = ! m_volumes.get_transparent_depth_write();
+        if (! support_zones_ghosted)
+            _render_support_zones();
         _render_objects(GLVolumeCollection::ERenderType::Transparent, !m_gizmos.is_running());
+        if (support_zones_ghosted)
+            _render_support_zones();
         _render_wireframe_overlay();
         m_frame_profiler.mark("transparent");
     }
@@ -3724,6 +3733,9 @@ void GLCanvas3D::reload_scene(bool refresh_immediately, bool force_full_scene_re
     //BBS:exclude the assmble view
     if (m_canvas_type != ECanvasType::CanvasAssembleView) {
         _update_slice_error_status();
+        // Support Zones: after a model change, not per frame; nothing to do without zones.
+        _update_support_zones();
+        _set_warning_notification(EWarning::SterileSupportZone, m_support_zone_sterile);
         // checks for geometry outside the print volume to render it accordingly
         if (!m_volumes.empty()) {
             ModelInstanceEPrintVolumeState state;
@@ -12179,6 +12191,151 @@ void GLCanvas3D::_load_sla_shells()
     update_volumes_colors_by_extruder();
 }
 
+// Support Zones (ported from OrcaFS-NeotkoCM by Neotko, NEOTKO_SUPPORTZONES_TAG s284 F1, s286b).
+// See libslic3r/Feature/SupportZones/SupportZoneProbe.hpp. Only zone volumes are probed and only
+// with the experimental Neotko features on, so a plate without zones builds nothing.
+void GLCanvas3D::_update_support_zones()
+{
+    static constexpr double MARKER_LIFT_MM  = 0.05;
+    static constexpr float  MARKER_FATNESS  = 0.62f;
+    static constexpr int    MARKER_SEGMENTS = 10;
+
+    m_support_zone_lit.reset();
+    m_support_zone_gaps.reset();
+    m_support_zone_sterile = false;
+    if (m_model == nullptr || ! wxGetApp().neotko_features_enabled())
+        return;
+
+    // A disc in the plane of the surface, lifted a little along its normal.
+    auto add_marker = [](GLModel::Geometry &data, unsigned int &count, const Vec3d &c, const Vec3f &normal, float half) {
+        Vec3d n = normal.cast<double>();
+        const double n_len = n.norm();
+        if (n_len <= 0.)
+            return;
+        n /= n_len;
+        const Vec3d up      = (std::abs(n.z()) > 0.9) ? Vec3d(1., 0., 0.) : Vec3d(0., 0., 1.);
+        const Vec3d tangent = up.cross(n).normalized();
+        const Vec3d bitan   = n.cross(tangent);
+        const Vec3d centre  = c + n * MARKER_LIFT_MM;
+        data.add_vertex(Vec3f(centre.cast<float>()));
+        for (int k = 0; k < MARKER_SEGMENTS; ++ k) {
+            const double a = 2. * M_PI * double(k) / double(MARKER_SEGMENTS);
+            data.add_vertex(Vec3f((centre + tangent * (half * std::cos(a)) + bitan * (half * std::sin(a))).cast<float>()));
+        }
+        for (int k = 0; k < MARKER_SEGMENTS; ++ k)
+            data.add_triangle(count, count + 1 + k, count + 1 + (k + 1) % MARKER_SEGMENTS);
+        count += 1 + MARKER_SEGMENTS;
+    };
+    auto orient_of = [](const ModelInstance *inst) {
+        Transform3d o = inst->get_matrix();
+        o.translation() = Vec3d::Zero();
+        return o;
+    };
+
+    float default_step = 2.f;
+    if (m_config != nullptr && m_config->has("support_base_pattern_spacing"))
+        default_step = float(m_config->opt_float("support_base_pattern_spacing"));
+
+    GLModel::Geometry lit_data;
+    lit_data.format = { GLModel::Geometry::EPrimitiveType::Triangles, GLModel::Geometry::EVertexLayout::P3 };
+    unsigned int lit_count = 0;
+    GLModel::Geometry gaps_data;
+    gaps_data.format = { GLModel::Geometry::EPrimitiveType::Triangles, GLModel::Geometry::EVertexLayout::P3 };
+    unsigned int gaps_count = 0;
+    // With the coverage map on, the green comes from the map and its grid.
+    const bool green_from_coverage = m_support_zone_show_gaps;
+
+    for (const ModelObject *object : m_model->objects) {
+        if (object == nullptr || object->instances.empty() ||
+            std::none_of(object->volumes.begin(), object->volumes.end(), [](const ModelVolume *v) { return SupportZones::is_support_zone(*v); }))
+            continue;
+        const float step = object->config.has("support_base_pattern_spacing") ? float(object->config.opt_float("support_base_pattern_spacing")) : default_step;
+        for (const ModelVolume *volume : object->volumes) {
+            if (! SupportZones::is_support_zone(*volume))
+                continue;
+            for (const ModelInstance *instance : object->instances) {
+                const SupportZones::ZoneProbe probe = SupportZones::probe_zone(*object, *volume, step, orient_of(instance));
+                if (probe.sterile()) {
+                    m_support_zone_sterile = true;
+                    break;
+                }
+                if (green_from_coverage)
+                    break;
+                const Vec3d shift = instance->get_matrix().translation();
+                for (const SupportZones::LitSample &sample : probe.lit)
+                    add_marker(lit_data, lit_count, shift + sample.pos.cast<double>(), sample.normal, MARKER_FATNESS * probe.grid_step_mm);
+            }
+        }
+        if (! green_from_coverage)
+            continue;
+        for (const ModelInstance *instance : object->instances) {
+            const SupportZones::CoverageProbe cov = SupportZones::probe_object_coverage(*object, m_support_zone_gap_step, m_support_zone_gap_normal_z, orient_of(instance));
+            const float half  = MARKER_FATNESS * cov.grid_step_mm;
+            const Vec3d shift = instance->get_matrix().translation();
+            for (const SupportZones::LitSample &sample : cov.covered)
+                add_marker(lit_data, lit_count, shift + sample.pos.cast<double>(), sample.normal, half);
+            for (const SupportZones::LitSample &sample : cov.uncovered)
+                add_marker(gaps_data, gaps_count, shift + sample.pos.cast<double>(), sample.normal, half);
+        }
+    }
+    if (lit_count > 0)
+        m_support_zone_lit.init_from(std::move(lit_data));
+    if (gaps_count > 0)
+        m_support_zone_gaps.init_from(std::move(gaps_data));
+}
+
+void GLCanvas3D::_render_support_zones()
+{
+    if (! m_support_zone_lit.is_initialized() && ! m_support_zone_gaps.is_initialized())
+        return;
+    if (m_mouse.dragging || m_gizmos.is_dragging())
+        return;
+    GLShaderProgram *shader = wxGetApp().get_shader("flat");
+    if (shader == nullptr)
+        return;
+
+    const bool in_gizmo = m_gizmos.get_current_type() == GLGizmosManager::EType::SupportZones;
+    shader->start_using();
+    const Camera &camera = wxGetApp().plater()->get_camera();
+    shader->set_uniform("view_model_matrix", camera.get_view_matrix());
+    shader->set_uniform("projection_matrix", camera.get_projection_matrix());
+
+    glsafe(::glEnable(GL_DEPTH_TEST));
+    glsafe(::glDisable(GL_CULL_FACE));
+    glsafe(::glEnable(GL_BLEND));
+    glsafe(::glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA));
+    glsafe(::glEnable(GL_POLYGON_OFFSET_FILL));
+    glsafe(::glPolygonOffset(-0.35f, -0.35f));
+    glsafe(::glDepthMask(GL_FALSE));
+
+    // Inside the gizmo the maps are also drawn through the part, fainter, so a gap hidden behind
+    // the model is still a gap you can see.
+    auto draw = [this, shader, in_gizmo](GLModel &model, const ColorRGBA &base) {
+        if (! model.is_initialized())
+            return;
+        auto pass = [&](float alpha_scale) {
+            ColorRGBA c = base;
+            c.a(c.a() * alpha_scale);
+            model.set_color(c);
+            model.render();
+        };
+        if (in_gizmo) {
+            glsafe(::glDisable(GL_DEPTH_TEST));
+            pass(0.80f);
+            glsafe(::glEnable(GL_DEPTH_TEST));
+        }
+        pass(1.0f);
+    };
+    draw(m_support_zone_lit, in_gizmo ? ColorRGBA(0.75f, 1.00f, 0.35f, m_support_zone_marker_alpha) : ColorRGBA(0.15f, 0.90f, 0.55f, 0.60f));
+    draw(m_support_zone_gaps, ColorRGBA(0.98f, 0.42f, 0.35f, in_gizmo ? m_support_zone_marker_alpha : 0.65f));
+
+    glsafe(::glDepthMask(GL_TRUE));
+    glsafe(::glPolygonOffset(0.0f, 0.0f));
+    glsafe(::glDisable(GL_POLYGON_OFFSET_FILL));
+    glsafe(::glDisable(GL_BLEND));
+    shader->stop_using();
+}
+
 void GLCanvas3D::_set_warning_notification_if_needed(EWarning warning)
 {
     _set_current();
@@ -12383,6 +12540,9 @@ void GLCanvas3D::_set_warning_notification(EWarning warning, bool state)
     // BBS: remove _u8L() for SLA
     case EWarning::SlaSupportsOutside: text = ("SLA supports outside the print area were detected."); error = ErrorType::PLATER_ERROR; break;
     case EWarning::SomethingNotShown:  text = _u8L("Only the object being edited is visible."); break;
+    case EWarning::SterileSupportZone:
+        text = _u8L("A support zone contains no downward-facing surface and will not generate any support.");
+        break;
     case EWarning::ObjectClashed:
         error = ErrorType::PLATER_ERROR;
         break;
