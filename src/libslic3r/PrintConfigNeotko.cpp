@@ -102,7 +102,7 @@ void PrintConfigDef::init_neotko_params()
     def->tooltip = L("Support avoids the other objects on the plate, keeping the support/object XY distance from "
                      "them, instead of being generated through them. Useful when separate objects touch or overlap. "
                      "Only works when all objects are printed at once (by layer).");
-    def->mode = comDevelop;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
     // ---- B1 Height Adaptive Effects ----

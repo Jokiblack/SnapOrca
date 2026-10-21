@@ -30,6 +30,7 @@
 #include <ostream>
 #include "ExPolygon.hpp"
 #include "Layer.hpp"
+#include "InstanceContact.hpp"
 #include "FilamentGroup.hpp"
 #include <memory>
 #include "FilamentGroupUtils.hpp"
@@ -4557,6 +4558,11 @@ void Print::process(long long *time_cost_with_cache, bool use_cache)
             return false;
         if (model_obj1->config.get() != model_obj2->config.get())
             return false;
+        // PerObject Support: the support depends on where the other objects sit relative to this one,
+        // and copy_layers_from_shared_object() copies the support layers as they are, so two identical
+        // objects at different places must not share them.
+        if (InstanceContact::cross_object_active(*object1) || InstanceContact::cross_object_active(*object2))
+            return false;
         return true;
     };
     int object_count = m_objects.size();
@@ -4719,13 +4725,23 @@ void Print::process(long long *time_cost_with_cache, bool use_cache)
             for (size_t i = 0; i < m_objects.size(); ++i)
                 sup_was_done[i] = m_objects[i]->is_step_done(posSupportMaterial) ? 1 : 0;
 
+        // PerObject Support: an object with the option avoids the support the other objects already
+        // have (InstanceContact::neighbor_occupancy() reads it once their posSupportMaterial is done), so
+        // those objects generate after the parallel batch, one after the other in plate order. Each one
+        // sees every object of the batch and every earlier one of the list. Empty when nobody uses it.
+        std::vector<PrintObject*> xobj_serial_support;
+        for (PrintObject *obj : m_objects)
+            if (need_slicing_objects.count(obj) != 0 && InstanceContact::cross_object_active(*obj))
+                xobj_serial_support.emplace_back(obj);
+
         tbb::parallel_for(tbb::blocked_range<int>(0, int(m_objects.size())),
-            [this, need_slicing_objects](const tbb::blocked_range<int>& range) {
+            [this, need_slicing_objects, &xobj_serial_support](const tbb::blocked_range<int>& range) {
                 for (int i = range.begin(); i < range.end(); i++) {
                     PrintObject* obj = m_objects[i];
                     if (need_slicing_objects.count(obj) != 0) {
                         // The belt brim follows sequentially below.
-                        obj->generate_support_material(false);
+                        if (std::find(xobj_serial_support.begin(), xobj_serial_support.end(), obj) == xobj_serial_support.end())
+                            obj->generate_support_material(false);
                     }
                     else {
                         if (obj->set_started(posSupportMaterial))
@@ -4734,6 +4750,8 @@ void Print::process(long long *time_cost_with_cache, bool use_cache)
                 }
             }
         );
+        for (PrintObject *obj : xobj_serial_support)
+            obj->generate_support_material(false);
         // The belt brim keeps clear of every object's layers and support layers,
         // so it runs once no support step is rebuilding them any more.
         for (PrintObject *obj : m_objects)

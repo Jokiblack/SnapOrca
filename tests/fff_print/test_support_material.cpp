@@ -530,3 +530,82 @@ TEST_CASE("Bottom-only support interface keeps the dense interface density", "[S
     REQUIRE(sp.bottom_interface_density > sp.support_density);
 }
 
+
+namespace {
+
+// Support points of `object` that fall inside `footprint` at a print height below `below_z`, both in
+// plate coordinates (the footprint already shifted).
+size_t support_points_inside(const PrintObject &object, const ExPolygons &footprint, double below_z)
+{
+    size_t inside = 0;
+    for (const SupportLayer *layer : object.support_layers()) {
+        if (layer->print_z >= below_z)
+            continue;
+        Points points;
+        layer->support_fills.collect_points(points);
+        for (const PrintInstance &instance : object.instances())
+            for (const Point &p : points)
+                for (const ExPolygon &expoly : footprint)
+                    if (expoly.contains(p + instance.shift))
+                        ++inside;
+    }
+    return inside;
+}
+
+} // namespace
+
+// Object A is a column carrying a plate that overhangs 34 mm; object B, a separate 10 mm box, stands
+// under that overhang. Without PerObject Support the support of A is generated as if B were not there.
+TEST_CASE("PerObject Support keeps the support of an object out of the object below its overhang", "[SupportMaterial][PerObjectSupport]")
+{
+    const auto [support_type, support_style] = GENERATE(table<const char *, const char *>({
+        { "normal(auto)", "default" },
+        { "tree(auto)",   "tree_slim" },
+        // Organic runs on the hybrid engine while the option is on.
+        { "tree(auto)",   "organic" },
+    }));
+    const int avoidance = GENERATE(0, 1);
+    INFO("support_type=" << support_type << " support_style=" << support_style << " avoidance=" << avoidance);
+
+    TriangleMesh a = make_cube(6, 6, 16);
+    TriangleMesh plate = make_cube(40, 6, 3);
+    plate.translate(0.f, 0.f, 15.f); // overlaps the column by 1 mm instead of resting on it
+    a.merge(plate);
+    a.translate(80.f, 80.f, 0.f);
+    const double b_height = 10.;
+    TriangleMesh b = make_cube(10, 10, b_height);
+    b.translate(100.f, 78.f, 0.f);
+    std::vector<TriangleMesh> meshes;
+    meshes.push_back(std::move(a));
+    meshes.push_back(std::move(b));
+
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_deserialize_strict({
+        { "enable_support",                 1 },
+        { "support_type",                   support_type },
+        { "support_style",                  support_style },
+        { "support_on_build_plate_only",    0 },
+        { "layer_height",                   0.2 },
+        { "print_sequence",                 "by layer" },
+        { "support_cross_object_avoidance", avoidance },
+    });
+    Slic3r::Print print;
+    Slic3r::Model model;
+    init_print(std::move(meshes), print, model, config, nullptr, /*arrange=*/false);
+    print.process();
+    REQUIRE(print.objects().size() == 2);
+
+    const PrintObject &object_a = *print.objects()[0];
+    const PrintObject &object_b = *print.objects()[1];
+    REQUIRE(object_a.support_layer_count() > 0);
+    // B is a box, so its first layer is its footprint at every height.
+    ExPolygons footprint_b = object_b.layers().front()->lslices;
+    for (ExPolygon &expoly : footprint_b)
+        expoly.translate(object_b.instances().front().shift);
+
+    const size_t inside = support_points_inside(object_a, footprint_b, b_height);
+    if (avoidance)
+        CHECK(inside == 0);
+    else
+        CHECK(inside > 0); // otherwise the case above proves nothing
+}

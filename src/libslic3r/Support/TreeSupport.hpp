@@ -340,6 +340,12 @@ public:
     // union contours of all layers below
     std::vector<ExPolygons> m_layer_outlines_below;
 
+    // PerObject Support: footprint of the other objects and of their support per object layer, in the
+    // local frame and not dilated (calculate_collision() offsets it per radius). Apart from
+    // m_layer_outlines on purpose: those mean "my own object" (sharp tails, rests on model). Empty when
+    // the option is off.
+    std::vector<Polygons> m_neighbor_occupancy;
+
     std::vector<double> m_max_move_distances;
 
     /*!

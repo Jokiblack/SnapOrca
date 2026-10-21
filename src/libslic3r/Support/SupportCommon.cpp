@@ -6,6 +6,7 @@
 #include "../Fill/FillBase.hpp"
 #include "../MutablePolygon.hpp"
 #include "../Geometry.hpp"
+#include "../InstanceContact.hpp"
 #include "../Point.hpp"
 
 #include <cmath>
@@ -385,7 +386,9 @@ SupportGeneratorLayersPtr generate_raft_base(
     float initial_inflation = float(object.config().raft_first_layer_expansion);
     if (initial_inflation < 0.f)
         initial_inflation = 2.f;
-    const float inflate_factor_1st_layer = belt_floor_active ? 0.f :
+    // PerObject Support drops it too: the inflation is never clipped against anything, so it would
+    // spill the support bases across the other objects.
+    const float inflate_factor_1st_layer = (belt_floor_active || InstanceContact::cross_object_active(object)) ? 0.f :
         std::max(0.f, float(scale_(initial_inflation)) - inflate_factor_fine);
     SupportGeneratorLayer       *contacts         = top_contacts         .empty() ? nullptr : top_contacts         .front();
     SupportGeneratorLayer       *interfaces       = interface_layers     .empty() ? nullptr : interface_layers     .front();

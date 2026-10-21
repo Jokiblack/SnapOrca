@@ -1186,6 +1186,8 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
         "support_object_xy_distance", "support_object_first_layer_gap", "independent_support_layer_height",
         "support_interface_min_area" /* Snapmaker */})
         toggle_field(el, have_support_material);
+    // PerObject Support needs real support: with a raft alone it does nothing.
+    toggle_field("support_cross_object_avoidance", config->opt_bool("enable_support"));
     toggle_field("support_threshold_angle", have_support_material && is_auto(support_type));
     toggle_field("support_threshold_overlap", config->opt_int("support_threshold_angle") == 0 && have_support_material && is_auto(support_type));
     //toggle_field("support_closing_radius", have_support_material && support_style == smsSnug);
