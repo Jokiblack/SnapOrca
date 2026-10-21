@@ -7,7 +7,7 @@ msgid ""
 msgstr ""
 "Project-Id-Version: \n"
 "Report-Msgid-Bugs-To: \n"
-"POT-Creation-Date: 2026-10-20 21:31+0200\n"
+"POT-Creation-Date: 2026-10-20 22:22+0200\n"
 "PO-Revision-Date: 2026-07-20 13:33+0200\n"
 "Last-Translator: Manu Goiogana <mgoiogana@gmail.com>\n"
 "Language-Team: \n"
@@ -18886,6 +18886,12 @@ msgstr ""
 msgid "Enable clumping detection"
 msgstr "Gaitu material-metaketa detektatzea"
 
+msgid "Order-independent overlap carving"
+msgstr ""
+
+msgid "When enabled, overlapping model parts are carved by bounding-box size: the smaller part always carves the larger one, with the same result on every layer, so a small part embedded in a larger one is not removed. When disabled, the parts are compared by their area in each layer."
+msgstr ""
+
 msgid "Clumping detection layers"
 msgstr "Material-metaketa detektatzeko geruzak"
 
@@ -19668,6 +19674,12 @@ msgstr "Murriztu betegarriaren atzera-egitea"
 msgid "Don't retract when the travel is entirely within an infill area. That means the oozing can't been seen. This can reduce times of retraction for complex model and save printing time, but make slicing and G-code generating slower. Note that Z-hop is also not performed in areas where retraction is skipped."
 msgstr "Ez egin atzera-egiterik mugimendua guztiz betegarriaren eremuan dagoenean. Horrek esan nahi du jarioa ez dela ikusiko. Honek modelo konplexuetan atzera-egite kopurua murriztu eta inprimatze-denbora aurreztu dezake, baina xerraketa eta G-codearen sorrera motelduko ditu. Kontuan izan Z-hop mugimendua ez dela egiten atzera-egitea saihesten den eremuetan."
 
+msgid "Retract on long travel along walls"
+msgstr ""
+
+msgid "When \"Reduce infill retraction\" skips the retraction of a travel inside an infill area, still retract if the travel runs close to a wall (within one wall line width) for longer than the retraction minimum travel distance. This avoids stringing and oozing marks along the walls, especially when \"Avoid crossing walls\" routes the travel along them."
+msgstr ""
+
 msgid "This option will drop the temperature of the inactive extruders to prevent oozing."
 msgstr "Aukera honek aktibo ez dauden estrusoreen tenperatura jaitsiko du, jarioa saihesteko."
 
@@ -20282,6 +20294,18 @@ msgstr "Atzean"
 
 msgid "Random"
 msgstr "Ausazkoa"
+
+msgid "Seam placement away from overhangs (experimental)"
+msgstr ""
+
+msgid "Penalize seam candidates close to overhangs, so that the seam is placed away from them. It has no effect with the Random seam position."
+msgstr ""
+
+msgid "Z overrides X/Y"
+msgstr ""
+
+msgid "When the top Z distance clashes with the support/object XY distance, give priority to generating supports beneath overhangs, leaving a gap to the model as large as the top Z distance. When disabled, the gap between supports and the model always follows the support/object XY distance. Only recommended with hybrid tree supports."
+msgstr ""
 
 msgid "Staggered inner seams"
 msgstr "Barne-jostura mailakatuak"

@@ -5016,6 +5016,14 @@ void PrintConfigDef::init_fff_params()
     def->mode    = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def          = this->add("enable_order_independent_overlap_carving", coBool);
+    def->label   = L("Order-independent overlap carving");
+    def->tooltip = L("When enabled, overlapping model parts are carved by bounding-box size: the smaller part always "
+                     "carves the larger one, with the same result on every layer, so a small part embedded in a larger "
+                     "one is not removed. When disabled, the parts are compared by their area in each layer.");
+    def->mode    = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def           = this->add("wrapping_detection_layers", coInt);
     def->label    = L("Clumping detection layers");
     def->tooltip  = L("Clumping detection layers.");
@@ -6143,6 +6151,15 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def = this->add("retract_on_long_wall_travel", coBool);
+    def->label = L("Retract on long travel along walls");
+    def->tooltip = L("When \"Reduce infill retraction\" skips the retraction of a travel inside an infill area, still retract "
+                     "if the travel runs close to a wall (within one wall line width) for longer than the retraction minimum "
+                     "travel distance. This avoids stringing and oozing marks along the walls, especially when \"Avoid "
+                     "crossing walls\" routes the travel along them.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("ooze_prevention", coBool);
     def->label = L("Enable");
     def->tooltip = L("This option will drop the temperature of the inactive extruders to prevent oozing.");
@@ -7114,6 +7131,26 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Random"));
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionEnum<SeamPosition>(spAligned));
+
+    // Snapmaker Orca: options ported from Bambu Studio (seam / tree supports).
+    def = this->add("seam_placement_away_from_overhangs", coBool);
+    def->label = L("Seam placement away from overhangs (experimental)");
+    def->category = L("Quality");
+    def->tooltip = L("Penalize seam candidates close to overhangs, so that the seam is placed away from them. "
+                     "It has no effect with the Random seam position.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("top_z_overrides_xy_distance", coBool);
+    def->label = L("Z overrides X/Y");
+    def->category = L("Support");
+    def->tooltip = L("When the top Z distance clashes with the support/object XY distance, give priority to generating supports "
+                     "beneath overhangs, leaving a gap to the model as large as the top Z distance. When disabled, the gap "
+                     "between supports and the model always follows the support/object XY distance. "
+                     "Only recommended with hybrid tree supports.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+    // Snapmaker Orca: end of the options ported from Bambu Studio.
 
     def = this->add("staggered_inner_seams", coBool);
     def->label = L("Staggered inner seams");

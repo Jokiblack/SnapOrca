@@ -752,6 +752,7 @@ bool Print::invalidate_state_by_config_options(const ConfigOptionResolver & /* n
         "max_volumetric_extrusion_rate_slope_segment_length",
         "extrusion_rate_smoothing_external_perimeter_only",
         "reduce_infill_retraction",
+        "retract_on_long_wall_travel",
         "filename_format",
         "retraction_minimum_travel",
         "retract_before_wipe",
@@ -911,6 +912,8 @@ bool Print::invalidate_state_by_config_options(const ConfigOptionResolver & /* n
             || opt_key == "periodic_modifier_skip_layers"
             || opt_key == "periodic_modifier_apply_layers"
             || opt_key == "modifier_ignore_infill"
+            // Changes how overlapping model parts carve each other in slices_to_regions().
+            || opt_key == "enable_order_independent_overlap_carving"
             // Build plate tilt changes slicing plane orientation.
             || opt_key == "build_plate_tilt_x"
             || opt_key == "build_plate_tilt_y"

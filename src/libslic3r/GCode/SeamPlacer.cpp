@@ -503,7 +503,7 @@ Polygons extract_perimeter_polygons(const Layer *layer, std::vector<const LayerR
 // oversamples enforcer edges, applies weak modifiers, marks one enforced point as central for alignment.
 void process_perimeter_polygon(const Polygon &orig_polygon, float z_coord, const LayerRegion *region,
                                const GlobalModelInfo &global_model_info, PrintObjectSeamData::LayerSeams &result,
-                               PreciseSeam::PreciseSeamWarnings* warnings = nullptr) {
+                               bool oversample_long_sides, PreciseSeam::PreciseSeamWarnings* warnings = nullptr) {
   if (orig_polygon.size() == 0) {
     return;
   }
@@ -597,6 +597,12 @@ void process_perimeter_polygon(const Polygon &orig_polygon, float z_coord, const
           oversampled_points.push(position + vec_to_next * step);
           step += step_size;
         }
+      } else if (oversample_long_sides && distance_to_next > SeamPlacer::end_point_oversampling_threshold) {
+        // Bambu: candidates close to both ends and in the middle of a long side, in order along the side.
+        const float ratio = SeamPlacer::end_point_oversampling_distance / distance_to_next;
+        oversampled_points.push(position + ratio * (pos_of_next - position));
+        oversampled_points.push((position + pos_of_next) / 2);
+        oversampled_points.push(pos_of_next + ratio * (position - pos_of_next));
       }
     }
 
@@ -876,12 +882,13 @@ struct SeamComparator {
     }
 
     // the penalites are kept close to range [0-1.x] however, it should not be relied upon
+    // extra_overhang_point is 0 unless seam_placement_away_from_overhangs is enabled.
     float penalty_a = a.overhang + a.visibility +
                       angle_importance * compute_angle_penalty(a.local_ccw_angle)
-                      + distance_penalty_a;
+                      + distance_penalty_a + a.extra_overhang_point;
     float penalty_b = b.overhang + b.visibility +
                       angle_importance * compute_angle_penalty(b.local_ccw_angle)
-                      + distance_penalty_b;
+                      + distance_penalty_b + b.extra_overhang_point;
 
     return penalty_a < penalty_b;
   }
@@ -928,9 +935,9 @@ struct SeamComparator {
     }
 
     float penalty_a = a.overhang + a.visibility
-                      + angle_importance * compute_angle_penalty(a.local_ccw_angle);
+                      + angle_importance * compute_angle_penalty(a.local_ccw_angle) + a.extra_overhang_point;
     float penalty_b = b.overhang + b.visibility +
-                      angle_importance * compute_angle_penalty(b.local_ccw_angle);
+                      angle_importance * compute_angle_penalty(b.local_ccw_angle) + b.extra_overhang_point;
 
     return penalty_a <= penalty_b || penalty_a - penalty_b < SeamPlacer::seam_align_score_tolerance;
   }
@@ -1107,6 +1114,7 @@ void SeamPlacer::gather_seam_candidates(const PrintObject *po, const SeamPlacerI
   tbb::parallel_for(tbb::blocked_range<size_t>(0, po->layers().size()),
                     [po, &global_model_info, &seam_data, warnings]
                     (tbb::blocked_range<size_t> r) {
+                      const bool oversample_long_sides = po->config().seam_placement_away_from_overhangs.value;
                       for (size_t layer_idx = r.begin(); layer_idx < r.end(); ++layer_idx) {
                         PrintObjectSeamData::LayerSeams &layer_seams = seam_data.layers[layer_idx];
                         const Layer *layer = po->get_layer(layer_idx);
@@ -1119,7 +1127,7 @@ void SeamPlacer::gather_seam_candidates(const PrintObject *po, const SeamPlacerI
                         for (size_t poly_index = 0; poly_index < polygons.size(); ++poly_index) {
                           process_perimeter_polygon(polygons[poly_index], unscaled_z,
                                                     regions[poly_index], global_model_info, layer_seams,
-                                                    warnings);
+                                                    oversample_long_sides, warnings);
                         }
                         auto functor = SeamCandidateCoordinateFunctor { layer_seams.points };
                         seam_data.layers[layer_idx].points_tree =
@@ -1145,6 +1153,40 @@ void SeamPlacer::calculate_candidates_visibility(const PrintObject *po,
                     });
 }
 
+// Bambu (seam_placement_away_from_overhangs): every overhanging point penalises itself and the points along its
+// perimeter up to overhang_penalty_spread_distance away in both directions, decaying with the distance.
+// Each point keeps the largest penalty it receives, so the result does not depend on the processing order.
+static void spread_overhang_penalty(std::vector<SeamPlacerImpl::SeamCandidate> &points) {
+  using namespace SeamPlacerImpl;
+  const auto raise = [](SeamCandidate &p, float penalty) { p.extra_overhang_point = std::max(p.extra_overhang_point, penalty); };
+  for (size_t i = 0; i < points.size(); ++i) {
+    const SeamCandidate &source = points[i];
+    const size_t start_index = source.perimeter.start_index;
+    const size_t end_index = source.perimeter.end_index;
+    if (source.overhang_degree <= 0.0f || end_index - start_index < 2)
+      continue;
+    const float degree = source.overhang_degree;
+    raise(points[i], degree * gauss(0.0f, 0.0f, 1.0f, 10.0f));
+    for (const bool forward : { false, true }) {
+      float dist = 0.0f;
+      size_t idx = i;
+      while (true) {
+        const size_t prev = idx;
+        if (forward)
+          idx = idx == end_index - 1 ? start_index : idx + 1;
+        else
+          idx = idx == start_index ? end_index - 1 : idx - 1;
+        if (idx == i)
+          break;
+        dist += (points[idx].position.head<2>() - points[prev].position.head<2>()).norm();
+        if (dist > SeamPlacer::overhang_penalty_spread_distance)
+          break;
+        raise(points[idx], degree * gauss(dist, 0.0f, 1.0f, 10.0f));
+      }
+    }
+  }
+}
+
 void SeamPlacer::calculate_overhangs_and_layer_embedding(const PrintObject *po) {
   using namespace SeamPlacerImpl;
   using PerimeterDistancer = AABBTreeLines::LinesDistancer<Linef>;
@@ -1157,6 +1199,7 @@ void SeamPlacer::calculate_overhangs_and_layer_embedding(const PrintObject *po) 
                         prev_layer_distancer = std::make_unique<PerimeterDistancer>(to_unscaled_linesf(po->layers()[r.begin() - 1]->lslices));
                       }
 
+                      const bool away_from_overhangs = po->config().seam_placement_away_from_overhangs.value;
                       for (size_t layer_idx = r.begin(); layer_idx < r.end(); ++layer_idx) {
                         size_t regions_with_perimeter = 0;
                         for (const LayerRegion *region : po->layers()[layer_idx]->regions()) {
@@ -1180,6 +1223,9 @@ void SeamPlacer::calculate_overhangs_and_layer_embedding(const PrintObject *po) 
                             perimeter_point.overhang =
                                 perimeter_point.overhang < 0.0f ? 0.0f : perimeter_point.overhang;
                             perimeter_point.unsupported_dist = _dist + 0.4f * perimeter_point.perimeter.flow_width;
+                            if (away_from_overhangs && perimeter_point.perimeter.flow_width > 0.0f)
+                              perimeter_point.overhang_degree = std::max(0.0f,
+                                  float(_dist + 0.6f * perimeter_point.perimeter.flow_width) / perimeter_point.perimeter.flow_width);
                           }
 
                           if (should_compute_layer_embedding) { // search for embedded perimeter points (points hidden inside the print ,e.g. multimaterial join, best position for seam)
@@ -1187,6 +1233,9 @@ void SeamPlacer::calculate_overhangs_and_layer_embedding(const PrintObject *po) 
                                                                 + 0.65f * perimeter_point.perimeter.flow_width;
                           }
                         }
+
+                        if (away_from_overhangs)
+                          spread_overhang_penalty(layer_seams.points);
 
                         prev_layer_distancer.swap(current_layer_distancer);
                       }
