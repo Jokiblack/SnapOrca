@@ -3945,6 +3945,7 @@ void TabPrint::build()
         optgroup->append_single_option_line("flush_into_infill", "multimaterial_settings_flush_options#flush-into-objects-infill");
         optgroup->append_single_option_line("flush_into_objects", "multimaterial_settings_flush_options#flush-into-this-object");
         optgroup->append_single_option_line("flush_into_support", "multimaterial_settings_flush_options#flush-into-objects-support");
+        optgroup->append_single_option_line("toolchanger_flush_into_objects", "multimaterial_settings_flush_options#flush-into-objects-infill");
         optgroup = page->new_optgroup(L("Advanced"), L"advanced");
         optgroup->append_single_option_line("interlocking_beam", "multimaterial_settings_advanced#interlocking-beam");
         optgroup->append_single_option_line("toolchange_ordering", "multimaterial_settings_advanced#toolchange-ordering");
@@ -6972,10 +6973,14 @@ void TabFilament::toggle_options()
     if (m_active_page->title() == L("Multimaterial")) {
         // Orca: hide specific settings for BBL printers
         // Snapmaker Orca: only the single extruder multi material path reads the minimal purge; a
-        // toolchanger purges prime_volume per change and carries no colour over, so the line is hidden.
+        // toolchanger purges prime_volume per change and carries no colour over, so the line is hidden,
+        // unless the process purges a tool changer into objects (toolchanger_flush_into_objects): the
+        // minimal purge is then the floor that stays on the tower.
         const bool toolchanger = !is_BBL_printer && !printer_cfg.opt_bool("single_extruder_multi_material") &&
                                  printer_cfg.option<ConfigOptionFloats>("nozzle_diameter")->size() > 1;
-        toggle_line("filament_minimal_purge_on_wipe_tower", !is_BBL_printer && !toolchanger, 256 + variant_index);
+        const bool toolchanger_flush_into_objects =
+            m_preset_bundle->prints.get_edited_preset().config.opt_bool("toolchanger_flush_into_objects");
+        toggle_line("filament_minimal_purge_on_wipe_tower", !is_BBL_printer && (!toolchanger || toolchanger_flush_into_objects), 256 + variant_index);
         toggle_option("filament_minimal_purge_on_wipe_tower", !is_BBL_printer, 256 + variant_index);
         for (auto el : {"filament_loading_speed_start", "filament_loading_speed",
                         "filament_unloading_speed_start", "filament_unloading_speed", "filament_toolchange_delay", "filament_cooling_moves",

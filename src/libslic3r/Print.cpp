@@ -995,6 +995,7 @@ bool Print::invalidate_state_by_config_options(const ConfigOptionResolver & /* n
             || opt_key == "prime_tower_brim_chamfer_max_width"
             || opt_key == "flush_into_infill"
             || opt_key == "flush_into_support"
+            || opt_key == "toolchanger_flush_into_objects"
             || opt_key == "belt_purge_tower_width"
             || opt_key == "initial_layer_infill_speed"
             || opt_key == "travel_speed"
@@ -6741,6 +6742,15 @@ void Print::_make_wipe_tower()
 
                             // add back the minimal amount toforce on the wipe tower:
                             volume_to_wipe += (float) get_value_at(m_config, m_config.filament_minimal_purge_on_wipe_tower, ConfigFlowDomain::Filament, extruder_id);
+                        } else if (m_config.toolchanger_flush_into_objects) {
+                            // Snapmaker Orca: a tool changer purges prime_volume per change; the same bracket as
+                            // above hands what exceeds the filament's minimal purge to the objects' infill,
+                            // support or sacrificial objects (flush_into_*), and only the rest goes on the tower.
+                            const float minimal_purge = (float) get_value_at(m_config, m_config.filament_minimal_purge_on_wipe_tower, ConfigFlowDomain::Filament, extruder_id);
+                            volume_to_wipe = std::max(0.f, volume_to_wipe - minimal_purge);
+                            volume_to_wipe = layer_tools.wiping_extrusions().mark_wiping_extrusions(*this, current_extruder_id, extruder_id,
+                                                                                                    volume_to_wipe);
+                            volume_to_wipe += minimal_purge;
                         }
 
                         // request a toolchange at the wipe tower with at least volume_to_wipe purging amount

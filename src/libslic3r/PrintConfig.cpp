@@ -9280,6 +9280,20 @@ void PrintConfigDef::init_fff_params()
         "It will not take effect unless the prime tower is enabled.");
     def->set_default_value(new ConfigOptionBool(false));
 
+    // Snapmaker Orca: on a tool changer (several tool heads, no single extruder multi-material purging)
+    // the flush options above are only honored when this is enabled; off, the whole prime volume of
+    // every tool change is purged on the prime tower, as before.
+    def = this->add("toolchanger_flush_into_objects", coBool);
+    def->category = L("Flush options");
+    def->label = L("Flush into objects on tool changers");
+    def->tooltip = L("On a printer with several tool heads, purge the prime volume of each tool change into the objects' infill, "
+                     "support or sacrificial objects that have the flush options above enabled, instead of on the prime tower. "
+                     "Only the remainder is purged on the tower, never less than the filament's minimal purge on wipe tower. "
+                     "With enough infill on the layer this saves up to two thirds of the tower purge, at the cost of mixed "
+                     "colors inside the infill. Disabled: the tower purges the whole prime volume, the flush options have no effect.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     // Internal marker (not shown in any settings tab): identifies the auto-generated
     // belt purge prism so it can be updated/removed by the auto-manager and aligned
     // to the object layer grid by the backend. Persisted to 3mf like any per-object key.

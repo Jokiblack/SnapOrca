@@ -1991,6 +1991,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionEnum<ToolChangeOrderingType>, toolchange_ordering))
     ((ConfigOptionString,              toolchange_cyclic_order))
     ((ConfigOptionBool,                toolchange_cyclic_first_layer))
+    ((ConfigOptionBool,                toolchanger_flush_into_objects))
     ((ConfigOptionBool,                wipe_tower_no_sparse_layers))
     ((ConfigOptionBool,                wipe_tower_sparse_layers_combination))
     ((ConfigOptionString,              change_filament_gcode))

@@ -21394,6 +21394,14 @@ msgstr ""
 "Por defecto está desactivado, porque la capa inicial se ordena en su lugar para lograr la mejor adhesión a la cama: los filamentos que imprimen detalles pequeños y frágiles de la capa inicial se imprimen al final, de modo que los cambios de herramienta y desplazamientos posteriores tienen menos probabilidad de arrancar esas piezas mal ancladas. Este orden de la capa inicial también respeta una secuencia de filamentos personalizada para la capa inicial cuando se ha definido. La ventaja del orden cíclico (los cambios de herramienta adicionales dan a cada capa más tiempo para enfriarse) no se aplica a la capa inicial, que se imprime despacio y caliente para favorecer la adhesión.\n"
 "Active esta opción solo si necesita exactamente la misma secuencia de herramientas en todas las capas, incluida la primera, a costa de esa optimización de la adhesión."
 
+# AI Translated
+msgid "Flush into objects on tool changers"
+msgstr "Purgar en objetos con cambiador de herramienta"
+
+# AI Translated
+msgid "On a printer with several tool heads, purge the prime volume of each tool change into the objects' infill, support or sacrificial objects that have the flush options above enabled, instead of on the prime tower. Only the remainder is purged on the tower, never less than the filament's minimal purge on wipe tower. With enough infill on the layer this saves up to two thirds of the tower purge, at the cost of mixed colors inside the infill. Disabled: the tower purges the whole prime volume, the flush options have no effect."
+msgstr "En una impresora con varios cabezales, purga el volumen de purga de cada cambio de herramienta en el relleno, los soportes o los objetos de sacrificio que tengan activadas las opciones de purgado anteriores, en lugar de en la torre de purga. En la torre solo se purga el resto, nunca menos que la purga mínima en la torre del filamento. Con suficiente relleno en la capa ahorra hasta dos tercios de la purga de la torre, a cambio de colores mezclados dentro del relleno. Desactivado: la torre purga todo el volumen de purga y las opciones de purgado no tienen efecto."
+
 msgid "Slice gap closing radius"
 msgstr "Radio de cierre de laminado"
 
