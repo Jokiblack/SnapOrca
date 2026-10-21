@@ -2858,6 +2858,36 @@ void ObjectList::load_shape_object(const std::string &type_name)
     wxGetApp().mainframe->update_title();
 }
 
+// NEOTKO_CONSTRUCT_TAG_START — ported from OrcaFS-NeotkoCM by Neotko (AGPL-3.0), neotko/main e68dcc8551.
+ModelVolume* ObjectList::neotko_add_mesh_part(int obj_idx, TriangleMesh mesh_world, const std::string &name)
+{
+    if (m_objects == nullptr || obj_idx < 0 || obj_idx >= (int)m_objects->size() || mesh_world.empty())
+        return nullptr;
+    ModelObject &model_object = *(*m_objects)[obj_idx];
+    if (model_object.instances.empty())
+        return nullptr;
+
+    // add_volume() centres the mesh and leaves the centre as the volume's offset, which here is
+    // still a WORLD position. Undoing the instance matrix puts the part back where it was drawn.
+    ModelVolume *new_volume = model_object.add_volume(std::move(mesh_world), ModelVolumeType::MODEL_PART);
+    const Transform3d placed = model_object.instances.front()->get_matrix().inverse() * new_volume->get_matrix();
+    new_volume->set_transformation(placed);
+    new_volume->name = name;
+    const int extruder_id = model_object.config.has("extruder") ? model_object.config.opt_int("extruder") : 0;
+    new_volume->config.set_key_value("extruder", new ConfigOptionInt(extruder_id));
+    new_volume->source.is_from_builtin_objects = true;
+    model_object.invalidate_bounding_box();
+
+    Slic3r::save_object_mesh(model_object);
+
+    // Rebuilds the object's rows in the list and calls changed_object().
+    reorder_volumes_and_get_selection(obj_idx);
+    wxGetApp().plater()->get_view3D_canvas3D()->update_instance_printable_state_for_object((size_t)obj_idx);
+    notify_instance_updated(obj_idx);
+    return new_volume;
+}
+// NEOTKO_CONSTRUCT_TAG_END
+
 void ObjectList::load_mesh_object(const TriangleMesh &mesh, const wxString &name, bool center)
 {
     load_mesh_object(std::vector<std::pair<const TriangleMesh*, wxString>>{{&mesh, name}}, name, center);

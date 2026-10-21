@@ -313,6 +313,10 @@ public:
     void                load_generic_subobject(const std::string& type_name, const ModelVolumeType type);
     void                load_shape_object(const std::string &type_name);
     void                load_mesh_object(const TriangleMesh &mesh, const wxString &name, bool center = true);
+    // NEOTKO_CONSTRUCT_TAG (ported from OrcaFS-NeotkoCM by Neotko, AGPL-3.0): adds `mesh_world`, already
+    // where it should be seen in world coordinates, as a model part of the object, without moving
+    // anything else. Returns the new part, nullptr when nothing was added.
+    ModelVolume*        neotko_add_mesh_part(int obj_idx, TriangleMesh mesh_world, const std::string &name);
     // One object holding one part per mesh; the parts keep their placement relative to each other.
     void                load_mesh_object(const std::vector<std::pair<const TriangleMesh*, wxString>> &parts, const wxString &name, bool center = true);
     // BBS

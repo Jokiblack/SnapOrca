@@ -5458,7 +5458,9 @@ void GLCanvas3D::on_mouse(wxMouseEvent& evt)
         m_mouse.position = pos.cast<double>();
 
         // updates gizmos overlay
-        if (m_selection.is_empty())
+        // NEOTKO_ALIGNSTACK_TAG (ported from OrcaFS-NeotkoCM): Align & Stack works with an empty
+        // selection, the user builds the order by clicking objects, so it is not closed for that.
+        if (m_selection.is_empty() && m_gizmos.get_current_type() != GLGizmosManager::AlignStack)
             m_gizmos.reset_all_states();
 
         _set_overlay_as_dirty();

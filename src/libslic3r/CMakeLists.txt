@@ -435,6 +435,8 @@ set(lisbslic3r_sources
     PrintApply.cpp
     NeoDebug.cpp
     NeoDebug.hpp
+    NeotkoSurfaceExtrude.cpp
+    NeotkoSurfaceExtrude.hpp
     PrintBase.cpp
     PrintBase.hpp
     MaterialType.cpp
