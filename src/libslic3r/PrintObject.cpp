@@ -25,6 +25,7 @@
 #include "Support/SupportCommon.hpp"
 #include "Support/SupportSpotsGenerator.hpp"
 #include "Support/TreeSupport.hpp"
+#include "InstanceContact.hpp"
 #include "Support/SupportParameters.hpp"
 #include "Surface.hpp"
 #include "Slicing.hpp"
@@ -6448,7 +6449,8 @@ void PrintObject::_generate_support_material()
         auto style = m_config.support_style.value;
         if (style == smsDefault)
             style = smsTreeOrganic;
-        if (style == smsTreeOrganic) {
+        // PerObject Support runs Organic on the hybrid engine (TreeSupport::TreeSupport()).
+        if (style == smsTreeOrganic && !InstanceContact::cross_object_active(*this)) {
             for (SupportLayer *sl : m_support_layers)
                 sl->print_z += m_belt_global_z_offset;
         }

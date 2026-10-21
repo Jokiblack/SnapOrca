@@ -3803,6 +3803,7 @@ void TabPrint::build()
     page = add_options_page(L("Support"), "custom-gcode_support"); // ORCA: icon only visible on placeholders
         optgroup = page->new_optgroup(L("Support"), L"param_support");
         optgroup->append_single_option_line("enable_support", "support_settings_support");
+        optgroup->append_single_option_line("support_cross_object_avoidance");
         optgroup->append_single_option_line("support_type", "support_settings_support#type");
         optgroup->append_single_option_line("support_style", "support_settings_support#style");
         optgroup->append_single_option_line("support_threshold_angle", "support_settings_support#threshold-angle");

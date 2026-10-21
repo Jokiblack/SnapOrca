@@ -435,6 +435,8 @@ set(lisbslic3r_sources
     PublishSettings.cpp
     PublishSettings.hpp
     PrintApply.cpp
+    InstanceContact.cpp
+    InstanceContact.hpp
     NeoDebug.cpp
     NeoDebug.hpp
     PrintBase.cpp

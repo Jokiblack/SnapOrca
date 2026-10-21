@@ -12,6 +12,7 @@
 #include "libslic3r/Support/SupportLayer.hpp"
 #include "libslic3r/PrintConfig.hpp"
 #include "SupportCommon.hpp"
+#include "libslic3r/InstanceContact.hpp"
 #include "BeltFloorContext.hpp"
 #include "Geometry.hpp"
 #include "Point.hpp"
@@ -416,6 +417,10 @@ static void trim_support_layers_by_belt_floor(
 void PrintObjectSupportMaterial::generate(PrintObject &object)
 {
     BOOST_LOG_TRIVIAL(info) << "Support generator - Start";
+
+    // PerObject Support: the other objects of the plate, trimmed off in trim_support_layers_by_object().
+    // Empty when the option is off.
+    m_neighbor_occupancy = InstanceContact::neighbor_occupancy(object);
 
     coordf_t max_object_layer_height = 0.;
     for (size_t i = 0; i < object.layer_count(); ++ i)
@@ -3380,6 +3385,10 @@ void PrintObjectSupportMaterial::trim_support_layers_by_object(
                     const Layer &object_layer = *object.layers()[i];
                     if (object_layer.bottom_z() > support_layer.print_z + gap_extra_above - EPSILON)
                         break;
+
+                    // PerObject Support: keep the support/object XY gap from the other objects and their support too.
+                    if (i < m_neighbor_occupancy.size() && !m_neighbor_occupancy[i].empty())
+                        polygons_append(polygons_trimming, offset(m_neighbor_occupancy[i], gap_xy_scaled, SUPPORT_SURFACES_OFFSET_PARAMETERS));
 
                     // Skip the object layer directly supported by this top contact layer: its lslices
                     // cover the overhang itself, so trimming by it would cut away the contact area.

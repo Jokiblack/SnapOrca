@@ -2308,6 +2308,8 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
         print_objects_new.reserve(std::max(m_objects.size(), m_model.objects.size()));
         bool new_objects = false;
         bool belt_instances_shifted = false;
+        // PerObject Support: an instance moved, or an object came or went.
+        bool xobj_plate_changed = false;
         // Walk over all new model objects and check, whether there are matching PrintObjects.
         for (ModelObject *model_object : m_model.objects) {
             ModelObjectStatus &model_object_status = const_cast<ModelObjectStatus&>(model_object_status_db.reuse(*model_object));
@@ -2368,6 +2370,7 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
                         size_t extruder_num = new_full_config.option<ConfigOptionFloats>("nozzle_diameter")->size();
                         update_apply_status(status == PrintBase::APPLY_STATUS_INVALIDATED);
                         belt_instances_shifted = true;
+                        xobj_plate_changed = true;
                     }
 					print_objects_new.emplace_back((*it_old)->print_object);
 					const_cast<PrintObjectStatus*>(*it_old)->status = PrintObjectStatus::Reused;
@@ -2377,6 +2380,7 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
         if (m_objects != print_objects_new) {
             //BBS: add more logs
             BOOST_LOG_TRIVIAL(info) << __FUNCTION__ << boost::format(" %1%: found print object changed.")%__LINE__;
+            xobj_plate_changed = true;
             this->call_cancel_callback();
 			update_apply_status(this->invalidate_all_steps());
             m_objects = print_objects_new;
@@ -2402,6 +2406,32 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
             print_regions_reshuffled = true;
         }
         print_object_status_db.clear();
+
+        // PerObject Support: the support of an object with the option depends on the other objects
+        // (where they sit, their slices and their support), an edge the step graph does not have.
+        // Regenerate the support of all those objects together when the plate changed, when the print
+        // sequence changed, or when any object has to rebuild its support (and with it, maybe, its
+        // slices), so that none keeps avoiding what the others no longer are. Nothing happens on a
+        // plate where no object uses the option.
+        {
+            // Not cross_object_active(): an object that has just stopped printing by layer still holds
+            // the support generated with the avoidance.
+            std::vector<PrintObject*> xobj_objects;
+            for (PrintObject *object : m_objects)
+                if (object->config().support_cross_object_avoidance.value && object->config().enable_support.value)
+                    xobj_objects.emplace_back(object);
+            if (!xobj_objects.empty()) {
+                // Unguarded: Print::apply() already holds the state mutex.
+                bool stale = xobj_plate_changed || std::find(print_diff.begin(), print_diff.end(), "print_sequence") != print_diff.end();
+                for (size_t i = 0; !stale && i < m_objects.size(); ++i)
+                    stale = !m_objects[i]->is_step_done_unguarded(posSupportMaterial);
+                if (stale)
+                    for (PrintObject *object : xobj_objects) {
+                        update_apply_status(object->invalidate_step(posSupportMaterial));
+                        object->clear_tree_support_preview_cache();
+                    }
+            }
+        }
 
         // BBS
         for (PrintObject* object : m_objects) {
