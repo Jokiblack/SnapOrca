@@ -689,6 +689,9 @@ protected:
     std::string     extrude_perimeters(const Print& print, const std::vector<ObjectByExtruder::Island::Region>& by_region, bool is_first_layer, bool is_infill_first, bool unsupported_loops_only = false);
     std::string     extrude_infill(const Print& print, const std::vector<ObjectByExtruder::Island::Region>& by_region, bool ironing);
     std::string     extrude_support(const ExtrusionEntityCollection& support_fills, const ExtrusionRole support_extrusion_role);
+    // Surface Sandwich passes (ported from OrcaFS-NeotkoCM by Neotko) of an object layer, in printing order and with the
+    // current tool. The tool of each pass, and with it the tool changes and the wipe tower, is left to the tool ordering.
+    std::string     extrude_sandwich_passes(const PrintObject& object, const Layer& layer);
 
     // Farthest-point timelapse: find the extrusion point farthest from camera (0,0)
     void compute_farthest_point(const std::vector<LayerToPrint> &layers, int most_used_extruder,

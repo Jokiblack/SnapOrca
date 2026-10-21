@@ -17,6 +17,7 @@
 #include "Geometry.hpp"
 #include "I18N.hpp"
 #include "Layer.hpp"
+#include "ColorStitch.hpp"
 #include "MutablePolygon.hpp"
 #include "PrintBase.hpp"
 #include "PrintConfig.hpp"
@@ -843,6 +844,13 @@ void PrintObject::infill()
     if (this->set_started(posInfill)) {
         m_print->set_status(35, L("Generating infill toolpath"));
 
+        // Surface Sandwich (ported from OrcaFS-NeotkoCM by Neotko): one slot of passes per layer, written only by the
+        // thread filling that layer, and the ColorStitch paint of the object, read by all of them.
+        m_multipass_sublayers.assign(m_layers.size(), {});
+        m_minlayer_collapsed_slots.assign(m_layers.size(), {});
+        m_colorstitch_paint_cache = ColorStitch::object_has_any_colorstitch_paint(this->model_object()) ?
+                                        ColorStitchPaintCache::build(*this) : std::make_shared<ColorStitchPaintCache>();
+        fused_monotonic_seen().store(false);
         BOOST_LOG_TRIVIAL(debug) << "Filling layers in parallel - start";
         tbb::parallel_for(
             tbb::blocked_range<size_t>(0, m_layers.size()),
@@ -854,11 +862,48 @@ void PrintObject::infill()
             }
         );
         m_print->throw_if_canceled();
+        this->add_sandwich_warnings();
         BOOST_LOG_TRIVIAL(debug) << "Filling layers in parallel - end";
         /*  we could free memory now, but this would make this step not idempotent
         ### $_->fill_surfaces->clear for map @{$_->regions}, @{$object->layers};
         */
         this->set_done(posInfill);
+    }
+}
+
+// The warnings the Sandwich passes collected while filling, one of each kind per object.
+void PrintObject::add_sandwich_warnings()
+{
+    if (fused_monotonic_seen().load() && this->has_multipass_sublayers())
+        this->active_step_add_warning(PrintStateBase::WarningLevel::NON_CRITICAL,
+            L("ColorStitch: this object uses the Monotonic pattern on a ColorStitch surface, and some lines may lose their colour. "
+              "Use Monotonic line on the top and penultimate surfaces for an exact result."),
+            PrintStateBase::SlicingDefaultNotification);
+    std::set<int> collapsed_slots;
+    bool          local_z = false;
+    for (const std::vector<int> &per_layer : m_minlayer_collapsed_slots)
+        for (int slot : per_layer) {
+            if (slot < 0)
+                local_z = true;
+            else
+                collapsed_slots.insert(slot);
+        }
+    if (local_z)
+        this->active_step_add_warning(PrintStateBase::WarningLevel::NON_CRITICAL,
+            L("Sandwich and Subdivide Mix Layer are not compatible for now. On the layers of this object that Subdivide Mix Layer splits, "
+              "the Sandwich recipe was not applied and those surfaces print like the rest of the layer. Use only one of the two on this object."),
+            PrintStateBase::SlicingDefaultNotification);
+    if (!collapsed_slots.empty()) {
+        std::string slot_list;
+        for (int slot : collapsed_slots)
+            slot_list += (slot_list.empty() ? "" : ", ") + std::to_string(slot);
+        this->active_step_add_warning(PrintStateBase::WarningLevel::NON_CRITICAL,
+            // TRN %1% is a list of paint slot numbers of the ColorStitch Painter, e.g. "1, 3".
+            Slic3r::format(L("Sandwich: on some layers the layer height is too thin for every pass of the recipe painted with these slots: %1%. "
+                             "There the recipe prints with fewer passes. Raise the layer height, narrow the adaptive layer height range "
+                             "or change the shares of the passes."),
+                           slot_list),
+            PrintStateBase::SlicingDefaultNotification);
     }
 }
 
@@ -6318,7 +6363,10 @@ void PrintObject::discover_sub_top_surfaces()
 // drop or merge the new surface type.
 void PrintObject::discover_penultimate_surfaces()
 {
-    const int penultimate_layers = this->config().penultimate_top_layers.value;
+    int penultimate_layers = this->config().penultimate_top_layers.value;
+    // A painted Sandwich profile with a penultimate zone needs penultimate surfaces even when the preset makes none.
+    if (penultimate_layers <= 0 && ColorStitch::object_painter_wants_penu(this->model_object()))
+        penultimate_layers = 2;
     if (penultimate_layers <= 0 || m_layers.size() < 2)
         return;
     BOOST_LOG_TRIVIAL(trace) << "discover_penultimate_surfaces()";

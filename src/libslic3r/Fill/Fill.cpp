@@ -15,6 +15,7 @@
 #include <queue>
 #include <unordered_set>
 #include <utility>
+#include <functional>
 
 #include "../ClipperUtils.hpp"
 #include "../Geometry.hpp"
@@ -22,6 +23,9 @@
 #include "../Print.hpp"
 #include "../PrintConfig.hpp"
 #include "../Surface.hpp"
+#include "../ColorStitch.hpp"
+#include "../NeoDebug.hpp"
+#include "../SurfaceEffectProfile.hpp"
 
 #include "AABBTreeLines.hpp"
 #include "libslic3r/Config.hpp"
@@ -1431,6 +1435,624 @@ void export_group_fills_to_svg(const char *path, const std::vector<SurfaceFill> 
 #endif
 
 // friend to Layer
+// ---------------------------------------------------------------------------------------------------------
+// Surface Sandwich (ported from OrcaFS-NeotkoCM by Neotko, AGPL-3.0, neotko/main e68dcc8551).
+// A top, penultimate or painted bottom surface whose recipe has an effect is not filled here: it becomes a
+// stack of thin single-tool passes, PrintObject::multipass_sublayers(), printed by the G-code generator.
+// Nothing below runs unless a Sandwich key of the region is set or the object carries ColorStitch paint.
+// ---------------------------------------------------------------------------------------------------------
+
+// Painted slot of each piece of a surface fill: -1 = not split, 0 = unpainted remainder, > 0 = painted slot.
+struct SandwichPieces {
+    std::vector<int>   slot_tag;
+    std::map<int, int> slot_owner; // slot -> index of the model part whose paint was used
+    int tag(size_t i) const { return i < slot_tag.size() ? slot_tag[i] : -1; }
+};
+
+// Z band of the paint of a surface, in the slice frame. The top of the mesh may sit up to a layer above the
+// last print_z; the penultimate surface reads the paint one layer up; a bottom the faces looking down below it.
+static std::pair<double, double> sandwich_paint_band(const Layer &layer, ExtrusionRole role)
+{
+    if (role == erBottomSurface || role == erBridgeInfill)
+        return { layer.print_z - 2.0 * layer.height, layer.print_z };
+    if (role == erTopSolidInfill)
+        return { layer.print_z - layer.height, layer.print_z + layer.height };
+    return { layer.print_z, layer.print_z + 2.0 * layer.height };
+}
+
+// Painter mode: splits the surface into the footprint of every painted slot (whose profile has a stack for this
+// zone) and the unpainted remainder, so each recipe applies only where it was painted. Where two model parts of
+// an assembled object painted the same area, the later part wins, like the geometry clip of the slicer.
+static SandwichPieces sandwich_split_painted(const Layer &layer, SurfaceFill &surface_fill)
+{
+    SandwichPieces     out;
+    const PrintObject *po   = layer.object();
+    const ModelObject *mo   = po != nullptr ? po->model_object() : nullptr;
+    const ExtrusionRole role = surface_fill.params.extrusion_role;
+    const bool is_tp     = role == erTopSolidInfill || role == erPenultimateInfill;
+    const bool is_bottom = role == erBottomSurface || role == erBridgeInfill;
+    if ((!is_tp && !is_bottom) || surface_fill.expolygons.empty() || !ColorStitch::object_has_any_colorstitch_paint(mo) ||
+        (is_bottom && !ColorStitch::object_painter_wants_bottom(mo)))
+        return out;
+
+    const auto [zlo, zhi] = sandwich_paint_band(layer, role);
+    std::vector<int>        slots, owners;
+    std::vector<ExPolygons> masks;
+    for (int slot : ColorStitch::enumerate_painted_slots_in_z_range(po, zlo, zhi, is_bottom)) {
+        const int                   owner = ColorStitch::painted_slot_owner_volume_index_in_z_range(po, slot, zlo, zhi, is_bottom);
+        const SurfaceEffectProfile *p     = ColorStitch::find_profile(po, ColorStitch::profile_id_for_slot_in_volume(po, slot, owner));
+        if (p == nullptr)
+            continue;
+        const std::string &js = is_bottom ? p->stack_bottom_json : (role == erTopSolidInfill ? p->stack_top_json : p->stack_penu_json);
+        if (SurfacePassStack::from_json(js).passes.empty())
+            continue;
+        ExPolygons mask = ColorStitch::painted_footprint_in_z_range(po, slot, zlo, zhi, is_bottom);
+        if (mask.empty())
+            continue;
+        slots.push_back(slot);
+        owners.push_back(owner);
+        masks.push_back(std::move(mask));
+        out.slot_owner[slot] = owner;
+    }
+    if (slots.empty())
+        return out;
+
+    std::vector<size_t> order(slots.size());
+    for (size_t k = 0; k < order.size(); ++k)
+        order[k] = k;
+    std::stable_sort(order.begin(), order.end(), [&owners](size_t a, size_t b) { return owners[a] > owners[b]; });
+
+    ExPolygons remaining = std::move(surface_fill.expolygons);
+    surface_fill.expolygons.clear();
+    for (size_t k : order) {
+        for (ExPolygon &e : intersection_ex(remaining, masks[k])) {
+            surface_fill.expolygons.push_back(std::move(e));
+            out.slot_tag.push_back(slots[k]);
+        }
+        remaining = diff_ex(remaining, masks[k]);
+    }
+    for (ExPolygon &e : remaining) {
+        surface_fill.expolygons.push_back(std::move(e));
+        out.slot_tag.push_back(0);
+    }
+    NEOTKO_LOG(PROFILE, "FOOTPRINT_CLIP z=" << layer.print_z << " role=" << int(role) << " slots=" << slots.size()
+                                            << " pieces=" << surface_fill.expolygons.size());
+    return out;
+}
+
+// Rescales mm3_per_mm and height of a cloned wall to a pass height ratio * H, with the stadium cross section
+// A(W, H) = H * (W - H * (1 - pi / 4)) of Flow.
+static void sandwich_scale_perimeter(ExtrusionEntity *e, double ratio, double k_mp)
+{
+    auto scale_path = [ratio, k_mp](ExtrusionPath &p) {
+        const double W = p.width, H = p.height, H_sub = H * ratio;
+        const double A_orig = H * (W - k_mp * H), A_sub = H_sub * (W - k_mp * H_sub);
+        p.mm3_per_mm *= (A_orig > 1e-9 && W > H + 1e-6) ? A_sub / A_orig : ratio;
+        p.height = float(H_sub);
+    };
+    if (auto *path = dynamic_cast<ExtrusionPath *>(e))
+        scale_path(*path);
+    else if (auto *loop = dynamic_cast<ExtrusionLoop *>(e))
+        for (ExtrusionPath &p : loop->paths)
+            scale_path(p);
+    else if (auto *multi = dynamic_cast<ExtrusionMultiPath *>(e))
+        for (ExtrusionPath &p : multi->paths)
+            scale_path(p);
+    else if (auto *coll = dynamic_cast<ExtrusionEntityCollection *>(e))
+        for (ExtrusionEntity *ee : coll->entities)
+            sandwich_scale_perimeter(ee, ratio, k_mp);
+}
+
+static void sandwich_walk_paths(const ExtrusionEntity *e, const std::function<void(const ExtrusionPath &)> &visit)
+{
+    if (e == nullptr)
+        return;
+    if (const auto *coll = dynamic_cast<const ExtrusionEntityCollection *>(e))
+        for (const ExtrusionEntity *ee : coll->entities)
+            sandwich_walk_paths(ee, visit);
+    else if (const auto *p = dynamic_cast<const ExtrusionPath *>(e))
+        visit(*p);
+}
+
+// Resolves the Sandwich recipe of one piece of a surface fill and compiles it into passes. Returns false, without
+// touching anything, when the piece has no recipe: the caller then fills it as usual.
+static bool sandwich_fill_piece(Layer &layer, SurfaceFill &surface_fill, Fill &f, const FillParams &params, const LayerRegion &layerm,
+                                int fp_slot_tag, const SandwichPieces &pieces)
+{
+    const ExtrusionRole sub_role       = surface_fill.params.extrusion_role;
+    const bool          is_tp          = sub_role == erTopSolidInfill || sub_role == erPenultimateInfill;
+    const bool          is_bottom_role = sub_role == erBottomSurface || sub_role == erBridgeInfill;
+    if (!is_tp && !is_bottom_role)
+        return false;
+    PrintObject *po = layer.object();
+    if (po == nullptr || layer.id() >= po->multipass_sublayers().size())
+        return false;
+    const ModelObject *mo           = po->model_object();
+    const bool         painter_mode = ColorStitch::object_has_any_colorstitch_paint(mo);
+    // Top and penultimate surfaces over a bridge stay as they are; a bottom (bed contact or bridge) is painter only.
+    if (is_tp ? surface_fill.params.bridge : !(painter_mode && ColorStitch::object_painter_wants_bottom(mo)))
+        return false;
+    const PrintRegionConfig &mp_cfg = layerm.region().config();
+
+    // The recipe: in painter mode the profile painted here (the unpainted remainder prints plain), otherwise the
+    // region preset.
+    SurfacePassStack stack;
+    if (painter_mode) {
+        int slot = fp_slot_tag;
+        if (slot < 0) {
+            const auto [zlo, zhi] = sandwich_paint_band(layer, sub_role);
+            slot                  = ColorStitch::dominant_painted_slot_in_z_range(po, zlo, zhi, is_bottom_role);
+        }
+        if (slot <= 0)
+            return false;
+        const auto                  owner = pieces.slot_owner.find(slot);
+        const SurfaceEffectProfile *p     = ColorStitch::find_profile(
+            po, ColorStitch::profile_id_for_slot_in_volume(po, slot, owner == pieces.slot_owner.end() ? -1 : owner->second));
+        if (p == nullptr)
+            return false;
+        stack = SurfacePassStack::from_json(is_bottom_role ? p->stack_bottom_json :
+                                            sub_role == erTopSolidInfill ? p->stack_top_json : p->stack_penu_json);
+        if (!stack.any_effect())
+            return false;
+        NEOTKO_LOG(PROFILE, "STACK_OVERRIDE layer=" << layer.id() << " role=" << int(sub_role) << " profile='" << p->name << "'");
+    } else {
+        stack = SurfacePassStack::resolve(mp_cfg, sub_role);
+        if (!stack.any_effect())
+            return false;
+        // Zone filter (1 = only the topmost top / the layer right below it) and filament filter of the preset.
+        const int zone = sub_role == erTopSolidInfill ? mp_cfg.interlayer_colormix_top_zone.value : mp_cfg.interlayer_colormix_penu_zone.value;
+        if (zone == 1 && !(sub_role == erTopSolidInfill ? layer.upper_layer == nullptr :
+                                                          layer.upper_layer != nullptr && layer.upper_layer->upper_layer == nullptr))
+            return false;
+        const int filament_filter = mp_cfg.interlayer_colormix_filament_filter.value;
+        if (filament_filter > 0 && int(surface_fill.params.extruder) != filament_filter)
+            return false;
+    }
+    // The first object layer prints plain, except a painted bed-contact bottom.
+    if (layer.id() == po->get_layer(0)->id() && !is_bottom_role)
+        return false;
+    // Subdivide Mix Layer (Local-Z) splits this layer its own way: the two are not compatible, the recipe is not applied.
+    const auto &lzi = po->local_z_intervals();
+    if (std::any_of(lzi.begin(), lzi.end(), [&layer](const LocalZInterval &iv) {
+            return iv.layer_id == layer.id() && iv.has_mixed_paint && iv.sublayer_count > 1; })) {
+        po->minlayer_collapsed_slots()[layer.id()].push_back(-1);
+        return false;
+    }
+
+    // On a round-wire bridge (thick_bridges) a PathBlend staircase would cut the wire into slivers: each PathBlend
+    // pass becomes Solid passes of its tools, sharing the share of the pass.
+    if (sub_role == erBridgeInfill && f.print_object_config != nullptr && f.print_object_config->thick_bridges.value) {
+        std::vector<SurfacePass> degraded;
+        for (const SurfacePass &p : stack.passes) {
+            if (p.kind != SurfacePassKind::PathBlend) {
+                degraded.push_back(p);
+                continue;
+            }
+            const auto                blob = p.pathblend.kv.find("blob");
+            const PathBlendPassConfig pb   = PathBlendPassConfig::from_blob_json(blob == p.pathblend.kv.end() ? std::string() : blob->second);
+            const int                 nsub = pb.mode == PathBlendPassConfig::Mode::Full && pb.tool_top >= 0 ? 2 : 1;
+            for (int k = 0; k < nsub; ++k) {
+                SurfacePass s = p;
+                s.kind        = SurfacePassKind::Solid;
+                s.solid_tool  = std::max(0, k == 0 ? pb.tool_bottom : pb.tool_top);
+                s.ratio       = p.ratio / double(nsub);
+                s.pathblend   = {};
+                degraded.push_back(std::move(s));
+            }
+        }
+        stack.passes = std::move(degraded);
+    }
+
+    const int     n           = std::min<int>(SurfacePassStack::kMaxPasses, int(stack.passes.size()));
+    const float   base_angle  = surface_fill.params.angle;
+    const bool    orig_fixed  = f.fixed_angle;
+    constexpr double k_mp     = 1.0 - 0.25 * M_PI;
+    auto         &sublayers   = po->multipass_sublayers()[layer.id()];
+    const int     natural_tool = std::max(0, int(surface_fill.params.extruder) - 1);
+    const bool    perim_override = painter_mode ? stack.perimeter_override : mp_cfg.multipass_perimeter_override.value;
+    // Running pass index of the layer: a ColorStitch lamina emits several passes.
+    int           global_pass = 0;
+    const size_t  first_new_sublayer = sublayers.size();
+    const double  H           = layer.height;
+    const double  band_top_sched = layer.bottom_z() + H - 2.0 * EPSILON;
+
+    // A band thinner than the printable floor is not dropped (that left a hole above the surviving bands, e.g. with
+    // adaptive layer height): the recipe collapses to the bands that reach it, or to the thickest one, and their
+    // shares are renormalized so the layer is always filled to its full height.
+    constexpr double    kMinBandHeight = 0.04;
+    std::vector<double> eff_ratio(size_t(n), 0.0);
+    int                 last_eff = -1;
+    {
+        const bool has_pb = std::any_of(stack.passes.begin(), stack.passes.begin() + n, [](const SurfacePass &p) { return p.kind == SurfacePassKind::PathBlend; });
+        double sum_alive = 0.0;
+        int    n_alive   = 0;
+        for (int i = 0; i < n; ++i)
+            if (has_pb || H * stack.passes[i].ratio >= kMinBandHeight) {
+                eff_ratio[i] = stack.passes[i].ratio;
+                sum_alive += eff_ratio[i];
+                ++n_alive;
+            }
+        if (n_alive == 0) {
+            int best = -1;
+            for (int i = 0; i < n; ++i)
+                if (best < 0 || stack.passes[i].ratio >= stack.passes[best].ratio)
+                    best = i;
+            if (best >= 0)
+                eff_ratio[best] = 1.0;
+            n_alive = 1;
+        } else if (n_alive < n && sum_alive > 1e-9) {
+            for (double &r : eff_ratio)
+                r /= sum_alive;
+        }
+        for (int i = 0; i < n; ++i)
+            if (eff_ratio[i] > 0.0)
+                last_eff = i;
+        if (n_alive < n && !has_pb && fp_slot_tag > 0)
+            po->minlayer_collapsed_slots()[layer.id()].push_back(fp_slot_tag);
+    }
+
+    auto clone_perimeters = [&layer](ExtrusionEntityCollection &dst, double ratio, bool scale) {
+        for (const LayerRegion *lr : layer.regions())
+            for (const ExtrusionEntity *pe : lr->perimeters.entities) {
+                ExtrusionEntity *cloned = pe->clone();
+                if (scale)
+                    sandwich_scale_perimeter(cloned, ratio, k_mp);
+                dst.entities.push_back(cloned);
+            }
+    };
+
+    for (int i = 0; i < n; ++i) {
+        const SurfacePass    &pass = stack.passes[i];
+        const SurfacePassKind kind = pass.kind;
+        // A supported bottom: the first pass keeps the base role (a bridge stays a bridge), the passes above it lie
+        // on that one and print as solid infill.
+        const ExtrusionRole band_role = is_bottom_role && i >= 1 ? erSolidInfill : sub_role;
+        f.fixed_angle                 = orig_fixed;
+
+        if (kind == SurfacePassKind::PathBlend) {
+            const auto          blob_it = pass.pathblend.kv.find("blob");
+            const std::string   blob    = blob_it == pass.pathblend.kv.end() ? std::string() : blob_it->second;
+            const PathBlendPassConfig pb = PathBlendPassConfig::from_blob_json(blob);
+            if (pb.num_passes < 1 || pb.tool_bottom < 0)
+                continue;
+            // An authored angle is absolute: no per-layer alternation, and it wins over the bridge angle.
+            f.angle = pb.fill_angle >= 0 ? Geometry::deg2rad(float(pb.fill_angle)) : base_angle;
+            if (pb.fill_angle >= 0)
+                f.fixed_angle = true;
+            Surface surf = surface_fill.surface;
+            if (pb.fill_angle >= 0)
+                surf.bridge_angle = -1.0;
+
+            // Staircase model: one height per fill line. The ramp lines of tool_bottom rest on the layer below and
+            // climb from the floor to mid_end across the surface; in Full mode the cap of tool_top fills H - ramp(t)
+            // on top of each, so that the two add up to the layer height everywhere.
+            const double min_h   = pb_min_printable_h();
+            const float  floor_v = std::max(float(min_h), std::max(0.01f, pb.floor_mm));
+            const float  mid_pref = pb.mid_end_mm < 0.f ? float(pb.mode == PathBlendPassConfig::Mode::Full ? H - min_h : H) : pb.mid_end_mm;
+            const float  mid_end = std::min(mid_pref, float(H - min_h));
+            const bool   want_cap = pb.tool_top >= 0 && pb.num_passes >= 2;
+            const std::vector<PBBand> bands = compute_pb_bands(pb, layer.bottom_z(), H, 0.01, want_cap, 32, min_h);
+            if (bands.empty()) {
+                // Degenerate ramp (mid_end <= floor): one flat pass of the ramp tool.
+                FillParams flat = params;
+                ExtrusionEntityCollection temp;
+                f.spacing = params.flow.spacing();
+                f.fill_surface_extrusion(&surf, flat, temp.entities);
+                MultiPassSubLayer sub;
+                sub.island_key = fp_slot_tag;
+                sub.print_z    = band_top_sched;
+                sub.height     = float(H);
+                sub.pass_idx   = global_pass++;
+                sub.role       = sub_role;
+                sub.effect     = SurfacePassKind::PathBlend;
+                sub.tool_id    = pb.tool_bottom;
+                sub.fills      = std::move(temp);
+                sublayers.push_back(std::move(sub));
+                continue;
+            }
+
+            // Lines unconnected, so that every scanline is its own path and gets its own height.
+            FillParams line_params        = params;
+            line_params.anchor_length     = 0.f;
+            line_params.anchor_length_max = 0.f;
+            f.spacing                     = params.flow.spacing();
+            ExtrusionEntityCollection ramp_global;
+            f.fill_surface_extrusion(&surf, line_params, ramp_global.entities);
+
+            // Axis of the ramp: the normal of the lines just generated, measured (length weighted doubled angle),
+            // pointing to +Y (+X when horizontal). It cannot be derived from f.angle, which _infill_direction()
+            // turns by the layer parity and 90 degrees.
+            double ux = 0.0, uy = 1.0;
+            {
+                double s2x = 0.0, s2y = 0.0;
+                for (const ExtrusionEntity *e : ramp_global.entities)
+                    sandwich_walk_paths(e, [&](const ExtrusionPath &pp) {
+                        const auto &pts = pp.polyline.points;
+                        for (size_t k = 1; k < pts.size(); ++k) {
+                            const double dx = double(pts[k].x() - pts[k - 1].x()), dy = double(pts[k].y() - pts[k - 1].y());
+                            const double L  = std::sqrt(dx * dx + dy * dy);
+                            if (L <= 0.0)
+                                continue;
+                            const double th = std::atan2(dy, dx);
+                            s2x += L * std::cos(2.0 * th);
+                            s2y += L * std::sin(2.0 * th);
+                        }
+                    });
+                if (s2x * s2x + s2y * s2y > 0.0) {
+                    const double line_ang = 0.5 * std::atan2(s2y, s2x);
+                    ux = -std::sin(line_ang);
+                    uy = std::cos(line_ang);
+                    if (uy < 0.0 || (std::abs(uy) <= 1e-12 && ux < 0.0)) {
+                        ux = -ux;
+                        uy = -uy;
+                    }
+                }
+            }
+            // t of a line: its lane along the axis, fitted to the extent of the surface contour (or a physical period),
+            // anchored at the object origin. The ramp and the cap use the same t, so their volumes add up.
+            FieldSampler smp;
+            smp.sp     = std::max(1e-3, double(params.flow.spacing()));
+            smp.period = double(pb.span_mm);
+            {
+                const Vec3d o = po->trafo_centered() * Vec3d(0.0, 0.0, 0.0);
+                smp.anchor    = o.x() * ux + o.y() * uy;
+                double pmin = 0.0, pmax = 0.0;
+                bool   first = true;
+                for (const Point &pt : surface_fill.surface.expolygon.contour.points) {
+                    const double q = double(pt.x()) * ux + double(pt.y()) * uy;
+                    pmin  = first ? q : std::min(pmin, q);
+                    pmax  = first ? q : std::max(pmax, q);
+                    first = false;
+                }
+                smp.k0 = smp.lane_of(pmin * SCALING_FACTOR);
+                smp.k1 = smp.lane_of(pmax * SCALING_FACTOR);
+            }
+            auto t_of = [&](const ExtrusionPath &p) {
+                if (p.polyline.points.empty())
+                    return 0.5;
+                double sum = 0.0;
+                for (const auto &pt : p.polyline.points)
+                    sum += double(pt.x()) * ux + double(pt.y()) * uy;
+                return smp.t_of(sum / double(p.polyline.points.size()) * SCALING_FACTOR);
+            };
+            const size_t pb_base = sublayers.size();
+
+            // Ramp: one pass per distinct height, ascending, print_z keys 0.1 um apart below the layer top.
+            {
+                struct ScanPath { double t, z, h; ExtrusionPath *p; };
+                std::vector<ScanPath> scans;
+                const double          range = double(mid_end) - double(floor_v);
+                for (const ExtrusionEntity *e : ramp_global.entities)
+                    sandwich_walk_paths(e, [&](const ExtrusionPath &p) {
+                        const double t   = t_of(p);
+                        const double h_p = double(floor_v) + pb.profile_u(t) * range;
+                        auto        *cl  = dynamic_cast<ExtrusionPath *>(p.clone());
+                        if (cl == nullptr)
+                            return;
+                        cl->mm3_per_mm *= H > 0.0 ? h_p / H : 1.0;
+                        cl->height = float(h_p);
+                        scans.push_back({ t, layer.bottom_z() + h_p, h_p, cl });
+                    });
+                std::sort(scans.begin(), scans.end(), [](const ScanPath &a, const ScanPath &b) { return a.t < b.t; });
+                constexpr double Z_QUANT = 1e-4;
+                for (size_t a = 0; a < scans.size();) {
+                    size_t b = a + 1;
+                    while (b < scans.size() && std::abs(scans[b].z - scans[a].z) < Z_QUANT)
+                        ++b;
+                    MultiPassSubLayer sub;
+                    sub.island_key     = fp_slot_tag;
+                    sub.print_z        = band_top_sched - double(scans.size() - a) * 1e-7;
+                    sub.height         = float(scans[a].h);
+                    sub.real_extrude_z = scans[a].z;
+                    sub.pass_idx       = global_pass++;
+                    sub.role           = sub_role;
+                    sub.effect         = SurfacePassKind::PathBlend;
+                    sub.tool_id        = pb.tool_bottom;
+                    for (size_t k = a; k < b; ++k)
+                        sub.fills.entities.push_back(scans[k].p);
+                    sublayers.push_back(std::move(sub));
+                    a = b;
+                }
+            }
+            // Cap (Full): one pass at the layer top, each line with the height left above its ramp line.
+            if (want_cap) {
+                ExtrusionEntityCollection cap_global, cap;
+                f.spacing = params.flow.spacing();
+                f.fill_surface_extrusion(&surf, line_params, cap_global.entities);
+                for (const ExtrusionEntity *e : cap_global.entities)
+                    sandwich_walk_paths(e, [&](const ExtrusionPath &p) {
+                        const double h_cap = H - (double(floor_v) + pb.profile_u(t_of(p)) * double(mid_end - floor_v));
+                        if (h_cap < min_h)
+                            return;
+                        auto *cl = dynamic_cast<ExtrusionPath *>(p.clone());
+                        if (cl == nullptr)
+                            return;
+                        cl->mm3_per_mm *= h_cap / H;
+                        cl->height = float(h_cap);
+                        cap.entities.push_back(cl);
+                    });
+                if (!cap.entities.empty()) {
+                    MultiPassSubLayer sub;
+                    sub.island_key     = fp_slot_tag;
+                    sub.print_z        = band_top_sched;
+                    sub.height         = float(H);
+                    sub.real_extrude_z = layer.bottom_z() + H;
+                    sub.pass_idx       = global_pass++;
+                    sub.role           = sub_role;
+                    sub.effect         = SurfacePassKind::PathBlend;
+                    sub.tool_id        = pb.tool_top;
+                    sub.fills          = std::move(cap);
+                    sublayers.push_back(std::move(sub));
+                }
+            }
+            // Perimeter override: the wall is printed at full height by the last pass at the layer top (the cap), or
+            // by a wall-only pass of the ramp tool when there is no cap.
+            if (perim_override && i == n - 1 && sublayers.size() > pb_base) {
+                if (sublayers.back().real_extrude_z >= layer.print_z - 1e-4) {
+                    clone_perimeters(sublayers.back().perimeters, 1.0, false);
+                } else {
+                    MultiPassSubLayer sub;
+                    sub.print_z        = band_top_sched;
+                    sub.height         = float(H);
+                    sub.real_extrude_z = layer.print_z;
+                    sub.pass_idx       = global_pass++;
+                    sub.role           = sub_role;
+                    sub.effect         = SurfacePassKind::PathBlend;
+                    sub.tool_id        = pb.tool_bottom;
+                    clone_perimeters(sub.perimeters, 1.0, false);
+                    sublayers.push_back(std::move(sub));
+                }
+            }
+            continue;
+        }
+
+        const bool is_cm      = kind == SurfacePassKind::ColorStitch;
+        const bool is_none    = kind == SurfacePassKind::None;
+        const int  solid_tool = is_none ? natural_tool : pass.solid_tool;
+        // A disabled Solid pass still counts in the Z of the passes above it.
+        if (!is_cm && solid_tool < 0)
+            continue;
+        const double ratio = eff_ratio[i];
+        if (ratio <= 0.0)
+            continue;
+
+        // A ColorStitch pass may carry its own interlayer_colormix_* keys, applied over a copy of the region config.
+        PrintRegionConfig        cm_cfg_override;
+        const PrintRegionConfig *cm_eff = &mp_cfg;
+        if (is_cm && pass.colorstitch.present && !pass.colorstitch.kv.empty()) {
+            cm_cfg_override = mp_cfg;
+            for (const auto &[key, value] : pass.colorstitch.kv)
+                try {
+                    cm_cfg_override.set_deserialize_strict(key, value);
+                } catch (const std::exception &e) {
+                    NEOTKO_LOG(MULTIPASS, "CM_OVERRIDE_SKIP key=" << key << " err=" << e.what());
+                }
+            cm_cfg_override.interlayer_colormix_enabled.value = true;
+            cm_eff = &cm_cfg_override;
+        }
+
+        // Fill angle: an authored angle is absolute (no per-layer alternation, wins over the bridge angle); auto
+        // ColorStitch follows the surface, auto Solid passes cross each other.
+        int authored = -1;
+        if (is_cm)
+            // A bottom zone is authored with the top keys.
+            authored = sub_role == erTopSolidInfill || is_bottom_role ? cm_eff->interlayer_colormix_angle.value : cm_eff->interlayer_colormix_penu_angle.value;
+        else
+            authored = pass.angle;
+        if (authored >= 0) {
+            f.angle       = Geometry::deg2rad(float(authored));
+            f.fixed_angle = f.fixed_angle || is_cm;
+        } else {
+            f.angle = is_cm ? base_angle : base_angle + float(i % 2) * float(M_PI / 2);
+        }
+        Surface surf = surface_fill.surface;
+        if (authored >= 0)
+            surf.bridge_angle = -1.0;
+        ExtrusionEntityCollection temp;
+        f.spacing = surface_fill.params.spacing;
+        f.fill_surface_extrusion(&surf, params, temp.entities);
+        for (ExtrusionEntity *e : temp.entities)
+            if (auto *coll = dynamic_cast<ExtrusionEntityCollection *>(e))
+                for (ExtrusionEntity *ee : coll->entities)
+                    if (auto *path = dynamic_cast<ExtrusionPath *>(ee)) {
+                        const double W = path->width, Hp = path->height, H_sub = Hp * ratio;
+                        const double A_orig = Hp * (W - k_mp * Hp), A_sub = H_sub * (W - k_mp * H_sub);
+                        path->mm3_per_mm *= (A_orig > 1e-9 && W > Hp + 1e-6) ? A_sub / A_orig : ratio;
+                        path->height = float(H_sub);
+                    }
+
+        // Top of the band. The last surviving band closes the layer exactly, whatever rounding the shares carry.
+        double cumsum = 0.0;
+        for (int pi = 0; pi <= i; ++pi)
+            cumsum += eff_ratio[pi];
+        const double band_top_z  = i == last_eff ? band_top_sched : layer.bottom_z() + cumsum * H;
+        const float  band_height = float(H * ratio);
+
+        if (is_cm) {
+            // One pass per tool of the lamina, keys 1 um apart, in the colour order of the recipe.
+            const MixedFilamentManager *mgr          = nullptr;
+            size_t                      num_physical = 0;
+            if (cm_eff->interlayer_colormix_use_virtual.value) {
+                mgr          = &po->print()->mixed_filament_manager();
+                num_physical = po->print()->config().filament_colour.size();
+            }
+            last_tool_order_tls().clear();
+            ColorStitch::assign_and_group_tools(temp, *cm_eff, sub_role, int(f.layer_id), true, true, mgr, num_physical, po, layer.print_z,
+                                                layer.height, cm_eff == &cm_cfg_override);
+            // Lines ColorStitch could not distribute take tool A of the recipe.
+            const int fallback = std::max(0, sub_role == erPenultimateInfill ? cm_eff->interlayer_colormix_penu_tool_a.value :
+                                                                               cm_eff->interlayer_colormix_tool_a.value);
+            auto buckets = ColorStitch::eec_to_tool_buckets(temp, fallback);
+            {
+                const std::vector<int> order = last_tool_order_tls();
+                auto rank = [&order](int t) {
+                    const auto it = std::find(order.begin(), order.end(), t);
+                    return it == order.end() ? int(order.size()) + t : int(it - order.begin());
+                };
+                std::stable_sort(buckets.begin(), buckets.end(), [&rank](const auto &a, const auto &b) { return rank(a.first) < rank(b.first); });
+            }
+            const int NB = int(buckets.size());
+            for (int k = 0; k < NB; ++k) {
+                MultiPassSubLayer sub;
+                sub.island_key = fp_slot_tag;
+                sub.print_z    = band_top_z - double(NB - 1 - k) * 1e-3;
+                sub.height     = band_height;
+                sub.pass_idx   = global_pass++;
+                sub.role       = band_role;
+                sub.effect     = SurfacePassKind::ColorStitch;
+                sub.tool_id    = buckets[k].first;
+                sub.fills      = std::move(buckets[k].second);
+                sublayers.push_back(std::move(sub));
+            }
+            // The wall is printed once, at full height, by the last pass of the topmost band.
+            if (perim_override && i == n - 1 && NB > 0)
+                clone_perimeters(sublayers.back().perimeters, 1.0, false);
+        } else {
+            MultiPassSubLayer sub;
+            sub.island_key  = fp_slot_tag;
+            sub.print_z     = band_top_z;
+            sub.height      = band_height;
+            sub.pass_idx    = global_pass++;
+            sub.role        = band_role;
+            sub.effect      = SurfacePassKind::Solid;
+            sub.tool_id     = solid_tool;
+            sub.speed_pct   = is_none ? 100 : pass.speed_pct;
+            sub.gcode_start = is_none ? std::string() : pass.gcode_start;
+            sub.gcode_end   = is_none ? std::string() : pass.gcode_end;
+            sub.fills       = std::move(temp);
+            if (perim_override)
+                clone_perimeters(sub.perimeters, ratio, true);
+            sublayers.push_back(std::move(sub));
+        }
+    }
+    for (size_t k = first_new_sublayer; k < sublayers.size(); ++k)
+        sublayers[k].region_id = surface_fill.region_id;
+    f.angle       = base_angle;
+    f.fixed_angle = orig_fixed;
+    NEOTKO_LOG(MULTIPASS, "SANDWICH layer=" << layer.id() << " z=" << layer.print_z << " role=" << int(sub_role) << " slot=" << fp_slot_tag
+                                            << " passes=" << n << " sublayers=" << sublayers.size());
+    return true;
+}
+
+// Two surfaces of one object at the same Z (twin steps) give passes with the same key: they are merged, so they
+// print as one pass. The island key keeps apart the passes of different painted islands.
+static void sandwich_coalesce_twins(std::vector<MultiPassSubLayer> &subs)
+{
+    for (size_t a = 0; a < subs.size(); ++a)
+        for (size_t b = subs.size(); b-- > a + 1;) {
+            MultiPassSubLayer &A = subs[a], &B = subs[b];
+            if (A.island_key == B.island_key && A.region_id == B.region_id && A.tool_id == B.tool_id && A.pass_idx == B.pass_idx && A.role == B.role &&
+                A.effect == B.effect && A.pathblend_pass == B.pathblend_pass && std::abs(A.print_z - B.print_z) < EPSILON &&
+                std::abs(A.real_extrude_z - B.real_extrude_z) < EPSILON) {
+                A.fills.entities.insert(A.fills.entities.end(), B.fills.entities.begin(), B.fills.entities.end());
+                B.fills.entities.clear();
+                A.perimeters.entities.insert(A.perimeters.entities.end(), B.perimeters.entities.begin(), B.perimeters.entities.end());
+                B.perimeters.entities.clear();
+                subs.erase(subs.begin() + b);
+            }
+        }
+}
+
 void Layer::make_fills(const FillAdaptive::RegionOctrees* fill_octrees, FillLightning::Generator* lightning_generator)
 {
 	for (LayerRegion *layerm : m_regions)
@@ -1572,7 +2194,11 @@ void Layer::make_fills(const FillAdaptive::RegionOctrees* fill_octrees, FillLigh
         }
 		if (surface_fill.params.pattern == ipGrid)
 			params.can_reverse = false;
+        // Surface Sandwich: painted objects get their surface split by painted slot first.
+        const SandwichPieces sandwich_pieces = sandwich_split_painted(*this, surface_fill);
+        size_t               sandwich_piece  = 0;
 		for (ExPolygon& expoly : surface_fill.expolygons) {
+            const int sandwich_slot = sandwich_pieces.tag(sandwich_piece++);
 
             // Orca: Reuse the body box and octree used for bridge anchoring, resetting them for each surface.
             const int body = infill_body(*this, surface_fill, expoly);
@@ -1606,6 +2232,9 @@ void Layer::make_fills(const FillAdaptive::RegionOctrees* fill_octrees, FillLigh
                 if (f->layer_id > 0 && f->layer_id <= elefant_layers)
                     params.density = 1.0f - (1.0f - elefant_density) * (elefant_layers - (f->layer_id - 1)) / elefant_layers; // Reverse calculation - The higher layer number means the higher density. Counting starts from the second layer.
             }
+            // A surface with a Sandwich recipe becomes passes instead of a fill.
+            if (sandwich_fill_piece(*this, surface_fill, *f, params, *layerm, sandwich_slot, sandwich_pieces))
+                continue;
             // make fill
 			f->fill_surface_extrusion(&surface_fill.surface,
 				params,
@@ -1629,6 +2258,9 @@ void Layer::make_fills(const FillAdaptive::RegionOctrees* fill_octrees, FillLigh
 	    for (size_t i = 0; i < layerm->fills.entities.size(); ++ i)
     	    assert(dynamic_cast<ExtrusionEntityCollection*>(layerm->fills.entities[i]) != nullptr);
 #endif
+
+    if (this->object() != nullptr && this->id() < this->object()->multipass_sublayers().size())
+        sandwich_coalesce_twins(this->object()->multipass_sublayers()[this->id()]);
 }
 /**
  * Generate sparse-infill polylines for anchoring/analysis purposes.

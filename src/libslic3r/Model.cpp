@@ -153,6 +153,7 @@ Model& Model::assign_copy(const Model &rhs)
     this->texture_mesh = rhs.texture_mesh;
 
     this->cad_recipe = rhs.cad_recipe;
+    this->surface_effect_profiles = rhs.surface_effect_profiles;
 
     return *this;
 }
@@ -199,6 +200,7 @@ Model& Model::assign_copy(Model &&rhs)
     this->profile_info = rhs.profile_info;
     rhs.profile_info.reset();
     this->cad_recipe = std::move(rhs.cad_recipe);
+    this->surface_effect_profiles = std::move(rhs.surface_effect_profiles);
     return *this;
 }
 
@@ -2169,6 +2171,8 @@ void ModelObject::convert_units(ModelObjectPtrs& new_objects, ConversionType con
             vol->seam_facets.assign(volume->seam_facets);
             vol->mmu_segmentation_facets.assign(volume->mmu_segmentation_facets);
             vol->fuzzy_skin_facets.assign(volume->fuzzy_skin_facets);
+            vol->colorstitch_paint_facets.assign(volume->colorstitch_paint_facets);
+            vol->colorstitch_slot_to_profile_id = volume->colorstitch_slot_to_profile_id;
 
             // Perform conversion only if the target "imperial" state is different from the current one.
             // This check supports conversion of "mixed" set of volumes, each with different "imperial" state.
@@ -2281,6 +2285,8 @@ void ModelVolume::reset_extra_facets()
     this->seam_facets.reset();
     this->mmu_segmentation_facets.reset();
     this->fuzzy_skin_facets.reset();
+    this->colorstitch_paint_facets.reset();
+    this->colorstitch_slot_to_profile_id.fill(0);
     // Texture-displacement paint data has no remap-across-topology-change support yet (see
     // build_texture_displacement()'s documented limitation), so it must be dropped here rather
     // than left referring to a mesh that no longer matches it.
@@ -2496,6 +2502,8 @@ void ModelObject::split(ModelObjectPtrs* new_objects, const bool remap_paint)
                 COPY_FACETS(seam_facets);
                 COPY_FACETS(mmu_segmentation_facets);
                 COPY_FACETS(fuzzy_skin_facets);
+                COPY_FACETS(colorstitch_paint_facets);
+                new_vol->colorstitch_slot_to_profile_id = volume->colorstitch_slot_to_profile_id;
             } else if (saved_painting) {
                 // Geometry changed, attempt to remap them to the new mesh
                 new_vol->restore_painting(saved_painting);
@@ -3372,6 +3380,7 @@ void ModelVolume::assign_new_unique_ids_recursive()
     seam_facets.set_new_unique_id();
     mmu_segmentation_facets.set_new_unique_id();
     fuzzy_skin_facets.set_new_unique_id();
+    colorstitch_paint_facets.set_new_unique_id();
     // As set_new_unique_id() already does: the undo/redo stack stores FacetsAnnotation contents keyed
     // by ObjectID, so a clone left sharing these ids with its source can be handed the source's mask
     // on an undo - after which a paint mask and the mesh it was recorded against no longer match.
@@ -4285,6 +4294,37 @@ bool model_fuzzy_skin_data_changed(const ModelObject &mo, const ModelObject &mo_
     return model_property_changed(mo, mo_new,
         [](const ModelVolumeType t) { return t == ModelVolumeType::MODEL_PART; },
         [](const ModelVolume &mv_old, const ModelVolume &mv_new){ return mv_old.fuzzy_skin_facets.timestamp_matches(mv_new.fuzzy_skin_facets); });
+}
+
+// Content of the profiles a volume's slot table refers to, looked up in the library of the volume's model.
+static bool colorstitch_profiles_equal(const ModelVolume &mv_old, const ModelVolume &mv_new)
+{
+    const Model *m_old = mv_old.get_object() ? mv_old.get_object()->get_model() : nullptr;
+    const Model *m_new = mv_new.get_object() ? mv_new.get_object()->get_model() : nullptr;
+    for (int s = 1; s < ModelVolume::COLORSTITCH_SLOT_COUNT; ++s) {
+        const int pid = mv_new.colorstitch_slot_to_profile_id[s];
+        if (pid == 0)
+            continue;
+        const SurfaceEffectProfile *p_old = m_old ? m_old->surface_effect_profiles.find(pid) : nullptr;
+        const SurfaceEffectProfile *p_new = m_new ? m_new->surface_effect_profiles.find(pid) : nullptr;
+        if ((p_old == nullptr) != (p_new == nullptr) || (p_old != nullptr && *p_old != *p_new))
+            return false;
+    }
+    return true;
+}
+
+bool model_colorstitch_paint_data_changed(const ModelObject &mo, const ModelObject &mo_new)
+{
+    return model_property_changed(mo, mo_new,
+        [](const ModelVolumeType t) { return t == ModelVolumeType::MODEL_PART; },
+        [](const ModelVolume &mv_old, const ModelVolume &mv_new) {
+            // Nothing to compare when neither side is painted: the slot table and the profiles are unused.
+            if (mv_old.colorstitch_paint_facets.empty() && mv_new.colorstitch_paint_facets.empty())
+                return true;
+            return mv_old.colorstitch_paint_facets.timestamp_matches(mv_new.colorstitch_paint_facets) &&
+                   mv_old.colorstitch_slot_to_profile_id == mv_new.colorstitch_slot_to_profile_id &&
+                   colorstitch_profiles_equal(mv_old, mv_new);
+        });
 }
 
 bool model_brim_points_data_changed(const ModelObject& mo, const ModelObject& mo_new)

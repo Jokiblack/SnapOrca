@@ -9491,6 +9491,8 @@ LayerResult GCode::process_layer(
     // down so the in-visit emit and the end-of-layer orphan sweep never double it.
     // Key = (LayerToPrint index, instance_id).
     std::set<std::pair<size_t, size_t>> belt_brim_emitted;
+    // Object layers whose Surface Sandwich passes went out. Key = (LayerToPrint index, instance_id).
+    std::set<std::pair<size_t, size_t>> sandwich_emitted;
 
     // Emit every ORDINARY-layer apron band (belt_brim_prologue band coinciding with an
     // object/support layer) whose brim filament is this pass's extruder, so each band
@@ -9752,6 +9754,10 @@ LayerResult GCode::process_layer(
                     m_layer = layer_to_print.layer();
                     m_object_layer_over_raft = object_layer_over_raft;
                 }
+                // Surface Sandwich passes, once per object instance and layer, with the first tool that prints it.
+                if (print_wipe_extrusions == 0 && layer_to_print.object_layer != nullptr &&
+                    sandwich_emitted.insert({ instance_to_print.layer_id, instance_to_print.instance_id }).second)
+                    gcode += this->extrude_sandwich_passes(instance_to_print.print_object, *layer_to_print.object_layer);
                 // Sequential tool path ordering of multiple parts within the same object, aka. perimeter tracking (#5511)
                 // Island print order. Use the islands the tour assigned to this visit; if none,
                 // chain all islands nearest-neighbor from the current nozzle position (last_pos(),
@@ -11090,6 +11096,61 @@ std::string GCode::extrude_infill(const Print &print, const std::vector<ObjectBy
                 }
             }
         }
+    return gcode;
+}
+
+// The passes replace the surface fills, so they go first, before the walls and the infill of the object at this
+// layer, from the lowest to the highest. Every pass prints at its own Z inside the layer.
+std::string GCode::extrude_sandwich_passes(const PrintObject &object, const Layer &layer)
+{
+    // A copy of a shared object prints the passes of the object it shares its layers with.
+    const PrintObject *src = object.get_shared_object() != nullptr ? object.get_shared_object() : &object;
+    if (layer.id() >= src->multipass_sublayers().size() || src->multipass_sublayers()[layer.id()].empty())
+        return {};
+    std::vector<const MultiPassSubLayer *> passes;
+    for (const MultiPassSubLayer &pass : src->multipass_sublayers()[layer.id()])
+        if (!pass.fills.entities.empty())
+            passes.push_back(&pass);
+    std::stable_sort(passes.begin(), passes.end(), [](const MultiPassSubLayer *a, const MultiPassSubLayer *b) {
+        return a->print_z < b->print_z;
+    });
+
+    std::string  gcode;
+    const double saved_nominal_z    = m_nominal_z;
+    const float  saved_last_layer_z = m_last_layer_z;
+    for (const MultiPassSubLayer *pass : passes) {
+        if (pass->region_id < layer.regions().size())
+            m_config.apply(layer.regions()[pass->region_id]->region().config());
+        // Travels and lifts inside the pass reference its Z.
+        const double z = (pass->real_extrude_z > 0. ? pass->real_extrude_z : pass->print_z) + m_config.z_offset.value;
+        m_nominal_z    = z;
+        m_last_layer_z = float(z);
+        if (std::abs(m_writer.get_position().z() - z) > EPSILON) {
+            gcode += this->retract(false, false, LiftType::NormalLift);
+            gcode += m_writer.travel_to_z(z, "sandwich pass");
+        }
+        if (!pass->gcode_start.empty())
+            gcode += pass->gcode_start + "\n";
+        if (pass->speed_pct != 100)
+            gcode += "M220 S" + std::to_string(pass->speed_pct) + "\n";
+        for (const ExtrusionEntity *e : pass->fills.entities) {
+            if (const auto *coll = dynamic_cast<const ExtrusionEntityCollection *>(e)) {
+                for (const ExtrusionEntity *ee : coll->entities)
+                    gcode += this->extrude_entity(*ee, "sandwich pass");
+            } else
+                gcode += this->extrude_entity(*e, "sandwich pass");
+        }
+        if (!pass->gcode_end.empty())
+            gcode += pass->gcode_end + "\n";
+        if (pass->speed_pct != 100)
+            gcode += "M220 S100\n";
+    }
+    m_nominal_z    = saved_nominal_z;
+    m_last_layer_z = saved_last_layer_z;
+    if (!passes.empty() && std::abs(m_writer.get_position().z() - m_nominal_z) > EPSILON) {
+        gcode += this->retract(false, false, LiftType::NormalLift);
+        gcode += m_writer.travel_to_z(m_nominal_z, "sandwich passes done");
+    }
     return gcode;
 }
 

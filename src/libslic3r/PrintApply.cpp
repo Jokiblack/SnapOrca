@@ -122,6 +122,9 @@ static inline void model_volume_list_copy_configs(ModelObject &model_object_dst,
         mv_dst.mmu_segmentation_facets.assign(mv_src.mmu_segmentation_facets);
         assert(mv_dst.fuzzy_skin_facets.id() == mv_src.fuzzy_skin_facets.id());
         mv_dst.fuzzy_skin_facets.assign(mv_src.fuzzy_skin_facets);
+        assert(mv_dst.colorstitch_paint_facets.id() == mv_src.colorstitch_paint_facets.id());
+        mv_dst.colorstitch_paint_facets.assign(mv_src.colorstitch_paint_facets);
+        mv_dst.colorstitch_slot_to_profile_id = mv_src.colorstitch_slot_to_profile_id;
         //FIXME what to do with the materials?
         // mv_dst.m_material_id = mv_src.m_material_id;
         ++ i_src;
@@ -2264,6 +2267,12 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
                 model_object.brim_points = model_object_new.brim_points;
                 update_apply_status(this->invalidate_all_steps());
             }
+            // ColorStitch Painter: the paint, the slot tables or the painted recipes changed. They are read when
+            // the penultimate surfaces are classified (prepare_infill) and by the fill; copied below with the
+            // volume data, the profile library after this loop.
+            if (model_colorstitch_paint_data_changed(model_object, model_object_new))
+                for (const PrintObjectStatus &print_object_status : print_objects_range)
+                    update_apply_status(print_object_status.print_object->invalidate_step(posPrepareInfill));
         }
         if (! solid_or_modifier_differ) {
             // Synchronize Object's config.
@@ -2323,6 +2332,11 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
 	        }
         }
     }
+
+    // The Surface Effect Profile library is model wide. The objects whose paint refers to a changed profile were
+    // invalidated above, comparing against the old library, so it is copied only now.
+    if (m_model.surface_effect_profiles != model.surface_effect_profiles)
+        m_model.surface_effect_profiles = model.surface_effect_profiles;
 
     // 4) Generate PrintObjects from ModelObjects and their instances.
     {

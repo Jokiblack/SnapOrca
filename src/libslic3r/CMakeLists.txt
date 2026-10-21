@@ -445,6 +445,13 @@ set(lisbslic3r_sources
     NeoDebug.hpp
     NeotkoSurfaceExtrude.cpp
     NeotkoSurfaceExtrude.hpp
+    ColorStitch.cpp
+    ColorStitch.hpp
+    PathBlendRuntime.cpp
+    PathBlendRuntime.hpp
+    SurfaceEffectProfile.cpp
+    SurfaceEffectProfile.hpp
+    SurfacePassKind.hpp
     PrintBase.cpp
     PrintBase.hpp
     MaterialType.cpp

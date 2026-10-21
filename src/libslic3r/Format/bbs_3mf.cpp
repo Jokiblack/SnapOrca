@@ -34,6 +34,7 @@
 #include <boost/spirit/home/qi/parse.hpp>
 #include <boost/spirit/home/qi/numeric/int.hpp>
 #include <cstdlib>
+#include <array>
 #include <cstddef>
 #include <boost/algorithm/string/constants.hpp>
 #include <algorithm>
@@ -379,6 +380,13 @@ static constexpr const char* TEXTURE_DISPLACEMENT_ATTRS[Slic3r::TEXTURE_DISPLACE
     "paint_texture_4", "paint_texture_5", "paint_texture_6", "paint_texture_7" };
 static constexpr const char* TEXTURE_DISPLACEMENT_KEY = "texture_displacement";
 static constexpr const char* TEXTURE_DISPLACEMENT_DIR = "Metadata/texture_displacement/";
+// ColorStitch Painter (ported from OrcaFS-NeotkoCM by Neotko, same names so its projects open here):
+// the slot of each painted triangle, the slot -> profile id table of a volume (CSV) and the project's
+// Surface Effect Profile library (base64 JSON, as a model metadata item). All three are written only
+// when there is something to write, so a project without them is saved exactly as before.
+static constexpr const char* COLORSTITCH_PAINT_ATTR     = "paint_colormix";
+static constexpr const char* COLORSTITCH_SLOT_TABLE_KEY = "colormix_slot_to_profile_id";
+static constexpr const char* COLORSTITCH_PROFILES_KEY   = "colormix_profiles_b64";
 // BBS
 static constexpr const char* FACE_PROPERTY_ATTR = "face_property";
 
@@ -831,6 +839,78 @@ static bool bbs_encoded_path_within_dir(const std::string& encoded_dir, const st
 
 namespace Slic3r {
 
+// ColorStitch Painter data, see COLORSTITCH_PAINT_ATTR.
+static std::string colorstitch_b64_encode(const std::string &text)
+{
+    std::string out;
+    out.resize(boost::beast::detail::base64::encoded_size(text.size()));
+    out.resize(boost::beast::detail::base64::encode(&out[0], text.data(), text.size()));
+    return out;
+}
+
+static std::string colorstitch_b64_decode(const std::string &b64)
+{
+    std::string out;
+    out.resize(boost::beast::detail::base64::decoded_size(b64.size()));
+    out.resize(boost::beast::detail::base64::decode(&out[0], b64.data(), b64.size()).first);
+    return out;
+}
+
+// Comma separated slot -> profile id list, index 0 first. A shorter list leaves the rest unmapped.
+static void parse_colorstitch_slot_table(const std::string &csv, std::array<int, ModelVolume::COLORSTITCH_SLOT_COUNT> &slots)
+{
+    slots.fill(0);
+    size_t idx = 0, start = 0;
+    for (size_t i = 0; i <= csv.size() && idx < slots.size(); ++i)
+        if (i == csv.size() || csv[i] == ',') {
+            slots[idx++] = std::atoi(csv.substr(start, i - start).c_str());
+            start        = i + 1;
+        }
+}
+
+// Empty when no slot is mapped; otherwise up to the last mapped slot.
+static std::string serialize_colorstitch_slot_table(const std::array<int, ModelVolume::COLORSTITCH_SLOT_COUNT> &slots)
+{
+    size_t last = 0;
+    for (size_t i = 0; i < slots.size(); ++i)
+        if (slots[i] != 0)
+            last = i + 1;
+    std::string out;
+    for (size_t i = 0; i < last; ++i) {
+        if (i > 0)
+            out += ',';
+        out += std::to_string(slots[i]);
+    }
+    return out;
+}
+
+// `paint` holds the attribute of the triangles of the object, the volume covers [first, first + count).
+static void load_colorstitch_paint(ModelVolume &volume, const std::vector<std::string> &paint, size_t first, size_t count)
+{
+    if (paint.empty())
+        return;
+    volume.colorstitch_paint_facets.reserve(int(count));
+    for (size_t i = 0; i < count && first + i < paint.size(); ++i)
+        if (!paint[first + i].empty())
+            volume.colorstitch_paint_facets.set_triangle_from_string(int(i), paint[first + i]);
+    volume.colorstitch_paint_facets.shrink_to_fit();
+    volume.colorstitch_paint_facets.touch();
+}
+
+// Moves the profile library out of the model metadata into the model.
+static void load_colorstitch_profiles(Model &model)
+{
+    if (!model.model_info)
+        return;
+    auto &items = model.model_info->metadata_items;
+    auto  it    = items.find(COLORSTITCH_PROFILES_KEY);
+    if (it == items.end())
+        return;
+    if (!it->second.empty() && !model.surface_effect_profiles.from_json(colorstitch_b64_decode(it->second)))
+        BOOST_LOG_TRIVIAL(warning) << "bbs_3mf: invalid " << COLORSTITCH_PROFILES_KEY << ", the painted Surface Effect Profiles are lost";
+    items.erase(it);
+}
+
 // Snapmaker Orca <= 2.4 (and OrcaSlicer < 2.5) stored one filament for all walls ("wall_filament") and
 // one for all solid infill, top and bottom surfaces included ("solid_infill_filament"). handle_legacy()
 // renames each to a single new key (outer wall / internal solid), so the inner walls and the top and
@@ -1038,6 +1118,8 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
             std::vector<std::string> custom_seam;
             std::vector<std::string> mmu_segmentation;
             std::vector<std::string> fuzzy_skin;
+            // ColorStitch paint, indexed like `triangles` but stored only as far as the last painted triangle.
+            std::vector<std::string> colorstitch_paint;
             // One per texture displacement layer slot, indexed like `triangles` but stored only as far as the
             // slot's last painted triangle: empty when the slot has no paint, which is nearly every file.
             std::vector<std::string> texture_displacement[TEXTURE_DISPLACEMENT_MAX_LAYERS];
@@ -1061,6 +1143,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                 custom_seam.clear();
                 mmu_segmentation.clear();
                 fuzzy_skin.clear();
+                colorstitch_paint.clear();
                 for (std::vector<std::string> &slot : texture_displacement)
                     slot.clear();
             }
@@ -1846,6 +1929,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
 
         m_model->model_info = std::make_shared<ModelInfo>();
         m_model->model_info->load(model_info);
+        load_colorstitch_profiles(*m_model);
 
         if (m_thumbnail_middle.empty()) m_thumbnail_middle = m_thumbnail_path;
         if (m_thumbnail_small.empty()) m_thumbnail_small = m_thumbnail_path;
@@ -2149,6 +2233,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
 
         m_model->model_info = std::make_shared<ModelInfo>();
         m_model->model_info->load(model_info);
+        load_colorstitch_profiles(*m_model);
         if (!m_thumbnail_small.empty()) m_model->model_info->metadata_items.emplace("Thumbnail_Small", m_thumbnail_small);
         if (!m_thumbnail_middle.empty()) m_model->model_info->metadata_items.emplace("Thumbnail_Middle", m_thumbnail_middle);
 
@@ -4257,6 +4342,11 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
             m_curr_object->geometry.custom_seam.push_back(bbs_get_attribute_value_string(attributes, num_attributes, CUSTOM_SEAM_ATTR));
             m_curr_object->geometry.mmu_segmentation.push_back(bbs_get_attribute_value_string(attributes, num_attributes, MMU_SEGMENTATION_ATTR));
             m_curr_object->geometry.fuzzy_skin.push_back(bbs_get_attribute_value_string(attributes, num_attributes, {CUSTOM_FUZZY_SKIN_ATTR, CUSTOM_FUZZY_SKIN_ATTR_OLD}));
+            if (const char *paint = bbs_get_attribute_value_charptr(attributes, num_attributes, COLORSTITCH_PAINT_ATTR)) {
+                std::vector<std::string> &mask = m_curr_object->geometry.colorstitch_paint;
+                mask.resize(m_curr_object->geometry.triangles.size());
+                mask.back() = paint;
+            }
             for (int slot = 0; slot < int(TEXTURE_DISPLACEMENT_MAX_LAYERS); ++slot)
                 if (const char *paint = bbs_get_attribute_value_charptr(attributes, num_attributes, TEXTURE_DISPLACEMENT_ATTRS[slot])) {
                     std::vector<std::string> &mask = m_curr_object->geometry.texture_displacement[slot];
@@ -5614,6 +5704,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                 volume->mmu_segmentation_facets.touch();
                 volume->fuzzy_skin_facets.shrink_to_fit();
                 volume->fuzzy_skin_facets.touch();
+                load_colorstitch_paint(*volume, sub_object->geometry.colorstitch_paint, 0, triangles_count);
                 for (int slot = 0; slot < int(TEXTURE_DISPLACEMENT_MAX_LAYERS); ++slot) {
                     const std::vector<std::string> &mask = sub_object->geometry.texture_displacement[slot];
                     if (mask.empty())
@@ -5672,6 +5763,8 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                     volume->set_merged_group_id(ObjectID((size_t) ::atoi(metadata.value.c_str())));
                 else if ((metadata.key == MATRIX_KEY) || (metadata.key == MESH_SHARED_KEY))
                     continue;
+                else if (metadata.key == COLORSTITCH_SLOT_TABLE_KEY)
+                    parse_colorstitch_slot_table(metadata.value, volume->colorstitch_slot_to_profile_id);
                 else
                     set_deserialize_feature_filament_aware(volume->config, metadata.key, metadata.value, config_substitutions);
             }
@@ -5808,6 +5901,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
             volume->supported_facets.shrink_to_fit();
             volume->seam_facets.shrink_to_fit();
             volume->mmu_segmentation_facets.shrink_to_fit();
+            load_colorstitch_paint(*volume, geometry.colorstitch_paint, volume_data.first_triangle_id, triangles_count);
 
             for (int slot = 0; slot < int(TEXTURE_DISPLACEMENT_MAX_LAYERS); ++slot) {
                 const std::vector<std::string> &mask = geometry.texture_displacement[slot];
@@ -5854,6 +5948,8 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                     volume->source.is_converted_from_meters = metadata.value == "1";
                 else if (metadata.key == MERGED_GROUP_ID_KEY)
                     volume->set_merged_group_id(ObjectID((size_t) ::atoi(metadata.value.c_str())));
+                else if (metadata.key == COLORSTITCH_SLOT_TABLE_KEY)
+                    parse_colorstitch_slot_table(metadata.value, volume->colorstitch_slot_to_profile_id);
                 else
                     set_deserialize_feature_filament_aware(volume->config, metadata.key, metadata.value, config_substitutions);
             }
@@ -6136,6 +6232,11 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
             current_object->geometry.custom_seam.push_back(bbs_get_attribute_value_string(attributes, num_attributes, CUSTOM_SEAM_ATTR));
             current_object->geometry.mmu_segmentation.push_back(bbs_get_attribute_value_string(attributes, num_attributes, MMU_SEGMENTATION_ATTR));
             current_object->geometry.fuzzy_skin.push_back(bbs_get_attribute_value_string(attributes, num_attributes, {CUSTOM_FUZZY_SKIN_ATTR, CUSTOM_FUZZY_SKIN_ATTR_OLD}));
+            if (const char *paint = bbs_get_attribute_value_charptr(attributes, num_attributes, COLORSTITCH_PAINT_ATTR)) {
+                std::vector<std::string> &mask = current_object->geometry.colorstitch_paint;
+                mask.resize(current_object->geometry.triangles.size());
+                mask.back() = paint;
+            }
             for (int slot = 0; slot < int(TEXTURE_DISPLACEMENT_MAX_LAYERS); ++slot)
                 if (const char *paint = bbs_get_attribute_value_charptr(attributes, num_attributes, TEXTURE_DISPLACEMENT_ATTRS[slot])) {
                     std::vector<std::string> &mask = current_object->geometry.texture_displacement[slot];
@@ -7508,6 +7609,10 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                 metadata_item_map[BBL_MAKERLAB_VERSION_TAG] = xml_escape(model.mk_version);
                 BOOST_LOG_TRIVIAL(info) << "saved mk_version " << model.mk_version;
             }
+            // The profile library is held by the model; a stale copy loaded into metadata_items never goes out.
+            metadata_item_map.erase(COLORSTITCH_PROFILES_KEY);
+            if (!sub_model && !m_minimal_published && !model.surface_effect_profiles.empty())
+                metadata_item_map[COLORSTITCH_PROFILES_KEY] = colorstitch_b64_encode(model.surface_effect_profiles.to_json());
             if (!model.md_name.empty()) {
                 for (unsigned int i = 0; i < model.md_name.size(); i++)
                 {
@@ -7598,6 +7703,7 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                                     && (shared_volume->seam_facets.equals(volume->seam_facets))
                                     && (shared_volume->mmu_segmentation_facets.equals(volume->mmu_segmentation_facets))
                                     && (shared_volume->fuzzy_skin_facets.equals(volume->fuzzy_skin_facets))
+                                    && (shared_volume->colorstitch_paint_facets.equals(volume->colorstitch_paint_facets))
                                     && same_texture_paint)
                                 {
                                     auto data = iter->second.first;
@@ -8011,6 +8117,15 @@ void PlateData::parse_filament_info(GCodeProcessorResult *result)
                     output_buffer += CUSTOM_FUZZY_SKIN_ATTR;
                     output_buffer += "=\"";
                     output_buffer += fuzzy_skin_painting_data_string;
+                    output_buffer += "\"";
+                }
+
+                const std::string colorstitch_paint = volume->colorstitch_paint_facets.get_triangle_as_string(i);
+                if (!colorstitch_paint.empty()) {
+                    output_buffer += " ";
+                    output_buffer += COLORSTITCH_PAINT_ATTR;
+                    output_buffer += "=\"";
+                    output_buffer += colorstitch_paint;
                     output_buffer += "\"";
                 }
 
@@ -8639,6 +8754,10 @@ bool _BBS_3MF_Exporter::_add_model_config_file_to_archive(mz_zip_archive& archiv
                             }
 
                             add_texture_displacement(stream, *volume, archive, std::to_string(volume->id().id));
+
+                            if (const std::string slot_csv = serialize_colorstitch_slot_table(volume->colorstitch_slot_to_profile_id); !slot_csv.empty())
+                                stream << "      <" << METADATA_TAG << " " << KEY_ATTR << "=\"" << COLORSTITCH_SLOT_TABLE_KEY << "\" " << VALUE_ATTR << "=\""
+                                       << slot_csv << "\"/>\n";
                     
                             if (const std::optional<TextConfiguration> &tc = volume->text_configuration;
                                 tc.has_value())

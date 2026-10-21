@@ -30,6 +30,7 @@
 #include "GCode/GCodeProcessor.hpp"
 #include "MultiMaterialSegmentation.hpp"
 #include "MixedFilament.hpp"
+#include "SurfacePassKind.hpp"
 #include "BeltBrim.hpp"
 #include "BeltTransform.hpp"
 #include "ObjectID.hpp"
@@ -397,6 +398,36 @@ private:
     size_t                                      m_ref_cnt{ 0 };
 };
 
+struct ColorStitchPaintCache;
+
+// One pass of a surface "Sandwich" (ported from OrcaFS-NeotkoCM by Neotko): a thin single-tool layer inside an
+// object layer, built by the fill step (Layer::make_fills()) where a top, penultimate or bottom surface carries a
+// Sandwich recipe, and printed by the G-code generator instead of that surface's own fill.
+struct MultiPassSubLayer {
+    // Ordering key of the pass: the passes of a layer sit microns below their layer's print_z, in printing order.
+    // The nozzle prints the pass at real_extrude_z when set (PathBlend), at print_z otherwise.
+    coordf_t                  print_z        = 0.;
+    coordf_t                  real_extrude_z = 0.;
+    float                     height         = 0.f; // bead height
+    int                       tool_id        = 0;   // 0-based filament
+    int                       pass_idx       = 0;   // running index of the pass within its layer
+    SurfacePassKind           effect         = SurfacePassKind::Solid;
+    ExtrusionRole             role           = erTopSolidInfill;
+    int                       speed_pct      = 100; // M220 override, 100 = none
+    std::string               gcode_start;
+    std::string               gcode_end;
+    ExtrusionEntityCollection fills;
+    // Walls reprinted by the pass (perimeter override). Empty unless the recipe asks for it.
+    ExtrusionEntityCollection perimeters;
+    // Legacy PathBlend ramp (0) / cap (1) of an unbanded pass, -1 otherwise; its blob when set.
+    int                       pathblend_pass = -1;
+    std::string               pathblend_blob;
+    // Painted slot the pass belongs to (0 = none), so that disjoint painted islands keep separate chains.
+    int                       island_key = 0;
+    // Index of the LayerRegion of the surface (speeds, accelerations and the rest of the region settings).
+    size_t                    region_id  = 0;
+};
+
 class PrintObject : public PrintObjectBaseWithState<Print, PrintObjectStep, posCount>
 {
 private: // Prevents erroneous use by other classes.
@@ -535,6 +566,18 @@ public:
     std::shared_ptr<TreeSupportData> alloc_tree_support_preview_cache();
     void clear_tree_support_preview_cache() { m_tree_support_preview_cache.reset(); }
     const std::vector<LocalZInterval>& local_z_intervals() const { return m_local_z_intervals; }
+    // Sandwich passes, indexed by layer (Layer::id()). Each fill thread writes only its own layer.
+    const std::vector<std::vector<MultiPassSubLayer>> &multipass_sublayers() const { return m_multipass_sublayers; }
+    std::vector<std::vector<MultiPassSubLayer>>       &multipass_sublayers() { return m_multipass_sublayers; }
+    bool has_multipass_sublayers() const
+    {
+        return std::any_of(m_multipass_sublayers.begin(), m_multipass_sublayers.end(), [](const auto &l) { return !l.empty(); });
+    }
+    // Painted slots whose Sandwich recipe had to be collapsed on a layer (a band below the printable height),
+    // indexed by layer like the passes; one warning is raised at the end of infill().
+    std::vector<std::vector<int>> &minlayer_collapsed_slots() { return m_minlayer_collapsed_slots; }
+    // ColorStitch paint of the object in the slice frame, built by infill() before the fill threads start.
+    std::shared_ptr<const ColorStitchPaintCache> colorstitch_paint_cache() const { return m_colorstitch_paint_cache; }
     const std::vector<SubLayerPlan>&   local_z_sublayer_plan() const { return m_local_z_sublayer_plan; }
     void                                set_local_z_plan(std::vector<LocalZInterval> intervals, std::vector<SubLayerPlan> sublayers)
     {
@@ -707,6 +750,7 @@ private:
     void prepare_infill();
     void infill();
     void ironing();
+    void add_sandwich_warnings();
     bool need_z_contouring() const;
     void contour_z();
     // with_belt_brim = false leaves the belt brim to generate_belt_brim(), for a
@@ -841,6 +885,9 @@ private:
     std::vector<BeltDroppedFill>            m_belt_dropped_fills;
     SupportLayerPtrs                        m_support_layers;
     std::vector<LocalZInterval>             m_local_z_intervals;
+    std::vector<std::vector<MultiPassSubLayer>> m_multipass_sublayers;
+    std::vector<std::vector<int>>           m_minlayer_collapsed_slots;
+    std::shared_ptr<const ColorStitchPaintCache> m_colorstitch_paint_cache;
     std::vector<SubLayerPlan>               m_local_z_sublayer_plan;
     // Belt brim, generated in posSupportMaterial by BeltBrim.cpp.  Object-local
     // slicing frame, one entry per object layer plus a prologue of brim-only

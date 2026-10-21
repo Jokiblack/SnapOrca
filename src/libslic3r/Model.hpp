@@ -22,6 +22,7 @@
 #include "EmbossShape.hpp"
 #include "TriangleSelector.hpp"
 #include "TextureDisplacement.hpp"
+#include "SurfaceEffectProfile.hpp"
 
 //BBS: add bbs 3mf
 #include "Format/bbs_3mf.hpp"
@@ -34,6 +35,7 @@
 #include <array>
 #include <cereal/access.hpp>
 #include <cereal/types/base_class.hpp>
+#include <cereal/types/array.hpp>
 #include <cassert>
 #include <cstddef>
 #include <iterator>
@@ -924,6 +926,13 @@ public:
     // List of mesh facets painted for fuzzy skin.
     FacetsAnnotation    fuzzy_skin_facets;
 
+    // ColorStitch Painter (ported from OrcaFS-NeotkoCM by Neotko): each painted triangle stores a slot,
+    // 1..254 (0 = unpainted), and the slot table maps a slot to a Surface Effect Profile id of
+    // Model::surface_effect_profiles (0 = unmapped).
+    static constexpr int COLORSTITCH_SLOT_COUNT = 255;
+    FacetsAnnotation    colorstitch_paint_facets;
+    std::array<int, COLORSTITCH_SLOT_COUNT> colorstitch_slot_to_profile_id{};
+
     // One independent paint mask per texture-displacement layer slot (see texture_displacement_layers
     // below). Unlike the other facets fields above, a triangle may be painted (ENFORCER) in more
     // than one of these simultaneously -- that overlap is what makes the layers "blend".
@@ -1156,6 +1165,7 @@ public:
         this->seam_facets.set_new_unique_id();
         this->mmu_segmentation_facets.set_new_unique_id();
         this->fuzzy_skin_facets.set_new_unique_id();
+        this->colorstitch_paint_facets.set_new_unique_id();
         for (int i = 0; i < int(TEXTURE_DISPLACEMENT_MAX_LAYERS); ++i)
             this->texture_displacement_facet(i).set_new_unique_id();
     }
@@ -1164,6 +1174,7 @@ public:
     bool is_seam_painted() const { return !this->seam_facets.empty(); }
     bool is_mm_painted() const { return !this->mmu_segmentation_facets.empty(); }
     bool is_fuzzy_skin_painted() const { return !this->fuzzy_skin_facets.empty(); }
+    bool is_colorstitch_painted() const { return !this->colorstitch_paint_facets.empty(); }
 
     // Id of the source ModelObject this volume was cloned from when objects were
     // assembled (merged) into a multi-part object. Opaque group label only compared for
@@ -1278,7 +1289,8 @@ private:
         name(other.name), source(other.source), m_mesh(other.m_mesh), m_convex_hull(other.m_convex_hull),
         config(other.config), m_type(other.m_type), object(object), m_transformation(other.m_transformation),
         supported_facets(other.supported_facets), seam_facets(other.seam_facets), mmu_segmentation_facets(other.mmu_segmentation_facets),
-        fuzzy_skin_facets(other.fuzzy_skin_facets),
+        fuzzy_skin_facets(other.fuzzy_skin_facets), colorstitch_paint_facets(other.colorstitch_paint_facets),
+        colorstitch_slot_to_profile_id(other.colorstitch_slot_to_profile_id),
         texture_displacement_facets_0(other.texture_displacement_facets_0), texture_displacement_facets_1(other.texture_displacement_facets_1),
         texture_displacement_facets_2(other.texture_displacement_facets_2), texture_displacement_facets_3(other.texture_displacement_facets_3),
         texture_displacement_facets_4(other.texture_displacement_facets_4), texture_displacement_facets_5(other.texture_displacement_facets_5),
@@ -1351,6 +1363,7 @@ private:
 	friend class UndoRedo::StackImpl;
 	// Used for deserialization, therefore no IDs are allocated.
 	ModelVolume() : ObjectBase(-1), config(-1), supported_facets(-1), seam_facets(-1), mmu_segmentation_facets(-1), fuzzy_skin_facets(-1),
+		colorstitch_paint_facets(-1),
 		texture_displacement_facets_0(-1), texture_displacement_facets_1(-1), texture_displacement_facets_2(-1), texture_displacement_facets_3(-1),
 		texture_displacement_facets_4(-1), texture_displacement_facets_5(-1), texture_displacement_facets_6(-1), texture_displacement_facets_7(-1),
 		object(nullptr) {
@@ -1381,6 +1394,8 @@ private:
         mesh_changed |= t != mmu_segmentation_facets.timestamp();
         cereal::load_by_value(ar, fuzzy_skin_facets);
         mesh_changed |= t != fuzzy_skin_facets.timestamp();
+        cereal::load_by_value(ar, colorstitch_paint_facets);
+        ar(colorstitch_slot_to_profile_id);
         for (int i = 0; i < int(TEXTURE_DISPLACEMENT_MAX_LAYERS); ++i) {
             FacetsAnnotation &f  = texture_displacement_facet(i);
             Timestamp         tf = f.timestamp();
@@ -1410,6 +1425,8 @@ private:
         cereal::save_by_value(ar, seam_facets);
         cereal::save_by_value(ar, mmu_segmentation_facets);
         cereal::save_by_value(ar, fuzzy_skin_facets);
+        cereal::save_by_value(ar, colorstitch_paint_facets);
+        ar(colorstitch_slot_to_profile_id);
         for (int i = 0; i < int(TEXTURE_DISPLACEMENT_MAX_LAYERS); ++i)
             cereal::save_by_value(ar, texture_displacement_facet(i));
         ar(texture_displacement_layers, texture_displacement_options, texture_uv);
@@ -1755,6 +1772,10 @@ public:
     // the 3MF as Metadata/orca_cad.bin. Empty for non-CAD projects.
     std::string cad_recipe;
 
+    // Surface Effect Profiles (the Sandwich recipes of the ColorStitch Painter) of the project, referred to by
+    // ModelVolume::colorstitch_slot_to_profile_id. Stored in the 3MF; empty for projects without them.
+    SurfaceEffectProfileManager surface_effect_profiles;
+
     void SetDesigner(std::string designer, std::string designer_user_id) {
         if (design_info == nullptr) {
             design_info = std::make_shared<ModelDesignInfo>();
@@ -1982,6 +2003,9 @@ extern bool model_mmu_segmentation_data_changed(const ModelObject& mo, const Mod
 // Test whether the now ModelObject has newer fuzzy skin data than the old one.
 // The function assumes that volumes list is synchronized.
 extern bool model_fuzzy_skin_data_changed(const ModelObject &mo, const ModelObject &mo_new);
+// Test whether the ColorStitch paint of the model parts, their slot tables or the content of the profiles they
+// refer to (in the profile library of each object's model) differ.
+extern bool model_colorstitch_paint_data_changed(const ModelObject &mo, const ModelObject &mo_new);
 
 bool model_brim_points_data_changed(const ModelObject& mo, const ModelObject& mo_new);
 
