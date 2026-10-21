@@ -55,16 +55,16 @@ bool layer_has_internal_solid(const Layer &layer)
     return false;
 }
 
-// Sparse (stInternal) infill surfaces on the layer that belong to a region with the given
-// sparse infill density, in percent.
-size_t layer_internal_surfaces_with_density(const Layer &layer, double density)
+// Fill surfaces on the layer that belong to a region with the given sparse infill density, in
+// percent. With `only_sparse` only the sparse (stInternal) ones are counted.
+size_t layer_fill_surfaces_with_density(const Layer &layer, double density, bool only_sparse)
 {
     size_t n = 0;
     for (const LayerRegion *region : layer.regions()) {
         if (std::abs(region->region().config().sparse_infill_density.value - density) > 1e-6)
             continue;
         for (const Surface &surface : region->fill_surfaces.surfaces)
-            if (surface.surface_type == stInternal)
+            if (! only_sparse || surface.surface_type == stInternal)
                 ++n;
     }
     return n;
@@ -79,14 +79,19 @@ void add_periodic_wall_modifier(ModelObject *object, int skip_layers, int apply_
     mod->config.set("periodic_modifier_apply_layers", apply_layers);
 }
 
-// A 20 mm cube with the modifiers `add_modifiers` adds, sliced with `items` on top of the full
-// default print config. test_helpers' init_print() applies the model before any modifier can be
-// added, so the object is assembled here.
-void process_cube_with_modifiers(Print &print, const std::function<void(ModelObject *)> &add_modifiers,
-                                 std::initializer_list<ConfigBase::SetDeserializeItem> items)
+// The full default print config with `items` on top.
+DynamicPrintConfig print_config(std::initializer_list<ConfigBase::SetDeserializeItem> items)
 {
     DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
     config.set_deserialize_strict(items);
+    return config;
+}
+
+// A 20 mm cube with the modifiers `add_modifiers` adds, sliced with `config`. test_helpers'
+// init_print() applies the model before any modifier can be added, so the object is assembled here.
+void process_cube_with_modifiers(Print &print, const std::function<void(ModelObject *)> &add_modifiers,
+                                 const DynamicPrintConfig &config)
+{
     Model        model;
     ModelObject *object = model.add_object();
     object->name = "cube.stl";
@@ -103,9 +108,11 @@ void process_cube_with_modifiers(Print &print, const std::function<void(ModelObj
 
 // Print settings for the wall tests: the object itself has no walls and no infill, so every
 // perimeter on a layer comes from a modifier. 20 mm at 0.2 mm layers gives 100 layers.
-std::initializer_list<ConfigBase::SetDeserializeItem> wall_test_config(const char *wall_generator, const char *ensure_vertical)
+// Returned as a config, not as an initializer_list: the array behind a returned
+// initializer_list dies with the function, and reading it afterwards is undefined behavior.
+DynamicPrintConfig wall_test_config(const char *wall_generator, const char *ensure_vertical)
 {
-    return {
+    return print_config({
         { "wall_loops", 0 },
         { "sparse_infill_density", 0 },
         { "top_shell_layers", 0 },
@@ -117,7 +124,7 @@ std::initializer_list<ConfigBase::SetDeserializeItem> wall_test_config(const cha
         { "layer_height", 0.2f },
         { "initial_layer_print_height", 0.2f },
         { "wall_generator", wall_generator }
-    };
+    });
 }
 
 } // namespace
@@ -259,7 +266,9 @@ TEST_CASE("A later non-periodic modifier still applies on the skipped layers of 
 TEST_CASE("A periodic infill modifier changes the infill only on its apply layers", "[PeriodicModifier]")
 {
     // 20 mm cube at 15 % grid; a 100 % infill modifier applied 2 layers out of every 10
-    // (2 mm period, 0.4 mm dense, at 0.2 mm layers).
+    // (2 mm period, 0.4 mm dense, at 0.2 mm layers). A 100 % region fills with solid infill
+    // (stInternalSolid, or an internal bridge right above sparse infill), never with stInternal,
+    // so on the apply layers the dense region is checked for any fill surface.
     Print print;
     process_cube_with_modifiers(
         print,
@@ -270,7 +279,7 @@ TEST_CASE("A periodic infill modifier changes the infill only on its apply layer
             mod->config.set("periodic_modifier_apply_layers", 2);
             mod->config.set("periodic_modifier_skip_layers", 8);
         },
-        {
+        print_config({
             { "wall_loops", 2 },
             { "sparse_infill_density", 15 },
             { "sparse_infill_pattern", "grid" },
@@ -280,14 +289,14 @@ TEST_CASE("A periodic infill modifier changes the infill only on its apply layer
             { "layer_height", 0.2f },
             { "initial_layer_print_height", 0.2f },
             { "wall_generator", "classic" }
-        });
+        }));
     const PrintObject &object = *print.objects().front();
     REQUIRE(object.layers().size() == 100);
     size_t dense_layers = 0;
     for (const Layer *layer : object.layers()) {
         const int    layer_id = static_cast<int>(layer->id());
-        const size_t dense    = layer_internal_surfaces_with_density(*layer, 100.);
-        const size_t sparse   = layer_internal_surfaces_with_density(*layer, 15.);
+        const size_t dense    = layer_fill_surfaces_with_density(*layer, 100., false);
+        const size_t sparse   = layer_fill_surfaces_with_density(*layer, 15., false);
         INFO("layer " << layer_id << " dense " << dense << " sparse " << sparse);
         if (layer_id % 10 < 2) {
             ++dense_layers;
@@ -295,7 +304,7 @@ TEST_CASE("A periodic infill modifier changes the infill only on its apply layer
             REQUIRE(sparse == 0);
         } else {
             REQUIRE(dense == 0);
-            REQUIRE(sparse > 0);
+            REQUIRE(layer_fill_surfaces_with_density(*layer, 15., true) > 0);
         }
     }
     REQUIRE(dense_layers == 20);
@@ -312,7 +321,7 @@ TEST_CASE("modifier_ignore_infill keeps the parent sparse infill under the modif
             mod->config.set_key_value("sparse_infill_density", new ConfigOptionPercent(0));
             mod->config.set("modifier_ignore_infill", true);
         },
-        {
+        print_config({
             { "wall_loops", 0 },
             { "sparse_infill_density", 20 },
             { "sparse_infill_pattern", "zigzag" },
@@ -325,7 +334,7 @@ TEST_CASE("modifier_ignore_infill keeps the parent sparse infill under the modif
             { "layer_height", 0.2f },
             { "initial_layer_print_height", 0.2f },
             { "wall_generator", "classic" }
-        });
+        }));
     const PrintObject &object = *print.objects().front();
     REQUIRE(object.layers().size() == 100);
     size_t layers_with_walls  = 0;
