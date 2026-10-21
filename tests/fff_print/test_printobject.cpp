@@ -721,3 +721,60 @@ TEST_CASE("Z contouring follows the surface of each instance as it is turned", "
         CHECK(lifted > 0);
     }
 }
+
+// Neotko: "Bridging infill extra expansion" (bridge_expansion_extra), ported from OrcaFS-NeotkoCM.
+// A beam resting on two blocks: the bridge over the gap may only grow into the solid beam beside it.
+TEST_CASE("Bridging infill extra expansion grows only the external bridges", "[PrintObject][BridgeExpansionExtra]")
+{
+    TriangleMesh dolmen = make_cube(10, 10, 5);
+    TriangleMesh right  = make_cube(10, 10, 5);
+    right.translate(20, 0, 0);
+    TriangleMesh beam = make_cube(30, 10, 2);
+    beam.translate(0, 0, 5);
+    dolmen.merge(right);
+    dolmen.merge(beam);
+
+    struct Areas { double bridge = 0.; std::vector<double> fill; };
+    auto slice_areas = [&dolmen](const char *extra) {
+        auto config = DynamicPrintConfig::full_print_config();
+        config.set_deserialize_strict({{"layer_height", 0.2},
+                                       {"initial_layer_print_height", 0.2},
+                                       {"wall_loops", 2},
+                                       // Keep the whole beam solid so that the bridge has solid infill to grow into.
+                                       {"top_shell_layers", 20},
+                                       {"top_shell_thickness", 0},
+                                       {"enable_support", false}});
+        if (extra != nullptr)
+            config.set_deserialize_strict({{"bridge_expansion_extra", extra}});
+        Print print;
+        Model model;
+        init_print({TriangleMesh(dolmen)}, print, model, config, nullptr, false);
+        print.process();
+        Areas out;
+        const PrintObject &object = *print.objects().front();
+        for (size_t i = 0; i < object.layer_count(); ++i) {
+            Polygons fill;
+            for (const LayerRegion *region : object.get_layer(i)->regions()) {
+                out.bridge += area(to_polygons(region->fill_surfaces.filter_by_type(stBottomBridge)));
+                polygons_append(fill, to_polygons(region->fill_surfaces.surfaces));
+            }
+            out.fill.push_back(area(union_(fill)));
+        }
+        return out;
+    };
+
+    const Areas stock = slice_areas(nullptr);
+    const Areas zero  = slice_areas("0");
+    const Areas extra = slice_areas("3");
+    REQUIRE(stock.bridge > 0.);
+    // 0 is the stock behaviour.
+    CHECK(zero.bridge == stock.bridge);
+    CHECK(zero.fill == stock.fill);
+    // Above 0 the bridge grows, and the area it takes is no longer filled by anything else.
+    CHECK(extra.bridge > stock.bridge);
+    REQUIRE(extra.fill.size() == stock.fill.size());
+    for (size_t i = 0; i < stock.fill.size(); ++i) {
+        CAPTURE(i);
+        CHECK(std::abs(extra.fill[i] - stock.fill[i]) <= 0.01 * stock.fill[i]);
+    }
+}

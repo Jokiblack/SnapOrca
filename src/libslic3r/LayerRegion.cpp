@@ -752,6 +752,14 @@ void LayerRegion::process_external_surfaces(const Layer *lower_layer, const Poly
     float                           expansion_top           = shell_width * sqrt(2.);
     float                           expansion_bottom        = expansion_top;
     float                           expansion_bottom_bridge = expansion_top;
+    // Neotko: "Bridging infill extra expansion". The automatic bridge expansion above comes from
+    // shell_width, i.e. from the wall count; this setting adds millimetres on top of it so that the
+    // bridge anchoring does not depend on wall_loops. Only bridges are affected, top and bottom keep
+    // their expansion. With the default 0 nothing below changes.
+    const double                    bridge_expansion_extra  = std::max(0., this->region().config().bridge_expansion_extra.value);
+    const bool                      bridge_extra_on         = bridge_expansion_extra > 0.;
+    if (bridge_extra_on)
+        expansion_bottom_bridge += scaled<float>(bridge_expansion_extra);
     // Expand by waves of expansion_step size (expansion_step is scaled), but with no more steps than max_nr_expansion_steps.
     const float                     expansion_step          = scaled<float>(0.1);
     // Don't take more than max_nr_steps for small expansion_step.
@@ -772,6 +780,16 @@ void LayerRegion::process_external_surfaces(const Layer *lower_layer, const Poly
         ExpansionZone{std::move(sparse), expansion_params_into_sparse_infill},
         ExpansionZone{std::move(top_expolygons), expansion_params_into_solid_infill},
     };
+    // Neotko: with extra expansion the bridge may also grow into the neighbouring supported bottom
+    // surface of the same part (a beam resting on two blocks), the best landing ground there is.
+    // This fourth zone only exists while the setting is above 0. expand_merge_surfaces() trims the
+    // zone by what the bridge takes, and the rest goes back to fill_surfaces as stBottom below, so
+    // stBottom and stBottomBridge never overlap.
+    double bottom_thickness = -1.;
+    if (bridge_extra_on) {
+        ExPolygons bottom_expolygons = union_ex(fill_surfaces_extract_expolygons(this->fill_surfaces.surfaces, { stBottom }, bottom_thickness));
+        expansion_zones.push_back(ExpansionZone{ std::move(bottom_expolygons), expansion_params_into_solid_infill });
+    }
 
     SurfaceCollection bridges;
     {
@@ -804,6 +822,15 @@ void LayerRegion::process_external_surfaces(const Layer *lower_layer, const Poly
             bridges.export_to_svg(debug_out_path("bridges-after-grouping-%d.svg", iRun++).c_str(), true);
         }
 #endif
+    }
+
+    if (bridge_extra_on) {
+        // Neotko: return what is left of the stBottom zone (pushed last, so it is popped first).
+        this->fill_surfaces.remove_types({ stBottom });
+        Surface bottom_templ(stBottom, {});
+        bottom_templ.thickness = bottom_thickness;
+        this->fill_surfaces.append(std::move(expansion_zones.back().expolygons), bottom_templ);
+        expansion_zones.pop_back();
     }
 
     this->fill_surfaces.remove_types({stTop});

@@ -27,7 +27,7 @@ void PrintConfigDef::init_neotko_params()
 
     // ---- A1 Bridging infill extra expansion ----
     // Batch A1. PrintRegionConfig, read by LayerRegion::process_external_surfaces(); invalidates posPrepareInfill.
-    // 0 = unchanged. Neotko mode: comAdvanced (Quality tab, bridging group).
+    // 0 = unchanged. comAdvanced, in the Quality tab, Bridging group (as in Neotko).
 
     def = this->add("bridge_expansion_extra", coFloat);
     def->label = L("Bridging infill extra expansion");
@@ -40,7 +40,7 @@ void PrintConfigDef::init_neotko_params()
     def->sidetext = L("mm");
     def->min = 0;
     def->max = 999;
-    def->mode = comDevelop;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(0.));
 
     // ---- A2 Overhang Shadow ----

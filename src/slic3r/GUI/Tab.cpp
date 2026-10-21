@@ -3606,6 +3606,9 @@ void TabPrint::build()
         optgroup->append_single_option_line("bridge_density", "quality_settings_bridging#bridge-density");
         optgroup->append_single_option_line("internal_bridge_density", "quality_settings_bridging#bridge-density");
         optgroup->append_single_option_line("thick_bridges", "quality_settings_bridging#thick-bridges");
+        // Neotko: extra bridge expansion into the neighbouring solid area, on top of the automatic one.
+        if (wxGetApp().neotko_features_enabled())
+            optgroup->append_single_option_line("bridge_expansion_extra");
         optgroup->append_single_option_line("thick_internal_bridges", "quality_settings_bridging#thick-bridges");
         optgroup->append_single_option_line("enable_extra_bridge_layer", "quality_settings_bridging#extra-bridge-layers");
         optgroup->append_single_option_line("dont_filter_internal_bridges", "quality_settings_bridging#filter-out-small-internal-bridges");
