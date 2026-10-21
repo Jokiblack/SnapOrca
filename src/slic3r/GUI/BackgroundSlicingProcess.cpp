@@ -38,6 +38,8 @@
 // Print now includes tbb, and tbb includes Windows. This breaks compilation of wxWidgets if included before wx.
 #include "libslic3r/Print.hpp"
 #include "libslic3r/SLAPrint.hpp"
+#include "libslic3r/GCode/ExpertGCodeReprocessor.hpp"
+#include "libslic3r/GCode/GCodeProcessor.hpp"
 #include "libslic3r/Utils.hpp"
 #include "PostProcessor.hpp"
 #include "libslic3r/Format/SL1.hpp"
@@ -857,10 +859,13 @@ void BackgroundSlicingProcess::finalize_gcode()
     // export_path may be changed by the post-processing script as well if the post processing script decides so, see GH #6042.
     // Runs both post-processing scripts and plugins on a single .pp copy of the G-code (make_copy = true),
     // so neither touches the original file the G-code viewer keeps memory-mapped.
-    bool post_processed = run_post_process_scripts(output_path, true, "File", export_path, m_fff_print->full_print_config());
+    // NEOTKO_GCODE_REPROCESSOR: the reprocessor runs first, on its own copy, because it addresses lines by the
+    // numbers m_gcode_result recorded for the unprocessed G-code. The scripts then edit that copy in place.
+    const bool reprocessed    = run_expert_gcode_reprocessor(output_path, true);
+    bool       post_processed = run_post_process_scripts(output_path, !reprocessed, "File", export_path, m_fff_print->full_print_config());
 
-    auto remove_post_processed_temp_file = [post_processed, &output_path]() {
-        if (post_processed)
+    auto remove_post_processed_temp_file = [post_processed, reprocessed, &output_path]() {
+        if (post_processed || reprocessed)
             try {
                 boost::filesystem::remove(output_path);
             } catch (const std::exception& ex) {
@@ -976,6 +981,45 @@ void BackgroundSlicingProcess::export_gcode()
     gcode_add_line_number(export_path, m_fff_print->full_print_config());
 }
 
+bool BackgroundSlicingProcess::run_expert_gcode_reprocessor(std::string &path, bool make_copy) const
+{
+    if (m_fff_print == nullptr || m_gcode_result == nullptr)
+        return false;
+    const DynamicPrintConfig &config = m_fff_print->full_print_config();
+    const auto               *rules  = config.option<ConfigOptionString>("expert_gcode_reprocessor_rules");
+    if (rules == nullptr || !expert_gcode_reprocessor_has_rules(rules->value))
+        return false;
+
+    std::string target = path;
+    if (make_copy) {
+        target = path + ".egr";
+        try {
+            if (boost::filesystem::exists(target))
+                boost::filesystem::remove(target);
+        } catch (...) {}
+        std::string error_message;
+        if (copy_file(path, target, error_message, false) != SUCCESS) {
+            BOOST_LOG_TRIVIAL(error) << "ExpertGCodeReprocessor: failed to copy " << path << " to " << target << ": " << error_message;
+            return false;
+        }
+    }
+    bool rewritten = false;
+    try {
+        rewritten = Slic3r::run_expert_gcode_reprocessor(target, config, *m_gcode_result);
+    } catch (const std::exception &ex) {
+        BOOST_LOG_TRIVIAL(error) << "ExpertGCodeReprocessor failed: " << ex.what();
+    }
+    if (!rewritten) {
+        if (make_copy)
+            try {
+                boost::filesystem::remove(target);
+            } catch (...) {}
+        return false;
+    }
+    path = target;
+    return true;
+}
+
 // A print host upload job has been scheduled, enqueue it to the printhost job queue
 void BackgroundSlicingProcess::prepare_upload()
 {
@@ -1000,6 +1044,8 @@ void BackgroundSlicingProcess::prepare_upload()
             // (not here, but when the final target is a file).
             if (!m_fff_print->is_BBL_printer()) {
                 std::string source_path_str = source_path.string();
+                // NEOTKO_GCODE_REPROCESSOR: source_path is already a private copy, rewrite it in place.
+                run_expert_gcode_reprocessor(source_path_str, false);
                 std::string output_name_str = m_upload_job.upload_data.upload_path.string();
                 // source_path_str is already a dedicated copy of the temp G-code (see copy_file above), not the
                 // memory-mapped original, so scripts and plugins can modify it in place (make_copy = false).

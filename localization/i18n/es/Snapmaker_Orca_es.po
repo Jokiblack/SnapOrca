@@ -39220,6 +39220,72 @@ msgid "Internal JSON list of the Expert G-code Reprocessor rules. Edited from it
 msgstr "Lista JSON interna con las reglas del reprocesador experto de G-code. Se edita desde su panel en la vista previa; no está pensada para editarse a mano."
 
 # AI Translated
+msgid "Expert G-code Reprocessor"
+msgstr "Reprocesador experto de G-code"
+
+# AI Translated
+msgid "Rewrites the exported G-code by layer range: print speed (M220), flow (M221), fan (M106) and Z offset (SET_GCODE_OFFSET). A rule for one filament only acts while that filament prints. Layers are numbered as in the preview."
+msgstr "Reescribe el G-code exportado por rangos de capas: velocidad de impresión (M220), flujo (M221), ventilador (M106) y desplazamiento de Z (SET_GCODE_OFFSET). Una regla de un solo filamento solo actúa mientras se imprime ese filamento. Las capas se numeran como en la vista previa."
+
+# AI Translated
+msgid "Reprocessor enabled"
+msgstr "Reprocesador activado"
+
+# AI Translated
+msgid "Add rule"
+msgstr "Añadir regla"
+
+# AI Translated
+msgid "Rule"
+msgstr "Regla"
+
+# AI Translated
+msgid "From layer"
+msgstr "Desde la capa"
+
+# AI Translated
+msgid "To layer"
+msgstr "Hasta la capa"
+
+# AI Translated
+msgid "Skip wipe tower"
+msgstr "Omitir la torre de purga"
+
+# AI Translated
+#, no-c-format
+msgid "Speed (%)"
+msgstr "Velocidad (%)"
+
+# AI Translated
+#, no-c-format
+msgid "Flow (%)"
+msgstr "Flujo (%)"
+
+# AI Translated
+msgid "Fan (0-255)"
+msgstr "Ventilador (0-255)"
+
+# AI Translated
+msgid "Z offset (mm)"
+msgstr "Desplazamiento de Z (mm)"
+
+# AI Translated
+msgid "Filament %1%"
+msgstr "Filamento %1%"
+
+# AI Translated
+msgid "Leave empty to apply the rule up to the last layer."
+msgstr "Déjalo vacío para aplicar la regla hasta la última capa."
+
+# AI Translated
+msgid "Do not apply the rule inside the wipe tower G-code."
+msgstr "No aplicar la regla dentro del G-code de la torre de purga."
+
+# AI Translated
+msgid "Edit the layer range rules applied to the exported G-code"
+msgstr "Editar las reglas por rango de capas que se aplican al G-code exportado"
+
+# AI Translated
 msgid "PerObject Support"
 msgstr "Soporte por objeto"
 

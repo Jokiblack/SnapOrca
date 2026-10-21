@@ -95,6 +95,8 @@ set(SLIC3R_GUI_SOURCES
     GUI/CameraUtils.hpp
     GUI/CloneDialog.cpp
     GUI/CloneDialog.hpp
+    GUI/ExpertGCodeReprocessorDialog.cpp
+    GUI/ExpertGCodeReprocessorDialog.hpp
     GUI/ConfigManipulation.cpp
     GUI/ConfigManipulation.hpp
     GUI/ConfigValueFormatter.cpp

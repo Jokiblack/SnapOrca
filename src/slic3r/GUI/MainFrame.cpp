@@ -92,6 +92,7 @@
 #include "I18N.hpp"
 #include "GLCanvas3D.hpp"
 #include "Plater.hpp"
+#include "ExpertGCodeReprocessorDialog.hpp"
 #ifdef SLIC3R_CAD
 #include "slic3r/GUI/CAD/DesignPanel.hpp"
 #include "slic3r/GUI/CAD/McpControl.hpp"
@@ -3557,6 +3558,15 @@ void MainFrame::init_menubar_as_editor()
                 }
                 m_plater->deselect_all(); },
             "", nullptr, [this](){return can_deselect(); }, this);
+        // NEOTKO_GCODE_REPROCESSOR: editor of the project's Expert G-code Reprocessor rules. The
+        // experimental features preference needs a restart, so the menu is built with it or without it.
+        if (wxGetApp().neotko_features_enabled()) {
+            editMenu->AppendSeparator();
+            append_menu_item(editMenu, wxID_ANY, _L("Expert G-code Reprocessor") + dots,
+                _L("Edit the layer range rules applied to the exported G-code"),
+                [this](wxCommandEvent&) { ExpertGCodeReprocessorDialog::show_and_save(this); },
+                "", nullptr, [this]() { return m_plater != nullptr; }, this);
+        }
         //editMenu->AppendSeparator();
         //append_menu_check_item(editMenu, wxID_ANY, _L("Show Model Mesh(TODO)"),
         //    _L("Display triangles of models."), [this](wxCommandEvent& evt) {
