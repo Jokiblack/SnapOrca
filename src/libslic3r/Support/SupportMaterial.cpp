@@ -13,6 +13,9 @@
 #include "libslic3r/PrintConfig.hpp"
 #include "SupportCommon.hpp"
 #include "libslic3r/InstanceContact.hpp"
+#include "libslic3r/Model.hpp"
+#include "libslic3r/NeoDebug.hpp"
+#include "libslic3r/Feature/SupportZones/SupportZoneProbe.hpp"
 #include "BeltFloorContext.hpp"
 #include "Geometry.hpp"
 #include "Point.hpp"
@@ -45,6 +48,23 @@
 #include <vector>
 #include <utility>
 #include <tuple>
+#include <functional>
+#include <string>
+#include <sstream>
+#include <iomanip>
+
+#include "libslic3r/I18N.hpp"
+
+// Support Zones (ported from OrcaFS-NeotkoCM by Neotko): corridor diagnostics.
+// ORCA_DEBUG_SUPPORTZONES=1 -> <temp>/neotko_logs/supportzones.log
+#define CORRIDOR_LOG(body)                                                          \
+    do {                                                                            \
+        if (Slic3r::NeoDebug::enabled(Slic3r::NeoDebug::SUPPORTZONES)) {            \
+            std::ostringstream _ndbg_;                                              \
+            _ndbg_ << std::fixed << std::setprecision(4) << body;                   \
+            Slic3r::NeoDebug::write(Slic3r::NeoDebug::SUPPORTZONES, _ndbg_.str());  \
+        }                                                                           \
+    } while (0)
 
 #define SUPPORT_USE_AGG_RASTERIZER
 
@@ -414,6 +434,78 @@ static void trim_support_layers_by_belt_floor(
     const SlicingParameters &slicing_params, const PrintConfig &print_config,
     const PrintObject &object, SupportGeneratorLayersPtr &support_layers);
 
+// Support Zones (ported from OrcaFS-NeotkoCM by Neotko, NEOTKO_SUPPORTZONES_TAG s286c F4): splits the
+// support extrusions of a layer between the zone families. The polylines are clipped, not tagged by
+// one of their points: an infill line crosses the seam between two zones and tagging it whole would
+// put the body material inside a soluble roof. What lies outside every family keeps no family (-1)
+// and prints as the object's support. A clipped loop comes out as an open path, only on that seam.
+static void split_support_fills_by_family(SupportLayer &support_layer, const std::vector<Polygons> &areas)
+{
+    Polygons all_areas;
+    for (const Polygons &a : areas)
+        polygons_append(all_areas, a);
+    all_areas = union_(all_areas);
+    if (all_areas.empty())
+        return;
+
+    ExtrusionEntityCollection out;
+    std::vector<int>          out_family;
+    bool                      split_any = false;
+    // The pieces keep the extrusion parameters of the path they come from.
+    auto emit = [&out, &out_family](Polylines &&pls, const ExtrusionPath &like, int family) {
+        for (const Polyline &pl : pls) {
+            if (pl.size() < 2)
+                continue;
+            out.entities.emplace_back(new ExtrusionPath(Polyline3(pl), like));
+            out_family.push_back(family);
+        }
+    };
+    std::function<void(const ExtrusionEntity*)> take = [&](const ExtrusionEntity *ee) {
+        if (const auto *coll = dynamic_cast<const ExtrusionEntityCollection*>(ee)) {
+            for (const ExtrusionEntity *child : coll->entities)
+                take(child);
+            return;
+        }
+        const ExtrusionPath *first = nullptr;
+        Polylines            pls;
+        if (const auto *path = dynamic_cast<const ExtrusionPath*>(ee)) {
+            pls.push_back(path->polyline.to_polyline());
+            first = path;
+        } else if (const auto *mp = dynamic_cast<const ExtrusionMultiPath*>(ee)) {
+            for (const ExtrusionPath &p : mp->paths)
+                pls.push_back(p.polyline.to_polyline());
+            first = mp->paths.empty() ? nullptr : &mp->paths.front();
+        } else if (const auto *loop = dynamic_cast<const ExtrusionLoop*>(ee)) {
+            for (const ExtrusionPath &p : loop->paths)
+                pls.push_back(p.polyline.to_polyline());
+            first = loop->paths.empty() ? nullptr : &loop->paths.front();
+        }
+        if (first == nullptr) {
+            // A kind that cannot be clipped stays as it is, without a family.
+            out.entities.emplace_back(ee->clone());
+            out_family.push_back(-1);
+            return;
+        }
+        if (intersection_pl(pls, all_areas).empty()) {
+            out.entities.emplace_back(ee->clone());
+            out_family.push_back(-1);
+            return;
+        }
+        split_any = true;
+        for (size_t f = 0; f < areas.size(); ++ f)
+            if (! areas[f].empty())
+                emit(intersection_pl(pls, areas[f]), *first, int(f));
+        emit(diff_pl(pls, all_areas), *first, -1);
+    };
+    for (const ExtrusionEntity *ee : support_layer.support_fills.entities)
+        take(ee);
+    if (! split_any)
+        return;
+    out.no_sort = support_layer.support_fills.no_sort;
+    support_layer.support_fills = std::move(out);
+    support_layer.support_fills_family = std::move(out_family);
+}
+
 void PrintObjectSupportMaterial::generate(PrintObject &object)
 {
     BOOST_LOG_TRIVIAL(info) << "Support generator - Start";
@@ -421,6 +513,20 @@ void PrintObjectSupportMaterial::generate(PrintObject &object)
     // PerObject Support: the other objects of the plate, trimmed off in trim_support_layers_by_object().
     // Empty when the option is off.
     m_neighbor_occupancy = InstanceContact::neighbor_occupancy(object);
+    // Support Zones (B4b): set again by bottom_contact_layers_and_layer_support_areas() when zones
+    // print with different filaments.
+    object.set_support_family_areas({});
+
+    // Support Zones (NEOTKO_SUPPORTZONES_TAG s304): with a style other than Snug the column is
+    // quantized to grid cells and steps sideways instead of sliding. A notice, not a veto.
+    if (m_object_config->support_style.value != smsSnug)
+        if (const ModelObject *mo = object.model_object();
+            mo != nullptr && std::any_of(mo->volumes.begin(), mo->volumes.end(),
+                                         [](const ModelVolume *v) { return SupportZones::is_support_zone(*v); }))
+            object.push_support_zone_style_warning(
+                _u8L("Support zones: Grid and Default support styles are NOT recommended, "
+                     "they will create print issues. Check the G-code before printing. "
+                     "Snug is the recommended style for painted support zones."));
 
     coordf_t max_object_layer_height = 0.;
     for (size_t i = 0; i < object.layer_count(); ++ i)
@@ -566,6 +672,31 @@ void PrintObjectSupportMaterial::generate(PrintObject &object)
 //    intermediate_layers.clear();
 //    interface_layers.clear();
 
+    // Support Zones (NEOTKO_SUPPORTZONES_TAG s343e): the cuts are subtracted from every support
+    // layer. A blocker only removes seeds, so a column coming down from above crosses it; a cut
+    // (SUPPORT_BLOCKER with neotko_support_cut) removes the support itself. Support layers are not
+    // synchronized with the object layers, so the object layer is found by print_z.
+    if (const std::vector<Polygons> cutters = object.slice_support_cutters(); ! cutters.empty() && object.layer_count() > 0) {
+        std::vector<double> obj_z;
+        obj_z.reserve(object.layer_count());
+        for (const Layer *l : object.layers())
+            obj_z.push_back(l->print_z);
+        auto cut_one = [&cutters, &obj_z](SupportGeneratorLayer *sl) {
+            if (sl == nullptr || sl->polygons.empty())
+                return;
+            auto it = std::lower_bound(obj_z.begin(), obj_z.end(), sl->print_z - 0.5 * sl->height);
+            if (it == obj_z.end())
+                it = std::prev(obj_z.end());
+            const size_t idx = size_t(it - obj_z.begin());
+            if (idx < cutters.size() && ! cutters[idx].empty())
+                sl->polygons = diff(sl->polygons, cutters[idx]);
+        };
+        for (SupportGeneratorLayersPtr *v : { &raft_layers, &bottom_contacts, &top_contacts, &intermediate_layers,
+                                              &interface_layers, &base_interface_layers })
+            for (SupportGeneratorLayer *sl : *v)
+                cut_one(sl);
+    }
+
 #ifdef SLIC3R_DEBUG
     SupportGeneratorLayersPtr layers_sorted =
 #endif // SLIC3R_DEBUG
@@ -602,6 +733,17 @@ void PrintObjectSupportMaterial::generate(PrintObject &object)
 
     // Generate the actual toolpaths and save them into each layer.
     generate_support_toolpaths(object.support_layers(), *m_object_config, m_support_params, m_slicing_params, raft_layers, bottom_contacts, top_contacts, intermediate_layers, interface_layers, base_interface_layers);
+
+    // Support Zones (B4b): split the toolpaths of every layer between the zone families.
+    if (! object.support_family_areas().trivial())
+        tbb::parallel_for(tbb::blocked_range<size_t>(0, object.support_layers().size()),
+            [&object](const tbb::blocked_range<size_t> &range) {
+                for (size_t i = range.begin(); i < range.end(); ++ i) {
+                    SupportLayer &support_layer = *object.support_layers()[i];
+                    if (const std::vector<Polygons> *areas = object.support_family_areas_at(float(support_layer.print_z)))
+                        split_support_fills_by_family(support_layer, *areas);
+                }
+            });
 
 #ifdef SLIC3R_DEBUG
     {
@@ -1405,11 +1547,36 @@ std::vector<Polygons> PrintObjectSupportMaterial::buildplate_covered(const Print
 
 struct SupportAnnotations
 {
-    SupportAnnotations(const PrintObject &object, const std::vector<Polygons> &buildplate_covered) :
+    // roof_expand: half the support extrusion width (Support Zones).
+    SupportAnnotations(const PrintObject &object, const std::vector<Polygons> &buildplate_covered, float roof_expand) :
         enforcers_layers(object.slice_support_enforcers()),
         blockers_layers(object.slice_support_blockers()),
         buildplate_covered(buildplate_covered)
     {
+        // Support Zones (NEOTKO_SUPPORTZONES_TAG s300e, s300g): a "roof only" zone grabs where its
+        // block starts, not everywhere it passes. A classic enforcer seeds contact in every layer it
+        // crosses, so a pillar rising through a hollow part makes roofs inside the wall. The roof
+        // band of a layer is what the block has there and not in the layer above, on the layers
+        // marked by roof_layer. Those zones then leave the classic enforcer stream.
+        for (const SupportZoneSlices &z : object.slice_support_zones()) {
+            const auto *ro = dynamic_cast<const ConfigOptionBool *>(z.model_volume->config.option("neotko_zone_roof_only"));
+            if (ro == nullptr || ! ro->value)
+                continue;
+            roof_only_layers.resize(std::max(roof_only_layers.size(), z.slices.size()), Polygons());
+            for (size_t i = 0; i < z.slices.size(); ++ i) {
+                if (z.slices[i].empty() || i >= z.roof_layer.size() || z.roof_layer[i] == 0)
+                    continue;
+                Polygons top = (i + 1 < z.slices.size() && ! z.slices[i + 1].empty()) ? diff(z.slices[i], z.slices[i + 1]) : z.slices[i];
+                if (top.empty())
+                    continue;
+                // Widened by half an extrusion: a vertical block roof would otherwise give a band of zero area.
+                polygons_append(roof_only_layers[i], expand(top, roof_expand, SUPPORT_SURFACES_OFFSET_PARAMETERS));
+            }
+            for (size_t i = 0; i < enforcers_layers.size() && i < z.slices.size(); ++ i)
+                if (! enforcers_layers[i].empty() && ! z.slices[i].empty())
+                    enforcers_layers[i] = diff(enforcers_layers[i], z.slices[i]);
+        }
+
         // Append custom supports.
         object.project_and_append_custom_facets(false, EnforcerBlockerType::ENFORCER, enforcers_layers);
         object.project_and_append_custom_facets(false, EnforcerBlockerType::BLOCKER, blockers_layers);
@@ -1425,6 +1592,8 @@ struct SupportAnnotations
     }
 
     std::vector<Polygons>         enforcers_layers;
+    // Support Zones: the roof bands of the "roof only" zones, per object layer.
+    std::vector<Polygons>         roof_only_layers;
     std::vector<Polygons>         blockers_layers;
     const std::vector<Polygons>&  buildplate_covered;
 };
@@ -1762,6 +1931,23 @@ static inline std::tuple<Polygons, Polygons, double> detect_contacts(
                     polygons_append(contact_polygons, diff(enforcer_polygons, slices_margin.all_polygons.empty() ? slices_margin.polygons : slices_margin.all_polygons));
                 }
             }
+
+        // Support Zones (NEOTKO_SUPPORTZONES_TAG s300e): a "roof only" zone seeds on the roof of its
+        // block, like an enforcer would, but only on a band that exists where the block ends upwards.
+        if (layer_id < annotations.roof_only_layers.size() && ! annotations.roof_only_layers[layer_id].empty()) {
+            Polygons roof = diff(intersection(layer.lslices, annotations.roof_only_layers[layer_id]),
+                                 expand(lower_layer_polygons, 0.05f * no_interface_offset, SUPPORT_SURFACES_OFFSET_PARAMETERS));
+            if (! roof.empty() && layer_id < annotations.blockers_layers.size() && ! annotations.blockers_layers[layer_id].empty())
+                roof = diff(roof, annotations.blockers_layers[layer_id]);
+            if (! roof.empty()) {
+                polygons_append(enforcer_polygons, roof);
+                polygons_append(overhang_polygons, roof);
+                slices_margin_update(std::min(lower_layer_offset, float(scale_(gap_xy))), no_interface_offset);
+                polygons_append(contact_polygons, diff(roof, slices_margin.all_polygons.empty() ? slices_margin.polygons : slices_margin.all_polygons));
+                CORRIDOR_LOG("[CORRIDOR] roof only layer=" << layer_id << " z=" << layer.print_z
+                    << " roof=" << unscale<double>(unscale<double>(area(roof))) << "mm2");
+            }
+        }
     }
 
     return std::make_tuple(std::move(contact_polygons), std::move(enforcer_polygons), no_interface_offset);
@@ -2201,7 +2387,7 @@ SupportGeneratorLayersPtr PrintObjectSupportMaterial::top_contact_layers(
     }
 
     // Slice support enforcers / support blockers.
-    SupportAnnotations annotations(object, buildplate_covered);
+    SupportAnnotations annotations(object, buildplate_covered, scaled<float>(0.5 * m_support_params.support_material_flow.width()));
 
     // Output layers, sorted by top Z.
     SupportGeneratorLayersPtr contact_out;
@@ -2758,6 +2944,416 @@ static inline std::pair<Polygons, Polygons> project_support_to_grid(const Layer 
     return out;
 }
 
+// Support Zones (ported from OrcaFS-NeotkoCM by Neotko, NEOTKO_SUPPORTZONES_TAG s284-s343).
+// The shape of a zone below the object is the corridor its column descends through: layer by
+// layer the accumulated projection is shifted along the axis the block describes, capped by the
+// lean of the zone. A painted zone (a "block tree": a head on top, stumps on the plate and nothing
+// in between) grows the middle by walking the column towards its stumps and contracting onto them.
+// Without zone volumes none of this runs.
+
+// Layers above the bottom of a zone that still count as its landing (land_only).
+static constexpr int ZONE_LANDING_LAYERS = 3;
+
+// Area-weighted centroid of a polygon set, in scaled coordinates.
+static Vec2d support_corridor_centroid(const Polygons &polys)
+{
+    double area_total = 0.;
+    Vec2d  acc        = Vec2d::Zero();
+    for (const Polygon &poly : polys) {
+        if (poly.size() < 3)
+            continue;
+        const double a = std::abs(poly.area());
+        if (a <= 0.)
+            continue;
+        const Point c = poly.centroid();
+        acc        += Vec2d(double(c.x()), double(c.y())) * a;
+        area_total += a;
+    }
+    return (area_total > 0.) ? Vec2d(acc / area_total) : Vec2d::Zero();
+}
+
+struct CorridorShift {
+    ExPolygon above;   // the corridor island at layer i+1
+    Vec2d     v;       // centroid(partner at layer i) - centroid(above)
+};
+
+// Voronoi cell of stump i inside bb: the column is split between stumps by area, not by island,
+// so a ring painted around a hole goes half to each of two opposite stumps.
+static Polygons support_stump_cell(const std::vector<Vec2d> &centres, size_t i, const BoundingBox &bb)
+{
+    Polygons cell { bb.polygon() };
+    if (centres.size() < 2)
+        return cell;
+    const double R = 2. * (Vec2d(double(bb.max.x() - bb.min.x()), double(bb.max.y() - bb.min.y())).norm() + 1.);
+    for (size_t j = 0; j < centres.size() && ! cell.empty(); ++ j) {
+        if (j == i)
+            continue;
+        Vec2d d = centres[i] - centres[j];
+        const double dl = d.norm();
+        if (dl < 1e-9)
+            continue;
+        d /= dl;
+        const Vec2d m = 0.5 * (centres[i] + centres[j]);
+        const Vec2d v(- d.y(), d.x());
+        auto P = [](const Vec2d &p) { return Point(coord_t(std::lround(p.x())), coord_t(std::lround(p.y()))); };
+        Polygon half({ P(m - R * v), P(m + R * v), P(m + R * v + 2. * R * d), P(m - R * v + 2. * R * d) });
+        if (! half.is_counter_clockwise())
+            half.reverse();
+        cell = intersection(cell, Polygons{ half });
+    }
+    return cell;
+}
+
+// Pairs the corridor islands of two consecutive layers: partner = the island below with the
+// largest overlap, or the nearest centroid when none overlaps. Ties break by union_ex order.
+static std::vector<CorridorShift> support_corridor_pair_components(const Polygons &corridor_above, const Polygons &corridor_here)
+{
+    std::vector<CorridorShift> out;
+    const ExPolygons comps_above = union_ex(corridor_above);
+    const ExPolygons comps_here  = union_ex(corridor_here);
+    if (comps_above.empty() || comps_here.empty())
+        return out;
+
+    std::vector<Vec2d> centroid_here(comps_here.size());
+    for (size_t j = 0; j < comps_here.size(); ++ j)
+        centroid_here[j] = support_corridor_centroid(to_polygons(comps_here[j]));
+
+    out.reserve(comps_above.size());
+    for (const ExPolygon &above : comps_above) {
+        const Polygons above_polys = to_polygons(above);
+        const Vec2d    c_above     = support_corridor_centroid(above_polys);
+        size_t         best        = size_t(-1);
+        double         best_score  = 0.;
+        for (size_t j = 0; j < comps_here.size(); ++ j) {
+            const double a = area(intersection(above_polys, to_polygons(comps_here[j])));
+            if (a > best_score) {
+                best_score = a;
+                best       = j;
+            }
+        }
+        if (best == size_t(-1)) {
+            double best_dist = std::numeric_limits<double>::max();
+            for (size_t j = 0; j < comps_here.size(); ++ j) {
+                const double d = (centroid_here[j] - c_above).squaredNorm();
+                if (d < best_dist) {
+                    best_dist = d;
+                    best      = j;
+                }
+            }
+        }
+        out.push_back({ above, centroid_here[best] - c_above });
+    }
+    return out;
+}
+
+// Moves a polygon set by v, rounded to scaled coordinates.
+static void support_corridor_translate(Polygons &polys, const Vec2d &v)
+{
+    const Point t(coord_t(std::lround(v.x())), coord_t(std::lround(v.y())));
+    if (t != Point(0, 0))
+        for (Polygon &poly : polys)
+            poly.translate(t);
+}
+
+// The zone state of bottom_contact_layers_and_layer_support_areas().
+struct SupportZoneDescent
+{
+    struct Stump { Polygons poly; Vec2d c { Vec2d::Zero() }; };
+
+    std::vector<SupportZoneSlices>   zones;
+    // Zones that touch and share their settings print as one column: they form one family.
+    std::vector<size_t>              family;
+    size_t                           n_families { 0 };
+    std::vector<Polygons>            projection;
+    std::vector<int>                 bottom_layer;
+    std::vector<int>                 top_layer;
+    // Block trees: the stumps are the islands of the lowest layer, the stump band ends at stump_top.
+    std::vector<std::vector<Stump>>  stumps;
+    std::vector<char>                guided;
+    std::vector<int>                 stump_top;
+    std::vector<char>                roof_only;
+    // B4b: the filaments of every family and its area per object layer.
+    PrintObject::SupportFamilyAreas  family_areas;
+
+    explicit SupportZoneDescent(const PrintObject &object) : zones(object.slice_support_zones())
+    {
+        const size_t n = zones.size();
+        if (n == 0)
+            return;
+        // Same recipe = same config, except the keys only the editor reads.
+        static const std::set<std::string> editor_keys {
+            "neotko_support_zone_gesture", "neotko_zone_lean_deg", "neotko_zone_roof_only",
+            "neotko_zone_solid", "neotko_zone_land_only" };
+        auto same_recipe = [](const ModelVolume *a, const ModelVolume *b) {
+            for (const t_config_option_key &k : a->config.get().diff(b->config.get()))
+                if (editor_keys.find(k) == editor_keys.end())
+                    return false;
+            return true;
+        };
+        family.assign(n, 0);
+        for (size_t i = 0; i < n; ++ i) {
+            size_t j = 0;
+            for (; j < i && ! same_recipe(zones[i].model_volume, zones[j].model_volume); ++ j) ;
+            family[i] = (j < i) ? family[j] : n_families ++;
+        }
+        family_areas.families.assign(n_families, PrintObject::SupportFamily());
+        for (size_t i = 0; i < n; ++ i) {
+            const ModelVolume          *v = zones[i].model_volume;
+            PrintObject::SupportFamily &f = family_areas.families[family[i]];
+            if (v->config.has("support_filament"))
+                f.body_filament = v->config.opt_int("support_filament");
+            if (v->config.has("support_interface_filament"))
+                f.interface_filament = v->config.opt_int("support_interface_filament");
+        }
+        if (! family_areas.trivial()) {
+            family_areas.areas.assign(object.total_layer_count(), std::vector<Polygons>(n_families, Polygons()));
+            for (const Layer *l : object.layers())
+                family_areas.layer_print_z.push_back(float(l->print_z));
+            family_areas.layer_print_z.resize(family_areas.areas.size(), family_areas.layer_print_z.empty() ? 0.f : family_areas.layer_print_z.back());
+        }
+        projection.assign(n, Polygons());
+        bottom_layer.assign(n, -1);
+        top_layer.assign(n, -1);
+        stumps.assign(n, {});
+        guided.assign(n, char(0));
+        stump_top.assign(n, -1);
+        roof_only.assign(n, char(0));
+        for (size_t zi = 0; zi < n; ++ zi) {
+            const std::vector<Polygons> &zs = zones[zi].slices;
+            if (const auto *ro = dynamic_cast<const ConfigOptionBool*>(zones[zi].model_volume->config.option("neotko_zone_roof_only")); ro != nullptr && ro->value)
+                roof_only[zi] = char(1);
+            for (size_t i = 0; i < zs.size(); ++ i)
+                if (! zs[i].empty()) {
+                    bottom_layer[zi] = int(i);
+                    break;
+                }
+            for (int i = int(zs.size()) - 1; i >= 0; -- i)
+                if (! zs[i].empty()) {
+                    top_layer[zi] = i;
+                    break;
+                }
+            if (bottom_layer[zi] < 0 || top_layer[zi] <= bottom_layer[zi])
+                continue;
+            int t = bottom_layer[zi];
+            while (t + 1 < int(zs.size()) && ! zs[t + 1].empty())
+                ++ t;
+            stump_top[zi] = t;
+            // A gap between the stump band and the head: a block tree.
+            if (t >= top_layer[zi])
+                continue;
+            guided[zi] = char(1);
+            for (const ExPolygon &isl : union_ex(zs[bottom_layer[zi]])) {
+                Stump st;
+                st.poly = to_polygons(isl);
+                st.c    = support_corridor_centroid(st.poly);
+                stumps[zi].emplace_back(std::move(st));
+            }
+        }
+    }
+
+    bool empty() const { return zones.empty(); }
+
+    // The layer contributes the section of the block to the column: every layer of a solid zone,
+    // the roof layers of a "roof only" one.
+    bool seeds_section(size_t zi, size_t layer_id) const
+    {
+        if (layer_id >= zones[zi].slices.size() || zones[zi].slices[layer_id].empty())
+            return false;
+        return zones[zi].solid || (roof_only[zi] != 0 && layer_id < zones[zi].roof_layer.size() && zones[zi].roof_layer[layer_id] != 0);
+    }
+
+    // Descends the column of every zone from layer_id + 1 to layer_id. What a block tree cannot
+    // hand to its stumps goes back to the general stream and comes down plumb.
+    void descend(const PrintObject &object, int layer_id, double min_half_width, bool buildplate_only,
+                 Polygons &overhangs_projection, Polygons &enforcers_projection)
+    {
+        const Layer &layer = *object.get_layer(layer_id);
+        for (size_t zi = 0; zi < zones.size(); ++ zi) {
+            Polygons &proj = projection[zi];
+            if (proj.empty())
+                continue;
+            const std::vector<Polygons> &zslices = zones[zi].slices;
+            if (size_t(layer_id) + 1 >= zslices.size())
+                continue;
+            const Polygons &corridor_here  = zslices[layer_id];
+            const Polygons &corridor_above = zslices[layer_id + 1];
+            // The real dz between the two layers, never the nominal layer height (adaptive layers).
+            const double dz_mm  = double(object.get_layer(layer_id + 1)->print_z) - double(layer.print_z);
+            const double d_max  = scaled<double>(SupportZones::corridor_d_max_mm(dz_mm, zones[zi].lean_deg));
+            auto overflow_to_general = [&](const Polygons &overflow) {
+                if (buildplate_only)
+                    polygons_append(enforcers_projection, overflow);
+                polygons_append(overhangs_projection, overflow);
+            };
+
+            if (corridor_here.empty()) {
+                // Corridor exhausted: the column keeps descending vertically, except on the middle
+                // of a block tree, where it walks towards its stumps and contracts onto them.
+                if (guided[zi] == 0 || stumps[zi].empty() || layer_id <= bottom_layer[zi])
+                    continue;
+                std::vector<Vec2d> centres;
+                centres.reserve(stumps[zi].size());
+                for (const Stump &st : stumps[zi])
+                    centres.push_back(st.c);
+                BoundingBox bb = get_extents(proj);
+                for (const Vec2d &c : centres)
+                    bb.merge(Point(coord_t(std::lround(c.x())), coord_t(std::lround(c.y()))));
+                bb.offset(scaled<coord_t>(10.));
+                Polygons moved;
+                for (size_t si = 0; si < centres.size(); ++ si) {
+                    Polygons part = (centres.size() == 1) ? proj : intersection(proj, support_stump_cell(centres, si, bb));
+                    if (part.empty())
+                        continue;
+                    // One budget per layer: moving towards the stump first, contracting with what is left.
+                    Vec2d        v     = centres[si] - support_corridor_centroid(part);
+                    const double v_raw = v.norm();
+                    if (v_raw > d_max)
+                        v *= d_max / v_raw;
+                    support_corridor_translate(part, v);
+                    const double d_shrink = d_max - std::min(v_raw, d_max);
+                    if (d_shrink > SCALED_EPSILON) {
+                        const Polygons &stump = stumps[zi][si].poly;
+                        Polygons        sh    = offset(part, - float(d_shrink));
+                        if (! intersection(part, stump).empty())
+                            sh = union_(sh, stump);
+                        // Never thinner than two extrusions: a starved column is removed and leaves the support above floating.
+                        if (! sh.empty() && ! offset(sh, - float(min_half_width)).empty())
+                            part = std::move(sh);
+                    }
+                    polygons_append(moved, std::move(part));
+                }
+                proj = moved.empty() ? Polygons() : union_(moved);
+                continue;
+            }
+            if (guided[zi] != 0 && ! stumps[zi].empty() && layer_id <= stump_top[zi]) {
+                // Reaching the stumps: what is outside them comes down plumb through the general stream.
+                Polygons clip;
+                if (layer_id == stump_top[zi]) {
+                    for (const Stump &st : stumps[zi])
+                        polygons_append(clip, st.poly);
+                    size_t n_unreached = 0;
+                    for (const ExPolygon &isl : union_ex(proj))
+                        if (intersection(to_polygons(isl), clip).empty())
+                            ++ n_unreached;
+                    if (n_unreached > 0)
+                        CORRIDOR_LOG("[CORRIDOR] layer=" << layer_id << " zone=" << zones[zi].priority << " " << n_unreached
+                            << " island(s) reach none of the " << stumps[zi].size() << " stump(s): plant another stump or raise the angle");
+                } else
+                    clip = corridor_here;
+                if (Polygons overflow = diff(proj, clip); ! overflow.empty()) {
+                    proj = intersection(proj, clip);
+                    overflow_to_general(overflow);
+                }
+            }
+            if (corridor_above.empty())
+                continue;
+
+            const ExPolygons comps_above = union_ex(corridor_above);
+            const ExPolygons comps_here  = union_ex(corridor_here);
+            if (comps_above.size() == 1 && comps_here.size() == 1) {
+                Vec2d        v     = support_corridor_centroid(corridor_here) - support_corridor_centroid(corridor_above);
+                const double v_raw = v.norm();
+                if (v_raw > d_max)
+                    v *= d_max / v_raw;
+                support_corridor_translate(proj, v);
+                proj = intersection(proj, corridor_here);
+            } else {
+                // A forked corridor: one shift per pair of islands.
+                Polygons rest = std::move(proj);
+                Polygons shifted;
+                for (const CorridorShift &sh : support_corridor_pair_components(corridor_above, corridor_here)) {
+                    if (rest.empty())
+                        break;
+                    const Polygons island = to_polygons(sh.above);
+                    Polygons       part   = intersection(rest, island);
+                    if (part.empty())
+                        continue;
+                    rest = diff(rest, island);
+                    Vec2d        v     = sh.v;
+                    const double v_raw = v.norm();
+                    if (v_raw > d_max)
+                        v *= d_max / v_raw;
+                    support_corridor_translate(part, v);
+                    polygons_append(shifted, std::move(part));
+                }
+                proj = shifted.empty() ? Polygons() : intersection(union_(shifted), corridor_here);
+            }
+        }
+    }
+
+    // T1: the enforcer contacts of a top contact layer that fall inside a zone leave the general
+    // stream and go down the corridor of that zone. Within a family the contact is shared (zones of
+    // the same recipe merge), between families it is exclusive. The general contacts in a halo
+    // around a zone go with it too, so that an automatic column next to it does not split the band.
+    void route_contacts(size_t idx_src, float zone_halo, Polygons &polygons_new, Polygons &enforcers_new)
+    {
+        Polygons rest = std::move(enforcers_new);
+        enforcers_new.clear();
+        size_t best_zone = size_t(-1);
+        double best_area = 0.;
+
+        std::vector<size_t> order(zones.size());
+        std::iota(order.begin(), order.end(), size_t(0));
+        std::stable_sort(order.begin(), order.end(), [this](size_t a, size_t b) { return family[a] < family[b]; });
+
+        size_t   cur_family = size_t(-1);
+        Polygons rest_family;
+        Polygons claimed_family;
+        for (size_t oi = 0; oi <= order.size(); ++ oi) {
+            if (oi == order.size() || (cur_family != size_t(-1) && family[order[oi]] != cur_family)) {
+                if (! claimed_family.empty())
+                    rest = diff(rest, claimed_family);
+                claimed_family.clear();
+                if (oi == order.size())
+                    break;
+            }
+            const size_t zi = order[oi];
+            if (family[zi] != cur_family) {
+                cur_family  = family[zi];
+                rest_family = rest;
+            }
+            const std::vector<Polygons> &zslices = zones[zi].slices;
+            if (idx_src >= zslices.size() || zslices[idx_src].empty())
+                continue;
+            Polygons part;
+            if (! rest_family.empty()) {
+                part = intersection(rest_family, zslices[idx_src]);
+                if (! part.empty()) {
+                    polygons_append(claimed_family, part);
+                    if (const double a = area(part); a > best_area) {
+                        best_area = a;
+                        best_zone = zi;
+                    }
+                }
+            }
+            if (! polygons_new.empty()) {
+                Polygons halo = expand(part.empty() ? zslices[idx_src] : part, zone_halo);
+                // The halo does not reach into another family's zone.
+                for (size_t oj = 0; oj < zones.size() && ! halo.empty(); ++ oj) {
+                    if (oj == zi || family[oj] == family[zi])
+                        continue;
+                    const std::vector<Polygons> &oslices = zones[oj].slices;
+                    if (idx_src < oslices.size() && ! oslices[idx_src].empty())
+                        halo = diff(halo, diff(oslices[idx_src], zslices[idx_src]));
+                }
+                if (! halo.empty())
+                    if (Polygons ghost = intersection(polygons_new, halo); ! ghost.empty()) {
+                        polygons_new = diff(polygons_new, halo);
+                        polygons_append(part, std::move(ghost));
+                    }
+            }
+            if (! part.empty())
+                polygons_append(projection[zi], std::move(part));
+        }
+        if (! rest.empty()) {
+            if (best_zone != size_t(-1))
+                polygons_append(projection[best_zone], std::move(rest));
+            else
+                polygons_append(enforcers_new, std::move(rest));
+        }
+    }
+};
+
 // Generate bottom contact layers supporting the top contact layers.
 // For a soluble interface material synchronize the layer heights with the object, 
 // otherwise set the layer height to a bridging flow of a support interface nozzle.
@@ -2792,11 +3388,20 @@ SupportGeneratorLayersPtr PrintObjectSupportMaterial::bottom_contact_layers_and_
     // Sum of unsupported enforcer contact areas above the current layer.print_z.
     // Only used if "supports on build plate only" is enabled and both automatic and support enforcers are enabled.
     Polygons  enforcers_projection;
+    // Support Zones: one projection per zone, descending through its own corridor. Empty without zones.
+    SupportZoneDescent zd(object);
+    const double zone_min_half_width = scaled<double>(m_support_params.support_material_flow.width());
+    const float  zone_halo = float(scaled<double>(grid_params.support_closing_radius) + m_support_params.support_material_flow.scaled_width());
+    if (! zd.empty())
+        CORRIDOR_LOG("[CORRIDOR] zones=" << zd.zones.size() << " families=" << zd.n_families
+            << " line_width=" << m_support_params.support_material_flow.width() << "mm buildplate_only=" << int(buildplate_only));
     // Last top contact layer visited when collecting the projection of contact areas.
     int       contact_idx = int(top_contacts.size()) - 1;
     for (int layer_id = int(object.total_layer_count()) - 2; layer_id >= 0; -- layer_id) {
         BOOST_LOG_TRIVIAL(trace) << "Support generator - bottom_contact_layers - layer " << layer_id;
         const Layer &layer = *object.get_layer(layer_id);
+        if (! zd.empty())
+            zd.descend(object, layer_id, zone_min_half_width, buildplate_only, overhangs_projection, enforcers_projection);
         // Collect projections of all contact areas above or at the same level as this top surface.
 #ifdef SLIC3R_DEBUG
         Polygons polygons_new;
@@ -2825,18 +3430,47 @@ SupportGeneratorLayersPtr PrintObjectSupportMaterial::bottom_contact_layers_and_
             // These are the overhang surfaces. They are touching the object and they are not expanded away from the object.
             // Use a slight positive offset to overlap the touching regions.
             polygons_append(polygons_new, expand(*top_contact.overhang_polygons, float(SCALED_EPSILON)));
+            if (! zd.empty() && ! enforcers_new.empty() && top_contact.idx_object_layer_above != size_t(-1))
+                zd.route_contacts(top_contact.idx_object_layer_above, zone_halo, polygons_new, enforcers_new);
             polygons_append(overhangs_projection, union_(polygons_new));
             polygons_append(enforcers_projection, enforcers_new);
         }
-        if (overhangs_projection.empty() && enforcers_projection.empty())
+        bool any_zone = false;
+        for (size_t zi = 0; zi < zd.zones.size() && ! any_zone; ++ zi)
+            any_zone = ! zd.projection[zi].empty() || zd.seeds_section(zi, size_t(layer_id));
+        if (overhangs_projection.empty() && enforcers_projection.empty() && ! any_zone)
             continue;
 
         // Overhangs_projection will be filled in asynchronously, move it away.
         Polygons overhangs_projection_raw = union_(std::move(overhangs_projection));
         Polygons enforcers_projection_raw = union_(std::move(enforcers_projection));
+        // Support Zones: the same for every zone, plus the section of the block where it seeds one,
+        // minus the object with the usual XY gap (the section arrives raw, not trimmed at the contact).
+        std::vector<Polygons> zones_projection_raw(zd.zones.size(), Polygons());
+        for (size_t zi = 0; zi < zd.zones.size(); ++ zi) {
+            zones_projection_raw[zi] = union_(std::move(zd.projection[zi]));
+            if (! zd.seeds_section(zi, size_t(layer_id)))
+                continue;
+            if (Polygons sect = diff(zd.zones[zi].slices[layer_id], offset(layer.lslices, float(scale_(m_support_params.gap_xy)))); ! sect.empty()) {
+                polygons_append(zones_projection_raw[zi], std::move(sect));
+                zones_projection_raw[zi] = union_(zones_projection_raw[zi]);
+            }
+        }
 
         tbb::task_group task_group;
-        const Polygons &overhangs_for_bottom_contacts = buildplate_only ? enforcers_projection_raw : overhangs_projection_raw;
+        // Support Zones: the bottom contacts are detected on the union of the general stream and the
+        // zones, a land_only zone only on its last layers.
+        Polygons overhangs_for_bottom_contacts_zones;
+        if (any_zone) {
+            overhangs_for_bottom_contacts_zones = buildplate_only ? enforcers_projection_raw : overhangs_projection_raw;
+            for (size_t zi = 0; zi < zones_projection_raw.size(); ++ zi)
+                if (! zones_projection_raw[zi].empty() &&
+                    ! (zd.zones[zi].land_only && zd.bottom_layer[zi] >= 0 && layer_id > zd.bottom_layer[zi] + ZONE_LANDING_LAYERS))
+                    polygons_append(overhangs_for_bottom_contacts_zones, zones_projection_raw[zi]);
+            overhangs_for_bottom_contacts_zones = union_(overhangs_for_bottom_contacts_zones);
+        }
+        const Polygons &overhangs_for_bottom_contacts = any_zone ? overhangs_for_bottom_contacts_zones :
+                                                        buildplate_only ? enforcers_projection_raw : overhangs_projection_raw;
         if (! overhangs_for_bottom_contacts.empty())
             // Find the bottom contact layers above the top surfaces of this layer,
             // and also detect belt floor contacts if belt mode is active.
@@ -2899,7 +3533,28 @@ SupportGeneratorLayersPtr PrintObjectSupportMaterial::bottom_contact_layers_and_
                 );
             });
 
+        std::vector<Polygons> zones_layer_area(zd.zones.size(), Polygons());
+        for (size_t zi = 0; zi < zd.zones.size(); ++ zi)
+            if (! zones_projection_raw[zi].empty())
+                task_group.run([&grid_params, &zd, &zones_projection_raw, &layer, &zones_layer_area, zi
+#ifdef SLIC3R_DEBUG 
+                    , iRun, layer_id
+#endif /* SLIC3R_DEBUG */
+                ]{
+                    std::tie(zones_layer_area[zi], zd.projection[zi]) = project_support_to_grid(layer, grid_params, zones_projection_raw[zi], nullptr
+#ifdef SLIC3R_DEBUG 
+                        , iRun, layer_id, "zone"
+#endif /* SLIC3R_DEBUG */
+                    );
+                });
+
         task_group.wait();
+
+        // Support Zones (s304): the grid expansion must not grow the column beyond what descended,
+        // or it widens a little at every layer.
+        for (size_t zi = 0; zi < zd.zones.size(); ++ zi)
+            if (! zones_projection_raw[zi].empty() && ! zd.projection[zi].empty())
+                zd.projection[zi] = intersection(zd.projection[zi], zones_projection_raw[zi]);
 
         // Belt floor: clip projections and support areas so support doesn't
         // propagate below the belt plane.
@@ -2915,6 +3570,12 @@ SupportGeneratorLayersPtr PrintObjectSupportMaterial::bottom_contact_layers_and_
                     layer_support_area = intersection(layer_support_area, valid_region);
                 if (! layer_support_area_enforcers.empty())
                     layer_support_area_enforcers = intersection(layer_support_area_enforcers, valid_region);
+                for (size_t zi = 0; zi < zd.zones.size(); ++ zi) {
+                    if (! zd.projection[zi].empty())
+                        zd.projection[zi] = intersection(zd.projection[zi], valid_region);
+                    if (! zones_layer_area[zi].empty())
+                        zones_layer_area[zi] = intersection(zones_layer_area[zi], valid_region);
+                }
             }
         }
 
@@ -2924,7 +3585,40 @@ SupportGeneratorLayersPtr PrintObjectSupportMaterial::bottom_contact_layers_and_
             else
                 layer_support_area = union_(layer_support_area, layer_support_area_enforcers);
         }
+
+        // Support Zones: zones of different families get out of each other's way, the earlier ones
+        // (higher priority) keep the shared area.
+        if (! zd.empty()) {
+            std::vector<Polygons> claimed_by_family(zd.n_families, Polygons());
+            for (size_t zi = 0; zi < zd.zones.size(); ++ zi) {
+                Polygons &za = zones_layer_area[zi];
+                if (za.empty())
+                    continue;
+                Polygons claimed_by_others;
+                for (size_t f = 0; f < zd.n_families; ++ f)
+                    if (f != zd.family[zi])
+                        polygons_append(claimed_by_others, claimed_by_family[f]);
+                if (! claimed_by_others.empty() && (za = diff(za, claimed_by_others)).empty())
+                    continue;
+                Polygons &mine = claimed_by_family[zd.family[zi]];
+                polygons_append(mine, za);
+                mine = union_(mine);
+                if (size_t(layer_id) < zd.family_areas.areas.size())
+                    polygons_append(zd.family_areas.areas[layer_id][zd.family[zi]], za);
+                layer_support_area = layer_support_area.empty() ? za : union_(layer_support_area, za);
+            }
+        }
     } // over all layers downwards
+
+    // Support Zones (B4b): the family areas for the toolpath split. Left empty with fewer than two
+    // materials, so nothing is split.
+    if (! zd.family_areas.areas.empty()) {
+        for (std::vector<Polygons> &per_layer : zd.family_areas.areas)
+            for (Polygons &p : per_layer)
+                if (! p.empty())
+                    p = union_(p);
+        object.set_support_family_areas(std::move(zd.family_areas));
+    }
 
     std::reverse(bottom_contacts.begin(), bottom_contacts.end());
     trim_support_layers_by_object(object, bottom_contacts, m_slicing_params.gap_support_object, m_slicing_params.gap_object_support, m_support_params.gap_xy);

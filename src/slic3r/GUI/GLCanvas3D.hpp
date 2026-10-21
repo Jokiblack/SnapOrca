@@ -436,8 +436,22 @@ class GLCanvas3D
         NozzleFilamentIncompatible,
         MixtureFilamentIncompatible,
         SingleExtruderMixedFilament,
-        FlushingVolumeZero
+        FlushingVolumeZero,
+        SterileSupportZone      // Support Zones: a zone that catches no downward-facing surface
     };
+
+    // Support Zones (ported from OrcaFS-NeotkoCM by Neotko, s284 F1, s286b): what each zone is going
+    // to catch (green) and, while the gizmo asks for it, the downward surface no zone catches (red).
+    // Render only: what needs support is still decided by the support generator. World coordinates.
+    GLModel m_support_zone_lit;
+    bool    m_support_zone_sterile { false };
+    // Opacity of the markers inside the Support Zones gizmo.
+    float   m_support_zone_marker_alpha { 0.35f };
+    GLModel m_support_zone_gaps;
+    bool    m_support_zone_show_gaps { false };
+    float   m_support_zone_gap_normal_z { -0.7071f };   // -cos(45 deg)
+    // Grid step of the map, in mm: a viewing preference, not a print setting.
+    float   m_support_zone_gap_step { 1.0f };
 
     class RenderStats
     {
@@ -992,6 +1006,8 @@ public:
 
     unsigned int get_volumes_count() const { return (unsigned int)m_volumes.volumes.size(); }
     const GLVolumeCollection& get_volumes() const { return m_volumes; }
+    // Support Zones: lets the gizmo switch render options of the collection.
+    GLVolumeCollection& get_volumes() { return m_volumes; }
     void reset_volumes();
     ModelInstanceEPrintVolumeState check_volumes_outside_state(ObjectFilamentResults* object_results = nullptr) const;
     void check_volumes_outside_state(GLVolumeCollection& volumes) const { check_volumes_outside_state(volumes, nullptr, false); }
@@ -1407,6 +1423,19 @@ public:
     bool is_overhang_shown() const { return m_slope.is_GlobalUsed(); }
     void show_overhang(bool show) { m_slope.globalUse(show); }
 
+    // Support Zones: settings of the zone maps, driven by the gizmo.
+    void  set_support_zone_marker_alpha(float a) { m_support_zone_marker_alpha = a; }
+    float get_support_zone_marker_alpha() const { return m_support_zone_marker_alpha; }
+    // The threshold comes from the gizmo so that the map and the overhang shading use the same number.
+    void  set_support_zone_gaps(bool on, float max_normal_z, float step_mm) {
+        if (on != m_support_zone_show_gaps || max_normal_z != m_support_zone_gap_normal_z || step_mm != m_support_zone_gap_step) {
+            m_support_zone_show_gaps    = on;
+            m_support_zone_gap_normal_z = max_normal_z;
+            m_support_zone_gap_step     = step_mm;
+            m_support_zone_gaps.reset();
+            _update_support_zones();
+        }
+    }
     bool is_using_slope() const { return m_slope.is_used(); }
     void use_slope(bool use) { m_slope.use(use); }
     void set_slope_normal_angle(float angle_in_deg) { m_slope.set_normal_angle(angle_in_deg); }
@@ -1633,6 +1662,9 @@ private:
     // Load SLA objects and support structures for objects, for which the slaposSliceSupports step has been finished.
   	void _load_sla_shells();
     void _update_sla_shells_outside_state() { check_volumes_outside_state(); }
+    // Support Zones: probes the zones of the plate once and feeds the markers and the sterile-zone warning.
+    void _update_support_zones();
+    void _render_support_zones();
     void _set_warning_notification_if_needed(EWarning warning);
 
     //BBS: add partplate print volume get function

@@ -29,6 +29,7 @@
 #include "BoundingBox.hpp"
 #include "ClipperUtils.hpp"
 #include "ElephantFootCompensation.hpp"
+#include "Feature/SupportZones/SupportZoneProbe.hpp"
 #include "ExPolygon.hpp"
 #include "Exception.hpp"
 #include "Flow.hpp"
@@ -6814,6 +6815,125 @@ std::vector<Polygons> PrintObject::slice_support_volumes(const ModelVolumeType m
         }
     }
     return slices;
+}
+
+// Support Zones (ported from OrcaFS-NeotkoCM by Neotko, NEOTKO_SUPPORTZONES_TAG s343e).
+std::vector<Polygons> PrintObject::slice_support_cutters() const
+{
+    std::vector<Polygons> out;
+    const ModelObject *mo = this->model_object();
+    if (mo == nullptr || std::none_of(mo->volumes.begin(), mo->volumes.end(),
+                                      [](const ModelVolume *v) { return SupportZones::is_support_cutter(*v); }))
+        return out;
+
+    const std::vector<float> zs = zs_from_layers(this->layers());
+    const Print *print = this->print();
+    auto throw_on_cancel_callback = std::function<void()>([print]() { print->throw_if_canceled(); });
+    MeshSlicingParamsEx params;
+    params.trafo = this->trafo_sliced();
+
+    out.assign(zs.size(), Polygons());
+    for (const ModelVolume *v : mo->volumes) {
+        if (! SupportZones::is_support_cutter(*v))
+            continue;
+        std::vector<ExPolygons> sl = slice_volume(*v, zs, params, throw_on_cancel_callback);
+        for (size_t i = 0; i < sl.size() && i < out.size(); ++ i)
+            polygons_append(out[i], to_polygons(std::move(sl[i])));
+    }
+    for (Polygons &p : out)
+        if (! p.empty())
+            p = union_(p);
+    return out;
+}
+
+// Support Zones (ported from OrcaFS-NeotkoCM by Neotko, NEOTKO_SUPPORTZONES_TAG s286c F4).
+const std::vector<Polygons>* PrintObject::support_family_areas_at(float print_z) const
+{
+    const SupportFamilyAreas &fa = m_support_family_areas;
+    if (fa.trivial() || fa.areas.empty() || fa.layer_print_z.size() != fa.areas.size())
+        return nullptr;
+    auto it = std::lower_bound(fa.layer_print_z.begin(), fa.layer_print_z.end(), print_z - float(EPSILON));
+    if (it == fa.layer_print_z.end())
+        it = std::prev(fa.layer_print_z.end());
+    return &fa.areas[size_t(it - fa.layer_print_z.begin())];
+}
+
+// Support Zones (ported from OrcaFS-NeotkoCM by Neotko, NEOTKO_SUPPORTZONES_TAG s286, s299, s300g).
+// The same slicing as slice_support_volumes(), one stream per zone volume and no union across them.
+std::vector<SupportZoneSlices> PrintObject::slice_support_zones() const
+{
+    std::vector<SupportZoneSlices> zones;
+    const ModelObject *mo = this->model_object();
+    if (mo == nullptr || std::none_of(mo->volumes.begin(), mo->volumes.end(),
+                                      [](const ModelVolume *v) { return SupportZones::is_support_zone(*v); }))
+        return zones;
+
+    const std::vector<float> zs = zs_from_layers(this->layers());
+    const Print *print = this->print();
+    auto throw_on_cancel_callback = std::function<void()>([print]() { print->throw_if_canceled(); });
+    MeshSlicingParamsEx params;
+    params.trafo = this->trafo_sliced();
+
+    auto centroid_of = [](const Polygons &polys) -> Vec2d {
+        double area_total = 0.;
+        Vec2d  acc        = Vec2d::Zero();
+        for (const Polygon &poly : polys) {
+            if (poly.size() < 3)
+                continue;
+            const double a = std::abs(poly.area());
+            if (a <= 0.)
+                continue;
+            const Point c = poly.centroid();
+            acc        += Vec2d(double(c.x()), double(c.y())) * a;
+            area_total += a;
+        }
+        return (area_total > 0.) ? Vec2d(acc / area_total) : Vec2d::Zero();
+    };
+
+    size_t priority = 0;
+    for (const ModelVolume *v : mo->volumes) {
+        if (! SupportZones::is_support_zone(*v))
+            continue;
+        std::vector<ExPolygons> slices2 = slice_volume(*v, zs, params, throw_on_cancel_callback);
+        SupportZoneSlices zone;
+        zone.priority     = priority ++;
+        zone.model_volume = v;
+        if (const auto *o = dynamic_cast<const ConfigOptionBool*>(v->config.option("neotko_zone_solid")); o != nullptr)
+            zone.solid = o->value;
+        if (const auto *o = dynamic_cast<const ConfigOptionBool*>(v->config.option("neotko_zone_land_only")); o != nullptr)
+            zone.land_only = o->value;
+        zone.lean_deg = SupportZones::SUPPORT_ZONE_DEFAULT_LEAN_DEG;
+        if (const auto *o = dynamic_cast<const ConfigOptionFloat*>(v->config.option("neotko_zone_lean_deg")); o != nullptr && o->value > 0.)
+            zone.lean_deg = std::min(o->value, SupportZones::SUPPORT_ZONE_MAX_LEAN_DEG);
+        zone.slices.reserve(zs.size());
+        for (ExPolygons &src : slices2)
+            zone.slices.emplace_back(to_polygons(std::move(src)));
+        zone.slices.resize(zs.size(), Polygons());
+
+        // The roof of the block: what remains of a layer once the layer above, shifted by the lean
+        // of the block between the two, is taken away. On a uniformly leaning stretch that is empty.
+        const size_t n = zone.slices.size();
+        zone.roof_layer.assign(n, char(0));
+        for (size_t i = 0; i < n; ++ i) {
+            if (zone.slices[i].empty())
+                continue;
+            if (i + 1 >= n || zone.slices[i + 1].empty()) {
+                zone.roof_layer[i] = char(1);
+                continue;
+            }
+            const Vec2d d = centroid_of(zone.slices[i]) - centroid_of(zone.slices[i + 1]);
+            Polygons above = zone.slices[i + 1];
+            const Point shift(coord_t(std::lround(d.x())), coord_t(std::lround(d.y())));
+            for (Polygon &p : above)
+                p.translate(shift);
+            const Polygons band    = diff(zone.slices[i], above);
+            const double   a_layer = std::abs(area(zone.slices[i]));
+            if (! band.empty() && a_layer > 0. && std::abs(area(band)) > 0.02 * a_layer)
+                zone.roof_layer[i] = char(1);
+        }
+        zones.emplace_back(std::move(zone));
+    }
+    return zones;
 }
 
 std::vector<ExPolygons> PrintObject::slice_single_volume_regions(const ModelVolume* volume) const

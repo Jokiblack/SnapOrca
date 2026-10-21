@@ -631,6 +631,13 @@ protected:
         const ExtrusionEntityCollection  *support;
         // erSupportMaterial / erSupportMaterialInterface / erSupportTransition or erMixed.
         ExtrusionRole                     support_extrusion_role;
+        // Support Zones (ported from OrcaFS-NeotkoCM by Neotko, s286c F4): on a layer split between zone
+        // families (support_families, parallel to support->entities), the families this bucket prints
+        // as body and as interface. Two lists, because two families may share the extruder of one
+        // role and differ in the other. Null: the usual path, driven by support_extrusion_role.
+        const std::vector<int>           *support_families { nullptr };
+        std::vector<int>                  support_family_base;
+        std::vector<int>                  support_family_intf;
 
         struct Island
         {
@@ -688,9 +695,13 @@ protected:
 
     std::string     extrude_perimeters(const Print& print, const std::vector<ObjectByExtruder::Island::Region>& by_region, bool is_first_layer, bool is_infill_first, bool unsupported_loops_only = false);
     std::string     extrude_infill(const Print& print, const std::vector<ObjectByExtruder::Island::Region>& by_region, bool ironing);
-    std::string     extrude_support(const ExtrusionEntityCollection& support_fills, const ExtrusionRole support_extrusion_role);
+    // families / want_families (Support Zones): print only the entities whose family is listed.
+    std::string     extrude_support(const ExtrusionEntityCollection& support_fills, const ExtrusionRole support_extrusion_role,
+                                    const std::vector<int> *families = nullptr, const std::vector<int> *want_families = nullptr);
+    // The support of one bucket, ironing last; on a layer split between zone families, family by family.
+    std::string     extrude_support_of(const ObjectByExtruder &object_by_extruder, ExtrusionRole support_extrusion_role);
     // Surface Sandwich passes (ported from OrcaFS-NeotkoCM by Neotko) of an object layer, in printing order and with the
-    // current tool. The tool of each pass, and with it the tool changes and the wipe tower, is left to the tool ordering.
+    // current tool: the passes never change tool.
     std::string     extrude_sandwich_passes(const PrintObject& object, const Layer& layer);
 
     // Farthest-point timelapse: find the extrusion point farthest from camera (0,0)

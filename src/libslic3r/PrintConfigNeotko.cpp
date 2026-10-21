@@ -87,8 +87,9 @@ void PrintConfigDef::init_neotko_params()
 
     def = this->add("expert_gcode_reprocessor_rules", coString);
     def->label = L("Expert G-code Reprocessor rules");
-    def->tooltip = L("Internal JSON list of the Expert G-code Reprocessor rules. Edited from its panel in the "
-                     "preview; not meant to be edited directly.");
+    // TRN "Edit > Expert G-code Reprocessor..." is the menu path of the rules editor; translate it as the menu shows it.
+    def->tooltip = L("Internal JSON list of the Expert G-code Reprocessor rules. Edited from Edit > "
+                     "Expert G-code Reprocessor...; not meant to be edited directly.");
     def->mode = comDevelop;
     def->set_default_value(new ConfigOptionString(""));
 

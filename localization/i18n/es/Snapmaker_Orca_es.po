@@ -39248,8 +39248,8 @@ msgid "Expert G-code Reprocessor rules"
 msgstr "Reglas del reprocesador experto de G-code"
 
 # AI Translated
-msgid "Internal JSON list of the Expert G-code Reprocessor rules. Edited from its panel in the preview; not meant to be edited directly."
-msgstr "Lista JSON interna con las reglas del reprocesador experto de G-code. Se edita desde su panel en la vista previa; no está pensada para editarse a mano."
+msgid "Internal JSON list of the Expert G-code Reprocessor rules. Edited from Edit > Expert G-code Reprocessor...; not meant to be edited directly."
+msgstr "Lista JSON interna con las reglas del reprocesador experto de G-code. Se edita desde Edición > Reprocesador experto de G-code...; no está pensada para editarse a mano."
 
 # AI Translated
 msgid "Expert G-code Reprocessor"
@@ -39476,6 +39476,962 @@ msgstr "Zona de soporte: apoyar solo al final"
 # AI Translated
 msgid "Support cut"
 msgstr "Corte de soporte"
+
+# AI Translated
+msgid "Support Zones"
+msgstr "Zonas de soporte"
+
+# AI Translated
+msgid "Unlock support zone"
+msgstr "Desbloquear la zona de soporte"
+
+# AI Translated
+msgid "Duplicate support zone"
+msgstr "Duplicar la zona de soporte"
+
+# AI Translated
+msgid "Edit support zone"
+msgstr "Editar la zona de soporte"
+
+# AI Translated
+msgid "Add support cut"
+msgstr "Añadir corte de soporte"
+
+# AI Translated
+msgid "Nothing to merge: you need two cuts or more."
+msgstr "Nada que unir: hacen falta dos cortes o más."
+
+# AI Translated
+msgid "Could not merge the cuts (the meshes did not combine). They still work separately."
+msgstr "No se han podido unir los cortes (las mallas no se combinaron). Siguen funcionando por separado."
+
+# AI Translated
+msgid "Merge support cuts"
+msgstr "Unir los cortes de soporte"
+
+# AI Translated
+msgid "cuts merged into one."
+msgstr "cortes unidos en uno."
+
+# AI Translated
+msgid "%1% cut merged into one."
+msgid_plural "%1% cuts merged into one."
+msgstr[0] "%1% corte unido en uno."
+msgstr[1] "%1% cortes unidos en uno."
+
+# AI Translated
+msgid "Cuts applied to %1% zone."
+msgid_plural "Cuts applied to %1% zones."
+msgstr[0] "Cortes aplicados a %1% zona."
+msgstr[1] "Cortes aplicados a %1% zonas."
+
+# AI Translated
+msgid "%1% zone"
+msgid_plural "%1% zones"
+msgstr[0] "%1% zona"
+msgstr[1] "%1% zonas"
+
+# AI Translated
+msgid "%1% sterile"
+msgid_plural "%1% sterile"
+msgstr[0] "%1% estéril"
+msgstr[1] "%1% estériles"
+
+# AI Translated
+msgid ""
+"Puts the camera under the part, where the surfaces\n"
+"that need holding face you. Same as the Bottom view."
+msgstr ""
+"Pone la cámara bajo la pieza, donde las superficies\n"
+"que hay que sostener quedan de frente. Igual que la vista inferior."
+
+# AI Translated
+msgid ""
+"Draw a polygon on screen: click to add points,\n"
+"click the first point again to close it.\n"
+"All support behind it, in the direction you are looking,\n"
+"is not printed, even a column coming from above.\n"
+"\n"
+"Turn the view first: the cut goes through the whole part.\n"
+"Right click cancels the polygon. Dragging turns the view\n"
+"and throws away the points drawn so far."
+msgstr ""
+"Dibuja un polígono en pantalla: haz clic para añadir puntos,\n"
+"vuelve a hacer clic en el primer punto para cerrarlo.\n"
+"Todo el soporte que quede detrás, en la dirección en la que miras,\n"
+"no se imprime, ni siquiera una columna que venga de arriba.\n"
+"\n"
+"Gira la vista primero: el corte atraviesa toda la pieza.\n"
+"Clic derecho cancela el polígono. Arrastrar gira la vista\n"
+"y descarta los puntos dibujados hasta ahora."
+
+# AI Translated
+msgid ""
+"Everything you painted sits at stump height or below,\n"
+"so there is no stretch for the column to grow through.\n"
+"It prints as a plain block and the stumps do nothing."
+msgstr ""
+"Todo lo que has pintado está a la altura de los tocones o por debajo,\n"
+"así que no hay tramo por el que pueda crecer la columna.\n"
+"Se imprime como un bloque simple y los tocones no hacen nada."
+
+# AI Translated
+msgid "cuts on this object: %1%"
+msgstr "cortes en este objeto: %1%"
+
+# AI Translated
+msgid ""
+"Takes the cuts out of every support zone of this object\n"
+"and then deletes the cuts.\n"
+"\n"
+"Afterwards: the zones can no longer be reopened to edit,\n"
+"automatic support is not cut any more, and a guided column\n"
+"that comes in from the side can pass there again."
+msgstr ""
+"Resta los cortes de todas las zonas de soporte de este objeto\n"
+"y después borra los cortes.\n"
+"\n"
+"Después: las zonas ya no se pueden volver a abrir para editarlas,\n"
+"el soporte automático ya no se corta, y una columna guiada\n"
+"que llega de lado puede volver a pasar por ahí."
+
+# AI Translated
+msgid "Editing zone #%1%"
+msgstr "Editando la zona #%1%"
+
+# AI Translated
+msgid "3 · Stumps (%1%)"
+msgstr "3 · Tocones (%1%)"
+
+# AI Translated
+msgid "Recommended up to %1% deg  ·  at this layer height a support line is %2% mm wide"
+msgstr "Recomendado hasta %1% grados  ·  con esta altura de capa una línea de soporte mide %2% mm de ancho"
+
+# AI Translated
+msgid "Knee at z = %1% mm  ·  then drops %2% mm"
+msgstr "Codo en z = %1% mm  ·  y luego baja %2% mm"
+
+# AI Translated
+msgid "%1% mm of a reach of %2% mm"
+msgstr "%1% mm de un alcance de %2% mm"
+
+# AI Translated
+msgid ""
+"On: the brush only marks surface that leans past the overhang angle.\n"
+"Walls and the top side it sweeps over are left out,\n"
+"so painting along an edge no longer drags the box up.\n"
+"\n"
+"The angle is the one of 'Highlight overhangs'.\n"
+"Turn that on and move 'overhangs' to grab more or less:\n"
+"what you painted is redone live."
+msgstr ""
+"Activado: el pincel solo marca la superficie que se inclina más que el ángulo de voladizo.\n"
+"Las paredes y la cara superior por las que pasa quedan fuera,\n"
+"así que pintar a lo largo de un borde ya no arrastra la caja hacia arriba.\n"
+"\n"
+"El ángulo es el de 'Resaltar las zonas de voladizos'.\n"
+"Actívalo y mueve 'voladizos' para coger más o menos:\n"
+"lo que has pintado se rehace en directo."
+
+# AI Translated
+msgid "1  (plumb, under the area)"
+msgstr "1  (a plomo, bajo la zona)"
+
+# AI Translated
+msgid "Recommended up to %1% deg for this layer height and a support line of %2% mm wide."
+msgstr "Recomendado hasta %1% grados para esta altura de capa y una línea de soporte de %2% mm de ancho."
+
+# AI Translated
+msgid "Lands on the part  z = %1%"
+msgstr "Se apoya en la pieza  z = %1%"
+
+# AI Translated
+msgid "Surface picked:  z = %1% mm"
+msgstr "Superficie elegida:  z = %1% mm"
+
+# AI Translated
+msgid "There are no cuts to apply."
+msgstr "No hay cortes que aplicar."
+
+# AI Translated
+msgid "Could not subtract the cuts (the meshes did not combine). Nothing was changed."
+msgstr "No se han podido restar los cortes (las mallas no se combinaron). No se ha cambiado nada."
+
+# AI Translated
+msgid "There are no zones to subtract the cuts from."
+msgstr "No hay zonas de las que restar los cortes."
+
+# AI Translated
+msgid "Apply support cuts to zones"
+msgstr "Aplicar los cortes de soporte a las zonas"
+
+# AI Translated
+msgid "Cuts applied to zones:"
+msgstr "Cortes aplicados a las zonas:"
+
+# AI Translated
+msgid "Add support zone"
+msgstr "Añadir zona de soporte"
+
+# AI Translated
+msgid "Support zone"
+msgstr "Zona de soporte"
+
+# AI Translated
+msgid "Support zones: support style set to Snug"
+msgstr "Zonas de soporte: estilo de soporte cambiado a Ajustado"
+
+# AI Translated
+msgid "overhangs"
+msgstr "voladizos"
+
+# AI Translated
+msgid "map detail"
+msgstr "detalle del mapa"
+
+# AI Translated
+msgid "ghost"
+msgstr "fantasma"
+
+# AI Translated
+msgid "grid marks"
+msgstr "marcas de rejilla"
+
+# AI Translated
+msgid "across"
+msgstr "diámetro"
+
+# AI Translated
+msgid "side"
+msgstr "lado"
+
+# AI Translated
+msgid "edge · patch"
+msgstr "borde · parche"
+
+# AI Translated
+msgid "edge · foot"
+msgstr "borde · pie"
+
+# AI Translated
+msgid "lean"
+msgstr "inclinación"
+
+# AI Translated
+msgid "footprint"
+msgstr "huella"
+
+# AI Translated
+msgid "Pick the surface, then where it lands."
+msgstr "Elige la superficie y luego dónde se apoya."
+
+# AI Translated
+msgid "Now click where it lands."
+msgstr "Ahora haz clic donde se apoya."
+
+# AI Translated
+msgid "Duplicate"
+msgstr "Duplicar"
+
+# AI Translated
+msgid "Edit this zone: the two clicks that built it are loaded back into the panel. It can be edited because it is locked."
+msgstr "Editar esta zona: los dos clics que la crearon se vuelven a cargar en el panel. Se puede editar porque está bloqueada."
+
+# AI Translated
+msgid "Unlock this zone: it stops being editable from here and becomes an ordinary mesh. There is no way back, but making another one is cheap."
+msgstr "Desbloquear esta zona: deja de poder editarse desde aquí y pasa a ser una malla normal. No hay vuelta atrás, pero crear otra cuesta poco."
+
+# AI Translated
+msgid "catches nothing"
+msgstr "no coge nada"
+
+# AI Translated
+msgid "Downward-facing surface samples found inside this block. One column of the grid can cross more than one surface, so this is a count and not a percentage."
+msgstr "Muestras de superficie orientada hacia abajo encontradas dentro de este bloque. Una columna de la rejilla puede cruzar más de una superficie, así que es un recuento y no un porcentaje."
+
+# AI Translated
+msgid "The number is the priority: when two zones overlap, the lower one keeps the shared area."
+msgstr "El número es la prioridad: cuando dos zonas se solapan, la de número menor se queda el área compartida."
+
+# AI Translated
+msgid "Built by this gizmo and untouched since, so the two clicks that made it are still on record."
+msgstr "Creada con esta herramienta y sin tocar desde entonces, así que los dos clics que la crearon siguen guardados."
+
+# AI Translated
+msgid "This zone was built here, but it has been moved, rotated or scaled since, so it is now an ordinary mesh."
+msgstr "Esta zona se creó aquí, pero desde entonces se ha movido, girado o escalado, así que ahora es una malla normal."
+
+# AI Translated
+msgid "An ordinary support enforcer volume: it was not built by this gizmo."
+msgstr "Un volumen de forzado de soportes normal: no se creó con esta herramienta."
+
+# AI Translated
+msgid "Roof filament"
+msgstr "Filamento del techo"
+
+# AI Translated
+msgid "Only the roof of the zone takes its own filament: it is the part that touches the model. The body is left as the object has it, which also lets the slicer dump its purge in there instead of growing the wipe tower."
+msgstr "Solo el techo de la zona lleva su propio filamento: es la parte que toca el modelo. El cuerpo se queda como lo tiene el objeto, lo que además permite al laminador descargar ahí la purga en lugar de agrandar la torre de purga."
+
+# AI Translated
+msgid "Same as the object"
+msgstr "Igual que el objeto"
+
+# AI Translated
+msgid "Two tools on the contact layers."
+msgstr "Dos herramientas en las capas de contacto."
+
+# AI Translated
+msgid "The roof and the body of this zone print with different filaments, so every layer that has both needs a tool change. That purge goes to the wipe tower."
+msgstr "El techo y el cuerpo de esta zona se imprimen con filamentos distintos, así que cada capa que tiene los dos necesita un cambio de herramienta. Esa purga va a la torre de purga."
+
+# AI Translated
+msgid "Zones that touch and share their settings are printed as one column. Giving this one its own filament separates it from its neighbours, so the shape may change where they used to meet."
+msgstr "Las zonas que se tocan y comparten ajustes se imprimen como una sola columna. Darle a esta su propio filamento la separa de sus vecinas, así que la forma puede cambiar donde se juntaban."
+
+# AI Translated
+msgid "Support zone material"
+msgstr "Material de la zona de soporte"
+
+# AI Translated
+msgid "Show what still needs holding"
+msgstr "Mostrar lo que aún hay que sostener"
+
+# AI Translated
+msgid "Red marks surface that leans past the threshold and sits inside no zone: it might need support and nothing is holding it. Green is already caught by a zone."
+msgstr "El rojo marca la superficie que se inclina más que el umbral y no está dentro de ninguna zona: puede que necesite soporte y nada la sostiene. El verde ya lo coge una zona."
+
+# AI Translated
+msgid "View from below"
+msgstr "Ver desde abajo"
+
+# AI Translated
+msgid "Puts the camera under the part, where the surfaces"
+msgstr "Pone la cámara bajo la pieza, donde las superficies"
+
+# AI Translated
+msgid "that need holding face you. Same as the Bottom view."
+msgstr "que hay que sostener quedan de frente. Igual que la vista inferior."
+
+# AI Translated
+msgid "Cut supports"
+msgstr "Cortar soportes"
+
+# AI Translated
+msgid "Draw a polygon on screen: click to add points,"
+msgstr "Dibuja un polígono en pantalla: haz clic para añadir puntos,"
+
+# AI Translated
+msgid "click the first point again to close it."
+msgstr "vuelve a hacer clic en el primer punto para cerrarlo."
+
+# AI Translated
+msgid "All support behind it, in the direction you are looking,"
+msgstr "Todo el soporte que quede detrás, en la dirección en la que miras,"
+
+# AI Translated
+msgid "is not printed, even a column coming from above."
+msgstr "no se imprime, ni siquiera una columna que venga de arriba."
+
+# AI Translated
+msgid "Turn the view first: the cut goes through the whole part."
+msgstr "Gira la vista primero: el corte atraviesa toda la pieza."
+
+# AI Translated
+msgid "Right click cancels the polygon. Dragging turns the view"
+msgstr "Clic derecho cancela el polígono. Arrastrar gira la vista"
+
+# AI Translated
+msgid "and throws away the points drawn so far."
+msgstr "y descarta los puntos dibujados hasta ahora."
+
+# AI Translated
+msgid "zones"
+msgstr "zonas"
+
+# AI Translated
+msgid "sterile"
+msgstr "estéril"
+
+# AI Translated
+msgid "section"
+msgstr "sección"
+
+# AI Translated
+msgid "Cut the part away to look inside. It is the same section view the support painter has, so the plane keeps whatever direction you gave it there."
+msgstr "Recorta la pieza para mirar dentro. Es la misma vista de sección que tiene el pintor de soportes, así que el plano conserva la dirección que le diste allí."
+
+# AI Translated
+msgid "How strong the green grid and the red gap map are drawn. They are read through the part, so they do not depend on how ghosted the part is."
+msgstr "Intensidad con la que se dibujan la rejilla verde y el mapa rojo de huecos. Se ven a través de la pieza, así que no dependen de lo transparente que esté."
+
+# AI Translated
+msgid "Support zones: only my zones"
+msgstr "Zonas de soporte: solo mis zonas"
+
+# AI Translated
+msgid "Too narrow to print"
+msgstr "Demasiado estrecho para imprimir"
+
+# AI Translated
+msgid "Too narrow to print: this footprint is thinner than two extrusions and the support would be stripped away on the way down."
+msgstr "Demasiado estrecho para imprimir: esta huella es más fina que dos extrusiones y el soporte se eliminaría al bajar."
+
+# AI Translated
+msgid "It goes through the part"
+msgstr "Atraviesa la pieza"
+
+# AI Translated
+msgid "It goes through the part: this pillar would be printed inside the model and weld to it."
+msgstr "Atraviesa la pieza: este pilar se imprimiría dentro del modelo y quedaría soldado a él."
+
+# AI Translated
+msgid "The foot hangs off the plate"
+msgstr "El pie se sale de la placa"
+
+# AI Translated
+msgid "The foot hangs off the plate: part of this footprint is outside the printable area and would be cut away."
+msgstr "El pie se sale de la placa: parte de esta huella está fuera del área imprimible y se recortaría."
+
+# AI Translated
+msgid "Support style is not Snug"
+msgstr "El estilo de soporte no es Ajustado"
+
+# AI Translated
+msgid "Support style is not Snug: the support grid re-aligns to every layer, so this lean will come out as steps instead of a slide."
+msgstr "El estilo de soporte no es Ajustado: la rejilla del soporte se realinea en cada capa, así que esta inclinación saldrá a escalones en lugar de deslizar."
+
+# AI Translated
+msgid "Support style set to Snug for this object."
+msgstr "Estilo de soporte cambiado a Ajustado en este objeto."
+
+# AI Translated
+msgid "Support style set to Snug for this object, so a leaning column slides instead of stepping. It is an object setting: undo it, or remove it from the object list."
+msgstr "Estilo de soporte cambiado a Ajustado en este objeto, para que una columna inclinada deslice en lugar de ir a escalones. Es un ajuste del objeto: deshazlo o quítalo desde la lista de objetos."
+
+# AI Translated
+msgid "Not a tree: stumps unused"
+msgstr "No es un árbol: tocones sin usar"
+
+# AI Translated
+msgid "Everything you painted sits at stump height or below,"
+msgstr "Todo lo que has pintado está a la altura de los tocones o por debajo,"
+
+# AI Translated
+msgid "so there is no stretch for the column to grow through."
+msgstr "así que no hay tramo por el que pueda crecer la columna."
+
+# AI Translated
+msgid "It prints as a plain block and the stumps do nothing."
+msgstr "Se imprime como un bloque simple y los tocones no hacen nada."
+
+# AI Translated
+msgid "Paint a surface higher up, or lower the stump."
+msgstr "Pinta una superficie más alta o baja el tocón."
+
+# AI Translated
+msgid "A stump is too far for this lean"
+msgstr "Un tocón queda demasiado lejos para esta inclinación"
+
+# AI Translated
+msgid "A stump is too far for this lean: the column cannot walk that far sideways in the height it has, so that root would be left behind. Steepen the lean, move the stump closer, or plant one nearer the area. The log names the layer and the island if it happens."
+msgstr "Un tocón queda demasiado lejos para esta inclinación: la columna no puede desplazarse tanto de lado en la altura que tiene, así que esa raíz se quedaría atrás. Aumenta la inclinación, acerca el tocón o planta uno más cerca de la zona. Si ocurre, el registro indica la capa y la isla."
+
+# AI Translated
+msgid "Too far for this lean"
+msgstr "Demasiado lejos para esta inclinación"
+
+# AI Translated
+msgid "Too far for this lean: the knee would come out below the bed. Steepen the lean, or bring the foot closer."
+msgstr "Demasiado lejos para esta inclinación: el codo quedaría por debajo de la cama. Aumenta la inclinación o acerca el pie."
+
+# AI Translated
+msgid "Bring it into reach"
+msgstr "Ponerlo a su alcance"
+
+# AI Translated
+msgid "Support type is Tree"
+msgstr "El tipo de soporte es Árbol"
+
+# AI Translated
+msgid "The tree generator does not know about the corridor, so the lean and the knee you draw here would not come out. Creating the pillar switches this object to Normal, keeping whether it was auto or manual. It is an object setting: undo it, or remove it from the object list."
+msgstr "El generador de árbol no conoce el corredor, así que la inclinación y el codo que dibujas aquí no saldrían. Al crear el pilar este objeto pasa a Normal, conservando si era automático o manual. Es un ajuste del objeto: deshazlo o quítalo desde la lista de objetos."
+
+# AI Translated
+msgid "Automatic support is also on"
+msgstr "El soporte automático también está activado"
+
+# AI Translated
+msgid "Automatic support is also on: besides your zones, the slicer supports everything else it thinks needs holding, which is where the support you did not draw comes from. Turning it off leaves only what you painted."
+msgstr "El soporte automático también está activado: además de tus zonas, el laminador soporta todo lo demás que cree que hay que sostener, y de ahí sale el soporte que no has dibujado. Al desactivarlo queda solo lo que has pintado."
+
+# AI Translated
+msgid "Only my zones"
+msgstr "Solo mis zonas"
+
+# AI Translated
+msgid "Nothing to build there"
+msgstr "No hay nada que construir ahí"
+
+# AI Translated
+msgid "Nothing to build there: the landing is level with the surface, the footprint has been pulled in to nothing, or this lean cannot reach that far before hitting the bed."
+msgstr "No hay nada que construir ahí: el apoyo está a la altura de la superficie, la huella se ha encogido hasta desaparecer o esta inclinación no llega tan lejos antes de tocar la cama."
+
+# AI Translated
+msgid "cuts on this object"
+msgstr "cortes en este objeto"
+
+# AI Translated
+msgid "remove last cut"
+msgstr "quitar el último corte"
+
+# AI Translated
+msgid "merge cuts"
+msgstr "unir cortes"
+
+# AI Translated
+msgid "Joins every cut of this object into a single one."
+msgstr "Une todos los cortes de este objeto en uno solo."
+
+# AI Translated
+msgid "It cuts exactly the same; the list just gets shorter."
+msgstr "Corta exactamente igual; solo se acorta la lista."
+
+# AI Translated
+msgid "apply to zones"
+msgstr "aplicar a las zonas"
+
+# AI Translated
+msgid "Takes the cuts out of every support zone of this object"
+msgstr "Resta los cortes de todas las zonas de soporte de este objeto"
+
+# AI Translated
+msgid "and then deletes the cuts."
+msgstr "y después borra los cortes."
+
+# AI Translated
+msgid "Afterwards: the zones can no longer be reopened to edit,"
+msgstr "Después: las zonas ya no se pueden volver a abrir para editarlas,"
+
+# AI Translated
+msgid "automatic support is not cut any more, and a guided column"
+msgstr "el soporte automático ya no se corta, y una columna guiada"
+
+# AI Translated
+msgid "that comes in from the side can pass there again."
+msgstr "que llega de lado puede volver a pasar por ahí."
+
+# AI Translated
+msgid "Undo brings everything back."
+msgstr "Deshacer lo recupera todo."
+
+# AI Translated
+msgid "Cuts do not apply to tree supports"
+msgstr "Los cortes no se aplican a los soportes de árbol"
+
+# AI Translated
+msgid "The cut is taken out of normal and snug supports."
+msgstr "El corte se resta de los soportes normales y ajustados."
+
+# AI Translated
+msgid "Tree supports are built another way and ignore it."
+msgstr "Los soportes de árbol se construyen de otra forma y lo ignoran."
+
+# AI Translated
+msgid "Zones on this object"
+msgstr "Zonas de este objeto"
+
+# AI Translated
+msgid "only my zones"
+msgstr "solo mis zonas"
+
+# AI Translated
+msgid "Only the zones you drew get support. The automatic overhang detection is turned off for this object."
+msgstr "Solo las zonas que has dibujado llevan soporte. La detección automática de voladizos está desactivada para este objeto."
+
+# AI Translated
+msgid "With it off, the slicer also supports everything else it thinks needs holding, and your zones are added on top."
+msgstr "Desactivado, el laminador también soporta todo lo demás que cree que hay que sostener, y tus zonas se añaden encima."
+
+# AI Translated
+msgid "No support zones yet. A zone is a support enforcer volume: add one from the object list, or pick a surface below."
+msgstr "Todavía no hay zonas de soporte. Una zona es un volumen de forzado de soportes: añade uno desde la lista de objetos o elige una superficie abajo."
+
+# AI Translated
+msgid "Editing a zone"
+msgstr "Editando una zona"
+
+# AI Translated
+msgid "Build a pillar"
+msgstr "Construir un pilar"
+
+# AI Translated
+msgid "Editing zone"
+msgstr "Editando la zona"
+
+# AI Translated
+msgid "The controls below are editing this zone. Nothing is written until you apply, so leaving discards the changes."
+msgstr "Los controles de abajo están editando esta zona. No se guarda nada hasta que aplicas, así que al salir se descartan los cambios."
+
+# AI Translated
+msgid "Leave"
+msgstr "Salir"
+
+# AI Translated
+msgid "That surface is not there any more"
+msgstr "Esa superficie ya no existe"
+
+# AI Translated
+msgid "The zone remembers the point and the normal of the surface it was built against, and neither matches the mesh now. The mesh was repaired, simplified or replaced. The zone is still printed as it is; it just cannot be edited from the gesture any more."
+msgstr "La zona recuerda el punto y la normal de la superficie contra la que se creó, y ninguno coincide ya con la malla. La malla se ha reparado, simplificado o sustituido. La zona se sigue imprimiendo tal cual; solo que ya no se puede editar desde el gesto."
+
+# AI Translated
+msgid "1 · Surface"
+msgstr "1 · Superficie"
+
+# AI Translated
+msgid "1 · Surface to hold up"
+msgstr "1 · Superficie que sostener"
+
+# AI Translated
+msgid "Only surfaces that look downward can be picked, so the top of the part is never taken by mistake."
+msgstr "Solo se pueden elegir superficies orientadas hacia abajo, así que la parte de arriba de la pieza nunca se coge por error."
+
+# AI Translated
+msgid "Several surfaces are stacked here. Use the wheel to go through them."
+msgstr "Aquí hay varias superficies apiladas. Usa la rueda para recorrerlas."
+
+# AI Translated
+msgid "2 · Landing"
+msgstr "2 · Apoyo"
+
+# AI Translated
+msgid "While you are editing a zone the landing spot stays where it was. To move it, make a new zone: the two clicks are cheap."
+msgstr "Mientras editas una zona, el punto de apoyo se queda donde estaba. Para moverlo, crea una zona nueva: los dos clics cuestan poco."
+
+# AI Translated
+msgid "2 · Where it lands"
+msgstr "2 · Dónde se apoya"
+
+# AI Translated
+msgid "Click the bed, or a surface of the part below the one you picked."
+msgstr "Haz clic en la cama, o en una superficie de la pieza por debajo de la que elegiste."
+
+# AI Translated
+msgid "3 · Stumps"
+msgstr "3 · Tocones"
+
+# AI Translated
+msgid "3 · Plant the stumps"
+msgstr "3 · Planta los tocones"
+
+# AI Translated
+msgid "One is enough almost always: the first one is planted for you, plumb under what you painted."
+msgstr "Casi siempre basta con uno: el primero se planta solo, a plomo bajo lo que has pintado."
+
+# AI Translated
+msgid "Plant another only when the tray below says a root does not reach - a long or forked area needs a foot at each end, or the column would lean further than the angle allows."
+msgstr "Planta otro solo cuando la bandeja de abajo diga que una raíz no llega: una zona larga o con ramas necesita un pie en cada extremo, o la columna se inclinaría más de lo que permite el ángulo."
+
+# AI Translated
+msgid "Click the bed, or a shelf of the part, to plant one. Click a stump again to pull it out."
+msgstr "Haz clic en la cama, o en un saliente de la pieza, para plantar uno. Vuelve a hacer clic en un tocón para quitarlo."
+
+# AI Translated
+msgid "The column is born from the whole painted area and splits on the way down, each piece heading for its nearest stump."
+msgstr "La columna nace de toda la zona pintada y se reparte al bajar: cada trozo va hacia su tocón más cercano."
+
+# AI Translated
+msgid "Nothing under the cursor."
+msgstr "No hay nada bajo el cursor."
+
+# AI Translated
+msgid "Past the threshold: the slicer already treats this as an overhang."
+msgstr "Pasa el umbral: el laminador ya lo trata como un voladizo."
+
+# AI Translated
+msgid "Under the threshold: the slicer would not support this on its own. You can still pick it."
+msgstr "Bajo el umbral: el laminador no lo soportaría por sí solo. Aun así puedes elegirlo."
+
+# AI Translated
+msgid "Above 60 deg: only at low speed."
+msgstr "Por encima de 60°: solo a baja velocidad."
+
+# AI Translated
+msgid "Above 50 deg: needs enough width and top gap."
+msgstr "Por encima de 50°: necesita anchura y separación superior suficientes."
+
+# AI Translated
+msgid "Safe range."
+msgstr "Rango seguro."
+
+# AI Translated
+msgid "Recommended up to"
+msgstr "Recomendado hasta"
+
+# AI Translated
+msgid "at this layer height a support line is"
+msgstr "con esta altura de capa una línea de soporte mide"
+
+# AI Translated
+msgid "wide"
+msgstr "de ancho"
+
+# AI Translated
+msgid "LEAN"
+msgstr "INCLINACIÓN"
+
+# AI Translated
+msgid "STUMPS"
+msgstr "TOCONES"
+
+# AI Translated
+msgid "No knee here: the stretch between the area and the stumps is not drawn, it grows."
+msgstr "Aquí no hay codo: el tramo entre la zona y los tocones no se dibuja, crece solo."
+
+# AI Translated
+msgid "The column is born from the whole painted area and contracts toward the nearest stump as it descends, spending at most one lean-step per layer."
+msgstr "La columna nace de toda la zona pintada y se contrae hacia el tocón más cercano al bajar, gastando como mucho un paso de inclinación por capa."
+
+# AI Translated
+msgid "KNEE"
+msgstr "CODO"
+
+# AI Translated
+msgid "Straight down, no knee."
+msgstr "Recto hacia abajo, sin codo."
+
+# AI Translated
+msgid "Knee at z ="
+msgstr "Codo en z ="
+
+# AI Translated
+msgid "then drops"
+msgstr "y luego baja"
+
+# AI Translated
+msgid "The lean reaches all the way down: no drop left."
+msgstr "La inclinación llega hasta abajo: no queda tramo recto."
+
+# AI Translated
+msgid "REACH"
+msgstr "ALCANCE"
+
+# AI Translated
+msgid "of a reach of"
+msgstr "de un alcance de"
+
+# AI Translated
+msgid "Round"
+msgstr "Redondo"
+
+# AI Translated
+msgid "Whole patch"
+msgstr "Parche entero"
+
+# AI Translated
+msgid "Cut around the point you picked. The roof still follows the surface, so it stays flush on a curve."
+msgstr "Recorta alrededor del punto elegido. El techo sigue la superficie, así que queda a ras sobre una curva."
+
+# AI Translated
+msgid "Drag on the surface to mark the area you want held up. Shift-drag rubs it out. The mark is the size of the brush, so a small brush draws a narrow strip."
+msgstr "Arrastra sobre la superficie para marcar la zona que quieres sostener. Con Mayús y arrastrando se borra. La marca tiene el tamaño del pincel, así que un pincel pequeño dibuja una franja estrecha."
+
+# AI Translated
+msgid "paint inside"
+msgstr "pintar por dentro"
+
+# AI Translated
+msgid "Off: you paint the surface you can see, and only that one. It is what you want almost always."
+msgstr "Desactivado: pintas la superficie que ves, y solo esa. Es lo que quieres casi siempre."
+
+# AI Translated
+msgid "On: the pick goes through the wall, so you can grab a surface inside a hollow part. Use the section view to see what you are doing."
+msgstr "Activado: la selección atraviesa la pared, así que puedes coger una superficie dentro de una pieza hueca. Usa la vista de sección para ver lo que haces."
+
+# AI Translated
+msgid "overhang only"
+msgstr "solo voladizo"
+
+# AI Translated
+msgid "On: the brush only marks surface that leans past the overhang angle."
+msgstr "Activado: el pincel solo marca la superficie que se inclina más que el ángulo de voladizo."
+
+# AI Translated
+msgid "Walls and the top side it sweeps over are left out,"
+msgstr "Las paredes y la cara superior por las que pasa quedan fuera,"
+
+# AI Translated
+msgid "so painting along an edge no longer drags the box up."
+msgstr "así que pintar a lo largo de un borde ya no arrastra la caja hacia arriba."
+
+# AI Translated
+msgid "The angle is the one of 'Highlight overhangs'."
+msgstr "El ángulo es el de 'Resaltar las zonas de voladizos'."
+
+# AI Translated
+msgid "Turn that on and move 'overhangs' to grab more or less:"
+msgstr "Actívalo y mueve 'voladizos' para coger más o menos:"
+
+# AI Translated
+msgid "what you painted is redone live."
+msgstr "lo que has pintado se rehace en directo."
+
+# AI Translated
+msgid "Off: it marks everything the brush touches."
+msgstr "Desactivado: marca todo lo que toca el pincel."
+
+# AI Translated
+msgid "brush"
+msgstr "pincel"
+
+# AI Translated
+msgid "expand"
+msgstr "ampliar"
+
+# AI Translated
+msgid "area"
+msgstr "zona"
+
+# AI Translated
+msgid "cut"
+msgstr "recortar"
+
+# AI Translated
+msgid "cover"
+msgstr "cubrir"
+
+# AI Translated
+msgid "Cut: the shape is trimmed to the surface you picked, so it can never be bigger than the patch. The roof is the surface itself."
+msgstr "Recortar: la forma se recorta a la superficie elegida, así que nunca puede ser mayor que el parche. El techo es la propia superficie."
+
+# AI Translated
+msgid "Cover: the shape IS the section of the pillar, so it can be bigger than the patch and grow as far as you want. The roof still follows the surface where there is one, and stays flat where there is not. It holds more area than it needs, which is the trade."
+msgstr "Cubrir: la forma ES la sección del pilar, así que puede ser mayor que el parche y crecer cuanto quieras. El techo sigue la superficie donde la hay y queda plano donde no. Sostiene más área de la necesaria: ese es el precio."
+
+# AI Translated
+msgid "marks"
+msgstr "marcas"
+
+# AI Translated
+msgid "drag on the surface"
+msgstr "arrastra sobre la superficie"
+
+# AI Translated
+msgid "clear"
+msgstr "borrar"
+
+# AI Translated
+msgid "stump"
+msgstr "tocón"
+
+# AI Translated
+msgid "How wide each stump is where it stands."
+msgstr "Anchura de cada tocón donde se apoya."
+
+# AI Translated
+msgid "The column narrows down to this on the last few layers, so a stump much smaller than the area you painted starves it. The log says so if it happens."
+msgstr "La columna se estrecha hasta este tamaño en las últimas capas, así que un tocón mucho menor que la zona pintada la deja sin sección. Si ocurre, el registro lo indica."
+
+# AI Translated
+msgid "stumps"
+msgstr "tocones"
+
+# AI Translated
+msgid "none yet"
+msgstr "ninguno todavía"
+
+# AI Translated
+msgid "(plumb, under the area)"
+msgstr "(a plomo, bajo la zona)"
+
+# AI Translated
+msgid "Tapered: wide where it holds, narrow where it stands. Less material, less to break off."
+msgstr "Estrechado: ancho donde sostiene, estrecho donde se apoya. Menos material, menos que arrancar."
+
+# AI Translated
+msgid "Flared: wider at the foot than at the patch. Steadier on the bed, more material."
+msgstr "Acampanado: más ancho en el pie que en el parche. Más estable en la cama, más material."
+
+# AI Translated
+msgid "Same all the way up."
+msgstr "Igual en toda la altura."
+
+# AI Translated
+msgid "Edge exactly as picked."
+msgstr "Borde tal como se eligió."
+
+# AI Translated
+msgid "head"
+msgstr "cabeza"
+
+# AI Translated
+msgid "foot"
+msgstr "pie"
+
+# AI Translated
+msgid "dump geometry"
+msgstr "volcar geometría"
+
+# AI Translated
+msgid "Writes the whole decision chain to the SUPPORTZONES log, plus the solid as an .obj you can open anywhere. No 3mf export needed."
+msgstr "Escribe toda la cadena de decisiones en el registro SUPPORTZONES, más el sólido como un .obj que se abre en cualquier programa. No hace falta exportar un 3mf."
+
+# AI Translated
+msgid "for this layer height and a support line of"
+msgstr "para esta altura de capa y una línea de soporte de"
+
+# AI Translated
+msgid "Lands on the bed"
+msgstr "Se apoya en la cama"
+
+# AI Translated
+msgid "Lands on the part"
+msgstr "Se apoya en la pieza"
+
+# AI Translated
+msgid "Lands on the bed · goes straight down from there"
+msgstr "Se apoya en la cama · baja recto desde ahí"
+
+# AI Translated
+msgid "Lands on the part · stops there"
+msgstr "Se apoya en la pieza · termina ahí"
+
+# AI Translated
+msgid "fixed while editing"
+msgstr "fijo mientras se edita"
+
+# AI Translated
+msgid "Move it again"
+msgstr "Moverlo de nuevo"
+
+# AI Translated
+msgid "Following the cursor. Click to leave it there."
+msgstr "Siguiendo al cursor. Haz clic para dejarlo ahí."
+
+# AI Translated
+msgid "Apply changes"
+msgstr "Aplicar cambios"
+
+# AI Translated
+msgid "Create the pillar"
+msgstr "Crear el pilar"
+
+# AI Translated
+msgid "This pillar goes through the part: move the landing spot to a side where the way down is clear."
+msgstr "Este pilar atraviesa la pieza: mueve el punto de apoyo a un lado donde el camino hacia abajo esté libre."
+
+# AI Translated
+msgid "Surface picked:"
+msgstr "Superficie elegida:"
+
+# AI Translated
+msgid "A support zone contains no downward-facing surface and will not generate any support."
+msgstr "Una zona de soporte no contiene ninguna superficie orientada hacia abajo y no generará soporte."
+
+# AI Translated
+msgid "Support zones: Grid and Default support styles are NOT recommended, they will create print issues. Check the G-code before printing. Snug is the recommended style for painted support zones."
+msgstr "Zonas de soporte: los estilos de soporte Rejilla y Por defecto NO se recomiendan, darán problemas de impresión. Revisa el G-code antes de imprimir. Ajustado es el estilo recomendado para las zonas de soporte pintadas."
 
 # AI Translated
 msgid "Penultimate top layers"
@@ -40318,8 +41274,12 @@ msgid "Experimental features (Neotko)"
 msgstr "Funciones experimentales (Neotko)"
 
 # AI Translated
-msgid "Shows the tools and panels of the features ported from OrcaFS-NeotkoCM. They are experimental. This only shows their interface: a project slices the same whether it is on or off."
-msgstr "Muestra las herramientas y paneles de las funciones portadas de OrcaFS-NeotkoCM, que son experimentales. Solo muestra su interfaz: un proyecto se lamina igual con la opción activada o desactivada."
+msgid ""
+"Shows the experimental features ported from OrcaFS-NeotkoCM: the \"Align & Construct\", \"Height Adaptive Effects\", \"Precision Adaptive Layer Height\" and \"Support Zones\" tools, the Pro Mode of color painting, font kerning in embossed text, Edit > Expert G-code Reprocessor, and the print settings \"Bridging infill extra expansion\", \"Slow down inner walls next to overhangs\", \"Penultimate top layers\", \"Extra walls on segmented regions\" and \"Surface depth of painted regions\", also among the settings that can be added to an object.\n"
+"This only shows or hides their interface: a project slices the same whether it is on or off. Restart the application for the change to take effect."
+msgstr ""
+"Muestra las funciones experimentales portadas de OrcaFS-NeotkoCM: las herramientas \"Alinear y construir\", \"Efectos adaptativos por altura\", \"Altura de capa adaptativa de precisión\" y \"Zonas de soporte\", el modo Pro del pintado de colores, el kerning de fuente en el texto en relieve, Edición > Reprocesador experto de G-code, y los ajustes de impresión \"Expansión extra del relleno de puente\", \"Reducir velocidad de perímetros internos junto a voladizos\", \"Capas penúltimas superiores\", \"Perímetros extra en regiones segmentadas\" y \"Profundidad de superficie de las regiones pintadas\", también entre los ajustes que se pueden añadir a un objeto.\n"
+"Solo muestra u oculta su interfaz: un proyecto se lamina igual con la opción activada o desactivada. Reinicie la aplicación para que el cambio surta efecto."
 
 # AI Translated
 msgid "Precision Adaptive Layer Height"

@@ -453,6 +453,8 @@ private:
     // used by cut gizmo
     std::array<double, 4> m_color_clip_plane;
     bool m_use_color_clip_plane{ false };
+    // Support Zones (ported from OrcaFS-NeotkoCM by Neotko): depth writes of the transparent pass.
+    bool m_transparent_depth_write{ true };
     std::array<ColorRGBA, 2> m_color_clip_plane_colors{ ColorRGBA::RED(), ColorRGBA::BLUE() };
 
     struct Slope
@@ -540,6 +542,12 @@ public:
 
     const std::array<float, 2>& get_z_range() const { return m_z_range; }
     const std::array<double, 4>& get_clipping_plane() const { return m_clipping_plane; }
+
+    // Support Zones: the transparent pass writes depth, so a see-through non-convex part hides
+    // itself and every overlay drawn after it. The Support Zones gizmo switches it off while open
+    // and puts it back when it closes; true is the usual behaviour.
+    void set_transparent_depth_write(bool on) { m_transparent_depth_write = on; }
+    bool get_transparent_depth_write() const { return m_transparent_depth_write; }
 
     void set_use_color_clip_plane(bool use) { m_use_color_clip_plane = use; }
     void set_color_clip_plane(const Vec3d& cp_normal, double offset) {

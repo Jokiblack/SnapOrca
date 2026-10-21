@@ -25,6 +25,7 @@
 #include <boost/algorithm/string.hpp>
 #include <string>
 #include <map>
+#include <set>
 #include <vector>
 #include "libslic3r/PrintConfig.hpp"
 #include <wx/gdicmn.h>
@@ -111,6 +112,19 @@ static bool is_improper_category(const std::string& category, const int filament
     return  category.empty() ||
         (filaments_cnt == 1 && (category == "Extruders" || category == "Wipe options")) ||
         (!is_object_settings && category == "Support material");
+}
+
+// NEOTKO_UI_TAG — the per-object "Add settings" menu lists options by category, not by tab, so the Neotko
+// options would show up there even with the "Experimental features (Neotko)" preference off. Hide them then,
+// except the ones the item already has, so they can still be removed.
+static bool is_hidden_neotko_option(const std::string& opt_key, const t_config_option_keys& item_keys)
+{
+    if (wxGetApp().neotko_features_enabled())
+        return false;
+    static const std::set<std::string> neotko_keys(print_config_def.neotko_option_keys().begin(),
+                                                   print_config_def.neotko_option_keys().end());
+    return neotko_keys.count(opt_key) != 0 &&
+           std::find(item_keys.begin(), item_keys.end(), opt_key) == item_keys.end();
 }
 
 
@@ -461,7 +475,7 @@ static const Selection& get_selection()
 
 //				  category ->		vector 			 ( option	;  label )
 typedef std::map< std::string, std::vector< std::pair<std::string, std::string> > > FullSettingsHierarchy;
-static void get_full_settings_hierarchy(FullSettingsHierarchy& settings_menu, const bool is_part)
+static void get_full_settings_hierarchy(FullSettingsHierarchy& settings_menu, const bool is_part, const t_config_option_keys& item_keys)
 {
     auto options = SettingsFactory::get_options(is_part);
 
@@ -472,7 +486,7 @@ static void get_full_settings_hierarchy(FullSettingsHierarchy& settings_menu, co
     {
         auto const opt = config.def()->get(option);
         auto category = opt->category;
-        if (is_improper_category(category, filaments_cnt, !is_part))
+        if (is_improper_category(category, filaments_cnt, !is_part) || is_hidden_neotko_option(option, item_keys))
             continue;
 
         const std::string& label = !opt->full_label.empty() ? opt->full_label : opt->label;
@@ -490,7 +504,7 @@ static wxMenu* create_settings_popupmenu(wxMenu* parent_menu, const bool is_obje
     wxMenu* menu = new wxMenu;
 
     FullSettingsHierarchy categories;
-    get_full_settings_hierarchy(categories, !is_object_settings);
+    get_full_settings_hierarchy(categories, !is_object_settings, obj_list()->get_item_config(item).keys());
 
     auto get_selected_options_for_category = [categories, item](const wxString& category_name) {
         wxArrayString names;

@@ -1886,8 +1886,14 @@ void PreferencesDialog::create_items()
     g_sizer->Add(item_speed_dial_recents);
 
     auto item_neotko_features = create_item_checkbox(_L("Experimental features (Neotko)"),
-        _L("Shows the tools and panels of the features ported from OrcaFS-NeotkoCM. They are experimental. "
-           "This only shows their interface: a project slices the same whether it is on or off."),
+        _L("Shows the experimental features ported from OrcaFS-NeotkoCM: the \"Align & Construct\", "
+           "\"Height Adaptive Effects\", \"Precision Adaptive Layer Height\" and \"Support Zones\" tools, the Pro Mode "
+           "of color painting, font kerning in embossed text, Edit > Expert G-code Reprocessor, and the print settings "
+           "\"Bridging infill extra expansion\", \"Slow down inner walls next to overhangs\", \"Penultimate top layers\", "
+           "\"Extra walls on segmented regions\" and \"Surface depth of painted regions\", also among the settings "
+           "that can be added to an object.\n"
+           "This only shows or hides their interface: a project slices the same whether it is on or off. "
+           "Restart the application for the change to take effect."),
         "neotko_features", _L("(Requires restart)"));
     g_sizer->Add(item_neotko_features);
 

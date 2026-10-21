@@ -376,6 +376,9 @@ public:
     ExPolygons                  support_islands;
     // Extrusion paths for the support base and for the support interface and contacts.
     ExtrusionEntityCollection   support_fills;
+    // Support Zones: family of every top level entity of support_fills, parallel to it. Empty unless
+    // zones with different filaments split this layer; an entity past its end has no family (-1).
+    std::vector<int>            support_fills_family;
     SupportInnerType            support_type = stInnerNormal;
 
     // for tree supports
