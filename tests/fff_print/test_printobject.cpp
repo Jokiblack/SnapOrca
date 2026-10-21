@@ -778,3 +778,78 @@ TEST_CASE("Bridging infill extra expansion grows only the external bridges", "[P
         CHECK(std::abs(extra.fill[i] - stock.fill[i]) <= 0.01 * stock.fill[i]);
     }
 }
+
+// Penultimate Top Layers, ported from OrcaFS-NeotkoCM by Neotko (AGPL-3.0).
+static void slice_penultimate_cube(Print &print, Model &model, int penultimate_top_layers, bool detect_sub_top)
+{
+    // 20 mm cube at 0.5 mm layers: 40 layers, the top surface on layer 39 and four solid layers below it.
+    auto config = DynamicPrintConfig::full_print_config();
+    config.set_deserialize_strict({{"layer_height", 0.5},
+                                   {"initial_layer_print_height", 0.5},
+                                   {"top_shell_layers", 5},
+                                   {"top_shell_thickness", 0},
+                                   {"bottom_shell_layers", 2},
+                                   {"bottom_shell_thickness", 0},
+                                   {"sparse_infill_density", "20%"},
+                                   {"detect_sub_top_surface", detect_sub_top},
+                                   {"penultimate_top_layers", penultimate_top_layers}});
+    init_print({TestMesh::cube_20x20x20}, print, model, config);
+    print.process();
+}
+
+static bool layer_has_surface(const Layer &layer, SurfaceType type)
+{
+    for (const LayerRegion *region : layer.regions())
+        if (! region->fill_surfaces.filter_by_type(type).empty())
+            return true;
+    return false;
+}
+
+static bool layer_has_role(const Layer &layer, ExtrusionRole role)
+{
+    for (const LayerRegion *region : layer.regions())
+        for (const ExtrusionEntity *fill : region->fills.entities)
+            if (fill->role() == role)
+                return true;
+    return false;
+}
+
+TEST_CASE("Penultimate top layers retype the solid layers right below the top surface", "[PrintObject][Penultimate]")
+{
+    const bool detect_sub_top = GENERATE(false, true);
+    CAPTURE(detect_sub_top);
+    Print print;
+    Model model;
+    slice_penultimate_cube(print, model, 2, detect_sub_top);
+    const PrintObject &object = *print.objects().front();
+    REQUIRE(object.layer_count() == 40);
+    for (size_t i = 0; i < object.layer_count(); ++ i) {
+        CAPTURE(i);
+        const Layer &layer       = *object.get_layer(int(i));
+        const bool   penultimate = i == 37 || i == 38;
+        CHECK(layer_has_surface(layer, stPenultimateInternalSolid) == penultimate);
+        CHECK(layer_has_role(layer, erPenultimateInfill) == penultimate);
+        // The penultimate layers take precedence over the sub-top surface.
+        if (penultimate)
+            CHECK_FALSE(layer_has_surface(layer, stSubTop));
+    }
+    // Layers 35 and 36 are still in the top shell but deeper than penultimate_top_layers.
+    CHECK(layer_has_surface(*object.get_layer(36), stInternalSolid));
+    CHECK(layer_has_surface(*object.get_layer(35), stInternalSolid));
+    CHECK(gcode(print).find(";TYPE:Penultimate surface") != std::string::npos);
+}
+
+TEST_CASE("Penultimate top layers set to 0 leave every surface and the G-code untouched", "[PrintObject][Penultimate]")
+{
+    Print print;
+    Model model;
+    slice_penultimate_cube(print, model, 0, false);
+    const PrintObject &object = *print.objects().front();
+    for (size_t i = 0; i < object.layer_count(); ++ i) {
+        CAPTURE(i);
+        CHECK_FALSE(layer_has_surface(*object.get_layer(int(i)), stPenultimateInternalSolid));
+        CHECK_FALSE(layer_has_role(*object.get_layer(int(i)), erPenultimateInfill));
+    }
+    CHECK(layer_has_surface(*object.get_layer(38), stInternalSolid));
+    CHECK(gcode(print).find(";TYPE:Penultimate surface") == std::string::npos);
+}

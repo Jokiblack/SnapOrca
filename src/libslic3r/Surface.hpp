@@ -38,6 +38,11 @@ enum SurfaceType {
     // Internal solid island right below a visible top surface (sub-top), see PrintObject::discover_sub_top_surfaces().
     // Kept after stPerimeter so the numeric values of the older types, stored in cached slicing data, do not change.
     stSubTop,
+    // Solid infill of the penultimate_top_layers layers right below a top surface, with its own pattern, density and
+    // speed (erPenultimateInfill), see PrintObject::discover_penultimate_surfaces(). Only exists when
+    // penultimate_top_layers > 0. Appended last for the same reason as stSubTop.
+    // Ported from OrcaFS-NeotkoCM by Neotko (AGPL-3.0).
+    stPenultimateInternalSolid,
     // Number of SurfaceType enums.
     stCount,
 };
@@ -120,7 +125,8 @@ public:
 	bool   is_external() const { return this->is_top() || this->is_bottom(); }
 	bool   is_internal() const { return ! this->is_external(); }
 	bool   is_sub_top()  const { return this->surface_type == stSubTop; }
-	bool   is_solid()    const { return this->is_external() || this->surface_type == stInternalSolid || this->surface_type == stSubTop || this->surface_type == stInternalBridge; }
+	bool   is_penultimate() const { return this->surface_type == stPenultimateInternalSolid; }
+	bool   is_solid()    const { return this->is_external() || this->surface_type == stInternalSolid || this->surface_type == stSubTop || this->surface_type == stPenultimateInternalSolid || this->surface_type == stInternalBridge; }
 	bool   is_solid_infill() const { return this->surface_type == stInternalSolid; }
 };
 

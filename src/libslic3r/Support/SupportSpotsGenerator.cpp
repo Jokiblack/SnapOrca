@@ -83,7 +83,7 @@ float get_flow_width(const LayerRegion *region, ExtrusionRole role)
     if (role == ExtrusionRole::erExternalPerimeter) return region->flow(FlowRole::frExternalPerimeter).width();
     if (role == ExtrusionRole::erGapFill) return region->flow(FlowRole::frInfill).width();
     if (role == ExtrusionRole::erPerimeter) return region->flow(FlowRole::frPerimeter).width();
-    if (role == ExtrusionRole::erSolidInfill) return region->flow(FlowRole::frSolidInfill).width();
+    if (role == ExtrusionRole::erSolidInfill || role == ExtrusionRole::erPenultimateInfill) return region->flow(FlowRole::frSolidInfill).width();
     if (role == ExtrusionRole::erInternalInfill) return region->flow(FlowRole::frInfill).width();
     if (role == ExtrusionRole::erTopSolidInfill) return region->flow(FlowRole::frTopSolidInfill).width();
     // default

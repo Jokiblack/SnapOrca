@@ -247,7 +247,7 @@ void PrintConfigDef::init_neotko_params()
 
     // ---- S1 Penultimate Top Layers ----
     // Batch S1. PrintObjectConfig. With penultimate_top_layers = 0 no penultimate surface is classified and the other
-    // three do nothing. Neotko mode: comSimple (Strength tab). As in Neotko, penultimate_solid_infill_pattern invalidates
+    // three do nothing. Neotko mode: comSimple (Strength tab), here comAdvanced. As in Neotko, penultimate_solid_infill_pattern invalidates
     // posInfill and the others fall through to invalidate_all_steps().
 
     def = this->add("penultimate_top_layers", coInt);
@@ -257,7 +257,7 @@ void PrintConfigDef::init_neotko_params()
                      "density and speed. 0 disables them.");
     def->min = 0;
     def->max = 20;
-    def->mode = comDevelop;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(0));
 
     def = this->add("penultimate_solid_infill_density", coPercent);
@@ -268,7 +268,7 @@ void PrintConfigDef::init_neotko_params()
     def->sidetext = "%";
     def->min = 0;
     def->max = 100;
-    def->mode = comDevelop;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionPercent(100));
 
     def = this->add("penultimate_solid_infill_pattern", coEnum);
@@ -279,7 +279,7 @@ void PrintConfigDef::init_neotko_params()
     def->enum_keys_map = &ConfigOptionEnum<InfillPattern>::get_enum_values();
     def->enum_values = this->get("top_surface_pattern")->enum_values;
     def->enum_labels = this->get("top_surface_pattern")->enum_labels;
-    def->mode = comDevelop;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionEnum<InfillPattern>(ipMonotonicLine));
 
     def = this->add("penultimate_infill_speed", coFloat);
@@ -288,7 +288,7 @@ void PrintConfigDef::init_neotko_params()
     def->tooltip = L("Speed of the penultimate solid infill layers. 0 uses the top surface speed.");
     def->sidetext = L("mm/s");
     def->min = 0;
-    def->mode = comDevelop;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloat(50.));
 
     // ---- S2-S4 Sandwich: ColorStitch, MultiPass and PathBlend ----

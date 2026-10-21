@@ -666,7 +666,8 @@ static std::vector<Lines> filter_vibrating_extrusions(const std::vector<Lines> &
 
 void split_solid_surface(size_t layer_id, const SurfaceFill &fill, ExPolygons &normal_infill, ExPolygons &narrow_infill)
 {
-    assert(fill.surface.surface_type == stInternalSolid || fill.surface.surface_type == stSubTop);
+    assert(fill.surface.surface_type == stInternalSolid || fill.surface.surface_type == stSubTop ||
+           fill.surface.surface_type == stPenultimateInternalSolid);
 
     const bool line_based_pattern =
         fill.params.pattern == ipRectilinear || fill.params.pattern == ipMonotonic ||
@@ -963,6 +964,11 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
                             params.pattern = region_config.bottom_surface_pattern.value;
                             params.density = float(region_config.bottom_surface_density);
                         }
+                    } else if (surface.is_penultimate()) {
+                        // Neotko: the penultimate top layers have their own pattern and density (PrintObjectConfig).
+                        params.pattern = object_config.penultimate_solid_infill_pattern.value;
+                        params.density = float(object_config.penultimate_solid_infill_density);
+                        if (params.density <= 0.0f) continue;
                     } else if (surface.is_sub_top()) {
                         params.pattern = region_config.sub_top_surface_pattern.value;
                         params.density = 100.f;
@@ -991,6 +997,8 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
                         params.extrusion_role = erTopSolidInfill;
                     } else if (surface.is_bottom()) {
                         params.extrusion_role = erBottomSurface;
+                    } else if (surface.is_penultimate()) {
+                        params.extrusion_role = erPenultimateInfill;
                     } else {
                         params.extrusion_role = erSolidInfill;
                     }
@@ -999,7 +1007,7 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
                     params.extruder = region_config.top_surface_filament_id;
                 else if (params.extrusion_role == erBottomSurface)
                     params.extruder = region_config.bottom_surface_filament_id;
-                else if (params.extrusion_role == erSolidInfill)
+                else if (params.extrusion_role == erSolidInfill || params.extrusion_role == erPenultimateInfill)
                     params.extruder = region_config.internal_solid_filament_id;
                 // Orca: forced fill order applies only to top/bottom surfaces filled with a
                 // center-based pattern; everything else stays at Default to keep batching together.
@@ -1099,6 +1107,9 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
                         params.role_speed = region_config.top_surface_speed.get_at(speed_idx);
                     else if (params.extrusion_role == erSolidInfill)
                         params.role_speed = region_config.internal_solid_infill_speed.get_at(speed_idx);
+                    else if (params.extrusion_role == erPenultimateInfill)
+                        params.role_speed = object_config.penultimate_infill_speed.value > 0. ?
+                            float(object_config.penultimate_infill_speed.value) : float(region_config.top_surface_speed.get_at(speed_idx));
                 }
 				// Calculate flow spacing for infill pattern generation.
 		        if (surface.is_solid() || is_bridge) {
@@ -1220,7 +1231,8 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
     			distance_between_surfaces = std::max(distance_between_surfaces, surface_fill.params.flow.scaled_spacing());
 				append((surface_fill.surface.surface_type == stInternalVoid) ? voids : surfaces_polygons, to_polygons(surface_fill.expolygons));
 				if (surface_fill.surface.surface_type == stInternalSolid ||
-				    surface_fill.surface.surface_type == stSubTop)
+				    surface_fill.surface.surface_type == stSubTop ||
+				    surface_fill.surface.surface_type == stPenultimateInternalSolid)
 					region_internal_infill = (int)surface_fill.region_id;
 				if (surface_fill.surface.is_solid())
 					region_solid_infill = (int)surface_fill.region_id;
@@ -1249,10 +1261,12 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
 				region_id = region_some_infill;
 			const LayerRegion& layerm = *layer.regions()[region_id];
 	        // Bambu: prefer growing the sub-top fill, as these collapsed corners usually border on it.
+	        // Neotko: the penultimate fill plays the same part when the penultimate top layers are enabled.
 	        SurfaceFill *sub_top_fill = nullptr;
 	        for (SurfaceFill &surface_fill : surface_fills)
 	        	if (std::abs(layer.height - surface_fill.params.flow.height()) < EPSILON) {
-	        		if (surface_fill.surface.surface_type == stSubTop && sub_top_fill == nullptr)
+	        		if ((surface_fill.surface.surface_type == stSubTop || surface_fill.surface.surface_type == stPenultimateInternalSolid) &&
+	        		    sub_top_fill == nullptr)
 	        			sub_top_fill = &surface_fill;
 	        		else if (surface_fill.surface.surface_type == stInternalSolid && internal_solid_fill == nullptr)
 	        			internal_solid_fill = &surface_fill;
@@ -1293,7 +1307,8 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
 		size_t surface_fills_size = surface_fills.size();
 		for (size_t i = 0; i < surface_fills_size; i++) {
 			if (surface_fills[i].surface.surface_type != stInternalSolid &&
-			    surface_fills[i].surface.surface_type != stSubTop)
+			    surface_fills[i].surface.surface_type != stSubTop &&
+			    surface_fills[i].surface.surface_type != stPenultimateInternalSolid)
 				continue;
 
 			ExPolygons normal_infill;
@@ -1921,7 +1936,8 @@ void Layer::make_ironing()
 					// Add solid fill surfaces. This may not be ideal, as one will not iron perimeters touching these
 					// solid fill surfaces, but it is likely better than nothing.
 					for (const Surface &surface : ironing_params.layerm->fill_surfaces.surfaces)
-						if (surface.surface_type == stInternalSolid || surface.surface_type == stSubTop)
+						if (surface.surface_type == stInternalSolid || surface.surface_type == stSubTop ||
+						    surface.surface_type == stPenultimateInternalSolid)
 							polygons_append(infills, surface.expolygon);
 				}
 			}

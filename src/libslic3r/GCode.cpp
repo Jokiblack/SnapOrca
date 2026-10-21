@@ -7312,7 +7312,7 @@ void GCode::compute_farthest_point(const std::vector<LayerToPrint> &layers, int 
         return role == erExternalPerimeter;
     };
     auto is_fallback_role = [](ExtrusionRole role) -> bool {
-        return role == erInternalInfill || role == erSolidInfill || role == erTopSolidInfill;
+        return role == erInternalInfill || role == erSolidInfill || role == erPenultimateInfill || role == erTopSolidInfill;
     };
     auto is_candidate_support_role = [](ExtrusionRole role) -> bool {
         return role == erSupportMaterial || role == erSupportMaterialInterface || role == erSupportTransition;
@@ -8039,7 +8039,7 @@ LayerResult GCode::process_layer(
             if (role == erBottomSurface || role == erBridgeInfill) // ORCA: external bridges print as bottom surfaces
                 return unsigned(region.config().bottom_surface_filament_id.value);
             // Internal solid infill at 100% sparse density prints with the sparse infill filament.
-            const bool solid_uses_sparse = role == erSolidInfill && std::abs(region.config().sparse_infill_density.value - 100.) < EPSILON;
+            const bool solid_uses_sparse = (role == erSolidInfill || role == erPenultimateInfill) && std::abs(region.config().sparse_infill_density.value - 100.) < EPSILON;
             if (is_solid_infill(role) && !solid_uses_sparse)
                 return unsigned(region.config().internal_solid_filament_id.value);
             return unsigned(region.config().sparse_infill_filament_id.value);
@@ -11244,6 +11244,7 @@ bool GCode::_needSAFC(const ExtrusionPath &path)
     return std::any_of(std::begin(supported_patterns), std::end(supported_patterns), [&](const InfillPattern pattern) {
         return (this->on_first_layer() && this->config().bottom_surface_pattern == pattern) ||
                (path.role() == erSolidInfill && this->config().internal_solid_infill_pattern == pattern) ||
+               (path.role() == erPenultimateInfill && this->config().penultimate_solid_infill_pattern == pattern) ||
                (path.role() == erTopSolidInfill && this->config().top_surface_pattern == pattern);
     });
 }
@@ -11387,7 +11388,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &path_d
             m_config.bridge_acceleration.get_at(nozzle).get_abs_value(m_config.outer_wall_acceleration.get_at(nozzle)) : 0.;
         const double sparse_infill_acceleration = role == erInternalInfill ?
             m_config.sparse_infill_acceleration.get_at(nozzle).get_abs_value(m_config.default_acceleration.get_at(nozzle)) : 0.;
-        const double internal_solid_infill_acceleration = role == erSolidInfill ?
+        const double internal_solid_infill_acceleration = (role == erSolidInfill || role == erPenultimateInfill) ?
             m_config.internal_solid_infill_acceleration.get_at(nozzle).get_abs_value(m_config.default_acceleration.get_at(nozzle)) : 0.;
         double acceleration;
         if (path_on_first_layer && m_config.initial_layer_acceleration.get_at(nozzle) > 0) {
@@ -11482,7 +11483,7 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &path_d
             _mm3_per_mm *= m_config.overhang_flow_ratio;
         } else if (path.role() == erInternalInfill) {
             _mm3_per_mm *= m_config.sparse_infill_flow_ratio;
-        } else if (path.role() == erSolidInfill) {
+        } else if (path.role() == erSolidInfill || path.role() == erPenultimateInfill) {
             _mm3_per_mm *= m_config.internal_solid_infill_flow_ratio;
         } else if (path.role() == erGapFill) {
             _mm3_per_mm *= m_config.gap_fill_flow_ratio;
@@ -11540,6 +11541,10 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &path_d
             speed = NOZZLE_CONFIG(internal_solid_infill_speed);
         } else if (path.role() == erTopSolidInfill) {
             speed = NOZZLE_CONFIG(top_surface_speed);
+        } else if (path.role() == erPenultimateInfill) {
+            // Neotko: penultimate top layers have their own speed; 0 falls back to the top surface speed.
+            speed = m_config.penultimate_infill_speed.value > 0. ? m_config.penultimate_infill_speed.value
+                                                                 : NOZZLE_CONFIG(top_surface_speed);
         } else if (path.role() == erIroning) {
             const size_t filament_idx = get_filament_config_index(m_writer.filament()->id());
             speed = m_config.filament_ironing_speed.is_nil(filament_idx)
@@ -12357,7 +12362,10 @@ std::string GCode::extrusion_role_to_string_for_parser(const ExtrusionRole & rol
         case erExternalPerimeter: return "ExternalPerimeter";
         case erOverhangPerimeter: return "OverhangPerimeter";
         case erInternalInfill: return "InternalInfill";
-        case erSolidInfill: return "SolidInfill";
+        // The penultimate top layers are internal solid infill with their own parameters, so role based custom G-code
+        // written for SolidInfill keeps applying to them.
+        case erSolidInfill:
+        case erPenultimateInfill: return "SolidInfill";
         case erTopSolidInfill: return "TopSolidInfill";
         case erBottomSurface: return "BottomSurface";
         case erBridgeInfill:

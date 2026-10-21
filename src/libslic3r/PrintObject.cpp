@@ -792,6 +792,12 @@ void PrintObject::prepare_infill()
     this->combine_infill();
     m_print->throw_if_canceled();
 
+    // Neotko: retype the solid infill of the layers right below a top surface to stPenultimateInternalSolid.
+    // Runs before discover_sub_top_surfaces(), which only claims stInternalSolid, so where both are enabled the
+    // penultimate layers take precedence. Does nothing with penultimate_top_layers = 0.
+    this->discover_penultimate_surfaces();
+    m_print->throw_if_canceled();
+
     // Snapmaker: retype the internal solid islands right below a top surface, so they can use their own pattern.
     this->discover_sub_top_surfaces();
     m_print->throw_if_canceled();
@@ -6236,6 +6242,107 @@ void PrintObject::discover_sub_top_surfaces()
                     process_layer(parity + 2 * k);
             });
     }
+}
+
+// Neotko: retype the stInternalSolid surfaces that lie under a top surface of one of the penultimate_top_layers layers
+// above to stPenultimateInternalSolid, so that Fill prints them with penultimate_solid_infill_pattern and
+// penultimate_solid_infill_density and GCode with penultimate_infill_speed (role erPenultimateInfill).
+// Only the solid infill that discover_horizontal_shells() propagated from that top surface is claimed: a layer
+// counts when it is within penultimate_top_layers of the top and still inside its top shell (top_shell_layers or
+// top_shell_thickness, the same span the scatter uses), and only within the top's footprint, taken like the scatter
+// takes it from the slices and the fill surfaces. The leftover part of an island that is too narrow to be filled
+// on its own goes to the penultimate surface too, so the split does not leave slivers behind; an island that only
+// grazes the footprint stays stInternalSolid. Geometry is never changed, only surface types, and nothing runs when
+// penultimate_top_layers is 0.
+// Ported from OrcaFS-NeotkoCM by Neotko (AGPL-3.0); Neotko did the split inside discover_vertical_shells() and
+// discover_horizontal_shells(), here it is a separate pass at the end of prepare_infill() so that no later step can
+// drop or merge the new surface type.
+void PrintObject::discover_penultimate_surfaces()
+{
+    const int penultimate_layers = this->config().penultimate_top_layers.value;
+    if (penultimate_layers <= 0 || m_layers.size() < 2)
+        return;
+    BOOST_LOG_TRIVIAL(trace) << "discover_penultimate_surfaces()";
+
+    const size_t num_layers  = m_layers.size();
+    const size_t num_regions = this->num_printing_regions();
+
+    // Footprint of the top surfaces of each layer and region. Collected first, as the second pass retypes the fill
+    // surfaces of the layers whose tops it reads.
+    std::vector<ExPolygons> tops(num_layers * num_regions);
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, num_layers), [this, num_regions, &tops](const tbb::blocked_range<size_t> &range) {
+        for (size_t idx_layer = range.begin(); idx_layer < range.end(); ++ idx_layer) {
+            m_print->throw_if_canceled();
+            for (size_t region_id = 0; region_id < num_regions; ++ region_id) {
+                const LayerRegion *layerm = m_layers[idx_layer]->get_region(int(region_id));
+                Polygons           top;
+                for (const Surface &surface : layerm->slices.surfaces)
+                    if (surface.surface_type == stTop)
+                        polygons_append(top, to_polygons(surface.expolygon));
+                for (const Surface &surface : layerm->fill_surfaces.surfaces)
+                    if (surface.surface_type == stTop)
+                        polygons_append(top, to_polygons(surface.expolygon));
+                if (! top.empty())
+                    tops[idx_layer * num_regions + region_id] = union_ex(top);
+            }
+        }
+    });
+
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, num_layers - 1), [this, num_layers, num_regions, penultimate_layers, &tops](const tbb::blocked_range<size_t> &range) {
+        for (size_t idx_layer = range.begin(); idx_layer < range.end(); ++ idx_layer) {
+            m_print->throw_if_canceled();
+            Layer *layer = m_layers[idx_layer];
+            for (size_t region_id = 0; region_id < num_regions; ++ region_id) {
+                LayerRegion *layerm = layer->get_region(int(region_id));
+                if (layerm->combined_layer_count() == 0)
+                    continue;
+                const PrintRegionConfig &region_config = layerm->region().config();
+                const int                top_shells    = region_config.top_shell_layers.value;
+                // Walk up over the layers this region prints on, like the top shell scatter walks down.
+                Polygons mask;
+                int      depth = 0;
+                for (size_t j = idx_layer + 1; j < num_layers && depth < penultimate_layers; ++ j) {
+                    const LayerRegion *upper = m_layers[j]->get_region(int(region_id));
+                    if (upper->combined_layer_count() == 0)
+                        continue;
+                    ++ depth;
+                    // The scatter of a top surface reaches the layers for which this holds, see discover_horizontal_shells().
+                    if (depth >= top_shells && m_layers[j]->print_z - layer->print_z >= region_config.top_shell_thickness.value - EPSILON)
+                        break;
+                    polygons_append(mask, to_polygons(tops[j * num_regions + region_id]));
+                }
+                if (mask.empty())
+                    continue;
+
+                const float min_width = float(layerm->flow(frSolidInfill).scaled_spacing());
+                Surfaces    out;
+                bool        changed = false;
+                for (Surface &surface : layerm->fill_surfaces.surfaces) {
+                    if (surface.surface_type != stInternalSolid) {
+                        out.emplace_back(std::move(surface));
+                        continue;
+                    }
+                    ExPolygons under_top = intersection_ex(surface.expolygon, mask, ApplySafetyOffset::Yes);
+                    // An island is claimed on real overlap, not on a shared edge.
+                    if (under_top.empty() || opening_ex(under_top, 0.5f * min_width).empty()) {
+                        out.emplace_back(std::move(surface));
+                        continue;
+                    }
+                    // Keep as stInternalSolid only what is wide enough to be filled on its own.
+                    ExPolygons rest        = opening_ex(diff_ex(surface.expolygon, under_top), 0.5f * min_width);
+                    ExPolygons penultimate = rest.empty() ? ExPolygons{ surface.expolygon } : diff_ex(surface.expolygon, rest);
+                    Surface    templ(surface, ExPolygon());
+                    templ.surface_type = stPenultimateInternalSolid;
+                    surfaces_append(out, std::move(penultimate), templ);
+                    if (! rest.empty())
+                        surfaces_append(out, std::move(rest), surface);
+                    changed = true;
+                }
+                if (changed)
+                    layerm->fill_surfaces.surfaces = std::move(out);
+            }
+        }
+    });
 }
 
 void PrintObject::combine_infill()
