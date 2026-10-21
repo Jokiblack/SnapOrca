@@ -1451,6 +1451,18 @@ msgstr "Deshacer el uso de la superficie del modelo."
 msgid "Revert Transformation per glyph."
 msgstr "Deshacer Transformación por glifo."
 
+# AI Translated
+msgid "Revert using of font kerning."
+msgstr "Deshacer el uso del kerning de la fuente."
+
+# AI Translated
+msgid "Use the kerning pairs designed into the font, so pairs like \"AV\" or \"To\" are spaced the way the type designer intended. This is independent from \"Char gap\", which shifts every character by the same amount."
+msgstr "Usa los pares de kerning diseñados en la fuente, para que pares como «AV» o «To» queden espaciados como pretendía el diseñador tipográfico. Es independiente de «Espacio de carácter», que desplaza todos los caracteres por igual."
+
+# AI Translated
+msgid "Font has no kerning data"
+msgstr "La fuente no tiene datos de kerning"
+
 msgid "Set global orientation for whole text."
 msgstr "Establece la orientación global para todo el texto."
 
@@ -1577,6 +1589,12 @@ msgstr "Usar superficie"
 #. for each character(glyph) in text separately
 msgid "Per glyph"
 msgstr "Por glifo"
+
+# AI Translated
+#. TRN - Input label. Be short as possible
+#. Use the kerning pairs designed into the font file (NeotkoCM Typographic Spacing)
+msgid "Font kerning"
+msgstr "Kerning de fuente"
 
 #. TRN - Input label. Be short as possible
 #. Align Top|Middle|Bottom and Left|Center|Right
