@@ -1771,6 +1771,7 @@ bool PrintObject::invalidate_state_by_config_options(
             || opt_key == "top_surface_fill_order"
             || opt_key == "bottom_surface_fill_order"
             || opt_key == "internal_solid_infill_pattern"
+            || opt_key == "ghost_lines_concentric_solid_infill"
             || opt_key == "sub_top_surface_pattern"
             || opt_key == "external_fill_link_max_length"
             || opt_key == "infill_anchor"
@@ -1859,6 +1860,15 @@ bool PrintObject::invalidate_state_by_config_options(
             || opt_key == "wall_direction"
             || opt_key == "enable_overhang_speed"
             || opt_key == "detect_thin_wall"
+            || opt_key == "ghost_lines_enable"
+            || opt_key == "ghost_lines_scope"
+            || opt_key == "ghost_lines_feature_depth"
+            || opt_key == "ghost_lines_air_gap"
+            || opt_key == "ghost_lines_gap_after_wall"
+            || opt_key == "ghost_lines_bond_layers"
+            || opt_key == "ghost_lines_gap_taper_layers"
+            || opt_key == "ghost_lines_extra_wall"
+            || opt_key == "ghost_lines_outer_wall_first"
             || opt_key == "precise_outer_wall") {
             steps.emplace_back(posPerimeters);
             steps.emplace_back(posSupportMaterial);
@@ -1922,6 +1932,9 @@ bool PrintObject::invalidate_state_by_config_options(
             || opt_key == "top_solid_infill_flow_ratio"
             || opt_key == "bottom_solid_infill_flow_ratio"
             || opt_key == "outer_wall_flow_ratio"
+            || opt_key == "ghost_lines_outer_wall_flow"
+            || opt_key == "ghost_lines_outer_wall_speed"
+            || opt_key == "ghost_lines_fan"
             || opt_key == "inner_wall_flow_ratio"
             || opt_key == "overhang_flow_ratio"
             || opt_key == "sparse_infill_flow_ratio"

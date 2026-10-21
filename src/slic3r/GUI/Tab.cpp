@@ -3525,6 +3525,22 @@ void TabPrint::build()
         optgroup->append_single_option_line("wipe_before_external_loop","quality_settings_seam#wipe-before-external");
 
 
+        // SnapOrca
+        optgroup = page->new_optgroup(L("Ghost lines"), L"param_wall");
+        optgroup->append_single_option_line("ghost_lines_enable");
+        optgroup->append_single_option_line("ghost_lines_scope");
+        optgroup->append_single_option_line("ghost_lines_feature_depth");
+        optgroup->append_single_option_line("ghost_lines_air_gap");
+        optgroup->append_single_option_line("ghost_lines_gap_after_wall");
+        optgroup->append_single_option_line("ghost_lines_bond_layers");
+        optgroup->append_single_option_line("ghost_lines_gap_taper_layers");
+        optgroup->append_single_option_line("ghost_lines_extra_wall");
+        optgroup->append_single_option_line("ghost_lines_outer_wall_first");
+        optgroup->append_single_option_line("ghost_lines_outer_wall_flow");
+        optgroup->append_single_option_line("ghost_lines_outer_wall_speed");
+        optgroup->append_single_option_line("ghost_lines_fan");
+        optgroup->append_single_option_line("ghost_lines_concentric_solid_infill");
+
         optgroup = page->new_optgroup(L("Precision"), L"param_precision");
         optgroup->append_single_option_line("slice_closing_radius", "quality_settings_precision#slice-gap-closing-radius");
         optgroup->append_single_option_line("resolution", "quality_settings_precision#resolution");

@@ -39190,6 +39190,114 @@ msgstr ""
 "¿Sabía que, al imprimir materiales propensos a deformarse como el ABS, aumentar adecuadamente la temperatura de la cama puede reducir la probabilidad de deformación?"
 
 # AI Translated
+msgid "Ghost lines"
+msgstr "Líneas fantasma"
+
+# AI Translated
+msgid "Treat ghost lines"
+msgstr "Tratar las líneas fantasma"
+
+# AI Translated
+msgid "A floor, ceiling, rib or partition joined to the back of the outer wall pulls on it when it shrinks while cooling, and leaves a line on the outer surface along the joint: a ghost line. This enables the treatments below on the layers where such an internal feature joins the outer wall. The layers are found from the shape of the model: see the scope and the feature depth."
+msgstr "Un suelo, techo, nervio o tabique unido por detrás a la pared exterior tira de ella al contraerse mientras se enfría y deja una línea en la superficie exterior a lo largo de la unión: una línea fantasma. Esto activa los tratamientos de abajo en las capas en las que un elemento interno de ese tipo se une a la pared exterior. Las capas se detectan a partir de la forma del modelo: vea el ámbito y la profundidad del elemento."
+
+# AI Translated
+msgid "Scope"
+msgstr "Ámbito"
+
+# AI Translated
+msgid "Where the ghost line treatments are applied.\nInternal features: only on the layers where a floor, ceiling, rib or partition joins the outer wall from behind, and, for the air gap, only along the part of the outer wall it joins. Solid parts of the model are left alone.\nEverywhere: on every layer, along the whole outer wall. For the air gap, combine it with the bond interval to keep the outer wall attached."
+msgstr "Dónde se aplican los tratamientos de las líneas fantasma.\nElementos internos: solo en las capas en las que un suelo, techo, nervio o tabique se une por detrás a la pared exterior y, para la cámara de aire, solo a lo largo de la parte de la pared exterior a la que se une. Las partes macizas del modelo se dejan como están.\nEn todas partes: en todas las capas, a lo largo de toda la pared exterior. Para la cámara de aire, combínelo con el intervalo de unión para que la pared exterior siga sujeta."
+
+# AI Translated
+msgid "Internal features"
+msgstr "Elementos internos"
+
+# AI Translated
+msgid "Internal feature depth"
+msgstr "Profundidad del elemento interno"
+
+# AI Translated
+msgid "Material that reaches deeper than this distance from the outer surface counts as an internal feature joined to the outer wall. Set it a little larger than the wall thickness of the model, so that plain walls are not taken for internal features. It also sets how far above and below a floor or ceiling the layers are compared to find where it starts and ends."
+msgstr "El material que llega más adentro de esta distancia desde la superficie exterior cuenta como un elemento interno unido a la pared exterior. Póngalo un poco mayor que el grosor de pared del modelo, para que las paredes normales no se tomen por elementos internos. También fija a qué distancia por encima y por debajo de un suelo o techo se comparan las capas para encontrar dónde empieza y dónde acaba."
+
+# AI Translated
+msgid "Air gap behind the outer wall"
+msgstr "Cámara de aire tras la pared exterior"
+
+# AI Translated
+msgid "Air gap bond interval"
+msgstr "Intervalo de unión de la cámara de aire"
+
+# AI Translated
+msgid "Print every Nth layer without the air gap, so that the outer wall stays bonded to the inside of the part at regular heights. Set to 0 to leave the gap on every treated layer."
+msgstr "Imprime una de cada N capas sin cámara de aire, para que la pared exterior quede unida al interior de la pieza a alturas regulares. Ponga 0 para dejar la cámara en todas las capas tratadas."
+
+# AI Translated
+msgid "Air gap taper layers"
+msgstr "Capas de transición de la cámara de aire"
+
+# AI Translated
+msgid "Close the air gap gradually over this many layers below the first and above the last layer of each internal feature, instead of opening it at once. Set to 0 to open the gap at full width on the first treated layer."
+msgstr "Cierra la cámara de aire progresivamente a lo largo de este número de capas por debajo de la primera y por encima de la última capa de cada elemento interno, en lugar de abrirla de golpe. Ponga 0 para abrir la cámara a todo su ancho en la primera capa tratada."
+
+# AI Translated
+msgid "Extra wall"
+msgstr "Perímetro adicional"
+
+# AI Translated
+msgid "Print one more wall loop on the treated layers, so that the outer wall has more material behind it to resist the pull of the internal feature."
+msgstr "Imprime un perímetro más en las capas tratadas, para que la pared exterior tenga más material detrás con el que resistir el tirón del elemento interno."
+
+# AI Translated
+msgid "Outer wall first"
+msgstr "Pared exterior primero"
+
+# AI Translated
+msgid "Print the outer wall before the inner walls on the treated layers, so that it has cooled and set before the internal feature is printed against it. The other layers keep the wall printing order of the profile."
+msgstr "Imprime la pared exterior antes que los perímetros interiores en las capas tratadas, para que se haya enfriado y asentado antes de imprimir el elemento interno contra ella. Las demás capas mantienen el orden de impresión de perímetros del perfil."
+
+# AI Translated
+msgid "Outer wall flow"
+msgstr "Flujo de la pared exterior"
+
+# AI Translated
+msgid "Flow of the outer wall on the treated layers, as a percentage of its normal flow. A little more material (102-105%) fills the slight dip the internal feature pulls into the outer wall. Set to 0 to leave the flow unchanged."
+msgstr "Flujo de la pared exterior en las capas tratadas, como porcentaje de su flujo normal. Un poco más de material (102-105 %) rellena la ligera hendidura que el elemento interno produce en la pared exterior al tirar de ella. Ponga 0 para no cambiar el flujo."
+
+# AI Translated
+msgid "Speed of the outer wall on the treated layers, as a percentage of the outer wall speed. Set to 0 to leave the speed unchanged."
+msgstr "Velocidad de la pared exterior en las capas tratadas, como porcentaje de la velocidad de la pared exterior. Ponga 0 para no cambiar la velocidad."
+
+# AI Translated
+msgid "Minimum fan speed"
+msgstr "Velocidad mínima del ventilador"
+
+# AI Translated
+msgid "Run the part cooling fan at least at this speed on the treated layers, so that the outer wall sets before the internal feature shrinks. The fan is never raised on the layers without cooling (no cooling for the first layers). Set to 0 to leave the fan unchanged."
+msgstr "Hace funcionar el ventilador de capa al menos a esta velocidad en las capas tratadas, para que la pared exterior se asiente antes de que el elemento interno se contraiga. El ventilador nunca se sube en las capas sin refrigeración (sin refrigeración en las primeras capas). Ponga 0 para no cambiar el ventilador."
+
+# AI Translated
+msgid "Concentric solid infill behind the outer wall"
+msgstr "Relleno sólido concéntrico tras la pared exterior"
+
+# AI Translated
+msgid "On the treated layers, fill the solid infill next to the outer wall with concentric lines, parallel to the wall, instead of the solid infill pattern of the profile, so that it shrinks along the wall rather than towards it. The band is as wide as the internal feature depth."
+msgstr "En las capas tratadas, rellena el relleno sólido junto a la pared exterior con líneas concéntricas, paralelas a la pared, en lugar del patrón de relleno sólido del perfil, para que se contraiga a lo largo de la pared y no hacia ella. La banda es tan ancha como la profundidad del elemento interno."
+
+# AI Translated
+msgid "Leave an air gap of this width between the outer wall and the walls and infill behind it, so that the internal feature does not pull on the outer wall when it shrinks. This is what is done in CAD to hide ghost lines, without changing the model. The gap moves the walls behind it inwards and takes the place of infill or gap fill, never of a wall: where the model has no room for it, it is left out. The outer wall stays joined to the rest of the part on the layers without the gap. The gap is never left on the first or the last layer, where it would be exposed by a top or bottom surface, or in spiral vase mode. Classic wall generator only. Set to 0 to disable."
+msgstr "Deja una cámara de aire de este ancho entre la pared exterior y los perímetros y el relleno que hay detrás, para que el elemento interno no tire de la pared exterior al contraerse. Es lo que se hace en CAD para ocultar las líneas fantasma, sin cambiar el modelo. La cámara desplaza hacia dentro los perímetros que hay detrás y ocupa el lugar del relleno o del relleno de huecos, nunca el de un perímetro: donde el modelo no tiene sitio para ella, no se deja. La pared exterior sigue unida al resto de la pieza en las capas sin cámara. La cámara nunca se deja en la primera ni en la última capa, donde la dejaría al descubierto una superficie superior o inferior, ni en modo jarrón. Solo con el generador de perímetros clásico. Ponga 0 para desactivarla."
+
+# AI Translated
+msgid "Air gap after wall"
+msgstr "Cámara de aire tras el perímetro"
+
+# AI Translated
+msgid "Leave the air gap after this wall, counted from the outside: 1 leaves it right behind the outer wall, 2 behind the first inner wall, and so on, so that the walls in front of the gap print together as the skin of the part. Larger values give a stronger skin and a little less isolation. There is always at least one wall behind the gap: with fewer walls the gap moves out, and with a single wall it is not left."
+msgstr "Deja la cámara de aire después de este perímetro, contando desde fuera: 1 la deja justo detrás de la pared exterior, 2 detrás del primer perímetro interior, y así sucesivamente, de modo que los perímetros delante de la cámara se imprimen juntos como la piel de la pieza. Los valores mayores dan una piel más resistente y algo menos de aislamiento. Siempre queda al menos un perímetro detrás de la cámara: con menos perímetros la cámara se desplaza hacia fuera y con un solo perímetro no se deja."
+
+# AI Translated
 #~ msgid "Note: Inconsistent nozzle diameters. Current version does not support mixed diameter printing. Please select one nozzle for this print."
 #~ msgstr "Nota: los diámetros de boquilla no coinciden. La versión actual no admite imprimir con diámetros mezclados. Seleccione una sola boquilla para esta impresión."
 
