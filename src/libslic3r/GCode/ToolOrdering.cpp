@@ -1442,6 +1442,43 @@ void ToolOrdering::collect_extruders(const PrintObject &object, const std::vecto
             }
         }
         if (has_interface) layer_tools.extruders.push_back(extruder_interface);
+        // Support Zones (ported from OrcaFS-NeotkoCM by Neotko, s286c F4, s289): a layer split between
+        // zone families may need more than one support filament. Only the roles each family extrudes
+        // on this layer count, so a roof filament is scheduled on the roof layers only. GCode::process_layer()
+        // reads the same tags, so what is planned here is exactly what is emitted. Empty tags: nothing new.
+        if (! support_layer->support_fills_family.empty()) {
+            const auto  &families = object.support_family_areas().families;
+            const auto  &ents     = support_layer->support_fills.entities;
+            const size_t n_tag    = std::min(ents.size(), support_layer->support_fills_family.size());
+            std::vector<std::pair<bool, bool>> present(families.size(), { false, false }); // body, interface
+            for (size_t i = 0; i < n_tag; ++ i) {
+                const int fi = support_layer->support_fills_family[i];
+                if (fi < 0 || fi >= int(families.size()) || ents[i] == nullptr)
+                    continue;
+                const ExtrusionRole r = ents[i]->role();
+                if (r == erSupportMaterialInterface || r == erIroning)
+                    present[fi].second = true;
+                else if (r == erSupportMaterial || r == erSupportTransition)
+                    present[fi].first = true;
+                else
+                    present[fi] = { true, true };
+            }
+            // 1-based filament ids here, like extruder_support / extruder_interface; 0 = as the object, already scheduled.
+            const int n_filaments = int(object.print()->config().filament_diameter.size());
+            auto schedule = [&](int filament) {
+                if (filament > 0)
+                    if (const unsigned int f = resolve_mixed(unsigned(filament), layer_tools.layer_index, float(support_layer->print_z),
+                                                             float(support_layer->height), &object);
+                        f > 0 && int(f) <= n_filaments)
+                        layer_tools.extruders.push_back(f);
+            };
+            for (size_t fi = 0; fi < families.size(); ++ fi) {
+                if (present[fi].first)
+                    schedule(families[fi].body_filament);
+                if (present[fi].second)
+                    schedule(families[fi].interface_filament);
+            }
+        }
         if (has_support || has_interface) {
             layer_tools.has_support = true;
             layer_tools.wiping_extrusions().is_support_overriddable_and_mark(role, object);

@@ -85,6 +85,7 @@
 #include "FilamentHotBedNozzleRules.hpp"
 #include "MaterialType.hpp"
 #include "Model.hpp"
+#include "Feature/SupportZones/SupportZoneProbe.hpp"
 #include "format.hpp"
 #include "LocalesUtils.hpp"
 #include <float.h>
@@ -1192,6 +1193,15 @@ std::vector<unsigned int> Print::support_material_extruders() const
     for (PrintObject *object : m_objects) {
         if (object->has_support_material() && append_support_extruders(object->config(), m_config, num_extruders, extruders))
             support_uses_current_extruder = true;
+        // Support Zones (ported from OrcaFS-NeotkoCM by Neotko, s286c F4): the filaments of the zones
+        // are used too. Read from the model, as no support has been generated yet; 0 = as the object.
+        if (object->has_support_material() && object->model_object() != nullptr)
+            for (const ModelVolume *v : object->model_object()->volumes)
+                if (SupportZones::is_support_zone(*v))
+                    for (const char *key : { "support_filament", "support_interface_filament" })
+                        if (v->config.has(key))
+                            if (const int f = v->config.opt_int(key); f > 0)
+                                extruders.emplace_back((unsigned int)(f - 1) >= num_extruders ? 0 : (unsigned int)(f - 1));
     }
 
     if (support_uses_current_extruder)

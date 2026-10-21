@@ -295,6 +295,28 @@ struct PrintInstance
 
 typedef std::vector<PrintInstance> PrintInstances;
 
+// Support Zones (ported from OrcaFS-NeotkoCM by Neotko): one support zone sliced on its own.
+// A zone is a SUPPORT_ENFORCER volume made by the Support Zones gizmo (SupportZones::is_support_zone()).
+// Besides marking what to support, its shape below the object is the corridor the column follows
+// on its way down.
+struct SupportZoneSlices
+{
+    // Position among the zones of the object (order of ModelObject::volumes): a deterministic priority.
+    size_t                 priority { 0 };
+    const ModelVolume     *model_volume { nullptr };
+    // Lean the zone was drawn with, in degrees; never 0 (SUPPORT_ZONE_DEFAULT_LEAN_DEG when unset).
+    double                 lean_deg { 0. };
+    // The block is the column: every layer adds the section of the block, not only the contact.
+    bool                   solid { false };
+    // The zone only lands on its last few layers, not on every ledge it crosses.
+    bool                   land_only { false };
+    // Indexed by object layer, like slice_support_volumes().
+    std::vector<Polygons>  slices;
+    // Layers where the block ends upwards (its roof), computed against the layer above shifted by
+    // the lean of the block, so that the side of a leaning block is not taken for a roof.
+    std::vector<char>      roof_layer;
+};
+
 class PrintObjectRegions
 {
 public:
@@ -424,6 +446,13 @@ public:
     // Whoever will get a non-const pointer to PrintObject will be able to modify its layers.
     LayerPtrs&                   layers()               { return m_layers; }
     SupportLayerPtrs&            support_layers()       { return m_support_layers; }
+
+    // Support Zones: generate() warns when painted zones are sliced with a style other than Snug.
+    void push_support_zone_style_warning(const std::string &message)
+    {
+        this->active_step_add_warning(PrintStateBase::WarningLevel::NON_CRITICAL, message,
+                                      PrintStateBase::SlicingDefaultNotification);
+    }
 
     /*!
      * \brief Remove short bridges from the overhang contact regions so that they are
@@ -651,6 +680,43 @@ public:
     std::vector<Polygons>       slice_support_volumes(const ModelVolumeType model_volume_type) const;
     std::vector<Polygons>       slice_support_blockers() const { return this->slice_support_volumes(ModelVolumeType::SUPPORT_BLOCKER); }
     std::vector<Polygons>       slice_support_enforcers() const { return this->slice_support_volumes(ModelVolumeType::SUPPORT_ENFORCER); }
+    // Support Zones: the zone volumes sliced one by one (no union across volumes, identity kept).
+    // Empty when the object has no zone, so the support generator keeps its usual path.
+    std::vector<SupportZoneSlices> slice_support_zones() const;
+    // Support Zones: the SUPPORT_BLOCKER volumes marked as cut (neotko_support_cut), united, per
+    // object layer. Empty if there is none.
+    std::vector<Polygons>       slice_support_cutters() const;
+
+    // Support Zones (ported from OrcaFS-NeotkoCM by Neotko, s286c F4): the roof of a zone may take
+    // its own filament. Zones of the same recipe form one family, so two different materials are two
+    // families and their areas are disjoint. The support generator keeps the area of each family per
+    // object layer, the toolpaths are split by those areas, and ToolOrdering / GCode schedule and
+    // emit each family with its filaments.
+    struct SupportFamily
+    {
+        // 1-based filament ids; 0 = as the object (support_filament / support_interface_filament).
+        int body_filament      { 0 };
+        int interface_filament { 0 };
+        bool operator==(const SupportFamily &rhs) const { return body_filament == rhs.body_filament && interface_filament == rhs.interface_filament; }
+    };
+    struct SupportFamilyAreas
+    {
+        std::vector<SupportFamily>         families;
+        // [object layer][family], indexed like layer_support_areas.
+        std::vector<std::vector<Polygons>> areas;
+        // print_z of every object layer: the toolpaths work on support layers, not synchronized with the object ones.
+        std::vector<float>                 layer_print_z;
+        // Nothing to split unless at least two families print with different filaments: the usual
+        // path, and identical G-code.
+        bool trivial() const {
+            return families.size() < 2 ||
+                   std::all_of(families.begin(), families.end(), [this](const SupportFamily &f) { return f == families.front(); });
+        }
+    };
+    const SupportFamilyAreas&     support_family_areas() const { return m_support_family_areas; }
+    // The family areas of the object layer at print_z, or nullptr when there is nothing to split.
+    const std::vector<Polygons>*  support_family_areas_at(float print_z) const;
+    void                          set_support_family_areas(SupportFamilyAreas &&a) const { m_support_family_areas = std::move(a); }
     // Preserve each connected region and its holes for perimeter clipping.
     std::vector<ExPolygons>     slice_single_volume_regions(const ModelVolume* volume) const;
 
@@ -840,6 +906,8 @@ private:
     };
     std::vector<BeltDroppedFill>            m_belt_dropped_fills;
     SupportLayerPtrs                        m_support_layers;
+    // Support Zones: written by the support generator, which only gets a const PrintObject.
+    mutable SupportFamilyAreas              m_support_family_areas;
     std::vector<LocalZInterval>             m_local_z_intervals;
     std::vector<SubLayerPlan>               m_local_z_sublayer_plan;
     // Belt brim, generated in posSupportMaterial by BeltBrim.cpp.  Object-local

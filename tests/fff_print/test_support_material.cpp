@@ -609,3 +609,154 @@ TEST_CASE("PerObject Support keeps the support of an object out of the object be
     else
         CHECK(inside > 0); // otherwise the case above proves nothing
 }
+
+namespace {
+
+// Mean X of the support extrusions below `below_z`, in object coordinates, and how many points it averages.
+std::pair<double, size_t> support_mean_x_below(const PrintObject &object, double below_z)
+{
+    double sum = 0.;
+    size_t n   = 0;
+    for (const SupportLayer *layer : object.support_layers()) {
+        if (layer->print_z >= below_z)
+            continue;
+        Points points;
+        layer->support_fills.collect_points(points);
+        for (const Point &p : points) {
+            sum += unscale<double>(p.x());
+            ++n;
+        }
+    }
+    return { n > 0 ? sum / double(n) : 0., n };
+}
+
+// A column carrying a plate that overhangs 24 mm in +X, and an enforcer block under the tip of the
+// overhang that leans 8 mm towards the column on its way down to the bed. As a support zone (the
+// gizmo always writes neotko_zone_lean_deg) the column follows the block; as a classic enforcer it
+// falls plumb under the tip.
+std::pair<double, size_t> leaning_block_support(bool as_zone, size_t &zones_found)
+{
+    TriangleMesh part = make_cube(6, 6, 16);
+    TriangleMesh plate = make_cube(30, 6, 3);
+    plate.translate(0.f, 0.f, 15.f);
+    part.merge(plate);
+
+    const double height = 15.5, lean = -8.;
+    TriangleMesh block = make_cube(6, 10, height);
+    Transform3d shear = Transform3d::Identity();
+    shear.linear()(0, 2) = - lean / height;   // x grows with z: the foot is `lean` mm from the top
+    block.transform(shear);
+    block.translate(float(22. + lean), -2.f, 0.f);
+
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_deserialize_strict({
+        { "enable_support",              1 },
+        { "support_type",                "normal(manual)" },
+        { "support_style",               "snug" },
+        { "support_on_build_plate_only", 0 },
+        { "layer_height",                0.2 },
+        { "gcode_comments",              1 },
+    });
+
+    Model        model;
+    ModelObject *object = model.add_object();
+    object->name = "zone.stl";
+    object->add_volume(std::move(part));
+    ModelVolume *zone = object->add_volume(std::move(block), ModelVolumeType::SUPPORT_ENFORCER);
+    if (as_zone)
+        zone->config.set_key_value("neotko_zone_lean_deg", new ConfigOptionFloat(45.));
+    object->add_instance();
+    object->ensure_on_bed();
+
+    Print print;
+    print.auto_assign_extruders(object);
+    print.apply(model, config);
+    print.validate();
+    print.set_status_silent();
+    print.process();
+    REQUIRE(print.objects().size() == 1);
+    zones_found = print.objects().front()->slice_support_zones().size();
+    return support_mean_x_below(*print.objects().front(), 2.);
+}
+
+} // namespace
+
+TEST_CASE("A support zone column follows its leaning block down to the bed", "[SupportMaterial][SupportZones]")
+{
+    size_t zones_classic = 0, zones_zone = 0;
+    const auto [classic_x, classic_n] = leaning_block_support(false, zones_classic);
+    const auto [zone_x, zone_n]       = leaning_block_support(true, zones_zone);
+    CHECK(zones_classic == 0);
+    CHECK(zones_zone == 1);
+    REQUIRE(classic_n > 0);
+    REQUIRE(zone_n > 0);
+    INFO("classic mean x " << classic_x << " mm, zone mean x " << zone_x << " mm");
+    // The block leans 8 mm towards -X; the zone column lands most of that way, the classic one does not move.
+    CHECK(classic_x - zone_x > 4.);
+}
+
+// Two zones under the two overhangs of a T, one with its own roof filament: they are two families
+// with different materials, so the support toolpaths are split between them and the roof filament
+// is used by the print. With the same filament on both there is nothing to split.
+TEST_CASE("Support zones with their own roof filament split the support between families", "[SupportMaterial][SupportZones]")
+{
+    const int roof_filament = GENERATE(0, 2);
+    INFO("roof filament of the left zone: " << roof_filament);
+
+    TriangleMesh part = make_cube(6, 6, 16);
+    part.translate(12.f, 0.f, 0.f);
+    TriangleMesh plate = make_cube(30, 6, 3);
+    plate.translate(0.f, 0.f, 15.f);
+    part.merge(plate);
+
+    DynamicPrintConfig config = DynamicPrintConfig::full_print_config();
+    config.set_num_extruders(2);
+    config.set_deserialize_strict({
+        { "filament_diameter",           "1.75,1.75" },
+        { "enable_support",              1 },
+        { "support_type",                "normal(manual)" },
+        { "support_style",               "snug" },
+        { "support_on_build_plate_only", 0 },
+        { "layer_height",                0.2 },
+    });
+
+    Model        model;
+    ModelObject *object = model.add_object();
+    object->name = "zones.stl";
+    object->add_volume(std::move(part));
+    for (const float x : { 1.f, 24.f }) {
+        TriangleMesh block = make_cube(5, 8, 15.5);
+        block.translate(x, -1.f, 0.f);
+        ModelVolume *zone = object->add_volume(std::move(block), ModelVolumeType::SUPPORT_ENFORCER);
+        zone->config.set_key_value("neotko_zone_lean_deg", new ConfigOptionFloat(45.));
+        zone->config.set_key_value("support_filament", new ConfigOptionInt(0));
+        zone->config.set_key_value("support_interface_filament", new ConfigOptionInt(x < 10.f ? roof_filament : 0));
+    }
+    object->add_instance();
+    object->ensure_on_bed();
+
+    Print print;
+    print.auto_assign_extruders(object);
+    print.apply(model, config);
+    print.validate();
+    print.set_status_silent();
+    print.process();
+    REQUIRE(print.objects().size() == 1);
+    const PrintObject &po = *print.objects().front();
+    REQUIRE(po.support_layer_count() > 0);
+
+    size_t split_layers = 0;
+    for (const SupportLayer *layer : po.support_layers())
+        if (! layer->support_fills_family.empty())
+            ++ split_layers;
+    const std::vector<unsigned int> used = print.extruders();
+    const bool uses_second = std::find(used.begin(), used.end(), 1u) != used.end();
+    if (roof_filament == 0) {
+        CHECK(po.support_family_areas().trivial());
+        CHECK(split_layers == 0);
+    } else {
+        CHECK_FALSE(po.support_family_areas().trivial());
+        CHECK(split_layers > 0);
+        CHECK(uses_second);
+    }
+}
