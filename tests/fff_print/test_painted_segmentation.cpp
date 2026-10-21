@@ -316,3 +316,118 @@ TEST_CASE("Interlocking beams are rejected while a region combines layers", "[Pa
     CAPTURE(error);
     CHECK(error.find("interlocking beams") != std::string::npos);
 }
+
+// Painter Pro Mode (ported from OrcaFS-NeotkoCM by Neotko): extra walls and surface depth of painted regions.
+namespace {
+// A 20 x 20 x 10 mm cube of filament 2 whose top is painted with `paint`.
+void add_top_painted_cube(Model &model, int paint)
+{
+    ModelObject *object = model.add_object();
+    object->name = "top_painted_cube";
+    ModelVolume *cube = object->add_volume(make_cube(20., 20., 10.));
+    cube->config.set("extruder", 2);
+    paint_facets(*cube, paint, [](const Vec3f &n) { return n.z() > 0.5f; });
+    object->add_instance();
+}
+
+std::vector<int> region_wall_loops(const PrintObject &po)
+{
+    std::vector<int> out;
+    for (size_t i = 0; i < po.num_printing_regions(); ++ i)
+        out.emplace_back(po.printing_region(i).config().wall_loops.value);
+    return out;
+}
+
+double solid_infill_area_at(const Layer &layer, int region)
+{
+    double sum = 0.;
+    if (region >= 0 && size_t(region) < layer.region_count())
+        for (const Surface &surface : layer.get_region(region)->fill_surfaces.surfaces)
+            if (surface.surface_type == stInternalSolid)
+                sum += unscale<double>(unscale<double>(surface.expolygon.area()));
+    return sum;
+}
+} // namespace
+
+TEST_CASE("Painter Pro extra walls go to the painted region only", "[PaintedSegmentation][PainterPro]")
+{
+    DynamicPrintConfig config = three_filament_config(0.);
+    config.set_key_value("wall_loops", new ConfigOptionInt(2));
+    Model model;
+    Print print;
+
+    SECTION("off, every region keeps the object's walls") {
+        add_top_painted_cube(model, 1);
+        place_and_apply(print, model, config);
+        const PrintObject &po = *print.objects().front();
+        REQUIRE(region_with_inner_wall_filament(po, 1) >= 0);
+        for (int loops : region_wall_loops(po))
+            CHECK(loops == 2);
+    }
+    SECTION("on, the painted region gets them and keeps them when the regions are verified again") {
+        config.set_key_value("mmu_segmented_region_extra_walls", new ConfigOptionInt(3));
+        add_top_painted_cube(model, 1);
+        place_and_apply(print, model, config);
+        auto check = [&print](int painted_loops) {
+            const PrintObject &po      = *print.objects().front();
+            const int          painted = region_with_inner_wall_filament(po, 1);
+            const int          parent  = region_with_inner_wall_filament(po, 2);
+            REQUIRE(painted >= 0);
+            REQUIRE(parent >= 0);
+            CHECK(po.printing_region(size_t(painted)).config().wall_loops.value == painted_loops);
+            CHECK(po.printing_region(size_t(parent)).config().wall_loops.value == 2);
+        };
+        check(5);
+        // Another setting changes: the regions are kept and their configs verified.
+        config.set_key_value("sparse_infill_density", new ConfigOptionPercent(30));
+        print.apply(model, config);
+        check(5);
+        // A per-color value wins over the global one.
+        config.set_key_value("mmu_segmented_region_extra_walls_per_color", new ConfigOptionInts({0, 4}));
+        print.apply(model, config);
+        check(6);
+        config.set_key_value("mmu_segmented_region_extra_walls", new ConfigOptionInt(0));
+        config.set_key_value("mmu_segmented_region_extra_walls_per_color", new ConfigOptionInts());
+        print.apply(model, config);
+        check(2);
+    }
+    SECTION("not where the paint is the object's own filament") {
+        config.set_key_value("mmu_segmented_region_extra_walls", new ConfigOptionInt(3));
+        add_top_painted_cube(model, 2);
+        place_and_apply(print, model, config);
+        for (int loops : region_wall_loops(*print.objects().front()))
+            CHECK(loops == 2);
+    }
+}
+
+TEST_CASE("Painter Pro surface depth projects a painted top into the object as solid infill", "[PaintedSegmentation][PainterPro]")
+{
+    // Top painted with filament 1, two shell rows: the painted colour stops one row under the face unless
+    // the surface depth carries it down.
+    auto slice = [](int depth) {
+        DynamicPrintConfig config = three_filament_config(0.);
+        config.set_key_value("top_shell_layers",                   new ConfigOptionInt(2));
+        config.set_key_value("top_color_penetration_layers",       new ConfigOptionInt(2));
+        config.set_key_value("sparse_infill_density",              new ConfigOptionPercent(15));
+        config.set_key_value("mmu_segmented_region_surface_depth", new ConfigOptionInt(depth));
+        Model model;
+        auto  print = std::make_unique<Print>();
+        add_top_painted_cube(model, 1);
+        place_and_apply(*print, model, config);
+        print->process();
+        const PrintObject &po      = *print->objects().front();
+        const int          painted = region_with_inner_wall_filament(po, 1);
+        REQUIRE(painted >= 0);
+        REQUIRE(po.layer_count() == size_t(50));
+        // Layer 44 lies five rows under the painted face (layer 49).
+        const Layer &deep = *po.get_layer(44);
+        return std::make_pair(region_area_at(deep, painted), solid_infill_area_at(deep, painted));
+    };
+    const auto [off_area, off_solid] = slice(0);
+    CHECK(off_area < 0.1);
+    CHECK(off_solid < 0.1);
+    const auto [on_area, on_solid] = slice(8);
+    CAPTURE(on_area, on_solid);
+    CHECK(on_area > 250.);
+    CHECK(on_solid > 150.);
+}

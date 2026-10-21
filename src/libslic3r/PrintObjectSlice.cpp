@@ -6348,6 +6348,9 @@ void PrintObject::slice_volumes()
 
     this->apply_conical_overhang();
 
+    // Painter Pro Mode: refilled below by the colour segmentation, so that unpainting leaves no stale surface depth.
+    m_painted_depth_solid_mask.clear();
+
     // Is any ModelVolume multi-material painted?
     if (const auto& volumes = this->model_object()->volumes;
         m_print->config().filament_diameter.size() > 1 && // BBS
@@ -6364,7 +6367,8 @@ void PrintObject::slice_volumes()
         }
 
         BOOST_LOG_TRIVIAL(debug) << "Slicing volumes - MMU segmentation";
-        std::vector<std::vector<ExPolygons>> mm_segmentation = multi_material_segmentation_by_painting(*this, [print]() { print->throw_if_canceled(); });
+        std::vector<std::vector<ExPolygons>> mm_segmentation = multi_material_segmentation_by_painting(*this, [print]() { print->throw_if_canceled(); },
+                                                                                                       &m_painted_depth_solid_mask);
         apply_mixed_surface_indentation(*this, mm_segmentation);
         apply_mixed_component_surface_offsets(*this, mm_segmentation);
         std::vector<std::vector<ExPolygons>> local_z_segmentation =

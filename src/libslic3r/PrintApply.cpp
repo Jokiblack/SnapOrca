@@ -863,6 +863,17 @@ void print_region_ref_inc(PrintRegion &r) { ++ r.m_ref_cnt; }
 void print_region_ref_reset(PrintRegion &r) { r.m_ref_cnt = 0; }
 int  print_region_ref_cnt(const PrintRegion &r) { return r.m_ref_cnt; }
 
+// Painter Pro Mode (ported from OrcaFS-NeotkoCM by Neotko): walls added to the areas painted with
+// `painted_extruder_id` only, from mmu_segmented_region_extra_walls or its per-color override
+// (indexed by paint slot, 0 or missing = the global value). 0 = none.
+static int painted_region_extra_walls(const PrintObjectConfig &object_config, unsigned int painted_extruder_id)
+{
+    const std::vector<int> &per_color = object_config.mmu_segmented_region_extra_walls_per_color.values;
+    if (painted_extruder_id < per_color.size() && per_color[painted_extruder_id] > 0)
+        return std::min(per_color[painted_extruder_id], 8);
+    return std::max(0, object_config.mmu_segmented_region_extra_walls.value);
+}
+
 // Verify whether the PrintRegions of a PrintObject are still valid, possibly after updating the region configs.
 // Before region configs are updated, callback_invalidate() is called to possibly stop background processing.
 // Returns false if this object needs to be resliced because regions were merged or split.
@@ -870,9 +881,17 @@ int  print_region_ref_cnt(const PrintRegion &r) { return r.m_ref_cnt; }
 // part's own filament wherever a per-feature selector follows it (Default, resolved to the part's
 // extruder), while a selector the user pointed at another filament - e.g. all sparse infill with
 // filament 4 - keeps that filament inside painted areas as well.
-static PrintRegionConfig painted_region_config(const PrintRegionConfig &parent, int base_extruder, unsigned int painted_extruder_id)
+static PrintRegionConfig painted_region_config(const PrintRegionConfig &parent, int base_extruder, unsigned int painted_extruder_id, int extra_walls)
 {
     PrintRegionConfig cfg = parent;
+    // Painter Pro Mode: the extra walls go to the painted region only, and not where it is painted with the
+    // filament the parent already prints its walls with. There they would not show, and a config that differs
+    // from the parent's would make slicing keep both regions, printing the same walls twice.
+    if (extra_walls > 0) {
+        const int parent_wall = parent.outer_wall_filament_id.value >= 1 ? parent.outer_wall_filament_id.value : base_extruder;
+        if (int(painted_extruder_id) != parent_wall)
+            cfg.wall_loops.value = std::max(0, cfg.wall_loops.value) + extra_walls;
+    }
     auto paint = [base_extruder, painted_extruder_id](ConfigOptionInt &selector) {
         if (base_extruder <= 0 || selector.value <= 0 || selector.value == base_extruder)
             selector.value = int(painted_extruder_id);
@@ -889,6 +908,7 @@ static PrintRegionConfig painted_region_config(const PrintRegionConfig &parent, 
 bool verify_update_print_object_regions(
     ModelVolumePtrs                     model_volumes,
     const PrintRegionConfig            &default_region_config,
+    const PrintObjectConfig            &object_config,
     size_t                              num_extruders,
     PrintObjectRegions                 &print_object_regions,
     const std::function<void(const PrintRegionConfig&, const PrintRegionConfig&, const t_config_option_keys&)> &callback_invalidate,
@@ -971,7 +991,8 @@ bool verify_update_print_object_regions(
             if (!mm_paint_applies_to_parent_region(layer_range, region.parent))
                 return false;
             const PrintObjectRegions::VolumeRegion &parent_region   = layer_range.volume_regions[region.parent];
-            PrintRegionConfig                       cfg             = painted_region_config(parent_region.region->config(), parent_region.model_volume->extruder_id(), region.extruder_id);
+            PrintRegionConfig                       cfg             = painted_region_config(parent_region.region->config(), parent_region.model_volume->extruder_id(), region.extruder_id,
+                                                                                            painted_region_extra_walls(object_config, region.extruder_id));
             if (cfg != region.region->config()) {
                 // Region configuration changed.
                 if (print_region_ref_cnt(*region.region) == 0) {
@@ -1120,6 +1141,7 @@ static PrintObjectRegions* generate_print_object_regions(
     const ModelVolumePtrs                       &model_volumes,
     const LayerRanges                           &model_layer_ranges,
     const PrintRegionConfig                     &default_region_config,
+    const PrintObjectConfig                     &object_config,
     const Transform3d                           &trafo,
     size_t                                       num_extruders,
     const float                                  xy_contour_compensation,
@@ -1283,7 +1305,8 @@ static PrintObjectRegions* generate_print_object_regions(
                 if (const PrintObjectRegions::VolumeRegion &parent_region = layer_range.volume_regions[parent_region_id];
                     (parent_region.model_volume->is_model_part() || parent_region.model_volume->is_modifier()) &&
                     mm_paint_applies_to_parent_region(layer_range, parent_region_id)) {
-                    PrintRegionConfig       cfg    = painted_region_config(parent_region.region->config(), parent_region.model_volume->extruder_id(), painted_extruder_id);
+                    PrintRegionConfig       cfg    = painted_region_config(parent_region.region->config(), parent_region.model_volume->extruder_id(), painted_extruder_id,
+                                                                           painted_region_extra_walls(object_config, painted_extruder_id));
                     const PrintRegionConfig wanted = cfg;
                     // Keep PrintRegion config-interned. If a painted target resolves to the same
                     // config as its parent, alias it instead of creating a duplicate PrintRegion.
@@ -2643,6 +2666,7 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
                 verify_update_print_object_regions(
                     print_object.model_object()->volumes,
                     m_default_region_config,
+                    print_object.config(),
                     num_total_filaments,
                     *print_object_regions,
                     [it_print_object, it_print_object_end, &update_apply_status](const PrintRegionConfig &old_config, const PrintRegionConfig &new_config, const t_config_option_keys &diff_keys) {
@@ -2678,6 +2702,7 @@ Print::ApplyStatus Print::apply(const Model &model, DynamicPrintConfig new_full_
                 print_object.model_object()->volumes,
                 LayerRanges(print_object.model_object()->layer_config_ranges),
                 m_default_region_config,
+                print_object.config(),
                 model_object_status.print_instances.front().trafo,
                 num_total_filaments ,
                 print_object.is_mm_painted() ? 0.f : float(print_object.config().xy_contour_compensation.value),

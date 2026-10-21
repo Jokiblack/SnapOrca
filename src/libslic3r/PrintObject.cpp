@@ -673,6 +673,11 @@ void PrintObject::prepare_infill()
     this->discover_horizontal_shells();
     m_print->throw_if_canceled();
 
+    // Painter Pro Mode: solid infill under painted surfaces, before process_external_surfaces() so that the
+    // new solid gets the usual expansion and cleanup. Nothing happens without a surface depth.
+    this->apply_painted_surface_depth();
+    m_print->throw_if_canceled();
+
 #ifdef SLIC3R_DEBUG_SLICE_PROCESSING
     for (size_t region_id = 0; region_id < this->num_printing_regions(); ++ region_id) {
         for (const Layer *layer : m_layers) {
@@ -5885,6 +5890,45 @@ void PrintObject::discover_horizontal_shells()
     }     // for each region
 #endif    /* SLIC3R_DEBUG_SLICE_PROCESSING */
 } // void PrintObject::discover_horizontal_shells()
+
+// Painter Pro Mode (ported from OrcaFS-NeotkoCM by Neotko), surface depth. The colour segmentation projected the painted
+// top (bottom) surfaces mmu_segmented_region_surface_depth layers down (up) and kept the projections per layer. Here
+// the sparse infill under them turns into solid infill. Only stInternal is touched: what is already solid (shells,
+// vertical shells) is left alone, so nothing is counted twice.
+void PrintObject::apply_painted_surface_depth()
+{
+    if (std::none_of(m_painted_depth_solid_mask.begin(), m_painted_depth_solid_mask.end(), [](const ExPolygons &ex) { return !ex.empty(); }))
+        return;
+
+    const size_t num_layers = std::min(m_layers.size(), m_painted_depth_solid_mask.size());
+    tbb::parallel_for(tbb::blocked_range<size_t>(0, num_layers), [this](const tbb::blocked_range<size_t> &range) {
+        for (size_t layer_idx = range.begin(); layer_idx < range.end(); ++layer_idx) {
+            m_print->throw_if_canceled();
+            const ExPolygons &mask = m_painted_depth_solid_mask[layer_idx];
+            if (mask.empty())
+                continue;
+            for (LayerRegion *layerm : m_layers[layer_idx]->regions()) {
+                Polygons internal = to_polygons(layerm->fill_surfaces.filter_by_type(stInternal));
+                if (internal.empty())
+                    continue;
+                ExPolygons new_solid = intersection_ex(mask, internal);
+                if (new_solid.empty())
+                    continue;
+                // Rebuild as discover_horizontal_shells() does, keeping every other surface type untouched.
+                SurfaceCollection backup             = std::move(layerm->fill_surfaces);
+                ExPolygons        remaining_internal = diff_ex(internal, new_solid);
+                Polygons          solid              = to_polygons(std::move(new_solid));
+                polygons_append(solid, to_polygons(backup.filter_by_type(stInternalSolid)));
+                layerm->fill_surfaces.clear();
+                for (Surface &surface : backup.surfaces)
+                    if (surface.surface_type != stInternal && surface.surface_type != stInternalSolid)
+                        layerm->fill_surfaces.surfaces.emplace_back(std::move(surface));
+                layerm->fill_surfaces.append(remaining_internal, stInternal);
+                layerm->fill_surfaces.append(union_ex(solid), stInternalSolid);
+            }
+        }
+    });
+}
 
 // Drop expolygons too small to be worth combining (see LayerRegion::infill_area_threshold()).
 static void remove_small_expolygons(ExPolygons &expolygons, double area_threshold)

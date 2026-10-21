@@ -55,10 +55,14 @@ std::vector<std::vector<ExPolygons>> segmentation_by_painting(const PrintObject 
                                                               float                                                            segmentation_interlocking_depth,
                                                               bool                                                             segmentation_interlocking_beam,
                                                               IncludeTopAndBottomLayers                                        include_top_and_bottom_layers,
-                                                              const std::function<void()>                                     &throw_on_cancel_callback);
+                                                              const std::function<void()>                                     &throw_on_cancel_callback,
+                                                              std::vector<ExPolygons>                                         *painted_depth_solid_mask_out = nullptr);
 
-// Returns multi-material segmentation based on painting in multi-material segmentation gizmo
-std::vector<std::vector<ExPolygons>> multi_material_segmentation_by_painting(const PrintObject &print_object, const std::function<void()> &throw_on_cancel_callback);
+// Returns multi-material segmentation based on painting in multi-material segmentation gizmo.
+// Painter Pro Mode: painted_depth_solid_mask_out, when given, receives one ExPolygons per layer, the painted top and
+// bottom surfaces projected mmu_segmented_region_surface_depth layers into the object (empty when the depth is 0).
+std::vector<std::vector<ExPolygons>> multi_material_segmentation_by_painting(const PrintObject &print_object, const std::function<void()> &throw_on_cancel_callback,
+                                                                             std::vector<ExPolygons> *painted_depth_solid_mask_out = nullptr);
 
 // Returns fuzzy skin segmentation based on painting in fuzzy skin segmentation gizmo
 std::vector<std::vector<ExPolygons>> fuzzy_skin_segmentation_by_painting(const PrintObject &print_object, const std::function<void()> &throw_on_cancel_callback);

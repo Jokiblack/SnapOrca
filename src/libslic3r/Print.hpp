@@ -781,6 +781,9 @@ private:
     void bridge_over_infill();
     void clip_fill_surfaces();
     void discover_horizontal_shells();
+    // Painter Pro Mode (ported from OrcaFS-NeotkoCM by Neotko): solid infill under (over) painted top (bottom)
+    // surfaces, mmu_segmented_region_surface_depth layers deep.
+    void apply_painted_surface_depth();
     void combine_infill();
     void discover_sub_top_surfaces();
     // Per-extruder layer height: top surfaces print at their filament's preferred pitch by
@@ -857,6 +860,10 @@ private:
 
     std::vector < VolumeSlices >            firstLayerObjSliceByVolume;
     std::vector<groupedVolumeSlices>        firstLayerObjSliceByGroups;
+
+    // Painter Pro Mode: per layer, the painted surfaces projected there by the surface depth. Filled by the colour
+    // segmentation (posSlice), read by apply_painted_surface_depth() (posPrepareInfill). Empty when the depth is 0.
+    std::vector<ExPolygons>                 m_painted_depth_solid_mask;
 
     // BBS: per object skirt
     ExtrusionEntityCollection               m_skirt;
