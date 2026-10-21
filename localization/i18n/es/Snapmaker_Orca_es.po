@@ -39248,8 +39248,8 @@ msgid "Expert G-code Reprocessor rules"
 msgstr "Reglas del reprocesador experto de G-code"
 
 # AI Translated
-msgid "Internal JSON list of the Expert G-code Reprocessor rules. Edited from its panel in the preview; not meant to be edited directly."
-msgstr "Lista JSON interna con las reglas del reprocesador experto de G-code. Se edita desde su panel en la vista previa; no está pensada para editarse a mano."
+msgid "Internal JSON list of the Expert G-code Reprocessor rules. Edited from Edit > Expert G-code Reprocessor...; not meant to be edited directly."
+msgstr "Lista JSON interna con las reglas del reprocesador experto de G-code. Se edita desde Edición > Reprocesador experto de G-code...; no está pensada para editarse a mano."
 
 # AI Translated
 msgid "Expert G-code Reprocessor"
@@ -39512,6 +39512,142 @@ msgstr "Unir los cortes de soporte"
 # AI Translated
 msgid "cuts merged into one."
 msgstr "cortes unidos en uno."
+
+# AI Translated
+msgid "%1% cut merged into one."
+msgid_plural "%1% cuts merged into one."
+msgstr[0] "%1% corte unido en uno."
+msgstr[1] "%1% cortes unidos en uno."
+
+# AI Translated
+msgid "Cuts applied to %1% zone."
+msgid_plural "Cuts applied to %1% zones."
+msgstr[0] "Cortes aplicados a %1% zona."
+msgstr[1] "Cortes aplicados a %1% zonas."
+
+# AI Translated
+msgid "%1% zone"
+msgid_plural "%1% zones"
+msgstr[0] "%1% zona"
+msgstr[1] "%1% zonas"
+
+# AI Translated
+msgid "%1% sterile"
+msgid_plural "%1% sterile"
+msgstr[0] "%1% estéril"
+msgstr[1] "%1% estériles"
+
+# AI Translated
+msgid ""
+"Puts the camera under the part, where the surfaces\n"
+"that need holding face you. Same as the Bottom view."
+msgstr ""
+"Pone la cámara bajo la pieza, donde las superficies\n"
+"que hay que sostener quedan de frente. Igual que la vista inferior."
+
+# AI Translated
+msgid ""
+"Draw a polygon on screen: click to add points,\n"
+"click the first point again to close it.\n"
+"All support behind it, in the direction you are looking,\n"
+"is not printed, even a column coming from above.\n"
+"\n"
+"Turn the view first: the cut goes through the whole part.\n"
+"Right click cancels the polygon. Dragging turns the view\n"
+"and throws away the points drawn so far."
+msgstr ""
+"Dibuja un polígono en pantalla: haz clic para añadir puntos,\n"
+"vuelve a hacer clic en el primer punto para cerrarlo.\n"
+"Todo el soporte que quede detrás, en la dirección en la que miras,\n"
+"no se imprime, ni siquiera una columna que venga de arriba.\n"
+"\n"
+"Gira la vista primero: el corte atraviesa toda la pieza.\n"
+"Clic derecho cancela el polígono. Arrastrar gira la vista\n"
+"y descarta los puntos dibujados hasta ahora."
+
+# AI Translated
+msgid ""
+"Everything you painted sits at stump height or below,\n"
+"so there is no stretch for the column to grow through.\n"
+"It prints as a plain block and the stumps do nothing."
+msgstr ""
+"Todo lo que has pintado está a la altura de los tocones o por debajo,\n"
+"así que no hay tramo por el que pueda crecer la columna.\n"
+"Se imprime como un bloque simple y los tocones no hacen nada."
+
+# AI Translated
+msgid "cuts on this object: %1%"
+msgstr "cortes en este objeto: %1%"
+
+# AI Translated
+msgid ""
+"Takes the cuts out of every support zone of this object\n"
+"and then deletes the cuts.\n"
+"\n"
+"Afterwards: the zones can no longer be reopened to edit,\n"
+"automatic support is not cut any more, and a guided column\n"
+"that comes in from the side can pass there again."
+msgstr ""
+"Resta los cortes de todas las zonas de soporte de este objeto\n"
+"y después borra los cortes.\n"
+"\n"
+"Después: las zonas ya no se pueden volver a abrir para editarlas,\n"
+"el soporte automático ya no se corta, y una columna guiada\n"
+"que llega de lado puede volver a pasar por ahí."
+
+# AI Translated
+msgid "Editing zone #%1%"
+msgstr "Editando la zona #%1%"
+
+# AI Translated
+msgid "3 · Stumps (%1%)"
+msgstr "3 · Tocones (%1%)"
+
+# AI Translated
+msgid "Recommended up to %1% deg  ·  at this layer height a support line is %2% mm wide"
+msgstr "Recomendado hasta %1% grados  ·  con esta altura de capa una línea de soporte mide %2% mm de ancho"
+
+# AI Translated
+msgid "Knee at z = %1% mm  ·  then drops %2% mm"
+msgstr "Codo en z = %1% mm  ·  y luego baja %2% mm"
+
+# AI Translated
+msgid "%1% mm of a reach of %2% mm"
+msgstr "%1% mm de un alcance de %2% mm"
+
+# AI Translated
+msgid ""
+"On: the brush only marks surface that leans past the overhang angle.\n"
+"Walls and the top side it sweeps over are left out,\n"
+"so painting along an edge no longer drags the box up.\n"
+"\n"
+"The angle is the one of 'Highlight overhangs'.\n"
+"Turn that on and move 'overhangs' to grab more or less:\n"
+"what you painted is redone live."
+msgstr ""
+"Activado: el pincel solo marca la superficie que se inclina más que el ángulo de voladizo.\n"
+"Las paredes y la cara superior por las que pasa quedan fuera,\n"
+"así que pintar a lo largo de un borde ya no arrastra la caja hacia arriba.\n"
+"\n"
+"El ángulo es el de 'Resaltar las zonas de voladizos'.\n"
+"Actívalo y mueve 'voladizos' para coger más o menos:\n"
+"lo que has pintado se rehace en directo."
+
+# AI Translated
+msgid "1  (plumb, under the area)"
+msgstr "1  (a plomo, bajo la zona)"
+
+# AI Translated
+msgid "Recommended up to %1% deg for this layer height and a support line of %2% mm wide."
+msgstr "Recomendado hasta %1% grados para esta altura de capa y una línea de soporte de %2% mm de ancho."
+
+# AI Translated
+msgid "Lands on the part  z = %1%"
+msgstr "Se apoya en la pieza  z = %1%"
+
+# AI Translated
+msgid "Surface picked:  z = %1% mm"
+msgstr "Superficie elegida:  z = %1% mm"
 
 # AI Translated
 msgid "There are no cuts to apply."
@@ -41138,8 +41274,12 @@ msgid "Experimental features (Neotko)"
 msgstr "Funciones experimentales (Neotko)"
 
 # AI Translated
-msgid "Shows the tools and panels of the features ported from OrcaFS-NeotkoCM. They are experimental. This only shows their interface: a project slices the same whether it is on or off."
-msgstr "Muestra las herramientas y paneles de las funciones portadas de OrcaFS-NeotkoCM, que son experimentales. Solo muestra su interfaz: un proyecto se lamina igual con la opción activada o desactivada."
+msgid ""
+"Shows the experimental features ported from OrcaFS-NeotkoCM: the \"Align & Construct\", \"Height Adaptive Effects\", \"Precision Adaptive Layer Height\" and \"Support Zones\" tools, the Pro Mode of color painting, font kerning in embossed text, Edit > Expert G-code Reprocessor, and the print settings \"Bridging infill extra expansion\", \"Slow down inner walls next to overhangs\", \"Penultimate top layers\", \"Extra walls on segmented regions\" and \"Surface depth of painted regions\", also among the settings that can be added to an object.\n"
+"This only shows or hides their interface: a project slices the same whether it is on or off. Restart the application for the change to take effect."
+msgstr ""
+"Muestra las funciones experimentales portadas de OrcaFS-NeotkoCM: las herramientas \"Alinear y construir\", \"Efectos adaptativos por altura\", \"Altura de capa adaptativa de precisión\" y \"Zonas de soporte\", el modo Pro del pintado de colores, el kerning de fuente en el texto en relieve, Edición > Reprocesador experto de G-code, y los ajustes de impresión \"Expansión extra del relleno de puente\", \"Reducir velocidad de perímetros internos junto a voladizos\", \"Capas penúltimas superiores\", \"Perímetros extra en regiones segmentadas\" y \"Profundidad de superficie de las regiones pintadas\", también entre los ajustes que se pueden añadir a un objeto.\n"
+"Solo muestra u oculta su interfaz: un proyecto se lamina igual con la opción activada o desactivada. Reinicie la aplicación para que el cambio surta efecto."
 
 # AI Translated
 msgid "Precision Adaptive Layer Height"

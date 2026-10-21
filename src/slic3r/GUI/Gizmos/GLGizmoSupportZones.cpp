@@ -12,6 +12,7 @@
 #include "slic3r/GUI/CameraUtils.hpp"
 #include "slic3r/GUI/ImGuiWrapper.hpp"
 #include "slic3r/GUI/I18N.hpp"
+#include "slic3r/GUI/format.hpp"
 #include "slic3r/GUI/Gizmos/GLGizmosCommon.hpp"
 
 #include "libslic3r/BuildVolume.hpp"
@@ -47,6 +48,14 @@
 namespace Slic3r { namespace GUI {
 
 namespace {
+
+// A number with fixed decimals, for the placeholders of the translated messages.
+std::string sz_num(double value, int decimals)
+{
+    char buf[32];
+    std::snprintf(buf, sizeof(buf), "%.*f", decimals, value);
+    return buf;
+}
 
 // The colours the two picks wear. Teal is the accent of the Neotko gizmos (GizmoNeotkoStyle.hpp)
 // and here it means "this is the surface you are about to take"; green means "taken".
@@ -4751,9 +4760,7 @@ void GLGizmoSupportZones::merge_cuts()
     const int n = int(idxs.size());
     if (wxGetApp().obj_list() != nullptr && ! dels.empty())
         wxGetApp().obj_list()->delete_from_model_and_list(dels);
-    char b[96];
-    std::snprintf(b, sizeof(b), "%d %s", n, _u8L("cuts merged into one.").c_str());
-    m_cut_status = b;
+    m_cut_status = Slic3r::GUI::format(_L_PLURAL("%1% cut merged into one.", "%1% cuts merged into one.", n), n);
     NeoDebug::write(NeoDebug::SUPPORTZONES, std::string("cut       fundidos=") + std::to_string(n));
     wxGetApp().plater()->update();
     m_parent.set_as_dirty();
@@ -4824,9 +4831,7 @@ void GLGizmoSupportZones::subtract_cuts_from_zones()
     m_zones_dirty   = true;
     if (wxGetApp().obj_list() != nullptr && ! dels.empty())
         wxGetApp().obj_list()->delete_from_model_and_list(dels);
-    char b[128];
-    std::snprintf(b, sizeof(b), "%s %d.", _u8L("Cuts applied to zones:").c_str(), n_zones);
-    m_cut_status = b;
+    m_cut_status = Slic3r::GUI::format(_L_PLURAL("Cuts applied to %1% zone.", "Cuts applied to %1% zones.", n_zones), n_zones);
     NeoDebug::write(NeoDebug::SUPPORTZONES, std::string("cut       restados_de_zonas=") + std::to_string(n_zones)
                                              + " cortes_borrados=" + std::to_string(cut_idxs.size()));
     wxGetApp().plater()->update();
@@ -5823,7 +5828,7 @@ void GLGizmoSupportZones::render_zone_materials()
                         neo_fade(NeoCol::Ink, 0.45f), 6.f, 0, 1.2f);
         if (hv)
             ImGui::SetTooltip("%s", i == 0 ? _u8L("Same as the object").c_str()
-                                           : (_u8L("Filament") + " " + std::to_string(i)).c_str());
+                                           : Slic3r::GUI::format(_u8L("Filament %1%"), i).c_str());
         ImGui::PopID();
     }
 
@@ -5886,21 +5891,21 @@ void GLGizmoSupportZones::render_view_strip()
     ImGui::SameLine(0.f, 6.f);
     if (neo_glyph_toggle("##vbottom", sz, false, Glyph::Landing,
                          (_u8L("View from below") + "\n\n" +
-                          _u8L("Puts the camera under the part, where the surfaces") + "\n" +
-                          _u8L("that need holding face you. Same as the Bottom view.")).c_str()))
+                          _u8L("Puts the camera under the part, where the surfaces\n"
+                               "that need holding face you. Same as the Bottom view.")).c_str()))
         m_parent.select_view("bottom");
 
     // NEOTKO_SUPPORTZONES_TAG s343e — CORTAR SOPORTE con un polígono desde la vista.
     ImGui::SameLine(0.f, 6.f);
     if (neo_glyph_toggle("##vcut", sz, m_cut_mode, Glyph::Erase,
                          (_u8L("Cut supports") + "\n\n" +
-                          _u8L("Draw a polygon on screen: click to add points,") + "\n" +
-                          _u8L("click the first point again to close it.") + "\n" +
-                          _u8L("All support behind it, in the direction you are looking,") + "\n" +
-                          _u8L("is not printed, even a column coming from above.") + "\n\n" +
-                          _u8L("Turn the view first: the cut goes through the whole part.") + "\n" +
-                          _u8L("Right click cancels the polygon. Dragging turns the view") + "\n" +
-                          _u8L("and throws away the points drawn so far.")).c_str())) {
+                          _u8L("Draw a polygon on screen: click to add points,\n"
+                               "click the first point again to close it.\n"
+                               "All support behind it, in the direction you are looking,\n"
+                               "is not printed, even a column coming from above.\n\n"
+                               "Turn the view first: the cut goes through the whole part.\n"
+                               "Right click cancels the polygon. Dragging turns the view\n"
+                               "and throws away the points drawn so far.")).c_str())) {
         m_cut_mode = ! m_cut_mode;
         m_cut_points.clear();
         m_parent.set_as_dirty();
@@ -5913,15 +5918,15 @@ void GLGizmoSupportZones::render_view_strip()
         for (const ZoneRow &z : m_zones)
             if (z.sterile)
                 ++ sterile;
-        char t[64];
-        std::snprintf(t, sizeof(t), "%zu %s", m_zones.size(), _u8L("zones").c_str());
         ImGui::SameLine(0.f, 12.f);
         ImGui::SetCursorPosY(ImGui::GetCursorPosY() + (sz - ImGui::GetTextLineHeight() - 6.f) * 0.5f);
-        neo_status_chip(t, neo_col_u32(NeoCol::Accent), false);
+        neo_status_chip(Slic3r::GUI::format(_L_PLURAL("%1% zone", "%1% zones", m_zones.size()), m_zones.size()).c_str(),
+                        neo_col_u32(NeoCol::Accent), false);
         if (sterile > 0) {
-            std::snprintf(t, sizeof(t), "%zu %s", sterile, _u8L("sterile").c_str());
             ImGui::SameLine(0.f, 5.f);
-            neo_status_chip(t, neo_col_u32(NeoCol::Warn), false);
+            // TRN Count of support zones that catch no overhang at all.
+            neo_status_chip(Slic3r::GUI::format(_L_PLURAL("%1% sterile", "%1% sterile", sterile), sterile).c_str(),
+                            neo_col_u32(NeoCol::Warn), false);
         }
     }
 
@@ -6057,9 +6062,9 @@ void GLGizmoSupportZones::render_issue_tray()
         // s343 — con el pie (M6) esto sólo salta si TODO lo pintado cae bajo el suelo, o sea si la
         // zona no tiene cabeza. Y se dice lo que de verdad pasa: los tocones no se usan.
         neo_warn_row("##w_nogap", _u8L("Not a tree: stumps unused").c_str(),
-                     (_u8L("Everything you painted sits at stump height or below,") + "\n" +
-                      _u8L("so there is no stretch for the column to grow through.") + "\n" +
-                      _u8L("It prints as a plain block and the stumps do nothing.") + "\n\n" +
+                     (_u8L("Everything you painted sits at stump height or below,\n"
+                           "so there is no stretch for the column to grow through.\n"
+                           "It prints as a plain block and the stumps do nothing.") + "\n\n" +
                       _u8L("Paint a surface higher up, or lower the stump.")).c_str());
 
     if (landing_out_of_reach()) {
@@ -6134,10 +6139,8 @@ void GLGizmoSupportZones::render_panel_body()
     // s343e — los cortes del objeto: cuántos hay y quitar el último. Se borran también desde la
     // lista de objetos, como cualquier bloqueador («Support cut»).
     if (m_cut_mode || count_cuts() > 0) {
-        char t[96];
-        std::snprintf(t, sizeof(t), "%s: %d", _u8L("cuts on this object").c_str(), count_cuts());
         ImGui::AlignTextToFramePadding();
-        ImGui::TextUnformatted(t);
+        ImGui::TextUnformatted(Slic3r::GUI::format(_u8L("cuts on this object: %1%"), count_cuts()).c_str());
         const int last = last_cut_volume_idx();
         if (last >= 0) {
             ImGui::SameLine(0.f, 8.f);
@@ -6163,11 +6166,11 @@ void GLGizmoSupportZones::render_panel_body()
             if (ImGui::SmallButton(_u8L("apply to zones").c_str()))
                 wxGetApp().CallAfter([this]() { subtract_cuts_from_zones(); });
             if (ImGui::IsItemHovered())
-                ImGui::SetTooltip("%s", (_u8L("Takes the cuts out of every support zone of this object") + "\n" +
-                                         _u8L("and then deletes the cuts.") + "\n\n" +
-                                         _u8L("Afterwards: the zones can no longer be reopened to edit,") + "\n" +
-                                         _u8L("automatic support is not cut any more, and a guided column") + "\n" +
-                                         _u8L("that comes in from the side can pass there again.") + "\n" +
+                ImGui::SetTooltip("%s", (_u8L("Takes the cuts out of every support zone of this object\n"
+                                              "and then deletes the cuts.\n\n"
+                                              "Afterwards: the zones can no longer be reopened to edit,\n"
+                                              "automatic support is not cut any more, and a guided column\n"
+                                              "that comes in from the side can pass there again.") + "\n" +
                                          _u8L("Undo brings everything back.")).c_str());
         }
         if (! m_cut_status.empty()) {
@@ -6246,10 +6249,10 @@ void GLGizmoSupportZones::render_panel_body()
         dl->AddRectFilled(a, ImVec2(a.x + 2.f, b.y), neo_col_u32(NeoCol::Optimal), 1.f);
         draw_glyph(dl, ImVec2(a.x + 0.4f * neo_u(), a.y + (bh - 0.85f * neo_u()) * 0.5f), 0.85f * neo_u(),
                    Glyph::Edit, neo_col_u32(NeoCol::Optimal));
-        char t[64];
-        std::snprintf(t, sizeof(t), "%s #%zu", _u8L("Editing zone").c_str(), which);
+        // TRN %1% is the priority number of the support zone being edited.
+        const std::string t = Slic3r::GUI::format(_u8L("Editing zone #%1%"), which);
         dl->AddText(ImVec2(a.x + 1.55f * neo_u(), a.y + (bh - ImGui::GetTextLineHeight()) * 0.5f),
-                    neo_col_u32(NeoCol::Optimal), t);
+                    neo_col_u32(NeoCol::Optimal), t.c_str());
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("%s", _u8L("The controls below are editing this zone. Nothing is written until you apply, so leaving discards the changes.").c_str());
         ImGui::SameLine();
@@ -6335,11 +6338,10 @@ void GLGizmoSupportZones::render_panel_body()
         // del centro de un donut la columna se parte sola al bajar y cada mitad va a la suya.
         if (block_tree_mode()) {
             ImGui::SameLine(0.f, 6.f);
-            char lbl[64];
-            std::snprintf(lbl, sizeof(lbl), "%s (%d)", _u8L("3 · Stumps").c_str(),
-                          int(all_stumps().size()));
+            // TRN Third step of the support zone workflow; %1% is how many stumps are planted.
+            const std::string lbl = Slic3r::GUI::format(_u8L("3 · Stumps (%1%)"), all_stumps().size());
             if (step_button("##step3", m_stump_pick_mode, ! m_extra_stumps.empty(),
-                            m_has_target && ! editing(), Glyph::Landing, lbl,
+                            m_has_target && ! editing(), Glyph::Landing, lbl.c_str(),
                             (_u8L("3 · Plant the stumps") + "\n\n" +
                              // 🔑 s301b, dicho por él: «no me queda claro si realmente lo necesito o
                              // simplemente puedo». Un mando que no dice CUÁNDO hace falta es un mando
@@ -6404,22 +6406,21 @@ void GLGizmoSupportZones::render_panel_body()
         // altura de capa y de la boquilla, y esos sí cambian de una placa a otra.
         const double a_adv = max_lean_angle_deg();
         const double lean  = double(m_lean_angle_deg);
-        char v[48], tip[320];
+        char v[48];
+        std::string tip;
 
         std::snprintf(v, sizeof(v), "%.0f°", lean);
-        std::snprintf(tip, sizeof(tip), "%s\n\n%s %.0f deg  ·  %s %.2f mm %s",
-                      lean > 60. ? _u8L("Above 60 deg: only at low speed.").c_str()
-                        : lean > 50. ? _u8L("Above 50 deg: needs enough width and top gap.").c_str()
-                                     : _u8L("Safe range.").c_str(),
-                      _u8L("Recommended up to").c_str(), a_adv,
-                      _u8L("at this layer height a support line is").c_str(),
-                      support_line_width_mm(),
-                      _u8L("wide").c_str());
+        tip = (lean > 60. ? _u8L("Above 60 deg: only at low speed.")
+                 : lean > 50. ? _u8L("Above 50 deg: needs enough width and top gap.")
+                              : _u8L("Safe range.")) + "\n\n" +
+              // TRN %1% is the recommended lean angle in degrees, %2% the support line width in mm.
+              Slic3r::GUI::format(_u8L("Recommended up to %1% deg  ·  at this layer height a support line is %2% mm wide"),
+                     sz_num(a_adv, 0), sz_num(support_line_width_mm(), 2));
         neo_stat_tile("##t_lean", tw, _u8L("LEAN").c_str(), v,
                       lean > 60. ? neo_col_u32(NeoCol::Forbid)
                         : lean > 50. ? neo_col_u32(NeoCol::Warn)
                                      : neo_col_u32(NeoCol::Optimal),
-                      float(lean / SupportZones::SUPPORT_ZONE_MAX_LEAN_DEG), tip);
+                      float(lean / SupportZones::SUPPORT_ZONE_MAX_LEAN_DEG), tip.c_str());
 
         ImGui::SameLine(0.f, 6.f);
         if (block_tree_mode()) {
@@ -6445,9 +6446,9 @@ void GLGizmoSupportZones::render_panel_body()
                               _u8L("Straight down, no knee.").c_str());
             } else if (drop > 0.2) {
                 std::snprintf(v, sizeof(v), "z %.1f", z_knee);
-                std::snprintf(tip, sizeof(tip), "%s %.1f mm  ·  %s %.1f mm",
-                              _u8L("Knee at z =").c_str(), z_knee, _u8L("then drops").c_str(), drop);
-                neo_stat_tile("##t_knee", tw, _u8L("KNEE").c_str(), v, neo_col_u32(NeoCol::AccentBright), -1.f, tip);
+                // TRN %1% is the height of the knee of the support column, %2% how far it then drops straight down (both in mm).
+                tip = Slic3r::GUI::format(_u8L("Knee at z = %1% mm  ·  then drops %2% mm"), sz_num(z_knee, 1), sz_num(drop, 1));
+                neo_stat_tile("##t_knee", tw, _u8L("KNEE").c_str(), v, neo_col_u32(NeoCol::AccentBright), -1.f, tip.c_str());
             } else {
                 // La rodilla existe, pero no queda tramo recto debajo. El número sigue siendo cierto
                 // y lo que cambia es el porqué, así que cambia el tooltip y no el valor.
@@ -6464,10 +6465,11 @@ void GLGizmoSupportZones::render_panel_body()
             const double asked = landing_offset_mm();
             const double av    = reach_radius_mm(m_landing_world_pos.z());
             std::snprintf(v, sizeof(v), "%.1f/%.1f", asked, av);
-            std::snprintf(tip, sizeof(tip), "%.1f mm %s %.1f mm", asked, _u8L("of a reach of").c_str(), av);
+            // TRN %1% is the sideways distance asked of the support column, %2% the most it can reach (both in mm).
+            tip = Slic3r::GUI::format(_u8L("%1% mm of a reach of %2% mm"), sz_num(asked, 1), sz_num(av, 1));
             neo_stat_tile("##t_reach", tw, _u8L("REACH").c_str(), v,
                           landing_out_of_reach() ? neo_col_u32(NeoCol::Warn) : neo_col_u32(NeoCol::AccentBright),
-                          av > 1e-6 ? float(asked / av) : 1.f, tip);
+                          av > 1e-6 ? float(asked / av) : 1.f, tip.c_str());
         }
     }
 
@@ -6560,12 +6562,12 @@ void GLGizmoSupportZones::render_panel_body()
         // NEOTKO_SUPPORTZONES_TAG s343 M1 — pincel «sólo voladizo».
         if (m_foot_shape == FootShape::Brush
             && neo_row_toggle("##ovhonly", _u8L("overhang only").c_str(), &m_paint_overhang_only,
-                              (_u8L("On: the brush only marks surface that leans past the overhang angle.") + "\n" +
-                               _u8L("Walls and the top side it sweeps over are left out,") + "\n" +
-                               _u8L("so painting along an edge no longer drags the box up.") + "\n\n" +
-                               _u8L("The angle is the one of 'Highlight overhangs'.") + "\n" +
-                               _u8L("Turn that on and move 'overhangs' to grab more or less:") + "\n" +
-                               _u8L("what you painted is redone live.") + "\n\n" +
+                              (_u8L("On: the brush only marks surface that leans past the overhang angle.\n"
+                                    "Walls and the top side it sweeps over are left out,\n"
+                                    "so painting along an edge no longer drags the box up.\n\n"
+                                    "The angle is the one of 'Highlight overhangs'.\n"
+                                    "Turn that on and move 'overhangs' to grab more or less:\n"
+                                    "what you painted is redone live.") + "\n\n" +
                                _u8L("Off: it marks everything the brush touches.")).c_str())) {
             repaint_from_stamps();
             invalidate_patch();
@@ -6681,7 +6683,7 @@ void GLGizmoSupportZones::render_panel_body()
             if (n_st == 0)
                 std::snprintf(stmsg, sizeof(stmsg), "%s", _u8L("none yet").c_str());
             else if (m_extra_stumps.empty())
-                std::snprintf(stmsg, sizeof(stmsg), "1  %s", _u8L("(plumb, under the area)").c_str());
+                std::snprintf(stmsg, sizeof(stmsg), "%s", _u8L("1  (plumb, under the area)").c_str());
             else
                 std::snprintf(stmsg, sizeof(stmsg), "%d", int(n_st));
             ImGui::PushStyleColor(ImGuiCol_Text,
@@ -6773,19 +6775,16 @@ void GLGizmoSupportZones::render_panel_body()
         // Lo que queda de `max_lean_angle_deg()` es la RECOMENDACIÓN: el color del deslizador y lo
         // que dice el tooltip. Pasarse es legítimo, no avisarlo no lo sería.
         const double a_adv = max_lean_angle_deg();
-        char tip[320];
-        std::snprintf(tip, sizeof(tip), "%s %.0f deg %s %.2f mm %s.\n%s",
-                      _u8L("Recommended up to").c_str(), a_adv,
-                      _u8L("for this layer height and a support line of").c_str(),
-                      support_line_width_mm(),
-                      _u8L("wide").c_str(),
-                      double(m_lean_angle_deg) > 60.
-                          ? _u8L("Above 60 deg: only at low speed.").c_str()
-                          : double(m_lean_angle_deg) > 50.
-                              ? _u8L("Above 50 deg: needs enough width and top gap.").c_str()
-                              : _u8L("Safe range.").c_str());
+        // TRN %1% is the recommended lean angle in degrees, %2% the support line width in mm.
+        const std::string tip = Slic3r::GUI::format(_u8L("Recommended up to %1% deg for this layer height and a support line of %2% mm wide."),
+                                       sz_num(a_adv, 0), sz_num(support_line_width_mm(), 2)) + "\n" +
+                                (double(m_lean_angle_deg) > 60.
+                                     ? _u8L("Above 60 deg: only at low speed.")
+                                     : double(m_lean_angle_deg) > 50.
+                                         ? _u8L("Above 50 deg: needs enough width and top gap.")
+                                         : _u8L("Safe range."));
         if (neo_row_slider("##leanangle", _u8L("lean").c_str(), &m_lean_angle_deg,
-                           1.f, float(SupportZones::SUPPORT_ZONE_MAX_LEAN_DEG), "%.0f deg", tip)) {
+                           1.f, float(SupportZones::SUPPORT_ZONE_MAX_LEAN_DEG), "%.0f deg", tip.c_str())) {
             m_preview_dirty = true;
             m_reach_model_r = -1.;   // la franja depende del ángulo: se vuelve a construir
             m_parent.set_as_dirty();
@@ -6802,7 +6801,8 @@ void GLGizmoSupportZones::render_panel_body()
         if (m_landing_on_bed)
             std::snprintf(t, sizeof(t), "%s", _u8L("Lands on the bed").c_str());
         else
-            std::snprintf(t, sizeof(t), "%s  z = %.2f", _u8L("Lands on the part").c_str(), m_landing_world_pos.z());
+            // TRN %1% is the height in mm where the support column lands on the part.
+            std::snprintf(t, sizeof(t), "%s", Slic3r::GUI::format(_u8L("Lands on the part  z = %1%"), sz_num(m_landing_world_pos.z(), 2)).c_str());
         dl->AddText(ImVec2(p.x + 1.15f * neo_u(), p.y + 0.15f * neo_u()), col, t);
         if (ImGui::IsItemHovered())
             ImGui::SetTooltip("%s", m_landing_on_bed
@@ -6896,7 +6896,8 @@ void GLGizmoSupportZones::render_panel_body()
     // superficie que la define, y "salir" ya existe arriba y es lo que se quiere en ese caso.
     if (m_has_target && ! editing()) {
         ImGui::PushStyleColor(ImGuiCol_Text, neo_col(NeoCol::TextDim));
-        ImGui::Text("%s  z = %.2f mm", _u8L("Surface picked:").c_str(), m_target_world_pos.z());
+        // TRN %1% is the height in mm of the surface picked for the support zone.
+        ImGui::TextUnformatted(Slic3r::GUI::format(_u8L("Surface picked:  z = %1% mm"), sz_num(m_target_world_pos.z(), 2)).c_str());
         ImGui::PopStyleColor();
         ImGui::SameLine();
         if (ImGui::SmallButton(_u8L("Clear").c_str())) {
