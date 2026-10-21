@@ -367,6 +367,36 @@ std::vector<coordf_t> layer_height_profile_from_ranges(
    	return layer_height_profile;
 }
 
+// Ported from OrcaFS-NeotkoCM by Neotko (AGPL-3.0) — NEOTKO_PRECISIONALH_TAG s299.
+// The profile lives in absolute Z (mm from the base of the object), so a Z scale of the object leaves
+// its last Z at the old height. Scaling in Z is a pure rescale of the profile's Z coordinate: the layer
+// heights stay (a 0.12 layer is still 0.12), only the Z they apply at moves.
+bool rescale_layer_height_profile(std::vector<coordf_t> &profile, coordf_t new_height)
+{
+    if (profile.size() < 4 || (profile.size() & 1) != 0)
+        return false;
+    if (new_height < 1e-4)
+        return false;
+    // The profile must start at the base of the object, otherwise it is not a whole profile.
+    if (std::abs(profile.front()) > 1e-3)
+        return false;
+    const coordf_t old_height = profile[profile.size() - 2];
+    if (old_height < 1e-4)
+        return false;
+
+    // A x100 is not a rescale, it is another object.
+    const double k = double(new_height) / double(old_height);
+    if (k < 0.02 || k > 50.0)
+        return false;
+
+    for (size_t i = 0; i + 1 < profile.size(); i += 2)
+        profile[i] *= k;
+    // Both ends exact: they are what update_layer_height_profile() and generate_object_layers() check.
+    profile.front()             = 0.;
+    profile[profile.size() - 2] = new_height;
+    return true;
+}
+
 // Based on the work of @platsch
 // Fill layer_height_profile by heights ensuring a prescribed maximum cusp height.
 std::vector<double> layer_height_profile_adaptive(const SlicingParameters& slicing_params, const ModelObject& object, float quality_factor)

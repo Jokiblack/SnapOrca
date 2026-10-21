@@ -40146,6 +40146,42 @@ msgid "Shows the tools and panels of the features ported from OrcaFS-NeotkoCM. T
 msgstr "Muestra las herramientas y paneles de las funciones portadas de OrcaFS-NeotkoCM, que son experimentales. Solo muestra su interfaz: un proyecto se lamina igual con la opción activada o desactivada."
 
 # AI Translated
+msgid "Precision Adaptive Layer Height"
+msgstr "Altura de capa adaptativa de precisión"
+
+# AI Translated
+msgid "Select a single object to edit its layer height curve."
+msgstr "Seleccione un solo objeto para editar su curva de altura de capa."
+
+# AI Translated
+msgid "Click to add a point, drag to move it, right-click to delete it. The bottom point is the fixed first layer and the top point can only move in height."
+msgstr "Haga clic para añadir un punto, arrástrelo para moverlo y haga clic derecho para eliminarlo. El punto inferior es la capa inicial, que es fija, y el superior solo se mueve en altura."
+
+# AI Translated
+msgid "The object's height changed after this curve was saved, so the slicer is not using it. The curve shown is stretched to the new height: layer heights are unchanged, only the Z of each point moved. Keep it or edit it to use it."
+msgstr "La altura del objeto cambió después de guardar esta curva, así que el laminador no la usa. La curva que se muestra está estirada a la nueva altura: las alturas de capa no cambian, solo se ha movido la Z de cada punto. Consérvela o edítela para usarla."
+
+# AI Translated
+msgid "Keep stretched curve"
+msgstr "Conservar la curva estirada"
+
+# AI Translated
+msgid "Min layer height: %1% mm"
+msgstr "Altura de capa mínima: %1% mm"
+
+# AI Translated
+msgid "Max layer height: %1% mm"
+msgstr "Altura de capa máxima: %1% mm"
+
+# AI Translated
+msgid "Tension per segment"
+msgstr "Tensión por tramo"
+
+# AI Translated
+msgid "(0 = straight, 1 = smooth)"
+msgstr "(0 = recta, 1 = suave)"
+
+# AI Translated
 #~ msgid "Note: Inconsistent nozzle diameters. Current version does not support mixed diameter printing. Please select one nozzle for this print."
 #~ msgstr "Nota: los diámetros de boquilla no coinciden. La versión actual no admite imprimir con diámetros mezclados. Seleccione una sola boquilla para esta impresión."
 

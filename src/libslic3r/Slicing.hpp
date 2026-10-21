@@ -169,6 +169,13 @@ std::vector<double> layer_height_profile_adaptive(
     const SlicingParameters& slicing_params,
     const ModelObject& object, float quality_factor);
 
+// Ported from OrcaFS-NeotkoCM by Neotko (AGPL-3.0) — NEOTKO_PRECISIONALH_TAG s299.
+// Rescales the Z of an existing variable layer height profile so that its last Z equals new_height,
+// leaving the layer heights untouched. Returns false and leaves the profile intact when the profile
+// is malformed or the scale factor is out of band. Used only by the Precision ALH gizmo on an explicit
+// user action; the slicer does not call it, so projects slice as before.
+bool rescale_layer_height_profile(std::vector<coordf_t> &profile, coordf_t new_height);
+
 struct HeightProfileSmoothingParams
 {
     unsigned int radius;
