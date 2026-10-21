@@ -428,6 +428,35 @@ void ObjectSettings::update_config_values(ModelConfig* config, const std::string
 
     printer_technology == ptFFF  ?  config_manipulation.toggle_print_fff_options(&main_config, 0) :
                                     config_manipulation.toggle_print_sla_options(&main_config) ;
+
+    // NEOTKO_HAE_TAG — Height Adaptive Effects (ported from OrcaFS-NeotkoCM): a setting driven by a curve on this
+    // object is greyed out in its per-object rows (object, its parts and height ranges), so the same value is not
+    // set from two places. Only a hint: the engine already lets the curve win. Runs after the toggles above,
+    // which re-enable rows. Kept out of the global print settings tab, which is shared by every object.
+    {
+        const int   obj_idx       = objects_model->GetObjectIdByItem(item);
+        const auto &model_objects = wxGetApp().model().objects;
+        if (obj_idx >= 0 && obj_idx < int(model_objects.size())) {
+            const ModelConfigObject &object_config = model_objects[obj_idx]->config;
+            // Curve key and the setting it drives; keep in step with GLGizmoHeightAdaptiveEffects::effects().
+            static const std::pair<const char *, const char *> hae_owned[] = {
+                { "neotko_hae_xy_contour",           "xy_contour_compensation" },
+                { "neotko_hae_xy_hole",              "xy_hole_compensation" },
+                { "neotko_hae_infill_width",         "sparse_infill_line_width" },
+                { "neotko_hae_outer_wall_width",     "outer_wall_line_width" },
+                { "neotko_hae_inner_wall_width",     "inner_wall_line_width" },
+                { "neotko_hae_fuzzy_thickness",      "fuzzy_skin_thickness" },
+                { "neotko_hae_fuzzy_point_distance", "fuzzy_skin_point_distance" },
+                { "neotko_hae_fuzzy_scale",          "fuzzy_skin_scale" },
+                { "neotko_hae_fuzzy_octaves",        "fuzzy_skin_octaves" },
+                { "neotko_hae_fuzzy_persistence",    "fuzzy_skin_persistence" },
+            };
+            for (const auto &[curve_key, owned_key] : hae_owned)
+                if (const auto *curve = dynamic_cast<const ConfigOptionString *>(object_config.option(curve_key));
+                    curve != nullptr && ! curve->value.empty())
+                    toggle_field(owned_key, false, 0); // no-op when the row is not in this panel
+        }
+    }
 }
 
 void ObjectSettings::UpdateAndShow(const bool show)

@@ -40601,6 +40601,267 @@ msgstr ""
 "Desactivado: el resultado sustituye a los dos objetos.\n"
 "Activado: se añade el resultado y los dos se conservan."
 
+msgid "The XY size compensation curve merged or removed small islands of object \"%1%\", starting at Z = %2% mm. Check the preview if this object has small details or thin gaps."
+msgstr "La curva de compensación de tamaño XY ha fusionado o eliminado islas pequeñas del objeto «%1%» a partir de Z = %2% mm. Revisa la vista previa si el objeto tiene detalles pequeños o huecos finos."
+
+# AI Translated
+msgid "Height Adaptive Effects"
+msgstr "Efectos adaptativos por altura"
+
+# AI Translated
+msgid "XY contour"
+msgstr "Contorno XY"
+
+# AI Translated
+msgid "XY hole"
+msgstr "Agujero XY"
+
+# AI Translated
+msgid "Sparse infill width"
+msgstr "Ancho del relleno poco denso"
+
+# AI Translated
+msgid "Outer wall width"
+msgstr "Ancho del perímetro externo"
+
+# AI Translated
+msgid "Inner wall width"
+msgstr "Ancho del perímetro interno"
+
+# AI Translated
+msgid "Fuzzy skin noise scale"
+msgstr "Escala del ruido de piel rugosa"
+
+# AI Translated
+msgid "Fuzzy skin noise octaves"
+msgstr "Octavas del ruido de piel rugosa"
+
+# AI Translated
+msgid "Height adaptive effects - Remove effect"
+msgstr "Efectos adaptativos por altura - Quitar efecto"
+
+# AI Translated
+msgid "Height adaptive effects - Move point"
+msgstr "Efectos adaptativos por altura - Mover punto"
+
+# AI Translated
+msgid "Height adaptive effects - Delete point"
+msgstr "Efectos adaptativos por altura - Borrar punto"
+
+# AI Translated
+msgid "Height adaptive effects - Add point"
+msgstr "Efectos adaptativos por altura - Añadir punto"
+
+# AI Translated
+msgid "Height adaptive effects - Edit point"
+msgstr "Efectos adaptativos por altura - Editar punto"
+
+# AI Translated
+msgid "Height adaptive effects - Transition mode"
+msgstr "Efectos adaptativos por altura - Modo de transición"
+
+# AI Translated
+msgid "Height adaptive effects - Staircase"
+msgstr "Efectos adaptativos por altura - Escalonar"
+
+# AI Translated
+msgid "Height adaptive effects - Tension"
+msgstr "Efectos adaptativos por altura - Tensión"
+
+# AI Translated
+msgid "Height adaptive effects - Preset"
+msgstr "Efectos adaptativos por altura - Forma predefinida"
+
+# AI Translated
+msgid "Height adaptive effects - Clear"
+msgstr "Efectos adaptativos por altura - Vaciar"
+
+# AI Translated
+msgid "wall %1%°"
+msgstr "pared %1%°"
+
+# AI Translated
+msgid "Select a single object to edit its height adaptive effects."
+msgstr "Selecciona un solo objeto para editar sus efectos adaptativos por altura."
+
+# AI Translated
+msgid "Effects on this object"
+msgstr "Efectos de este objeto"
+
+# AI Translated
+msgid "Click in the graph to add a point, drag to move it, right-click to delete it. The horizontal lines are this object's real layers."
+msgstr "Haz clic en la gráfica para añadir un punto, arrástralo para moverlo y haz clic derecho para borrarlo. Las líneas horizontales son las capas reales de este objeto."
+
+# AI Translated
+msgid "No effect on this object yet. Press Add to drive a setting with a curve along the object's height."
+msgstr "Este objeto aún no tiene efectos. Pulsa Añadir para controlar un ajuste con una curva a lo largo de la altura del objeto."
+
+# AI Translated
+msgid "(no points yet)"
+msgstr "(aún sin puntos)"
+
+# AI Translated
+msgid "Remove this effect from the object"
+msgstr "Quitar este efecto del objeto"
+
+# AI Translated
+msgid "Range: %1% to %2% %3%"
+msgstr "Rango: de %1% a %2% %3%"
+
+# AI Translated
+msgid "Past 2 mm the sparse infill regions fail to generate. The limit is measured, not a round number."
+msgstr "Por encima de 2 mm no se llegan a generar las regiones de relleno poco denso. El límite está medido, no es un número redondo."
+
+# AI Translated
+msgid "Transition"
+msgstr "Transición"
+
+# AI Translated
+msgid ""
+"Steps: the value is constant inside each band and changes in one jump at a layer boundary, and every point is snapped to a real layer. Safest for sparse infill width, because the lines of every layer keep stacking on the ones below.\n"
+"\n"
+"Ramp: the value changes continuously with height."
+msgstr ""
+"Escalones: el valor es constante dentro de cada banda y cambia de golpe en el límite de una capa, y cada punto se ajusta a una capa real. Es lo más seguro para el ancho del relleno poco denso, porque las líneas de cada capa siguen apoyándose en las de debajo.\n"
+"\n"
+"Rampa: el valor cambia de forma continua con la altura."
+
+# AI Translated
+msgid "Ramp"
+msgstr "Rampa"
+
+# AI Translated
+msgid "Snap points to layer boundaries"
+msgstr "Ajustar los puntos a los límites de capa"
+
+# AI Translated
+msgid "Line shift per layer: %1% mm (%2% of the line width)"
+msgstr "Desplazamiento de línea por capa: %1% mm (%2% del ancho de línea)"
+
+# AI Translated
+msgid "How far the infill lines of one layer land from the ones below, at the far edge of the object. Above roughly a quarter of the line width the sparse infill stops stacking. Flatten the curve, or press Staircase to keep the shape with aligned bands."
+msgstr "Cuánto se separan las líneas de relleno de una capa de las de debajo, en el borde más alejado del objeto. Por encima de aproximadamente un cuarto del ancho de línea, el relleno poco denso deja de apilarse. Suaviza la curva o pulsa Escalonar para conservar la forma con bandas alineadas."
+
+# AI Translated
+msgid "Bands"
+msgstr "Bandas"
+
+# AI Translated
+msgid "Staircase"
+msgstr "Escalonar"
+
+# AI Translated
+msgid "Turns this ramp into that many aligned steps."
+msgstr "Convierte esta rampa en ese número de escalones alineados."
+
+# AI Translated
+msgid "Fuzzy skin is off for this object, so this curve does nothing. It adjusts the fuzzy skin; it does not turn it on."
+msgstr "La piel rugosa está desactivada en este objeto, así que esta curva no hace nada. La curva ajusta la piel rugosa, no la activa."
+
+# AI Translated
+msgid "Reaching 0 switches fuzzy skin off."
+msgstr "Al llegar a 0 se desactiva la piel rugosa."
+
+# AI Translated
+msgid "Where the curve reaches 0 the fuzzy skin is switched off for that layer, not just flattened. Otherwise a zero-amplitude fuzzy skin would still resample every wall and bloat the G-code."
+msgstr "Donde la curva llega a 0, la piel rugosa se desactiva en esa capa en lugar de solo aplanarse. Si no, una piel rugosa de amplitud cero seguiría remuestreando todos los perímetros e inflaría el G-code."
+
+# AI Translated
+msgid "This object is color or fuzzy skin painted. The slicer drops XY size compensation on painted objects, so this curve will have no effect."
+msgstr "Este objeto tiene pintura de color o de piel rugosa. El laminador descarta la compensación de tamaño XY en los objetos pintados, así que esta curva no tendrá efecto."
+
+# AI Translated
+msgid "0 = straight segment, 1 = smooth curve."
+msgstr "0 = segmento recto, 1 = curva suave."
+
+# AI Translated
+msgid "Close Z points"
+msgstr "Cerrar puntos Z"
+
+# AI Translated
+msgid "Open Z points"
+msgstr "Abrir puntos Z"
+
+# AI Translated
+msgid "Z (mm) / value (%1%)"
+msgstr "Z (mm) / valor (%1%)"
+
+# AI Translated
+msgid "Z (mm) / value"
+msgstr "Z (mm) / valor"
+
+# AI Translated
+msgid "layer %1%"
+msgstr "capa %1%"
+
+# AI Translated
+msgid "Bullnose"
+msgstr "Canto redondeado"
+
+# AI Translated
+msgid "Barrel"
+msgstr "Barril"
+
+# AI Translated
+msgid "Fade in"
+msgstr "Aparición gradual"
+
+# AI Translated
+msgid "Fade out"
+msgstr "Desaparición gradual"
+
+# AI Translated
+msgid "Rough middle"
+msgstr "Rugoso en el centro"
+
+# AI Translated
+msgid "Fine low, coarse high"
+msgstr "Fino abajo, grueso arriba"
+
+# AI Translated
+msgid "Coarse low, fine high"
+msgstr "Grueso abajo, fino arriba"
+
+# AI Translated
+msgid "Z is measured from the bottom of the object, not from the bed. The raft is not part of this axis."
+msgstr "Z se mide desde la base del objeto, no desde la cama. La balsa no forma parte de este eje."
+
+# AI Translated
+msgid "Refresh layers"
+msgstr "Actualizar capas"
+
+# AI Translated
+msgid "Re-reads the object's real layers. Needed after changing the adaptive layer height profile."
+msgstr "Vuelve a leer las capas reales del objeto. Hace falta tras cambiar el perfil de altura de capa adaptativa."
+
+# AI Translated
+msgctxt "Height curve"
+msgid "Steps"
+msgstr "Escalones"
+
+# AI Translated
+msgctxt "Height curve"
+msgid "Presets"
+msgstr "Formas predefinidas"
+
+# AI Translated
+msgid "%1% point"
+msgid_plural "%1% points"
+msgstr[0] "%1% punto"
+msgstr[1] "%1% puntos"
+
+# AI Translated
+msgid "The shortest band is %1% layer. Under about 4 layers the jump costs more than it gives."
+msgid_plural "The shortest band is %1% layers. Under about 4 layers the jump costs more than it gives."
+msgstr[0] "La banda más corta tiene %1% capa. Por debajo de unas 4 capas, el salto cuesta más de lo que aporta."
+msgstr[1] "La banda más corta tiene %1% capas. Por debajo de unas 4 capas, el salto cuesta más de lo que aporta."
+
+# AI Translated
+msgid "Object height: %1% mm, %2% layer"
+msgid_plural "Object height: %1% mm, %2% layers"
+msgstr[0] "Altura del objeto: %1% mm, %2% capa"
+msgstr[1] "Altura del objeto: %1% mm, %2% capas"
+
 # AI Translated
 #~ msgid "Note: Inconsistent nozzle diameters. Current version does not support mixed diameter printing. Please select one nozzle for this print."
 #~ msgstr "Nota: los diámetros de boquilla no coinciden. La versión actual no admite imprimir con diámetros mezclados. Seleccione una sola boquilla para esta impresión."

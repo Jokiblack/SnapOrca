@@ -8,6 +8,7 @@
 #include "ExtrusionEntity.hpp"
 #include "ExtrusionEntityCollection.hpp"
 #include "Feature/FuzzySkin/FuzzySkin.hpp"
+#include "Feature/HeightAdaptive/HeightCurve.hpp"
 #include "Polygon.hpp"
 #include "Polyline.hpp"
 #include "Point.hpp"
@@ -907,6 +908,14 @@ void PerimeterGenerator::split_top_surfaces(const ExPolygons &orig_polygons, ExP
     // nozzle is used here (the sparse infill of another head is the pre-existing mismatch).
     double infill_spacing_unscaled = Flow::width_at(this->config->sparse_infill_line_width, Print::width_slot(*this->print_config, this->config->outer_wall_filament_id)).get_abs_value(nozzle_diameter);
     if (infill_spacing_unscaled == 0) infill_spacing_unscaled = Flow::auto_extrusion_width(frInfill, nozzle_diameter);
+    // NEOTKO_HAE_TAG — Height Adaptive Effects (ported from OrcaFS-NeotkoCM): the sparse infill width curve that
+    // LayerRegion::flow() applies, so this clip and the infill agree about the width of the layer. Empty ⇒ untouched.
+    if (this->object_config != nullptr && ! this->object_config->neotko_hae_infill_width.value.empty()) {
+        const auto hae_width = HeightAdaptive::HeightCurve::parse(this->object_config->neotko_hae_infill_width.value,
+                                                                  HeightAdaptive::Interp::Stepped);
+        if (const double w = hae_width.at(this->slice_z, infill_spacing_unscaled); w > 0.)
+            infill_spacing_unscaled = w;
+    }
     fill_clip = offset_ex(orig_polygons, double(ext_perimeter_spacing / 2.) - scale_(infill_spacing_unscaled / 2.));
     // ExPolygons oldLast = last;
 
