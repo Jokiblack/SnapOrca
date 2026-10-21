@@ -105,6 +105,7 @@ void host_bindings::register_slicing(py::module_& host)
         .value("stInternalVoid", stInternalVoid)
         .value("stPerimeter", stPerimeter)
         .value("stSubTop", stSubTop)
+        .value("stPenultimateInternalSolid", stPenultimateInternalSolid)
         .value("stCount", stCount)
         .export_values();
 

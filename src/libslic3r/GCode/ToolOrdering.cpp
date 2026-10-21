@@ -169,7 +169,7 @@ void append_unique_preserve_order(std::vector<unsigned int> &dst, unsigned int v
 
 bool internal_solid_infill_uses_sparse_filament(const PrintRegion &region, ExtrusionRole role)
 {
-    return role == erSolidInfill && std::abs(region.config().sparse_infill_density.value - 100.) < EPSILON;
+    return (role == erSolidInfill || role == erPenultimateInfill) && std::abs(region.config().sparse_infill_density.value - 100.) < EPSILON;
 }
 
 unsigned int sparse_infill_filament_id_1based(const PrintRegion &region)

@@ -45,6 +45,7 @@ const char* surface_type_to_color_name(const SurfaceType surface_type)
         case stInternal:        return "rgb(255,255,128)"; // yellow 
         case stInternalSolid:   return "rgb(255,0,255)"; // magenta
         case stSubTop:          return "rgb(255,128,0)"; // orange
+        case stPenultimateInternalSolid: return "rgb(128,0,255)"; // violet
         case stInternalBridge:  return "rgb(0,255,255)";
         case stInternalVoid:    return "rgb(128,128,128)";
         case stPerimeter:       return "rgb(128,0,0)"; // maroon
@@ -85,6 +86,8 @@ void export_surface_type_legend_to_svg(SVG &svg, const Point &pos)
     svg.draw_legend(Point(pos_x, pos_y), "internal void"  , surface_type_to_color_name(stInternalVoid));
     pos_x += step_x;
     svg.draw_legend(Point(pos_x, pos_y), "sub-top"        , surface_type_to_color_name(stSubTop));
+    pos_x += step_x;
+    svg.draw_legend(Point(pos_x, pos_y), "penultimate"    , surface_type_to_color_name(stPenultimateInternalSolid));
 }
 
 bool export_to_svg(const char *path, const Surfaces &surfaces, const float transparency)

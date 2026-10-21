@@ -693,6 +693,7 @@ std::string ExtrusionEntity::role_to_string(ExtrusionRole role)
         case erWipeTower                    : return L("Prime tower");
         case erCustom                       : return L("Custom");
         case erMixed                        : return L("Multiple");
+        case erPenultimateInfill            : return L("Penultimate surface");
         default                             : assert(false);
     }
     return "";
@@ -738,6 +739,8 @@ ExtrusionRole ExtrusionEntity::string_to_role(const std::string_view role)
         return erCustom;
     else if (role == L("Multiple"))
         return erMixed;
+    else if (role == L("Penultimate surface"))
+        return erPenultimateInfill;
     else
         return erNone;
 }

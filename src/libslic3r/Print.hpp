@@ -783,6 +783,8 @@ private:
     void discover_horizontal_shells();
     void combine_infill();
     void discover_sub_top_surfaces();
+    // Neotko: retype the solid infill of the penultimate_top_layers layers below a top surface, see Surface.hpp.
+    void discover_penultimate_surfaces();
     // Per-extruder layer height: top surfaces print at their filament's preferred pitch by
     // absorbing the internal solid layers right below them into one thick pass.
     void combine_top_surfaces();

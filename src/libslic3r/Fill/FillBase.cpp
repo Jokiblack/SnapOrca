@@ -244,7 +244,8 @@ ThickPolylines Fill::_gap_fill_polylines(const Surface* surface, const FillParam
 
     // Orca: Enable gap fill as per the user preference. Return early if gap fill is to not be applied.
     if ((this->print_object_config->gap_fill_target.value == gftNowhere) ||
-        ((surface->surface_type == stInternalSolid || surface->surface_type == stSubTop) &&
+        ((surface->surface_type == stInternalSolid || surface->surface_type == stSubTop ||
+          surface->surface_type == stPenultimateInternalSolid) &&
          this->print_object_config->gap_fill_target.value != gftEverywhere))
         return polylines;
 

@@ -45,6 +45,9 @@ enum ExtrusionRole : uint8_t {
     erCustom,
     // Extrusion role for a collection with multiple extrusion roles.
     erMixed,
+    // Solid infill of the penultimate top layers (stPenultimateInternalSolid). Appended after erMixed so the values of
+    // the existing roles do not change. Ported from OrcaFS-NeotkoCM by Neotko (AGPL-3.0).
+    erPenultimateInfill,
     erCount
 };
 
@@ -82,6 +85,7 @@ inline bool is_infill(ExtrusionRole role)
         || role == erInternalBridgeInfill
         || role == erInternalInfill
         || role == erSolidInfill
+        || role == erPenultimateInfill
         || role == erTopSolidInfill
         || role == erBottomSurface
         || role == erIroning;
@@ -97,6 +101,7 @@ inline bool is_solid_infill(ExtrusionRole role)
     return role == erBridgeInfill
         || role == erInternalBridgeInfill
         || role == erSolidInfill
+        || role == erPenultimateInfill
         || role == erTopSolidInfill
         || role == erBottomSurface
         || role == erIroning;

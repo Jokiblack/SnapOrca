@@ -39338,6 +39338,10 @@ msgid "Speed of the penultimate solid infill layers. 0 uses the top surface spee
 msgstr "Velocidad de las capas de relleno sólido penúltimas. 0 usa la velocidad de la superficie superior."
 
 # AI Translated
+msgid "Penultimate surface"
+msgstr "Superficie penúltima"
+
+# AI Translated
 msgid "Sandwich purge"
 msgstr "Purga del sándwich"
 

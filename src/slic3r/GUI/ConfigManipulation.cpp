@@ -1037,6 +1037,20 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
     toggle_field("bottom_surface_pattern", has_bottom_shell);
     toggle_field("detect_sub_top_surface", has_top_shell);
     toggle_line("sub_top_surface_pattern", has_top_shell && config->opt_bool("detect_sub_top_surface"));
+    // Penultimate Top Layers (ported from OrcaFS-NeotkoCM by Neotko): shown with the "Experimental features (Neotko)"
+    // preference; pattern, density and speed only act while penultimate_top_layers > 0. Where both are enabled the
+    // penultimate layers take precedence over the sub-top surface, see PrintObject::discover_penultimate_surfaces().
+    {
+        const bool show_penultimate = wxGetApp().neotko_features_enabled();
+        for (auto el : {"penultimate_top_layers", "penultimate_solid_infill_pattern", "penultimate_solid_infill_density",
+                        "penultimate_infill_speed"})
+            toggle_line(el, show_penultimate);
+        toggle_field("penultimate_top_layers", has_top_shell_layers);
+        const bool has_penultimate = has_top_shell_layers && config->has("penultimate_top_layers") &&
+                                     config->opt_int("penultimate_top_layers") > 0;
+        for (auto el : {"penultimate_solid_infill_pattern", "penultimate_solid_infill_density", "penultimate_infill_speed"})
+            toggle_field(el, has_penultimate);
+    }
     toggle_field("top_surface_density", has_top_shell_layers);
     toggle_field("bottom_surface_density", has_bottom_shell);
     toggle_field("top_layer_direction", has_top_shell);

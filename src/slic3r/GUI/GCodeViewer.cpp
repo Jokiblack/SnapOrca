@@ -406,6 +406,7 @@ static std::string to_string(libvgcode::EGCodeExtrusionRole role)
     case libvgcode::EGCodeExtrusionRole::Brim:                     { return _u8L("Brim"); }
     case libvgcode::EGCodeExtrusionRole::SupportTransition:        { return _u8L("Support transition"); }
     case libvgcode::EGCodeExtrusionRole::Mixed:                    { return _u8L("Mixed"); }
+    case libvgcode::EGCodeExtrusionRole::PenultimateInfill:        { return _u8L("Penultimate surface"); }
     default:                                                       { return _u8L("Unknown"); }
     }
 }
@@ -1707,7 +1708,8 @@ void GCodeViewer::load_as_gcode(const GCodeProcessorResult& gcode_result, const 
             libvgcode::EGCodeExtrusionRole::WipeTower,
             // ORCA
             libvgcode::EGCodeExtrusionRole::BottomSurface, libvgcode::EGCodeExtrusionRole::InternalBridgeInfill, libvgcode::EGCodeExtrusionRole::Brim,
-            libvgcode::EGCodeExtrusionRole::SupportTransition, libvgcode::EGCodeExtrusionRole::Mixed
+            libvgcode::EGCodeExtrusionRole::SupportTransition, libvgcode::EGCodeExtrusionRole::Mixed,
+            libvgcode::EGCodeExtrusionRole::PenultimateInfill
             });
     m_paths_bounding_box = BoundingBoxf3(libvgcode::convert(bbox[0]).cast<double>(), libvgcode::convert(bbox[1]).cast<double>());
     m_max_bounding_box = m_paths_bounding_box;
@@ -1926,6 +1928,7 @@ void GCodeViewer::load_as_preview(libvgcode::GCodeInputData&& data)
     m_viewer.set_extrusion_role_color(libvgcode::EGCodeExtrusionRole::SupportMaterialInterface, { 127, 255, 127 });
     m_viewer.set_extrusion_role_color(libvgcode::EGCodeExtrusionRole::InternalInfill,           { 255, 127, 127 });
     m_viewer.set_extrusion_role_color(libvgcode::EGCodeExtrusionRole::SolidInfill,              { 255, 127, 127 });
+    m_viewer.set_extrusion_role_color(libvgcode::EGCodeExtrusionRole::PenultimateInfill,        { 255, 127, 127 });
     m_viewer.set_extrusion_role_color(libvgcode::EGCodeExtrusionRole::WipeTower,                { 127, 255, 127 });
     m_viewer.load(std::move(data));
 

@@ -374,6 +374,7 @@ static void add_config_substitutions(const ConfigSubstitutions& conf_substitutio
 							 def->opt_key == "bottom_surface_pattern" ||
 							 def->opt_key == "internal_solid_infill_pattern" ||
 							 def->opt_key == "sub_top_surface_pattern" ||
+							 def->opt_key == "penultimate_solid_infill_pattern" ||
 							 def->opt_key == "support_base_pattern" ||
 							 def->opt_key == "support_interface_pattern" ||
 							 def->opt_key == "ironing_pattern" ||

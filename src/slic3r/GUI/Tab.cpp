@@ -3633,6 +3633,10 @@ void TabPrint::build()
         optgroup->append_single_option_line("top_shell_layers", "strength_settings_top_bottom_shells#shell-layers");
         optgroup->append_single_option_line("top_shell_thickness", "strength_settings_top_bottom_shells#shell-thickness");
         optgroup->append_single_option_line("top_color_penetration_layers"); // Snapmaker
+        // Neotko: Penultimate Top Layers, shown with the "Experimental features (Neotko)" preference (ConfigManipulation).
+        optgroup->append_single_option_line("penultimate_top_layers");
+        optgroup->append_single_option_line("penultimate_solid_infill_pattern");
+        optgroup->append_single_option_line("penultimate_solid_infill_density");
         optgroup->append_single_option_line("top_surface_density", "strength_settings_top_bottom_shells#surface-density");
         optgroup->append_single_option_line("top_surface_pattern", "strength_settings_top_bottom_shells#surface-pattern");
         optgroup->append_single_option_line("top_surface_fill_order", "strength_settings_top_bottom_shells#fill-order");
@@ -3731,6 +3735,7 @@ void TabPrint::build()
         optgroup->append_single_option_line("sparse_infill_speed", "speed_settings_other_layers_speed#sparse-infill", 0);
         optgroup->append_single_option_line("internal_solid_infill_speed", "speed_settings_other_layers_speed#internal-solid-infill", 0);
         optgroup->append_single_option_line("top_surface_speed", "speed_settings_other_layers_speed#top-surface", 0);
+        optgroup->append_single_option_line("penultimate_infill_speed"); // Neotko
         optgroup->append_single_option_line("gap_infill_speed", "speed_settings_other_layers_speed#gap-infill", 0);
         optgroup->append_single_option_line("ironing_speed", "speed_settings_other_layers_speed#ironing-speed");
         optgroup->append_single_option_line("support_speed", "speed_settings_other_layers_speed#support", 0);

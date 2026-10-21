@@ -156,6 +156,8 @@ enum class EGCodeExtrusionRole : uint8_t
       Brim,
       SupportTransition,
       Mixed,
+      // Neotko: solid infill of the penultimate top layers
+      PenultimateInfill,
     COUNT
 };
 
