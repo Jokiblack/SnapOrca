@@ -76,6 +76,7 @@ add_executable(${_TEST_NAME}_tests
     test_connected_bodies.cpp
     test_texture_displacement.cpp
     test_instance_lock.cpp
+    test_surface_extrude.cpp # Ported from OrcaFS-NeotkoCM: Align & Construct
     ../libnest2d/printer_parts.cpp
     )
 

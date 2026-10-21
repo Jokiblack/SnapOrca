@@ -40266,6 +40266,342 @@ msgid "(0 = straight, 1 = smooth)"
 msgstr "(0 = recta, 1 = suave)"
 
 # AI Translated
+msgid "Align & Construct"
+msgstr "Alinear y construir"
+
+# AI Translated
+msgid "Pick a face on #1 first."
+msgstr "Elige primero una cara de #1."
+
+# AI Translated
+msgid "Height must be above 0."
+msgstr "La altura tiene que ser mayor que 0."
+
+# AI Translated
+msgid "That face has no usable outline."
+msgstr "Esa cara no tiene un contorno utilizable."
+
+# AI Translated
+msgid "That face has no holes."
+msgstr "Esa cara no tiene agujeros."
+
+# AI Translated
+msgid "With that offset nothing is left of the shape."
+msgstr "Con ese desfase no queda nada de la forma."
+
+# AI Translated
+msgid "Extruded surface"
+msgstr "Superficie extruida"
+
+# AI Translated
+msgid "Add line"
+msgstr "Añadir línea"
+
+# AI Translated
+msgid "Remove line"
+msgstr "Quitar línea"
+
+# AI Translated
+msgid "Straight"
+msgstr "Recta"
+
+# AI Translated
+msgid "at height"
+msgstr "a la altura"
+
+# AI Translated
+msgid "grows"
+msgstr "crece"
+
+# AI Translated
+msgid "One of them is inside the other. Pick two different parts, or two objects."
+msgstr "Uno está dentro del otro. Elige dos piezas distintas o dos objetos."
+
+# AI Translated
+msgid "The operation gave no result. The two objects may not overlap, or one of them is not a closed solid."
+msgstr "La operación no ha dado ningún resultado. Puede que los dos objetos no se solapen o que uno de ellos no sea un sólido cerrado."
+
+# AI Translated
+msgid "Just this part of its object."
+msgstr "Solo esta pieza de su objeto."
+
+# AI Translated
+msgid "The whole object."
+msgstr "El objeto entero."
+
+# AI Translated
+msgid "#1 stays where it is."
+msgstr "#1 se queda donde está."
+
+# AI Translated
+msgid "#2 is the one that moves."
+msgstr "#2 es el que se mueve."
+
+# AI Translated
+msgid "Click to let it go."
+msgstr "Haz clic para soltarlo."
+
+# AI Translated
+msgid "Swap"
+msgstr "Intercambiar"
+
+# AI Translated
+msgid "#1 becomes #2 and #2 becomes #1."
+msgstr "#1 pasa a ser #2 y #2 pasa a ser #1."
+
+# AI Translated
+msgid "Let both objects go and start again."
+msgstr "Suelta los dos objetos y empieza de nuevo."
+
+# AI Translated
+msgid "Click an object: it becomes #1, the one that stays. Then click another: #2, the one that moves. Click an object made of several parts again to take just the part you touch."
+msgstr "Haz clic en un objeto: será #1, el que se queda. Luego haz clic en otro: #2, el que se mueve. Vuelve a hacer clic en un objeto de varias piezas para coger solo la pieza que toques."
+
+# AI Translated
+msgid "Click a second object to place it against #1, or pick a face of #1 below. Click #1 again to take just the part you touch."
+msgstr "Haz clic en un segundo objeto para colocarlo junto a #1, o elige abajo una cara de #1. Vuelve a hacer clic en #1 para coger solo la pieza que toques."
+
+# AI Translated
+msgid "Place #2"
+msgstr "Colocar #2"
+
+# AI Translated
+msgid "Next to"
+msgstr "Al lado"
+
+# AI Translated
+msgid ""
+"#2 ends up beside #1, touching it\n"
+"on the side you choose."
+msgstr ""
+"#2 queda junto a #1, tocándolo,\n"
+"en el lado que elijas."
+
+# AI Translated
+msgid "Align edge"
+msgstr "Alinear borde"
+
+# AI Translated
+msgid ""
+"#2 moves until its edge on the side you choose\n"
+"lines up with the same edge of #1."
+msgstr ""
+"#2 se mueve hasta que su borde del lado que elijas\n"
+"queda alineado con el mismo borde de #1."
+
+# AI Translated
+msgid "Lines up this edge of #2 with #1's."
+msgstr "Alinea este borde de #2 con el de #1."
+
+# AI Translated
+msgid "Puts #2 on this side of #1, touching it."
+msgstr "Pone #2 en este lado de #1, tocándolo."
+
+# AI Translated
+msgid "Centres #2 on #1, seen from above."
+msgstr "Centra #2 sobre #1, visto desde arriba."
+
+# AI Translated
+msgid "Align tops"
+msgstr "Alinear partes superiores"
+
+# AI Translated
+msgid "On top"
+msgstr "Encima"
+
+# AI Translated
+msgid ""
+"#2 moves up or down until its top\n"
+"is level with #1's."
+msgstr ""
+"#2 sube o baja hasta que su parte superior\n"
+"queda a la altura de la de #1."
+
+# AI Translated
+msgid ""
+"#2 goes up until it rests on top of #1,\n"
+"leaving the Z gap."
+msgstr ""
+"#2 sube hasta quedar apoyado encima de #1,\n"
+"dejando la separación en Z."
+
+# AI Translated
+msgid "Centre in height"
+msgstr "Centrar en altura"
+
+# AI Translated
+msgid "Centres #2 on #1 in height."
+msgstr "Centra #2 en altura respecto a #1."
+
+# AI Translated
+msgid "To bed"
+msgstr "A la cama"
+
+# AI Translated
+msgid "#2 drops to the bed."
+msgstr "#2 baja hasta la cama."
+
+# AI Translated
+msgid "Z gap"
+msgstr "Separación en Z"
+
+# AI Translated
+msgid ""
+"Air left between the two parts when one\n"
+"is put on top of the other, in mm."
+msgstr ""
+"Aire que se deja entre las dos piezas cuando una\n"
+"se pone encima de la otra, en mm."
+
+# AI Translated
+msgid "Keep #2 off the bed"
+msgstr "Mantener #2 sin bajar a la cama"
+
+# AI Translated
+msgid ""
+"Turns off Auto Drop for #2, so it can stay on top of #1\n"
+"or in the air. Off: #2 drops back to the bed after every move."
+msgstr ""
+"Desactiva la caída automática de #2 para que pueda quedarse encima de #1\n"
+"o en el aire. Desactivado: #2 vuelve a la cama tras cada movimiento."
+
+# AI Translated
+msgid "Face of #1"
+msgstr "Cara de #1"
+
+# AI Translated
+msgid "Pick a face"
+msgstr "Elegir una cara"
+
+# AI Translated
+msgid ""
+"Then click a face of #1 in the scene.\n"
+"A flat face lights up whole."
+msgstr ""
+"Luego haz clic en una cara de #1 en la escena.\n"
+"Una cara plana se ilumina entera."
+
+# AI Translated
+msgid "Drop #2 on it"
+msgstr "Dejar #2 sobre ella"
+
+# AI Translated
+msgid ""
+"#2 goes up or down until it rests\n"
+"at the height of that face."
+msgstr ""
+"#2 sube o baja hasta quedar apoyado\n"
+"a la altura de esa cara."
+
+# AI Translated
+msgid "Click a face of #1 in the scene."
+msgstr "Haz clic en una cara de #1 en la escena."
+
+# AI Translated
+msgid "Extrude from the face"
+msgstr "Extruir desde la cara"
+
+# AI Translated
+msgid "Pick a flat face first."
+msgstr "Elige primero una cara plana."
+
+# AI Translated
+msgid "Extrudes the face as it is."
+msgstr "Extruye la cara tal cual."
+
+# AI Translated
+msgid "Holes"
+msgstr "Agujeros"
+
+# AI Translated
+msgid ""
+"Extrudes only the holes of the face, filled.\n"
+"Pick the flat face around a screw hole and\n"
+"raise Offset to make a bigger hole with\n"
+"a Difference."
+msgstr ""
+"Extruye solo los agujeros de la cara, rellenos.\n"
+"Elige la cara plana alrededor del agujero de un tornillo\n"
+"y sube el desfase para hacer un agujero mayor\n"
+"con una diferencia."
+
+# AI Translated
+msgid ""
+"How thick the new solid is, in mm.\n"
+"It grows along the face's own direction."
+msgstr ""
+"Grosor del nuevo sólido, en mm.\n"
+"Crece en la dirección de la propia cara."
+
+# AI Translated
+msgid ""
+"Grows the outline of the face, in mm.\n"
+"Negative values shrink it."
+msgstr ""
+"Agranda el contorno de la cara, en mm.\n"
+"Los valores negativos lo reducen."
+
+# AI Translated
+msgid "Both directions"
+msgstr "En los dos sentidos"
+
+# AI Translated
+msgid ""
+"Off: the solid grows out of the face.\n"
+"On: half the height grows out and half\n"
+"goes into the object, so it passes through\n"
+"the face (handy for booleans)."
+msgstr ""
+"Desactivado: el sólido crece hacia fuera de la cara.\n"
+"Activado: la mitad de la altura crece hacia fuera y la otra mitad\n"
+"entra en el objeto, de modo que atraviesa\n"
+"la cara (útil para operaciones booleanas)."
+
+# AI Translated
+msgid ""
+"A new part of #1's object, in place.\n"
+"It shares that object's layer height."
+msgstr ""
+"Una nueva pieza del objeto de #1, en su sitio.\n"
+"Comparte la altura de capa de ese objeto."
+
+# AI Translated
+msgid ""
+"A separate object sitting on the face,\n"
+"with its own layer height."
+msgstr ""
+"Un objeto aparte apoyado en la cara,\n"
+"con su propia altura de capa."
+
+# AI Translated
+msgid "Boolean: #1 with #2"
+msgstr "Booleana: #1 con #2"
+
+# AI Translated
+msgid "#1 and #2 fused into one solid."
+msgstr "#1 y #2 fundidos en un solo sólido."
+
+# AI Translated
+msgid "#1 with the shape of #2 carved out of it."
+msgstr "#1 con la forma de #2 recortada."
+
+# AI Translated
+msgid "Only the volume that #1 and #2 share."
+msgstr "Solo el volumen que comparten #1 y #2."
+
+# AI Translated
+msgid "Keep #1 and #2"
+msgstr "Conservar #1 y #2"
+
+# AI Translated
+msgid ""
+"Off: the result replaces both objects.\n"
+"On: the result is added and both stay."
+msgstr ""
+"Desactivado: el resultado sustituye a los dos objetos.\n"
+"Activado: se añade el resultado y los dos se conservan."
+
+# AI Translated
 #~ msgid "Note: Inconsistent nozzle diameters. Current version does not support mixed diameter printing. Please select one nozzle for this print."
 #~ msgstr "Nota: los diámetros de boquilla no coinciden. La versión actual no admite imprimir con diámetros mezclados. Seleccione una sola boquilla para esta impresión."
 
