@@ -1964,8 +1964,11 @@ TEST_CASE("The first layer infill of a tool head prints its first layer infill w
     for (size_t head = 0; head < HEADS; ++head) {
         const int tool = int(head);
         REQUIRE(first.count(tool) == 1);
-        const double wall_width   = expected_width(config, "initial_layer_line_width", head);
-        const double infill_width = expected_width(config, "initial_layer_infill_line_width", head);
+        const double wall_width = expected_width(config, "initial_layer_line_width", head);
+        // Zero falls back to the first layer width of the head, not to line_width as expected_width() does.
+        const double nozzle       = config.option<ConfigOptionFloats>("nozzle_diameter")->get_at(head);
+        const double own_infill   = config.get_abs_value_at("initial_layer_infill_line_width", head, nozzle);
+        const double infill_width = own_infill > 0. ? own_infill : wall_width;
         if (head % 2 == 0)
             REQUIRE(std::abs(infill_width - wall_width) > 0.1);
         else
