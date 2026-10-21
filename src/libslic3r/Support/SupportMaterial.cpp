@@ -48,6 +48,7 @@
 #include <vector>
 #include <utility>
 #include <tuple>
+#include <functional>
 #include <string>
 #include <sstream>
 #include <iomanip>
@@ -433,6 +434,78 @@ static void trim_support_layers_by_belt_floor(
     const SlicingParameters &slicing_params, const PrintConfig &print_config,
     const PrintObject &object, SupportGeneratorLayersPtr &support_layers);
 
+// Support Zones (ported from OrcaFS-NeotkoCM by Neotko, NEOTKO_SUPPORTZONES_TAG s286c F4): splits the
+// support extrusions of a layer between the zone families. The polylines are clipped, not tagged by
+// one of their points: an infill line crosses the seam between two zones and tagging it whole would
+// put the body material inside a soluble roof. What lies outside every family keeps no family (-1)
+// and prints as the object's support. A clipped loop comes out as an open path, only on that seam.
+static void split_support_fills_by_family(SupportLayer &support_layer, const std::vector<Polygons> &areas)
+{
+    Polygons all_areas;
+    for (const Polygons &a : areas)
+        polygons_append(all_areas, a);
+    all_areas = union_(all_areas);
+    if (all_areas.empty())
+        return;
+
+    ExtrusionEntityCollection out;
+    std::vector<int>          out_family;
+    bool                      split_any = false;
+    // The pieces keep the extrusion parameters of the path they come from.
+    auto emit = [&out, &out_family](Polylines &&pls, const ExtrusionPath &like, int family) {
+        for (const Polyline &pl : pls) {
+            if (pl.size() < 2)
+                continue;
+            out.entities.emplace_back(new ExtrusionPath(Polyline3(pl), like));
+            out_family.push_back(family);
+        }
+    };
+    std::function<void(const ExtrusionEntity*)> take = [&](const ExtrusionEntity *ee) {
+        if (const auto *coll = dynamic_cast<const ExtrusionEntityCollection*>(ee)) {
+            for (const ExtrusionEntity *child : coll->entities)
+                take(child);
+            return;
+        }
+        const ExtrusionPath *first = nullptr;
+        Polylines            pls;
+        if (const auto *path = dynamic_cast<const ExtrusionPath*>(ee)) {
+            pls.push_back(path->polyline.to_polyline());
+            first = path;
+        } else if (const auto *mp = dynamic_cast<const ExtrusionMultiPath*>(ee)) {
+            for (const ExtrusionPath &p : mp->paths)
+                pls.push_back(p.polyline.to_polyline());
+            first = mp->paths.empty() ? nullptr : &mp->paths.front();
+        } else if (const auto *loop = dynamic_cast<const ExtrusionLoop*>(ee)) {
+            for (const ExtrusionPath &p : loop->paths)
+                pls.push_back(p.polyline.to_polyline());
+            first = loop->paths.empty() ? nullptr : &loop->paths.front();
+        }
+        if (first == nullptr) {
+            // A kind that cannot be clipped stays as it is, without a family.
+            out.entities.emplace_back(ee->clone());
+            out_family.push_back(-1);
+            return;
+        }
+        if (intersection_pl(pls, all_areas).empty()) {
+            out.entities.emplace_back(ee->clone());
+            out_family.push_back(-1);
+            return;
+        }
+        split_any = true;
+        for (size_t f = 0; f < areas.size(); ++ f)
+            if (! areas[f].empty())
+                emit(intersection_pl(pls, areas[f]), *first, int(f));
+        emit(diff_pl(pls, all_areas), *first, -1);
+    };
+    for (const ExtrusionEntity *ee : support_layer.support_fills.entities)
+        take(ee);
+    if (! split_any)
+        return;
+    out.no_sort = support_layer.support_fills.no_sort;
+    support_layer.support_fills = std::move(out);
+    support_layer.support_fills_family = std::move(out_family);
+}
+
 void PrintObjectSupportMaterial::generate(PrintObject &object)
 {
     BOOST_LOG_TRIVIAL(info) << "Support generator - Start";
@@ -440,6 +513,9 @@ void PrintObjectSupportMaterial::generate(PrintObject &object)
     // PerObject Support: the other objects of the plate, trimmed off in trim_support_layers_by_object().
     // Empty when the option is off.
     m_neighbor_occupancy = InstanceContact::neighbor_occupancy(object);
+    // Support Zones (B4b): set again by bottom_contact_layers_and_layer_support_areas() when zones
+    // print with different filaments.
+    object.set_support_family_areas({});
 
     // Support Zones (NEOTKO_SUPPORTZONES_TAG s304): with a style other than Snug the column is
     // quantized to grid cells and steps sideways instead of sliding. A notice, not a veto.
@@ -657,6 +733,17 @@ void PrintObjectSupportMaterial::generate(PrintObject &object)
 
     // Generate the actual toolpaths and save them into each layer.
     generate_support_toolpaths(object.support_layers(), *m_object_config, m_support_params, m_slicing_params, raft_layers, bottom_contacts, top_contacts, intermediate_layers, interface_layers, base_interface_layers);
+
+    // Support Zones (B4b): split the toolpaths of every layer between the zone families.
+    if (! object.support_family_areas().trivial())
+        tbb::parallel_for(tbb::blocked_range<size_t>(0, object.support_layers().size()),
+            [&object](const tbb::blocked_range<size_t> &range) {
+                for (size_t i = range.begin(); i < range.end(); ++ i) {
+                    SupportLayer &support_layer = *object.support_layers()[i];
+                    if (const std::vector<Polygons> *areas = object.support_family_areas_at(float(support_layer.print_z)))
+                        split_support_fills_by_family(support_layer, *areas);
+                }
+            });
 
 #ifdef SLIC3R_DEBUG
     {
@@ -2985,6 +3072,8 @@ struct SupportZoneDescent
     std::vector<char>                guided;
     std::vector<int>                 stump_top;
     std::vector<char>                roof_only;
+    // B4b: the filaments of every family and its area per object layer.
+    PrintObject::SupportFamilyAreas  family_areas;
 
     explicit SupportZoneDescent(const PrintObject &object) : zones(object.slice_support_zones())
     {
@@ -3006,6 +3095,21 @@ struct SupportZoneDescent
             size_t j = 0;
             for (; j < i && ! same_recipe(zones[i].model_volume, zones[j].model_volume); ++ j) ;
             family[i] = (j < i) ? family[j] : n_families ++;
+        }
+        family_areas.families.assign(n_families, PrintObject::SupportFamily());
+        for (size_t i = 0; i < n; ++ i) {
+            const ModelVolume          *v = zones[i].model_volume;
+            PrintObject::SupportFamily &f = family_areas.families[family[i]];
+            if (v->config.has("support_filament"))
+                f.body_filament = v->config.opt_int("support_filament");
+            if (v->config.has("support_interface_filament"))
+                f.interface_filament = v->config.opt_int("support_interface_filament");
+        }
+        if (! family_areas.trivial()) {
+            family_areas.areas.assign(object.total_layer_count(), std::vector<Polygons>(n_families, Polygons()));
+            for (const Layer *l : object.layers())
+                family_areas.layer_print_z.push_back(float(l->print_z));
+            family_areas.layer_print_z.resize(family_areas.areas.size(), family_areas.layer_print_z.empty() ? 0.f : family_areas.layer_print_z.back());
         }
         projection.assign(n, Polygons());
         bottom_layer.assign(n, -1);
@@ -3499,10 +3603,22 @@ SupportGeneratorLayersPtr PrintObjectSupportMaterial::bottom_contact_layers_and_
                 Polygons &mine = claimed_by_family[zd.family[zi]];
                 polygons_append(mine, za);
                 mine = union_(mine);
+                if (size_t(layer_id) < zd.family_areas.areas.size())
+                    polygons_append(zd.family_areas.areas[layer_id][zd.family[zi]], za);
                 layer_support_area = layer_support_area.empty() ? za : union_(layer_support_area, za);
             }
         }
     } // over all layers downwards
+
+    // Support Zones (B4b): the family areas for the toolpath split. Left empty with fewer than two
+    // materials, so nothing is split.
+    if (! zd.family_areas.areas.empty()) {
+        for (std::vector<Polygons> &per_layer : zd.family_areas.areas)
+            for (Polygons &p : per_layer)
+                if (! p.empty())
+                    p = union_(p);
+        object.set_support_family_areas(std::move(zd.family_areas));
+    }
 
     std::reverse(bottom_contacts.begin(), bottom_contacts.end());
     trim_support_layers_by_object(object, bottom_contacts, m_slicing_params.gap_support_object, m_slicing_params.gap_object_support, m_support_params.gap_xy);

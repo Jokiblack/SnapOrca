@@ -6794,6 +6794,18 @@ std::vector<Polygons> PrintObject::slice_support_cutters() const
     return out;
 }
 
+// Support Zones (ported from OrcaFS-NeotkoCM by Neotko, NEOTKO_SUPPORTZONES_TAG s286c F4).
+const std::vector<Polygons>* PrintObject::support_family_areas_at(float print_z) const
+{
+    const SupportFamilyAreas &fa = m_support_family_areas;
+    if (fa.trivial() || fa.areas.empty() || fa.layer_print_z.size() != fa.areas.size())
+        return nullptr;
+    auto it = std::lower_bound(fa.layer_print_z.begin(), fa.layer_print_z.end(), print_z - float(EPSILON));
+    if (it == fa.layer_print_z.end())
+        it = std::prev(fa.layer_print_z.end());
+    return &fa.areas[size_t(it - fa.layer_print_z.begin())];
+}
+
 // Support Zones (ported from OrcaFS-NeotkoCM by Neotko, NEOTKO_SUPPORTZONES_TAG s286, s299, s300g).
 // The same slicing as slice_support_volumes(), one stream per zone volume and no union across them.
 std::vector<SupportZoneSlices> PrintObject::slice_support_zones() const
