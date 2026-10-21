@@ -64,6 +64,7 @@ add_executable(${_TEST_NAME}_tests
     test_utils.cpp
     test_miniz_extension.cpp
     test_timeutils.cpp
+    test_slicing.cpp # NeotkoCM Precision ALH: rescale_layer_height_profile()
     test_voronoi.cpp
     test_wipe_tower_estimate.cpp
     test_wipe_tower.cpp
