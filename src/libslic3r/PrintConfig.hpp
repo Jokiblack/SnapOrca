@@ -2213,7 +2213,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
     ((ConfigOptionInts,               during_print_exhaust_fan_speed))
     ((ConfigOptionInts,               complete_print_exhaust_fan_speed))
     ((ConfigOptionFloatsOrPercentsNullable,     initial_layer_line_width))
-    ((ConfigOptionFloatOrPercent,     initial_layer_infill_line_width))
+    ((ConfigOptionFloatsOrPercentsNullable,     initial_layer_infill_line_width))
     ((ConfigOptionFloat,              initial_layer_print_height))
     ((ConfigOptionFloatsNullable,     initial_layer_speed))
 

@@ -3473,7 +3473,7 @@ void TabPrint::build()
     load_initial_data();
 
     auto page = add_options_page(L("Quality"), "custom-gcode_quality"); // ORCA: icon only visible on placeholders
-        // Snapmaker Orca: the speed selector's line, picker and clear link, for the nine line widths
+        // Snapmaker Orca: the speed selector's line, picker and clear link, for the ten line widths
         // below; stacked, since the 20 em label column would leave the combo too narrow.
         auto optgroup = page->new_optgroup("");
         {
@@ -3487,12 +3487,12 @@ void TabPrint::build()
         optgroup->append_single_option_line("initial_layer_print_height","quality_settings_layer_height");
         optgroup->append_single_option_line("enable_mixed_color_sublayer");
 
-        // Snapmaker Orca: the nine line widths are per tool head columns (print_options_with_variant);
+        // Snapmaker Orca: the ten line widths are per tool head columns (print_options_with_variant);
         // the selector above points the fields at the column of the selected tool head.
         optgroup = page->new_optgroup(L("Line width"), L"param_line_width");
         optgroup->append_single_option_line("line_width","quality_settings_line_width", 0);
         optgroup->append_single_option_line("initial_layer_line_width","quality_settings_line_width#first-layer", 0);
-        optgroup->append_single_option_line("initial_layer_infill_line_width","quality_settings_line_width#first-layer");
+        optgroup->append_single_option_line("initial_layer_infill_line_width","quality_settings_line_width#first-layer", 0);
         optgroup->append_single_option_line("outer_wall_line_width","quality_settings_line_width#outer-wall", 0);
         optgroup->append_single_option_line("inner_wall_line_width","quality_settings_line_width#inner-wall", 0);
         optgroup->append_single_option_line("top_surface_line_width","quality_settings_line_width#top-surface", 0);
@@ -4174,7 +4174,7 @@ static std::string alias_of(const Preset &preset)
 
 // Snapmaker Orca: the pages of the Process tab that carry the speed selector, its line, its picker
 // and its clear link: the Speed page (the speeds, accelerations and jerk) and the Quality page
-// (the nine line widths). Compared on the untranslated page title.
+// (the ten line widths). Compared on the untranslated page title.
 static bool head_selector_page(const wxString &title)
 {
     return title == "Speed" || title == "Quality";

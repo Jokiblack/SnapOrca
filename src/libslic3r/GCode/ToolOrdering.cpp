@@ -4001,7 +4001,7 @@ static double filament_nozzle_diameter(const Print &print, unsigned int filament
     return print.config().nozzle_diameter.get_at(print.extruder_index_of(filament_id));
 }
 
-// Snapmaker Orca: the nine line widths of the tool heads of two 0-based filaments are equal (the
+// Snapmaker Orca: the ten line widths of the tool heads of two 0-based filaments are equal (the
 // columns of the narrowed table, Print::width_slot). An entity whose widths were computed for its
 // filament's head is handed to another filament only when that head prints the same widths.
 static bool same_width_columns(const Print &print, const PrintObject &object, const PrintRegion &region, unsigned int a, unsigned int b)
@@ -4013,7 +4013,8 @@ static bool same_width_columns(const Print &print, const PrintObject &object, co
     const PrintConfig       &print_config  = print.config();
     const PrintObjectConfig &object_config = object.config();
     const PrintRegionConfig &region_config = region.config();
-    return same(print_config.initial_layer_line_width) && same(object_config.line_width) && same(object_config.support_line_width) &&
+    return same(print_config.initial_layer_line_width) && same(print_config.initial_layer_infill_line_width) && same(object_config.line_width) &&
+           same(object_config.support_line_width) &&
            same(region_config.outer_wall_line_width) && same(region_config.inner_wall_line_width) && same(region_config.top_surface_line_width) &&
            same(region_config.sparse_infill_line_width) && same(region_config.internal_solid_infill_line_width) && same(region_config.bridge_line_width);
 }

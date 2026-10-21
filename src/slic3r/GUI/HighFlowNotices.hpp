@@ -217,7 +217,7 @@ wxString speeds_hint_label(const wxString &preset, const wxString &state, Speeds
 wxString standard_chosen_tooltip();
 
 // ---- The Quality page under the speed selector (line widths per tool head) ---------------------
-// Texts of the Quality page's selector, picker and line for the nine line widths; plain strings
+// Texts of the Quality page's selector, picker and line for the ten line widths; plain strings
 // in, wxStrings out, testable without a window.
 
 // The line under All tool heads: which tool heads print with the line widths of another process
@@ -251,7 +251,7 @@ wxString mixed_unit_sentence(const wxString &label, const std::string &old_reade
 // A width for the picker's tooltips: "110 % (0.22 mm)" for a percent of `nozzle`, "0.62 mm" for
 // an absolute value, "auto" for zero.
 std::string width_value_label(const FloatOrPercent &width, double nozzle);
-// The nine line widths of two process presets differ in their Standard shared column
+// The ten line widths of two process presets differ in their Standard shared column
 // (PerHeadProcess::flow_independent_keys); a key one of them lacks counts as a difference.
 bool widths_differ(const DynamicPrintConfig &a, const DynamicPrintConfig &b);
 // Object list notice after "Add settings" added a line width to an item printing on several heads:

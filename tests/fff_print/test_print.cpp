@@ -664,6 +664,12 @@ TEST_CASE("G-code lists the resolved extrusion-width settings", "[Print]")
 
     const std::string with_first_layer = slice({ cube(20) }, { { "initial_layer_line_width", "0.5" } });
     CHECK(with_first_layer.find("; first layer extrusion width") != std::string::npos);
+    CHECK(with_first_layer.find("; first layer infill extrusion width") == std::string::npos);
+
+    // The first layer infill width (Bambu Studio c9089d03c) has a line of its own once set.
+    const std::string with_first_layer_infill = slice({ cube(20) }, { { "initial_layer_line_width", "0.5" }, { "initial_layer_infill_line_width", "0.6" } });
+    CHECK(with_first_layer_infill.find("; first layer extrusion width = 0.50mm") != std::string::npos);
+    CHECK(with_first_layer_infill.find("; first layer infill extrusion width = 0.60mm") != std::string::npos);
 }
 
 // gcode_skip_config_block suppresses the resolved-settings block while leaving the

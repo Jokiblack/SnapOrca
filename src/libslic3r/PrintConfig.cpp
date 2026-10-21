@@ -4210,7 +4210,11 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionFloatsOrPercentsNullable{FloatOrPercent(0., false)});
 
-    def = this->add("initial_layer_infill_line_width", coFloatOrPercent);
+    // Bambu Studio c9089d03c: the first layer infill has its own line width; zero keeps following
+    // "initial_layer_line_width". Snapmaker Orca: one column per tool head like the other widths.
+    def = this->add("initial_layer_infill_line_width", coFloatsOrPercents);
+    def->nullable = true;
+    def->scalar_when_uniform = true;
     def->label = L("First layer infill");
     def->category = L("Quality");
     def->tooltip = L("Line width of the infill of the first layer, including sparse infill, solid infill and top surface. "
@@ -4223,7 +4227,7 @@ void PrintConfigDef::init_fff_params()
     def->max = 1000;
     def->max_literal = 10;
     def->mode = comAdvanced;
-    def->set_default_value(new ConfigOptionFloatOrPercent(0., false));
+    def->set_default_value(new ConfigOptionFloatsOrPercentsNullable{FloatOrPercent(0., false)});
 
     def = this->add("initial_layer_print_height", coFloat);
     def->label = L("First layer height");
@@ -11180,10 +11184,11 @@ std::set<std::string> print_options_with_variant = {
     "travel_jerk",
     "initial_layer_travel_jerk",
     "default_junction_deviation",
-    // Snapmaker Orca: the nine line widths of the Quality page, one column per tool head; the
+    // Snapmaker Orca: the ten line widths of the Quality page, one column per tool head; the
     // Locked Zag widths (skin_infill_line_width, skeleton_infill_line_width) stay scalar.
     "line_width", //coFloatsOrPercents
     "initial_layer_line_width",
+    "initial_layer_infill_line_width",
     "outer_wall_line_width",
     "inner_wall_line_width",
     "top_surface_line_width",

@@ -76,8 +76,8 @@ struct Source
     const Preset            *size_preset { nullptr };
 };
 
-// The 41 keys a head of another size takes from its size's preset: 17 role speeds, 8 accelerations, 7 jerk /
-// junction deviation keys and the nine line widths. Travel keys, enable_overhang_speed, slowdown_for_curled_perimeters
+// The 42 keys a head of another size takes from its size's preset: 17 role speeds, 8 accelerations, 7 jerk /
+// junction deviation keys and the ten line widths. Travel keys, enable_overhang_speed, slowdown_for_curled_perimeters
 // and small_perimeter_threshold stay uniform (read through other head mappings or gated per layer).
 const std::set<std::string>& composed_keys();
 
@@ -167,10 +167,10 @@ std::vector<std::string> head_override_keys(const DynamicPrintConfig &config, si
 bool marker_names_any(const DynamicPrintConfig &config);
 // The marker names nothing.
 bool marker_empty(const DynamicPrintConfig &config);
-// The 48 keys settable per tool head: the value keys of print_options_with_variant except enable_overhang_speed,
+// The 49 keys settable per tool head: the value keys of print_options_with_variant except enable_overhang_speed,
 // slowdown_for_curled_perimeters and small_perimeter_threshold, which stay uniform.
 const std::set<std::string> &head_editable_keys();
-// The nine line width keys of the Quality page. Flow-independent (a High Flow nozzle has the bore of its size): a head
+// The ten line width keys of the Quality page. Flow-independent (a High Flow nozzle has the bore of its size): a head
 // value fills both flow columns, an All tool heads edit every shared column, the composer reads the Standard shared
 // column, normalise() equalises flow columns, and neither the flow toggle nor flow_key selects a width column.
 const std::set<std::string> &flow_independent_keys();

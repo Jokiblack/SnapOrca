@@ -663,7 +663,7 @@ protected:
 	wxSizer*	per_head_line_widget(wxWindow *parent, int label_em, bool stacked = false);
 	wxString	head_selection_description() const;
 	void		clear_head_values();
-	// The Quality page carries the same selector, line, picker and link for the nine line widths:
+	// The Quality page carries the same selector, line, picker and link for the ten line widths:
 	// which page is active, the width keys among a head's values, and the head-editable keys of
 	// the active page (its clear link clears those alone).
 	bool		quality_page_active() const;

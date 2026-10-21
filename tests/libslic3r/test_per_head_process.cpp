@@ -194,21 +194,21 @@ std::vector<std::string> source_names(const std::vector<PerHeadProcess::Source> 
 TEST_CASE("The composed key set is the 32 speed, acceleration and jerk keys of the variant keys", "[PerHeadProcess][PerHeadWidth][phs_key_set]")
 {
     const std::set<std::string> &composed = PerHeadProcess::composed_keys();
-    // 32 speeds, accelerations and jerk keys plus the nine line widths.
-    CHECK(composed.size() == 41);
-    // 52 value keys (42 speeds, accelerations, jerk and switches, the nine line widths of the Quality
+    // 32 speeds, accelerations and jerk keys plus the ten line widths.
+    CHECK(composed.size() == 42);
+    // 53 value keys (42 speeds, accelerations, jerk and switches, the ten line widths of the Quality
     // page and the top surface flow ratio), the ids, the variants and the marker of the values set per tool head.
-    CHECK(print_options_with_variant.size() == 55);
+    CHECK(print_options_with_variant.size() == 56);
     CHECK(print_options_with_variant.count(PerHeadProcess::override_key) == 1);
     CHECK(composed.count(PerHeadProcess::override_key) == 0);
-    // 49 keys can be set per tool head: the value keys without the three uniform switches.
+    // 50 keys can be set per tool head: the value keys without the three uniform switches.
     const std::set<std::string> &editable = PerHeadProcess::head_editable_keys();
-    CHECK(editable.size() == 49);
-    // The nine line widths: flow-independent, editable per tool head and composed from the width
+    CHECK(editable.size() == 50);
+    // The ten line widths: flow-independent, editable per tool head and composed from the width
     // source; the Locked Zag widths stay scalar and outside every set.
     const std::set<std::string> &widths = PerHeadProcess::flow_independent_keys();
-    CHECK(widths == std::set<std::string>{"line_width", "initial_layer_line_width", "outer_wall_line_width", "inner_wall_line_width", "top_surface_line_width",
-                                          "sparse_infill_line_width", "internal_solid_infill_line_width", "support_line_width", "bridge_line_width"});
+    CHECK(widths == std::set<std::string>{"line_width", "initial_layer_line_width", "initial_layer_infill_line_width", "outer_wall_line_width", "inner_wall_line_width",
+                                          "top_surface_line_width", "sparse_infill_line_width", "internal_solid_infill_line_width", "support_line_width", "bridge_line_width"});
     for (const std::string &key : widths) {
         INFO(key);
         CHECK(print_options_with_variant.count(key) == 1);
@@ -3339,7 +3339,7 @@ TEST_CASE("The pressure advance pattern writes its line widths into every column
 namespace {
 
 // The process definition as an older reader has it (Snapmaker Orca 2.4, mainline OrcaSlicer, this
-// fork before the columns): the nine line widths one value, coFloatOrPercent.
+// fork before the columns): the ten line widths one value, coFloatOrPercent.
 class OldReaderConfig : public DynamicConfig
 {
 public:
