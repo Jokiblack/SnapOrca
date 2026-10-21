@@ -18,6 +18,7 @@
 #include "libslic3r/Arachne/utils/ExtrusionJunction.hpp"
 #include "libslic3r/Arachne/utils/ExtrusionLine.hpp"
 #include "libslic3r/ClipperUtils.hpp"
+#include "libslic3r/Feature/HeightAdaptive/HeightCurve.hpp"
 #include "libslic3r/Layer.hpp"
 #include "libslic3r/PerimeterGenerator.hpp"
 #include "libslic3r/Point.hpp"
@@ -438,11 +439,27 @@ void group_region_by_fuzzify(PerimeterGenerator& g)
         SurfacesPtr     surfaces;
     };
 
+    // NEOTKO_HAE_TAG — Height Adaptive Effects (ported from OrcaFS-NeotkoCM): fuzzy skin thickness, point distance,
+    // noise scale, octaves and persistence by height. This runs once per layer and is where the region values are
+    // copied into the FuzzySkinConfig everything downstream reads, so the curves are parsed once here and evaluated
+    // at this layer's slice_z. Within a layer the value is the same for every region, so regions group as before.
+    // An empty key gives an empty curve and leaves the region's value untouched.
+    const PrintObjectConfig *hae_oc = g.object_config;
+    auto hae_parse = [hae_oc](const ConfigOptionString PrintObjectConfig::*key) {
+        return hae_oc == nullptr || (hae_oc->*key).value.empty() ?
+            HeightAdaptive::HeightCurve() : HeightAdaptive::HeightCurve::parse((hae_oc->*key).value, HeightAdaptive::Interp::Smooth);
+    };
+    const HeightAdaptive::HeightCurve hae_thickness   = hae_parse(&PrintObjectConfig::neotko_hae_fuzzy_thickness);
+    const HeightAdaptive::HeightCurve hae_point_dist  = hae_parse(&PrintObjectConfig::neotko_hae_fuzzy_point_distance);
+    const HeightAdaptive::HeightCurve hae_scale       = hae_parse(&PrintObjectConfig::neotko_hae_fuzzy_scale);
+    const HeightAdaptive::HeightCurve hae_octaves     = hae_parse(&PrintObjectConfig::neotko_hae_fuzzy_octaves);
+    const HeightAdaptive::HeightCurve hae_persistence = hae_parse(&PrintObjectConfig::neotko_hae_fuzzy_persistence);
+
     std::vector<ConfigSurfaces> regions;
     regions.reserve(g.compatible_regions->size());
     for (auto region : *g.compatible_regions) {
         const auto&           region_config = region->region().config();
-        const FuzzySkinConfig cfg{region_config.fuzzy_skin,
+        FuzzySkinConfig       cfg{region_config.fuzzy_skin,
                                   scaled<coord_t>(region_config.fuzzy_skin_thickness.value),
                                   scaled<coord_t>(region_config.fuzzy_skin_point_distance.value),
                                   region_config.fuzzy_skin_first_layer,
@@ -455,6 +472,24 @@ void group_region_by_fuzzify(PerimeterGenerator& g)
                                   region_config.fuzzy_skin_ripple_offset,
                                   region_config.fuzzy_skin_layers_between_ripple_offset,
                                   g.layer_id};
+        // NEOTKO_HAE_TAG — each curve is clamped to the domain its own key declares: a freehand curve below zero
+        // would be a division or a loop bound downstream, not a milder texture.
+        if (! hae_thickness.empty()) {
+            const double thickness = std::max(0., hae_thickness.at(g.slice_z, region_config.fuzzy_skin_thickness.value));
+            cfg.thickness = scaled<coord_t>(thickness);
+            // A zero-amplitude fuzzy skin would still resample every wall into thousands of points: switch it off.
+            if (thickness < 0.005)
+                cfg.type = FuzzySkinType::None;
+        }
+        if (! hae_point_dist.empty())
+            cfg.point_distance = scaled<coord_t>(std::max(0.01, hae_point_dist.at(g.slice_z, region_config.fuzzy_skin_point_distance.value)));
+        if (! hae_scale.empty())
+            cfg.noise_scale = std::max(0.01, hae_scale.at(g.slice_z, region_config.fuzzy_skin_scale.value));
+        if (! hae_octaves.empty())
+            // Integer parameter: rounded, never truncated, so a curve sitting at 2.5 does not read as 2.
+            cfg.noise_octaves = std::max(1, int(std::lround(hae_octaves.at(g.slice_z, double(region_config.fuzzy_skin_octaves.value)))));
+        if (! hae_persistence.empty())
+            cfg.noise_persistence = std::clamp(hae_persistence.at(g.slice_z, region_config.fuzzy_skin_persistence.value), 0., 1.);
 
         auto it = std::find_if(regions.begin(), regions.end(), [&cfg](const ConfigSurfaces& item) {
             return item.config == cfg;

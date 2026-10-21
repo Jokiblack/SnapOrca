@@ -20,6 +20,7 @@
 #include "BoundingBox.hpp"
 #include "SVG.hpp"
 #include "Algorithm/RegionExpansion.hpp"
+#include "Feature/HeightAdaptive/HeightCurve.hpp"
 #include "libslic3r.h"
 #include "Utils.hpp"
 
@@ -138,6 +139,17 @@ Flow LayerRegion::flow(FlowRole role, double layer_height, unsigned int filament
     return this->flow(role, layer_height, m_layer->id() == 0, filament_id);
 }
 
+// NEOTKO_HAE_TAG — the Height Adaptive Effects width curve driving a flow role, or nullptr for a role no curve drives.
+static const std::string *hae_width_curve(const PrintObjectConfig &config, FlowRole role)
+{
+    switch (role) {
+    case frInfill:            return &config.neotko_hae_infill_width.value;
+    case frPerimeter:         return &config.neotko_hae_inner_wall_width.value;
+    case frExternalPerimeter: return &config.neotko_hae_outer_wall_width.value;
+    default:                  return nullptr;
+    }
+}
+
 Flow LayerRegion::flow(FlowRole role, double layer_height, bool use_initial_layer_width, unsigned int filament_id) const
 {
     const PrintConfig          &print_config = m_layer->object()->print()->config();
@@ -152,6 +164,8 @@ Flow LayerRegion::flow(FlowRole role, double layer_height, bool use_initial_laye
     // "initial_layer_line_width", which is a column per tool head (multi-nozzle).
     const bool infill_role = role == frInfill || role == frSolidInfill || role == frTopSolidInfill;
     const ConfigOptionFloatOrPercent initial_layer_width = Flow::width_at(print_config.initial_layer_line_width, column);
+    // NEOTKO_HAE_TAG — whether one of the two first-layer widths below applies to this role.
+    const bool initial_layer_width_set = (infill_role && print_config.initial_layer_infill_line_width.value > 0) || initial_layer_width.value > 0;
     if (use_initial_layer_width && infill_role && print_config.initial_layer_infill_line_width.value > 0) {
         config_width = print_config.initial_layer_infill_line_width;
     } else if (use_initial_layer_width && initial_layer_width.value > 0) {
@@ -178,6 +192,25 @@ Flow LayerRegion::flow(FlowRole role, double layer_height, bool use_initial_laye
     // Width resolves against the nozzle of the filament that actually prints (filament_id, when given),
     // which may differ from the role's default filament mapping.
     const auto nozzle_diameter = float(print_config.nozzle_diameter.get_at(filament - 1));
+
+    // NEOTKO_HAE_TAG — Height Adaptive Effects (ported from OrcaFS-NeotkoCM): sparse infill, inner wall and
+    // outer wall line width by height. Hooked here because this function feeds every consumer of these flows
+    // (Fill's flow and spacing, the perimeter flows handed to PerimeterGenerator), so they cannot disagree
+    // about the width of a layer. The curve is a per-object key overriding the per-region width at the point
+    // of use; values are absolute mm. An empty curve leaves config_width untouched. The first layer keeps its
+    // own width when one is set (initial_layer_*_line_width wins).
+    if (const std::string *hae_curve = hae_width_curve(m_layer->object()->config(), role);
+        hae_curve != nullptr && ! hae_curve->empty() && ! (use_initial_layer_width && initial_layer_width_set)) {
+        const auto curve = HeightAdaptive::HeightCurve::parse(*hae_curve, HeightAdaptive::Interp::Stepped);
+        if (! curve.empty()) {
+            double base_mm = config_width.get_abs_value(nozzle_diameter);
+            if (base_mm <= 0.)
+                base_mm = Flow::auto_extrusion_width(role, nozzle_diameter);
+            if (const double w = curve.at(m_layer->slice_z, base_mm); w > 0.)
+                config_width = ConfigOptionFloatOrPercent(w, false);
+        }
+    }
+
     return Flow::new_from_config_width(role, config_width, nozzle_diameter, float(layer_height));
 }
 

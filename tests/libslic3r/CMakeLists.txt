@@ -23,6 +23,7 @@ add_executable(${_TEST_NAME}_tests
     test_config_variant_expansion.cpp
     test_data_dir_migration.cpp
     test_locales_utils.cpp
+    test_height_curve.cpp
     test_drc.cpp
     test_gcodereader.cpp
     test_toolordering_nozzle_group.cpp
