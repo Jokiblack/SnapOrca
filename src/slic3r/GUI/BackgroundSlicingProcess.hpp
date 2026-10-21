@@ -108,6 +108,10 @@ public:
 	void set_current_plate(GUI::PartPlate* plate) { m_current_plate = plate; }
 	GUI::PartPlate* get_current_plate() { return m_current_plate; }
 	GCodeProcessorResult* get_current_gcode_result() { return m_gcode_result;}
+	// NEOTKO_GCODE_REPROCESSOR: when the project has Expert G-code Reprocessor rules, writes the
+	// rewritten G-code of `path` to "<path>.egr" (or in place when !make_copy) and points `path` at it.
+	// Returns false, leaving `path` and its file untouched, when there is nothing to apply.
+	bool run_expert_gcode_reprocessor(std::string &path, bool make_copy) const;
 
 	// The following wxCommandEvent will be sent to the UI thread / Plater window, when the slicing is finished
 	// and the background processing will transition into G-code export.

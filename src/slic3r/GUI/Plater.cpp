@@ -31079,6 +31079,9 @@ void Plater::send_gcode_legacy(int plate_idx, Export3mfProgressFn proFn)
 
         // get file path
         auto file_path = get_partplate_list().get_curr_plate()->get_tmp_gcode_path();
+        // NEOTKO_GCODE_REPROCESSOR: send the rewritten "<tmp>.egr" copy when the project has reprocessor
+        // rules. The preview keeps the original mapped; the copy is overwritten on the next send.
+        this->p->background_process.run_expert_gcode_reprocessor(file_path, true);
         upload_job.upload_data.source_path = file_path;
         upload_job.upload_data.upload_path = default_output_file;
 

@@ -263,6 +263,8 @@ set(lisbslic3r_sources
     GCode/MachineKinematics.hpp
     GCode/ConflictChecker.cpp
     GCode/ConflictChecker.hpp
+    GCode/ExpertGCodeReprocessor.cpp
+    GCode/ExpertGCodeReprocessor.hpp
     GCode/CoolingBuffer.cpp
     GCode/CoolingBuffer.hpp
     GCode/TimelapsePosPicker.cpp
