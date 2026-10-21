@@ -1567,11 +1567,19 @@ void PerimeterGenerator::process_classic()
         int sparse_infill_density = this->config->sparse_infill_density.value;
         if (this->config->alternate_extra_wall && this->layer_id % 2 == 1 && !m_spiral_vase && sparse_infill_density > 0) // add alternating extra wall
             loop_number++;
+        // SnapOrca: ghost lines, one more wall where an internal feature joins the outer wall.
+        if (this->ghost_lines_layer && this->config->ghost_lines_extra_wall && !m_spiral_vase)
+            loop_number++;
         if (this->layer_id == object_config->raft_layers && only_one_wall_first_layer)
             loop_number = 0;
         // Set the topmost layer to be one wall
         if (loop_number > 0 && only_one_wall_top && this->upper_slices == nullptr)
             loop_number = 0;
+
+        // SnapOrca: ghost lines air gap after this wall from the outside (1 = the outer wall), always with a wall
+        // inside it; 0 = no gap.
+        const int ghost_gap_after = this->ghost_lines_gaps == nullptr || m_spiral_vase ? 0 :
+            std::min(this->config->ghost_lines_gap_after_wall.value, loop_number);
 
         ExPolygons last        = union_ex(surface.expolygon.simplify_p(surface_simplify_resolution));
         ExPolygons gaps;
@@ -1729,6 +1737,44 @@ void PerimeterGenerator::process_classic()
                             ClipperUtils::clip_clipper_polygons_with_subject_bbox(reach, get_extents(hole.polygon).inflated(SCALED_EPSILON))).empty();
                 }
 
+                // SnapOrca: ghost lines air gap. After the ghost_gap_after-th wall from the outside, pull the region the
+                // next walls and the infill are built from away from it, so that their edge is the gap from its inner
+                // edge, where the layers above and below cover the gap: it never opens a hole in a top or bottom surface.
+                if (ghost_gap_after > 0 && i == ghost_gap_after - 1 && this->upper_slices != nullptr && this->lower_slices != nullptr) {
+                    // last is the centerline of wall i, the next one goes `spacing` inside it.
+                    const coord_t spacing = i == 0 ? ext_perimeter_spacing2 : perimeter_spacing;
+                    const coord_t width   = i == 0 ? (ext_perimeter_width + perimeter_width) / 2 : perimeter_width;
+                    Polygons contours;
+                    contours.reserve(last.size());
+                    for (const ExPolygon &ex : last)
+                        contours.emplace_back(ex.contour);
+                    // The gap goes between walls and never takes the place of one: where a hole of the island is too
+                    // close behind it to fit the gap, the walls left on this side and the hole's own walls (a wall as
+                    // thin as its walls next to a compartment), it is left out. It may take the place of gap fill or
+                    // infill.
+                    Polygons island_holes;
+                    for (const Polygon &hole : surface.expolygon.holes) {
+                        island_holes.emplace_back(hole);
+                        island_holes.back().make_counter_clockwise();
+                    }
+                    const coord_t room = coord_t(loop_number - i) * perimeter_spacing + ext_perimeter_width + coord_t(loop_number) * perimeter_spacing;
+                    Polygons gaps_cut;
+                    for (const auto &[area, gap] : *this->ghost_lines_gaps) {
+                        const coord_t shrink = gap + width - spacing;
+                        Polygons cut = intersection(diff(contours, offset(contours, -float(shrink))), to_polygons(area));
+                        if (! island_holes.empty() && ! cut.empty()) {
+                            // Where the cut's inner edge is too close to a hole, drop the cut across its whole depth.
+                            const Polygons too_close = intersection(cut, offset(island_holes, float(room), jtRound, scaled<double>(0.01)));
+                            if (! too_close.empty())
+                                cut = diff(cut, offset(too_close, float(shrink + SCALED_EPSILON), jtRound, scaled<double>(0.01)));
+                        }
+                        append(gaps_cut, std::move(cut));
+                    }
+                    const ExPolygons gap = intersection_ex(intersection_ex(union_ex(gaps_cut), *this->upper_slices), *this->lower_slices);
+                    if (! gap.empty())
+                        last = diff_ex(last, gap);
+                }
+
                 //BBS: refer to superslicer
                 //store surface for top infill if only_one_wall_top
                 if (i == 0 && i!=loop_number && only_one_wall_top && !surface.is_bridge() && this->upper_slices != NULL) {
@@ -1866,7 +1912,9 @@ void PerimeterGenerator::process_classic()
             // if brim will be printed, reverse the order of perimeters so that
             // we continue inwards after having finished the brim
             // TODO: add test for perimeter order
-            bool is_outer_wall_first = this->config->wall_sequence == WallSequence::OuterInner;
+            // SnapOrca: ghost lines, the outer wall goes first where an internal feature joins it.
+            const bool ghost_lines_outer_first = this->ghost_lines_layer && this->config->ghost_lines_outer_wall_first;
+            bool is_outer_wall_first = this->config->wall_sequence == WallSequence::OuterInner || ghost_lines_outer_first;
             if (is_outer_wall_first ||
                 //BBS: always print outer wall first when there indeed has brim.
                 // btLeadingEdgeOnly is an outer brim too (a belt brim at the part's first contact).
@@ -2620,6 +2668,9 @@ void PerimeterGenerator::process_arachne()
         int sparse_infill_density = this->config->sparse_infill_density.value;
         if (this->config->alternate_extra_wall && this->layer_id % 2 == 1 && !m_spiral_vase && sparse_infill_density > 0) // add alternating extra wall
             loop_number++;
+        // SnapOrca: ghost lines, one more wall where an internal feature joins the outer wall.
+        if (this->ghost_lines_layer && this->config->ghost_lines_extra_wall && !m_spiral_vase)
+            loop_number++;
 
         // Set the bottommost layer to be one wall
         const bool is_bottom_layer = (this->layer_id == object_config->raft_layers) ? true : false;
@@ -2820,6 +2871,9 @@ void PerimeterGenerator::process_arachne()
         	is_outer_wall_first =
             	this->config->wall_sequence == WallSequence::OuterInner;
         }
+        // SnapOrca: ghost lines, the outer wall goes first where an internal feature joins it.
+        if (this->ghost_lines_layer && this->config->ghost_lines_outer_wall_first)
+            is_outer_wall_first = true;
         if (is_outer_wall_first) {
             start_perimeter = 0;
             end_perimeter = int(perimeters.size());
@@ -2906,7 +2960,8 @@ void PerimeterGenerator::process_arachne()
         }
 
        // printf("New Layer: Layer ID %d\n",layer_id); //debug - new layer
-        if (this->config->wall_sequence == WallSequence::InnerOuterInner) {
+        if (this->config->wall_sequence == WallSequence::InnerOuterInner &&
+            ! (this->ghost_lines_layer && this->config->ghost_lines_outer_wall_first)) {
             if (ordered_extrusions.size() > 2) { // 3 walls minimum needed to do inner outer inner ordering
                 int position = 0; // index to run the re-ordering for multiple external perimeters in a single island.
                 int arr_i, arr_j = 0;    // indexes to run through the walls in the for loops

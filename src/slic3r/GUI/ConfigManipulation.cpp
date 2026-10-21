@@ -943,8 +943,9 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
 
     bool have_perimeters = config->opt_int("wall_loops") > 0;
     for (auto el : { "extra_perimeters_on_overhangs", "ensure_vertical_shell_thickness", "detect_thin_wall", "detect_overhang_wall",
-        "seam_position", "staggered_inner_seams", "wall_sequence", "outer_wall_line_width" })
+        "seam_position", "seam_placement_away_from_overhangs", "staggered_inner_seams", "wall_sequence", "outer_wall_line_width" })
         toggle_field(el, have_perimeters);
+    toggle_line("seam_placement_away_from_overhangs", config->opt_enum<SeamPosition>("seam_position") != spRandom);
     for (auto el : { "inner_wall_speed", "outer_wall_speed", "small_perimeter_speed", "small_perimeter_threshold" })
         toggle_field(el, have_perimeters, variant_index);
 
@@ -1197,7 +1198,7 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
         "support_interface_pattern", "support_interface_top_layers", "support_interface_bottom_layers",
         "bridge_no_support", "max_bridge_length", "support_top_z_distance", "support_bottom_z_distance",
         "support_type", "support_on_build_plate_only", "support_critical_regions_only", "support_interface_not_for_body",
-        "support_object_xy_distance", "support_object_first_layer_gap", "independent_support_layer_height",
+        "support_object_xy_distance", "top_z_overrides_xy_distance", "support_object_first_layer_gap", "independent_support_layer_height",
         "support_interface_min_area" /* Snapmaker */})
         toggle_field(el, have_support_material);
     // PerObject Support needs real support: with a raft alone it does nothing.
@@ -1385,6 +1386,8 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
     for (auto el : {"flush_into_infill", "flush_into_support", "flush_into_objects"})
         toggle_field(el, have_prime_tower);
 
+    toggle_line("retract_on_long_wall_travel", config->opt_bool("reduce_infill_retraction"));
+
     bool have_avoid_crossing_perimeters = config->opt_bool("reduce_crossing_wall");
     toggle_line("max_travel_detour_distance", have_avoid_crossing_perimeters);
 
@@ -1437,6 +1440,19 @@ void ConfigManipulation::toggle_print_fff_options(DynamicPrintConfig *config, in
         "min_bead_width", "wall_distribution_count", "initial_layer_min_bead_width", "wall_maximum_resolution", "wall_maximum_deviation"})
         toggle_line(el, have_arachne);
     toggle_field("detect_thin_wall", !have_arachne);
+
+    // SnapOrca: ghost lines. The air gap is cut by the classic wall generator only, and never in spiral vase mode.
+    const bool ghost_lines = have_perimeters && config->opt_bool("ghost_lines_enable");
+    toggle_field("ghost_lines_enable", have_perimeters);
+    toggle_line("ghost_lines_scope", ghost_lines);
+    toggle_line("ghost_lines_feature_depth", ghost_lines && config->opt_enum<GhostLinesScope>("ghost_lines_scope") == GhostLinesScope::InternalFeatures);
+    toggle_line("ghost_lines_air_gap", ghost_lines);
+    toggle_field("ghost_lines_air_gap", ghost_lines && !have_arachne && !config->opt_bool("spiral_mode"));
+    for (auto el : { "ghost_lines_gap_after_wall", "ghost_lines_bond_layers", "ghost_lines_gap_taper_layers" })
+        toggle_line(el, ghost_lines && config->opt_float("ghost_lines_air_gap") > 0.);
+    for (auto el : { "ghost_lines_extra_wall", "ghost_lines_outer_wall_first", "ghost_lines_outer_wall_flow",
+                     "ghost_lines_outer_wall_speed", "ghost_lines_fan", "ghost_lines_concentric_solid_infill" })
+        toggle_line(el, ghost_lines);
 
     // Orca
     auto is_role_based_wipe_speed = config->opt_bool("role_based_wipe_speed");

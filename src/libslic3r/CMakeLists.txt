@@ -320,6 +320,8 @@ set(lisbslic3r_sources
     GCode/WipeTowerEstimate.hpp
     GCodeWriter.cpp
     GCodeWriter.hpp
+    GhostLines.cpp
+    GhostLines.hpp
     Geometry/ArcWelder.hpp
     Geometry/ArcWelder.cpp
     Geometry/Bicubic.hpp

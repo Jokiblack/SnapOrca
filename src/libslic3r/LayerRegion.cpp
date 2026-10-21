@@ -9,6 +9,7 @@
 #include "Exception.hpp"
 #include "Geometry.hpp"
 #include "Line.hpp"
+#include "GhostLines.hpp"
 #include "PerimeterGenerator.hpp"
 #include "Point.hpp"
 #include "Polygon.hpp"
@@ -294,6 +295,14 @@ static void remove_wall_class(ExtrusionEntityCollection &collection, bool outer_
     }
 }
 
+// SnapOrca: the layer k layers above (k > 0) or below (k < 0) layer, or nullptr past the ends of the object.
+static const Layer *k_layer(const Layer *layer, int k)
+{
+    for (; layer != nullptr && k != 0; k += k > 0 ? -1 : 1)
+        layer = k > 0 ? layer->upper_layer : layer->lower_layer;
+    return layer;
+}
+
 void LayerRegion::make_perimeters(const SurfaceCollection &slices, const LayerRegionPtrs &compatible_regions, SurfaceCollection* fill_surfaces, ExPolygons* fill_no_overlap)
 {
     this->perimeters.clear();
@@ -366,6 +375,36 @@ void LayerRegion::make_perimeters(const SurfaceCollection &slices, const LayerRe
         g.sparse_infill_flow    = this->flow(frInfill, height);
         // Gap fill dispatches to the outer wall filament (LayerTools::extruder()); resolve its width against its nozzle.
         g.gap_fill_flow         = this->flow(frSolidInfill, height, (unsigned int)std::max(0, perimeter_config.outer_wall_filament_id.value));
+
+        // SnapOrca: ghost lines, see GhostLines.hpp. Declared after g so it outlives the process_*() calls below.
+        std::vector<std::pair<ExPolygons, coord_t>> ghost_lines_gaps;
+        if (perimeter_config.ghost_lines_enable.value) {
+            const coord_t gap        = scaled<coord_t>(perimeter_config.ghost_lines_air_gap.value);
+            // Deep enough to reach the wall the gap goes after, see ghost_lines_gap_after_wall.
+            const coord_t band_depth = g.ext_perimeter_flow.scaled_width() +
+                                       coord_t(std::max(1, perimeter_config.ghost_lines_gap_after_wall.value)) * g.perimeter_flow.scaled_width() + gap;
+            ExPolygons    area       = ghost_lines_area(*this->layer(), perimeter_config, band_depth);
+            if (! area.empty()) {
+                this->layer()->ghost_lines = true;
+                append(this->layer()->ghost_lines_area, area);
+                g.ghost_lines_layer = true;
+            }
+            if (gap > 0 && ghost_lines_air_gap_on_layer(*this->layer(), perimeter_config) && ! print_config.spiral_mode &&
+                this->layer()->object()->config().wall_generator.value == PerimeterGeneratorType::Classic) {
+                if (! area.empty())
+                    ghost_lines_gaps.emplace_back(std::move(area), gap);
+                // Taper the gap of the treated layers up to taper layers above and below into this one, narrower
+                // with the distance. Where the areas overlap, the widest gap wins.
+                const int taper = perimeter_config.ghost_lines_gap_taper_layers.value;
+                for (int k = 1; k <= taper; ++ k)
+                    for (const Layer *other : { k_layer(this->layer(), -k), k_layer(this->layer(), k) })
+                        if (other != nullptr)
+                            if (ExPolygons other_area = ghost_lines_area(*other, perimeter_config, band_depth); ! other_area.empty())
+                                ghost_lines_gaps.emplace_back(std::move(other_area), coord_t(double(gap) * double(taper + 1 - k) / double(taper + 1)));
+                if (! ghost_lines_gaps.empty())
+                    g.ghost_lines_gaps = &ghost_lines_gaps;
+            }
+        }
 
         // Cumulative sum of polygons over all the regions, less what the lower layer could not print.
         // ORCA: the overhang reference is the layer below the whole combined group or wall run

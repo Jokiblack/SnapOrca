@@ -1340,6 +1340,46 @@ std::vector<SurfaceFill> group_fills(const Layer &layer, LockRegionParam &lock_p
 		}
 	}
 
+	// SnapOrca: ghost lines, concentric solid infill in the band behind the outer wall where an internal feature joins it.
+	if (layer.ghost_lines) {
+		const size_t surface_fills_size = surface_fills.size();
+		for (size_t i = 0; i < surface_fills_size; i++) {
+			SurfaceFill &fill = surface_fills[i];
+			const PrintRegionConfig &region_config = layer.regions()[fill.region_id]->region().config();
+			if (! region_config.ghost_lines_enable.value || ! region_config.ghost_lines_concentric_solid_infill.value ||
+				! fill.surface.is_solid() || fill.params.bridge || fill.surface.is_bridge() ||
+				fill.params.pattern == ipConcentric || fill.params.pattern == ipConcentricInternal)
+				continue;
+			// The band behind the outer wall the feature joins, as deep as the feature, inside the solid surface.
+			Polygons contours;
+			for (const ExPolygon &ex : layer.lslices)
+				contours.emplace_back(ex.contour);
+			const coord_t depth = scaled<coord_t>(region_config.ghost_lines_feature_depth.value);
+			const ExPolygons band = intersection_ex(fill.expolygons,
+				intersection(diff(contours, offset(contours, -float(depth))), offset(layer.ghost_lines_area, float(depth))));
+			if (band.empty())
+				continue;
+			ExPolygons rest = diff_ex(fill.expolygons, band);
+			const InfillPattern pattern = fill.surface.is_external() ? ipConcentric : ipConcentricInternal;
+			if (rest.empty()) {
+				fill.params.pattern = pattern;
+			} else {
+				params = fill.params;
+				params.pattern = pattern;
+				surface_fills.emplace_back(params);
+				SurfaceFill &band_fill = surface_fills.back();
+				SurfaceFill &src       = surface_fills[i];
+				band_fill.region_id             = src.region_id;
+				band_fill.surface.surface_type  = src.surface.surface_type;
+				band_fill.surface.thickness     = src.surface.thickness;
+				band_fill.region_id_group       = src.region_id_group;
+				band_fill.no_overlap_expolygons = src.no_overlap_expolygons;
+				band_fill.expolygons            = band;
+				src.expolygons                  = std::move(rest);
+			}
+		}
+	}
+
 	return surface_fills;
 }
 

@@ -106,7 +106,10 @@ struct SupportParameters {
             external_perimeter_width = std::max(external_perimeter_width, coordf_t(region.flow(object, frExternalPerimeter, slicing_params.layer_height).width()));
             bridge_flow_ratio += region.config().bridge_flow;
         }
-        this->gap_xy = object_config.support_object_xy_distance.value;
+        // Bambu "Z overrides X/Y": the XY gap is limited to the top Z distance (at least 0.2 mm).
+        this->gap_xy = object_config.top_z_overrides_xy_distance ?
+            std::min(object_config.support_object_xy_distance.value, std::max(0.2, object_config.support_top_z_distance.value)) :
+            object_config.support_object_xy_distance.value;
         this->gap_xy_first_layer = object_config.support_object_first_layer_gap.value;
         bridge_flow_ratio /= object.num_printing_regions();
 

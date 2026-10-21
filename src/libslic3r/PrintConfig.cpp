@@ -355,6 +355,13 @@ static t_config_enum_values s_keys_map_WallSequence {
 };
 CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(WallSequence)
 
+// SnapOrca
+static t_config_enum_values s_keys_map_GhostLinesScope{
+    { "internal_features", int(GhostLinesScope::InternalFeatures) },
+    { "everywhere",        int(GhostLinesScope::Everywhere) },
+};
+CONFIG_OPTION_ENUM_DEFINE_STATIC_MAPS(GhostLinesScope)
+
 //Orca
 static t_config_enum_values s_keys_map_WallDirection{
     { "ccw",  int(WallDirection::CounterClockwise) },
@@ -5016,6 +5023,14 @@ void PrintConfigDef::init_fff_params()
     def->mode    = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def          = this->add("enable_order_independent_overlap_carving", coBool);
+    def->label   = L("Order-independent overlap carving");
+    def->tooltip = L("When enabled, overlapping model parts are carved by bounding-box size: the smaller part always "
+                     "carves the larger one, with the same result on every layer, so a small part embedded in a larger "
+                     "one is not removed. When disabled, the parts are compared by their area in each layer.");
+    def->mode    = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def           = this->add("wrapping_detection_layers", coInt);
     def->label    = L("Clumping detection layers");
     def->tooltip  = L("Clumping detection layers.");
@@ -6143,6 +6158,15 @@ void PrintConfigDef::init_fff_params()
     def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionBool(false));
 
+    def = this->add("retract_on_long_wall_travel", coBool);
+    def->label = L("Retract on long travel along walls");
+    def->tooltip = L("When \"Reduce infill retraction\" skips the retraction of a travel inside an infill area, still retract "
+                     "if the travel runs close to a wall (within one wall line width) for longer than the retraction minimum "
+                     "travel distance. This avoids stringing and oozing marks along the walls, especially when \"Avoid "
+                     "crossing walls\" routes the travel along them.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
     def = this->add("ooze_prevention", coBool);
     def->label = L("Enable");
     def->tooltip = L("This option will drop the temperature of the inactive extruders to prevent oozing.");
@@ -7114,6 +7138,26 @@ void PrintConfigDef::init_fff_params()
     def->enum_labels.push_back(L("Random"));
     def->mode = comSimple;
     def->set_default_value(new ConfigOptionEnum<SeamPosition>(spAligned));
+
+    // Snapmaker Orca: options ported from Bambu Studio (seam / tree supports).
+    def = this->add("seam_placement_away_from_overhangs", coBool);
+    def->label = L("Seam placement away from overhangs (experimental)");
+    def->category = L("Quality");
+    def->tooltip = L("Penalize seam candidates close to overhangs, so that the seam is placed away from them. "
+                     "It has no effect with the Random seam position.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("top_z_overrides_xy_distance", coBool);
+    def->label = L("Z overrides X/Y");
+    def->category = L("Support");
+    def->tooltip = L("When the top Z distance clashes with the support/object XY distance, give priority to generating supports "
+                     "beneath overhangs, leaving a gap to the model as large as the top Z distance. When disabled, the gap "
+                     "between supports and the model always follows the support/object XY distance. "
+                     "Only recommended with hybrid tree supports.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+    // Snapmaker Orca: end of the options ported from Bambu Studio.
 
     def = this->add("staggered_inner_seams", coBool);
     def->label = L("Staggered inner seams");
@@ -8847,6 +8891,160 @@ void PrintConfigDef::init_fff_params()
     def->label = "Head wrap detect zone"; //do not need translation
     def->mode = comDevelop;
     def->set_default_value(new ConfigOptionPoints{});
+
+    // SnapOrca: ghost lines, see GhostLines.hpp.
+    def = this->add("ghost_lines_enable", coBool);
+    def->label = L("Treat ghost lines");
+    def->category = L("Quality");
+    def->tooltip = L("A floor, ceiling, rib or partition joined to the back of the outer wall pulls on it when it shrinks "
+                     "while cooling, and leaves a line on the outer surface along the joint: a ghost line. This enables "
+                     "the treatments below on the layers where such an internal feature joins the outer wall. The "
+                     "layers are found from the shape of the model: see the scope and the feature depth.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("ghost_lines_scope", coEnum);
+    def->label = L("Scope");
+    def->category = L("Quality");
+    def->tooltip = L("Where the ghost line treatments are applied.\n"
+                     "Internal features: only on the layers where a floor, ceiling, rib or partition joins the outer "
+                     "wall from behind, and, for the air gap, only along the part of the outer wall it joins. Solid "
+                     "parts of the model are left alone.\n"
+                     "Everywhere: on every layer, along the whole outer wall. For the air gap, combine it with the "
+                     "bond interval to keep the outer wall attached.");
+    def->enum_keys_map = &ConfigOptionEnum<GhostLinesScope>::get_enum_values();
+    def->enum_values.push_back("internal_features");
+    def->enum_values.push_back("everywhere");
+    def->enum_labels.push_back(L("Internal features"));
+    def->enum_labels.push_back(L("Everywhere"));
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionEnum<GhostLinesScope>(GhostLinesScope::InternalFeatures));
+
+    def = this->add("ghost_lines_feature_depth", coFloat);
+    def->label = L("Internal feature depth");
+    def->category = L("Quality");
+    def->tooltip = L("Material that reaches deeper than this distance from the outer surface counts as an internal feature "
+                     "joined to the outer wall. Set it a little larger than the wall thickness of the model, so that plain "
+                     "walls are not taken for internal features. It also sets how far above and below a floor or ceiling "
+                     "the layers are compared to find where it starts and ends.");
+    def->sidetext = L("mm");
+    def->min = 0.5;
+    def->max = 50;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(3));
+
+    def = this->add("ghost_lines_air_gap", coFloat);
+    def->label = L("Air gap behind the outer wall");
+    def->category = L("Quality");
+    def->tooltip = L("Leave an air gap of this width between the outer wall and the walls and infill behind it, so that "
+                     "the internal feature does not pull on the outer wall when it shrinks. This is what is done in CAD "
+                     "to hide ghost lines, without changing the model. The gap moves the walls behind it inwards and "
+                     "takes the place of infill or gap fill, never of a wall: where the model has no room for it, it is "
+                     "left out. The outer wall stays joined to the rest of the part on the layers without the gap. The "
+                     "gap is never left on the first or the last layer, where it would be exposed by a top or bottom "
+                     "surface, or in spiral vase mode. Classic wall generator only. Set to 0 to disable.");
+    def->sidetext = L("mm");
+    def->min = 0;
+    def->max = 2;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionFloat(0));
+
+    def = this->add("ghost_lines_gap_after_wall", coInt);
+    def->label = L("Air gap after wall");
+    def->category = L("Quality");
+    def->tooltip = L("Leave the air gap after this wall, counted from the outside: 1 leaves it right behind the outer "
+                     "wall, 2 behind the first inner wall, and so on, so that the walls in front of the gap print "
+                     "together as the skin of the part. Larger values give a stronger skin and a little less "
+                     "isolation. There is always at least one wall behind the gap: with fewer walls the gap moves "
+                     "out, and with a single wall it is not left.");
+    def->min = 1;
+    def->max = 10;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionInt(1));
+
+    def = this->add("ghost_lines_bond_layers", coInt);
+    def->label = L("Air gap bond interval");
+    def->category = L("Quality");
+    def->tooltip = L("Print every Nth layer without the air gap, so that the outer wall stays bonded to the inside of the "
+                     "part at regular heights. Set to 0 to leave the gap on every treated layer.");
+    def->sidetext = L("layers");
+    def->min = 0;
+    def->max = 1000;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def = this->add("ghost_lines_gap_taper_layers", coInt);
+    def->label = L("Air gap taper layers");
+    def->category = L("Quality");
+    def->tooltip = L("Close the air gap gradually over this many layers below the first and above the last layer of each "
+                     "internal feature, instead of opening it at once. Set to 0 to open the gap at full width on the "
+                     "first treated layer.");
+    def->sidetext = L("layers");
+    def->min = 0;
+    def->max = 100;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def = this->add("ghost_lines_extra_wall", coBool);
+    def->label = L("Extra wall");
+    def->category = L("Quality");
+    def->tooltip = L("Print one more wall loop on the treated layers, so that the outer wall has more material behind it "
+                     "to resist the pull of the internal feature.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("ghost_lines_outer_wall_first", coBool);
+    def->label = L("Outer wall first");
+    def->category = L("Quality");
+    def->tooltip = L("Print the outer wall before the inner walls on the treated layers, so that it has cooled and set "
+                     "before the internal feature is printed against it. The other layers keep the wall printing order "
+                     "of the profile.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
+
+    def = this->add("ghost_lines_outer_wall_flow", coPercent);
+    def->label = L("Outer wall flow");
+    def->category = L("Quality");
+    def->tooltip = L("Flow of the outer wall on the treated layers, as a percentage of its normal flow. A little more "
+                     "material (102-105%) fills the slight dip the internal feature pulls into the outer wall. Set to 0 "
+                     "to leave the flow unchanged.");
+    def->sidetext = "%";
+    def->min = 0;
+    def->max = 200;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionPercent(0));
+
+    def = this->add("ghost_lines_outer_wall_speed", coPercent);
+    def->label = L("Outer wall speed");
+    def->category = L("Quality");
+    def->tooltip = L("Speed of the outer wall on the treated layers, as a percentage of the outer wall speed. Set to 0 "
+                     "to leave the speed unchanged.");
+    def->sidetext = "%";
+    def->min = 0;
+    def->max = 200;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionPercent(0));
+
+    def = this->add("ghost_lines_fan", coInt);
+    def->label = L("Minimum fan speed");
+    def->category = L("Quality");
+    def->tooltip = L("Run the part cooling fan at least at this speed on the treated layers, so that the outer wall sets "
+                     "before the internal feature shrinks. The fan is never raised on the layers without cooling "
+                     "(no cooling for the first layers). Set to 0 to leave the fan unchanged.");
+    def->sidetext = "%";
+    def->min = 0;
+    def->max = 100;
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionInt(0));
+
+    def = this->add("ghost_lines_concentric_solid_infill", coBool);
+    def->label = L("Concentric solid infill behind the outer wall");
+    def->category = L("Quality");
+    def->tooltip = L("On the treated layers, fill the solid infill next to the outer wall with concentric lines, parallel "
+                     "to the wall, instead of the solid infill pattern of the profile, so that it shrinks along the wall "
+                     "rather than towards it. The band is as wide as the internal feature depth.");
+    def->mode = comAdvanced;
+    def->set_default_value(new ConfigOptionBool(false));
 
     def = this->add("detect_thin_wall", coBool);
     def->label = L("Detect thin walls");

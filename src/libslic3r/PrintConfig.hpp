@@ -263,6 +263,14 @@ enum class WallSequence {
     Count,
 };
 
+// SnapOrca: where the ghost line treatments apply, see GhostLines.hpp.
+enum class GhostLinesScope
+{
+    InternalFeatures,
+    Everywhere,
+    Count,
+};
+
 // Orca
 enum class WallDirection
 {
@@ -889,6 +897,7 @@ extern std::vector<std::string> save_extruder_nozzle_stats_to_string(const std::
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(PrinterTechnology)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(WallSplitFilament)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(WallSplitDirection)
+CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(GhostLinesScope)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(GCodeFlavor)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(FuzzySkinType)
 CONFIG_OPTION_ENUM_DECLARE_STATIC_MAPS(FuzzySkinMode)
@@ -1467,6 +1476,9 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloat,               raft_first_layer_expansion))
     ((ConfigOptionInt,                 raft_layers))
     ((ConfigOptionEnum<SeamPosition>,  seam_position))
+    // Snapmaker Orca: options ported from Bambu Studio (seam / tree supports).
+    ((ConfigOptionBool,                seam_placement_away_from_overhangs))
+    ((ConfigOptionBool,                top_z_overrides_xy_distance))
     ((ConfigOptionBool,                staggered_inner_seams))
     ((ConfigOptionFloat,               slice_closing_radius))
     ((ConfigOptionEnum<SlicingMode>,   slicing_mode))
@@ -1765,6 +1777,20 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionFloatsNullable, internal_solid_infill_speed))
     // Detect thin walls.
     ((ConfigOptionBool, detect_thin_wall))
+    // SnapOrca: ghost lines, see GhostLines.hpp.
+    ((ConfigOptionBool, ghost_lines_enable))
+    ((ConfigOptionEnum<GhostLinesScope>, ghost_lines_scope))
+    ((ConfigOptionFloat, ghost_lines_feature_depth))
+    ((ConfigOptionFloat, ghost_lines_air_gap))
+    ((ConfigOptionInt, ghost_lines_gap_after_wall))
+    ((ConfigOptionInt, ghost_lines_bond_layers))
+    ((ConfigOptionInt, ghost_lines_gap_taper_layers))
+    ((ConfigOptionBool, ghost_lines_extra_wall))
+    ((ConfigOptionBool, ghost_lines_outer_wall_first))
+    ((ConfigOptionPercent, ghost_lines_outer_wall_flow))
+    ((ConfigOptionPercent, ghost_lines_outer_wall_speed))
+    ((ConfigOptionInt, ghost_lines_fan))
+    ((ConfigOptionBool, ghost_lines_concentric_solid_infill))
     ((ConfigOptionFloatsOrPercentsNullable, top_surface_line_width))
     ((ConfigOptionInt, top_shell_layers))
     ((ConfigOptionFloat, top_shell_thickness))
@@ -2160,6 +2186,7 @@ PRINT_CONFIG_CLASS_DEFINE(
     ((ConfigOptionBool,                scan_first_layer))
     ((ConfigOptionEnum<PowerLossRecoveryMode>, enable_power_loss_recovery))
     ((ConfigOptionBool,                enable_wrapping_detection))
+    ((ConfigOptionBool,                enable_order_independent_overlap_carving))
     ((ConfigOptionInt,                 wrapping_detection_layers))
     ((ConfigOptionPoints,              wrapping_exclude_area))
     ((ConfigOptionPoints,              thumbnail_size))
@@ -2466,6 +2493,7 @@ PRINT_CONFIG_CLASS_DERIVED_DEFINE(
     ((ConfigOptionFloats,             slow_down_min_speed))
     ((ConfigOptionFloats,             nozzle_diameter))
     ((ConfigOptionBool,               reduce_infill_retraction))
+    ((ConfigOptionBool,               retract_on_long_wall_travel))
     ((ConfigOptionBool,               ooze_prevention))
     ((ConfigOptionString,             filename_format))
     ((ConfigOptionStrings,            post_process))

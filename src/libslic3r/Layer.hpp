@@ -216,6 +216,12 @@ public:
     //Extrusions estimated to be seriously malformed, estimated during "Estimating curled extrusions" step. These lines should be avoided during fast travels.
     CurledLines         curled_lines;
 
+    // SnapOrca: an internal feature joins the outer wall on this layer and the ghost line treatments apply, see
+    // GhostLines.hpp. Set by LayerRegion::make_perimeters(); ghost_lines_area is the part of the band behind the
+    // outer wall it joins, over all regions.
+    bool                ghost_lines = false;
+    ExPolygons          ghost_lines_area;
+
     // BBS
     mutable ExPolygons          sharp_tails;
     mutable ExPolygons          cantilevers;

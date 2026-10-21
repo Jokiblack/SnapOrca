@@ -1155,12 +1155,10 @@ static ExPolygons get_boundary(const Layer &layer, float perimeter_spacing)
     return boundary;
 }
 
-// called by AvoidCrossingPerimeters::travel_to()
-static Polygons get_boundary_external(const Layer &layer)
+// called by get_boundary_external()
+static Polygons compute_boundary_external(const Layer &layer, const float perimeter_spacing, const SupportLayer *support_layer)
 {
-    const float perimeter_spacing = get_perimeter_spacing_external(layer);
     const float perimeter_offset  = perimeter_spacing / 2.f;
-    auto const *support_layer     = dynamic_cast<const SupportLayer *>(&layer);
     Polygons    boundary;
 #ifdef INCLUDE_SUPPORTS_IN_BOUNDARY
     ExPolygons  supports_boundary;
@@ -1211,6 +1209,35 @@ static Polygons get_boundary_external(const Layer &layer)
     append(boundary, to_polygons(inner_offset(supports_boundary, perimeter_offset)));
 #endif
     return boundary;
+}
+
+// called by AvoidCrossingPerimeters::travel_to()
+// The external boundary covers every object of the plate at the given print height, so it is the same for all objects
+// printed at that height. m_external is cleared by init_layer() once per object and rebuilt on the next external travel,
+// so with many objects the same boundary would be recomputed over and over (each time walking all objects).
+// The result depends only on the print height, the averaged perimeter spacing and whether the layer is a support layer,
+// so it is cached by those values and the cache is dropped as soon as the print height changes.
+static Polygons get_boundary_external(const Layer &layer, AvoidCrossingPerimeters::ExternalBoundaryCache &cache)
+{
+    const Print *print             = layer.object()->print();
+    const float  perimeter_spacing = get_perimeter_spacing_external(layer);
+    auto const  *support_layer     = dynamic_cast<const SupportLayer *>(&layer);
+    const bool   is_support_layer  = support_layer != nullptr;
+#ifdef INCLUDE_SUPPORTS_IN_BOUNDARY
+    // Support islands of the layer itself are part of the boundary, the cache would have to be keyed by the support layer.
+    return compute_boundary_external(layer, perimeter_spacing, support_layer);
+#else
+    if (cache.print != print || cache.print_z != layer.print_z) {
+        cache.entries.clear();
+        cache.print   = print;
+        cache.print_z = layer.print_z;
+    }
+    for (const AvoidCrossingPerimeters::ExternalBoundaryCache::Entry &entry : cache.entries)
+        if (entry.perimeter_spacing == perimeter_spacing && entry.is_support_layer == is_support_layer)
+            return entry.boundary;
+    cache.entries.push_back({perimeter_spacing, is_support_layer, compute_boundary_external(layer, perimeter_spacing, support_layer)});
+    return cache.entries.back().boundary;
+#endif
 }
 
 static void init_boundary_distances(AvoidCrossingPerimeters::Boundary *boundary)
@@ -1287,11 +1314,11 @@ Polyline AvoidCrossingPerimeters::travel_to(const GCode &gcodegen, const Point &
     } else if (use_external) {
         // Initialize m_external only when exist any external travel for the current layer.
         if (m_external.boundaries.empty()) {
-            init_boundary(&m_external, get_boundary_external(*gcodegen.layer()), {start, end});
+            init_boundary(&m_external, get_boundary_external(*gcodegen.layer(), m_external_boundary_cache), {start, end});
         } else if (!(m_external.bbox.contains(startf) && m_external.bbox.contains(endf))) {
             // check if start and end are in bbox
             m_external.clear();
-            init_boundary(&m_external, get_boundary_external(*gcodegen.layer()), {start, end});
+            init_boundary(&m_external, get_boundary_external(*gcodegen.layer(), m_external_boundary_cache), {start, end});
         }
         
         // Trim the travel line by the bounding box.
@@ -1341,6 +1368,8 @@ void AvoidCrossingPerimeters::init_layer(const Layer &layer)
 {
     m_internal.clear();
     m_external.clear();
+    // m_external_boundary_cache is intentionally kept: init_layer() is called once per object at each print height and the
+    // cached external boundary is shared by all of them. It is invalidated by print height in get_boundary_external().
 
     m_lslices_offset.clear();
     m_lslices_offset_bboxes.clear();

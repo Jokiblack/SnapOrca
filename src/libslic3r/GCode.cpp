@@ -7579,6 +7579,18 @@ LayerResult GCode::process_layer(
         m_writer.set_process_slot(process_slot_of((int)cur_filament->id()));
     }
     LayerResult   result { {}, layer.id(), false, last_layer };
+    // SnapOrca: ghost lines, minimum fan on the layers where an internal feature joins the outer wall, applied by the
+    // cooling buffer to this layer.
+    if (m_cooling_buffer) {
+        int ghost_lines_fan = 0;
+        for (const LayerToPrint &l : layers)
+            if (l.object_layer != nullptr && l.object_layer->ghost_lines)
+                for (const LayerRegion *layerm : l.object_layer->regions())
+                    if (layerm->region().config().ghost_lines_enable.value)
+                        ghost_lines_fan = std::max(ghost_lines_fan, layerm->region().config().ghost_lines_fan.value);
+        if (ghost_lines_fan > 0)
+            m_cooling_buffer->set_layer_min_fan_speed(layer.id(), ghost_lines_fan);
+    }
     if (layer_tools.extruders.empty())
         // Nothing to extrude.
         return result;
@@ -11474,6 +11486,12 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &path_d
         _mm3_per_mm *= m_config.scarf_joint_flow_ratio;
     }
 
+    // SnapOrca: ghost lines, outer wall flow and speed on the layers where an internal feature joins the outer wall.
+    const bool ghost_lines_outer_wall = path.role() == erExternalPerimeter && m_layer != nullptr && m_layer->ghost_lines &&
+                                        m_config.ghost_lines_enable.value;
+    if (ghost_lines_outer_wall && m_config.ghost_lines_outer_wall_flow.value > 0.)
+        _mm3_per_mm *= m_config.ghost_lines_outer_wall_flow.get_abs_value(1.);
+
     if (m_config.set_other_flow_ratios) {
         if (path.role() == erExternalPerimeter) {
             _mm3_per_mm *= m_config.outer_wall_flow_ratio;
@@ -11525,6 +11543,8 @@ std::string GCode::_extrude(const ExtrusionPath &path, const std::string &path_d
             }
         } else if (path.role() == erExternalPerimeter) {
             speed = NOZZLE_CONFIG(outer_wall_speed);
+            if (ghost_lines_outer_wall && m_config.ghost_lines_outer_wall_speed.value > 0.)
+                speed = m_config.ghost_lines_outer_wall_speed.get_abs_value(speed);
             if (sloped) {
                 speed = std::min(speed, m_config.scarf_joint_speed.get_abs_value(speed));
             }
@@ -12741,7 +12761,10 @@ bool GCode::needs_retraction(const Polyline &travel, ExtrusionRole role, LiftTyp
     }
     //BBS: need retract when long moving to print perimeter to avoid dropping of material
     if (!is_perimeter(role) && m_config.reduce_infill_retraction && m_layer != nullptr &&
-        m_config.sparse_infill_density.value > 0 && m_retract_when_crossing_perimeters.travel_inside_internal_regions(*m_layer, travel))
+        m_config.sparse_infill_density.value > 0 && m_retract_when_crossing_perimeters.travel_inside_internal_regions(*m_layer, travel) &&
+        // BBS (1d601fac9): keep the retraction when the travel runs along a wall for longer than retraction_minimum_travel.
+        !(m_config.retract_on_long_wall_travel &&
+          m_retract_when_crossing_perimeters.travel_near_perimeters_too_long(*m_layer, travel, coord_t(scale_(FILAMENT_CONFIG(retraction_minimum_travel))))))
         // Skip retraction if travel is contained in an internal slice *and*
         // internal infill is enabled (so that stringing is entirely not visible).
         //FIXME any_internal_region_slice_contains() is potentionally very slow, it shall test for the bounding boxes first.

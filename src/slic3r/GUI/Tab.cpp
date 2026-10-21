@@ -3503,6 +3503,7 @@ void TabPrint::build()
 
         optgroup = page->new_optgroup(L("Seam"), L"param_seam");
         optgroup->append_single_option_line("seam_position", "quality_settings_seam#seam-position");
+        optgroup->append_single_option_line("seam_placement_away_from_overhangs", "quality_settings_seam#seam-position");
         optgroup->append_single_option_line("staggered_inner_seams", "quality_settings_seam#staggered-inner-seams");
         optgroup->append_single_option_line("seam_gap","quality_settings_seam#seam-gap");
         optgroup->append_single_option_line("seam_slope_type", "quality_settings_seam#scarf-joint-seam");
@@ -3523,6 +3524,22 @@ void TabPrint::build()
         optgroup->append_single_option_line("wipe_inward_distance", "quality_settings_seam#wipe-inward");
         optgroup->append_single_option_line("wipe_before_external_loop","quality_settings_seam#wipe-before-external");
 
+
+        // SnapOrca
+        optgroup = page->new_optgroup(L("Ghost lines"), L"param_wall");
+        optgroup->append_single_option_line("ghost_lines_enable");
+        optgroup->append_single_option_line("ghost_lines_scope");
+        optgroup->append_single_option_line("ghost_lines_feature_depth");
+        optgroup->append_single_option_line("ghost_lines_air_gap");
+        optgroup->append_single_option_line("ghost_lines_gap_after_wall");
+        optgroup->append_single_option_line("ghost_lines_bond_layers");
+        optgroup->append_single_option_line("ghost_lines_gap_taper_layers");
+        optgroup->append_single_option_line("ghost_lines_extra_wall");
+        optgroup->append_single_option_line("ghost_lines_outer_wall_first");
+        optgroup->append_single_option_line("ghost_lines_outer_wall_flow");
+        optgroup->append_single_option_line("ghost_lines_outer_wall_speed");
+        optgroup->append_single_option_line("ghost_lines_fan");
+        optgroup->append_single_option_line("ghost_lines_concentric_solid_infill");
 
         optgroup = page->new_optgroup(L("Precision"), L"param_precision");
         optgroup->append_single_option_line("slice_closing_radius", "quality_settings_precision#slice-gap-closing-radius");
@@ -3888,6 +3905,7 @@ void TabPrint::build()
         //optgroup->append_single_option_line("support_interface_loop_pattern", "support_settings_advanced");
 
         optgroup->append_single_option_line("support_object_xy_distance", "support_settings_advanced#supportobject-xy-distance");
+        optgroup->append_single_option_line("top_z_overrides_xy_distance", "support_settings_advanced#supportobject-xy-distance");
         optgroup->append_single_option_line("support_object_first_layer_gap", "support_settings_advanced#supportobject-first-layer-gap");
         optgroup->append_single_option_line("bridge_no_support", "support_settings_advanced#dont-support-bridges");
         optgroup->append_single_option_line("max_bridge_length", "support_settings_advanced#max-bridge-length");
@@ -3965,6 +3983,7 @@ void TabPrint::build()
         optgroup->append_single_option_line("toolchange_cyclic_order", "multimaterial_settings_advanced#toolchange-order");
         optgroup->append_single_option_line("toolchange_cyclic_first_layer", "multimaterial_settings_advanced#toolchange-order");
         optgroup->append_single_option_line("interface_shells", "multimaterial_settings_advanced#interface-shells");
+        optgroup->append_single_option_line("enable_order_independent_overlap_carving");
         optgroup->append_single_option_line("mmu_segmented_region_max_width", "multimaterial_settings_advanced#maximum-width-of-segmented-region");
         optgroup->append_single_option_line("mmu_segmented_region_interlocking_depth", "multimaterial_settings_advanced#interlocking-depth-of-segmented-region");
         // Painter Pro Mode (ported from OrcaFS-NeotkoCM by Neotko): extra walls and surface depth of the painted regions.
@@ -4037,6 +4056,7 @@ void TabPrint::build()
 
         optgroup = page->new_optgroup(L("G-code output"), L"param_gcode");
         optgroup->append_single_option_line("reduce_infill_retraction", "others_settings_g_code_output#reduce-infill-retraction");
+        optgroup->append_single_option_line("retract_on_long_wall_travel");
         optgroup->append_single_option_line("gcode_add_line_number", "others_settings_g_code_output#add-line-number");
         optgroup->append_single_option_line("gcode_comments", "others_settings_g_code_output#verbose-g-code");
         optgroup->append_single_option_line("gcode_label_objects", "others_settings_g_code_output#label-objects");
