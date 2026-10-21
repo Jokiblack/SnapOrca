@@ -30,6 +30,7 @@
 #include "libslic3r/TriangleMesh.hpp"
 #include "libslic3r/TriangleSelector.hpp"
 #include "libslic3r/TextureDisplacement.hpp"
+#include "libslic3r/SurfaceEffectProfile.hpp"
 #include <memory>
 #include <cstdint>
 #include <ios>
@@ -2555,4 +2556,87 @@ SCENARIO("a rendered no-light thumbnail does not suppress the plate thumbnail", 
             }
         }
     }
+}
+
+// A cube whose triangles 3 and 7 are painted with ColorStitch slot 1 and triangle 10 with slot 4, the
+// slots mapped to profiles 2 and 5 of a two-profile library.
+static ModelVolume& add_colorstitch_painted_cube(Model& model)
+{
+    ModelObject* object = model.add_object();
+    ModelVolume* volume = object->add_volume(make_cube(10., 10., 10.));
+    object->add_instance();
+
+    TriangleSelector selector(volume->mesh());
+    for (const int triangle : { 3, 7 })
+        selector.set_facet(triangle, EnforcerBlockerType(1));
+    selector.set_facet(10, EnforcerBlockerType(4));
+    REQUIRE(volume->colorstitch_paint_facets.set(selector));
+    volume->colorstitch_slot_to_profile_id[1] = 2;
+    volume->colorstitch_slot_to_profile_id[4] = 5;
+
+    SurfaceEffectProfile first;
+    first.id             = 2;
+    first.name           = "Gradient";
+    first.preview_argb   = 0xFF336699u;
+    first.stack_top_json = R"({"v":1,"enabled":true,"passes":[{"kind":1,"ratio":0.5,"solid_tool":1}]})";
+    first.colorstitch.present = true;
+    first.colorstitch.kv["interlayer_colormix_pattern_top"] = "12";
+    REQUIRE(model.surface_effect_profiles.adopt(first));
+    SurfaceEffectProfile second;
+    second.id   = 5;
+    second.name = "Cap";
+    REQUIRE(model.surface_effect_profiles.adopt(second));
+    return *volume;
+}
+
+static std::vector<std::string> colorstitch_paint(const ModelVolume& volume)
+{
+    std::vector<std::string> paint;
+    for (size_t i = 0; i < volume.mesh().its.indices.size(); ++i)
+        paint.push_back(volume.colorstitch_paint_facets.get_triangle_as_string(int(i)));
+    return paint;
+}
+
+TEST_CASE("ColorStitch paint, slot table and profile library survive a project round trip", "[3mf][ColorStitch]")
+{
+    const SaveStrategy strategy = GENERATE(SaveStrategy::Zip64 | SaveStrategy::Silence,
+                                           SaveStrategy::Zip64 | SaveStrategy::Silence | SaveStrategy::SplitModel);
+    INFO("save strategy " << int(strategy));
+
+    ScopedTemporaryFile temp(".3mf");
+    Model               source;
+    const ModelVolume&  painted = add_colorstitch_painted_cube(source);
+    const std::vector<std::string> paint = colorstitch_paint(painted);
+    REQUIRE(std::count_if(paint.begin(), paint.end(), [](const std::string& s) { return !s.empty(); }) == 3);
+    store_project(source, temp.string(), strategy);
+
+    ScopedTemporaryDir backup_dir("orca_colorstitch_dst");
+    Model              model;
+    REQUIRE(load_project(temp.string(), model, backup_dir));
+    REQUIRE(model.objects.size() == 1);
+    const ModelVolume& volume = *model.objects.front()->volumes.front();
+    CHECK(colorstitch_paint(volume) == paint);
+    CHECK(volume.colorstitch_slot_to_profile_id == painted.colorstitch_slot_to_profile_id);
+    CHECK(model.surface_effect_profiles == source.surface_effect_profiles);
+    // The loader takes the library out of the project metadata it hands to the model.
+    if (model.model_info)
+        CHECK(model.model_info->metadata_items.count("colormix_profiles_b64") == 0);
+}
+
+TEST_CASE("A project without ColorStitch data writes none of its attributes", "[3mf][ColorStitch]")
+{
+    ScopedTemporaryFile temp(".3mf");
+    Model               source;
+    ModelObject*        object = source.add_object();
+    object->add_volume(make_cube(10., 10., 10.));
+    object->add_instance();
+    store_project(source, temp.string(), SaveStrategy::Zip64 | SaveStrategy::Silence | SaveStrategy::SplitModel);
+
+    bool found = false;
+    rewrite_3mf_entries(temp.string(), [&found](std::string&, std::string& data) {
+        for (const char* key : { "paint_colormix", "colormix_slot_to_profile_id", "colormix_profiles_b64" })
+            found |= data.find(key) != std::string::npos;
+        return false;
+    });
+    CHECK_FALSE(found);
 }

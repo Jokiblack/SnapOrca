@@ -29,6 +29,7 @@ add_executable(${_TEST_NAME}_tests
 	test_precise_seam.cpp
 	test_print.cpp
 	test_printobject.cpp
+	test_sandwich.cpp # Snapmaker Orca: Sandwich passes of the top surface (ColorStitch, MultiPass)
 	test_mixed_filament.cpp
 	test_seam_placer.cpp
 	test_skirt_brim.cpp

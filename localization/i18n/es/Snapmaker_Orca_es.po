@@ -41068,6 +41068,18 @@ msgid "Leave the air gap after this wall, counted from the outside: 1 leaves it 
 msgstr "Deja la cámara de aire después de este perímetro, contando desde fuera: 1 la deja justo detrás de la pared exterior, 2 detrás del primer perímetro interior, y así sucesivamente, de modo que los perímetros delante de la cámara se imprimen juntos como la piel de la pieza. Los valores mayores dan una piel más resistente y algo menos de aislamiento. Siempre queda al menos un perímetro detrás de la cámara: con menos perímetros la cámara se desplaza hacia fuera y con un solo perímetro no se deja."
 
 # AI Translated
+msgid "ColorStitch: this object uses the Monotonic pattern on a ColorStitch surface, and some lines may lose their colour. Use Monotonic line on the top and penultimate surfaces for an exact result."
+msgstr "ColorStitch: este objeto usa el patrón Monotónico en una superficie con ColorStitch y algunas líneas pueden perder su color. Use Líneas monotónicas en las superficies superior y penúltima para obtener un resultado exacto."
+
+# AI Translated
+msgid "Sandwich and Subdivide Mix Layer are not compatible for now. On the layers of this object that Subdivide Mix Layer splits, the Sandwich recipe was not applied and those surfaces print like the rest of the layer. Use only one of the two on this object."
+msgstr "El sándwich y Subdividir capa de mezcla no son compatibles por ahora. En las capas de este objeto que divide Subdividir capa de mezcla no se ha aplicado la receta del sándwich y esas superficies se imprimen como el resto de la capa. Use solo una de las dos opciones en este objeto."
+
+# AI Translated
+msgid "Sandwich: on some layers the layer height is too thin for every pass of the recipe painted with these slots: %1%. There the recipe prints with fewer passes. Raise the layer height, narrow the adaptive layer height range or change the shares of the passes."
+msgstr "Sándwich: en algunas capas la altura de capa es demasiado fina para todas las pasadas de la receta pintada con estas ranuras: %1%. Ahí la receta se imprime con menos pasadas. Aumente la altura de capa, reduzca el rango de la altura de capa adaptativa o cambie el reparto de las pasadas."
+
+# AI Translated
 #~ msgid "Note: Inconsistent nozzle diameters. Current version does not support mixed diameter printing. Please select one nozzle for this print."
 #~ msgstr "Nota: los diámetros de boquilla no coinciden. La versión actual no admite imprimir con diámetros mezclados. Seleccione una sola boquilla para esta impresión."
 
