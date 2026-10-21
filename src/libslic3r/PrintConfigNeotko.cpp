@@ -162,8 +162,9 @@ void PrintConfigDef::init_neotko_params()
 
     // ---- B2 Painter Pro Mode ----
     // Batch B2. PrintObjectConfig, read by generate_print_object_regions() (PrintApply.cpp), MultiMaterialSegmentation
-    // and PrintObject (surface depth); they invalidate posSlice. 0 / empty list = unchanged. Neotko mode: comAdvanced
-    // (Advanced category); the *_per_color ones are written by the painting gizmo.
+    // and PrintObject (surface depth); they invalidate posSlice. 0 / empty list = unchanged. The two scalars are
+    // comAdvanced, in the Multimaterial tab, Advanced group (Neotko has extra walls there); the *_per_color ones are
+    // written by the painting gizmo only and stay comDevelop.
 
     def = this->add("mmu_segmented_region_extra_walls", coInt);
     def->label = L("Extra walls on segmented regions");
@@ -173,7 +174,7 @@ void PrintConfigDef::init_neotko_params()
                      "it.");
     def->min = 0;
     def->max = 8;
-    def->mode = comDevelop;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(0));
 
     def = this->add("mmu_segmented_region_surface_depth", coInt);
@@ -183,7 +184,7 @@ void PrintConfigDef::init_neotko_params()
                      "painted color, following the painted outline. 0 disables it.");
     def->min = 0;
     def->max = 20;
-    def->mode = comDevelop;
+    def->mode = comAdvanced;
     def->set_default_value(new ConfigOptionInt(0));
 
     def = this->add("mmu_segmented_region_extra_walls_per_color", coInts);

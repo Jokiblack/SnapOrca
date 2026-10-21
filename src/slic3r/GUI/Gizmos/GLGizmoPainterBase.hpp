@@ -17,6 +17,7 @@
 
 #include "libslic3r/Point.hpp"
 #include "libslic3r/Color.hpp"
+#include <functional>
 #include <memory>
 #include <vector>
 #include <set>
@@ -258,6 +259,11 @@ protected:
     static constexpr float CursorRadiusMin  = 0.4f; // cannot be zero
     static constexpr float CursorRadiusMax  = 8.f;
     static constexpr float CursorRadiusStep = 0.2f;
+    // Painter Pro Mode (ported from OrcaFS-NeotkoCM by Neotko), brush precision: see
+    // TriangleSelector::set_precision_factor(). Only the colour painting gizmo changes it; 1 = stock.
+    float m_precision_factor = 1.f;
+    static constexpr float PrecisionFactorMin = 1.f;
+    static constexpr float PrecisionFactorMax = 8.f;
     static constexpr float CursorHeightMin = 0.1f; // cannot be zero
     static constexpr float CursorHeightMax = 8.f;
     static constexpr float CursorHeightStep = 0.2f;
@@ -273,6 +279,11 @@ protected:
         SMART_FILL,
         // BBS
         GAP_FILL,
+        // Painter Pro Mode (ported from OrcaFS-NeotkoCM by Neotko): screen-space masks, set by the colour
+        // painting gizmo only. RECTANGLE paints what a dragged rectangle covers when the button is released,
+        // POLYGON what a polygon of clicked vertices encloses when it is closed on its first vertex.
+        RECTANGLE,
+        POLYGON,
     };
 
     struct ProjectedMousePosition
@@ -303,6 +314,17 @@ protected:
     GLModel m_circle;
     Vec2d m_old_center{ Vec2d::Zero() };
     float m_old_cursor_radius{ 0.0f };
+
+    // Painter Pro Mode: mask state, in canvas pixels. A polygon vertex can be dragged before closing; right
+    // click cancels the polygon.
+    Vec2d              m_rect_start_corner      = Vec2d::Zero();
+    Vec2d              m_rect_end_corner        = Vec2d::Zero();
+    bool               m_rect_dragging          = false;
+    std::vector<Vec2d> m_polygon_points;
+    int                m_polygon_dragged_vertex = -1;
+    static constexpr double PolygonCloseRadiusPx = 8.;
+    GLModel            m_mask_overlay;
+    void               clear_mask_state();
     static constexpr float SmartFillAngleMin  = 0.0f;
     static constexpr float SmartFillAngleMax  = 90.f;
     static constexpr float SmartFillAngleStep = 1.f;
@@ -338,6 +360,17 @@ private:
     std::vector<std::vector<ProjectedMousePosition>> get_projected_mouse_positions(const Vec2d &mouse_position, double resolution, const std::vector<Transform3d> &trafo_matrices) const;
 
     std::vector<ProjectedHeightRange> get_projected_height_range(const Vec2d& mouse_position, double resolution, const std::vector<const ModelVolume*>& part_volumes, const std::vector<Transform3d>& trafo_matrices) const;
+
+    // Painter Pro Mode: paints the screen-space mask cursor made by make_cursor for each mesh.
+    void apply_mask(EnforcerBlockerType new_state,
+                    const std::function<std::unique_ptr<TriangleSelector::Cursor>(const Vec3f &camera_pos_mesh, const Vec3f &camera_target_mesh,
+                                                                                  const Matrix4d &view_projection_matrix, const std::array<int, 4> &viewport,
+                                                                                  const Transform3d &trafo, const TriangleSelector::ClippingPlane &clp)> &make_cursor);
+    // Painter Pro Mode: handles the mouse for the mask tools.
+    bool mask_gizmo_event(SLAGizmoEventType action, const Vec2d &mouse_position, bool shift_down);
+    void render_mask_overlay();
+    // Uses m_precision_factor for the selector if it differs from the one it has.
+    void apply_precision_factor(TriangleSelectorGUI &selector) const;
 
     bool is_mesh_point_clipped(const Vec3d& point, const Transform3d& trafo) const;
     // World transforms of the model parts, in mo->volumes order.

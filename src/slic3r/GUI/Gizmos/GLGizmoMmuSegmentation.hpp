@@ -144,9 +144,19 @@ protected:
     // Minimal context for gradient rendering; only physical_colors is used
     MixedFilamentDisplayContext       m_mixed_display_context;
 
+    // Painter Pro Mode (ported from OrcaFS-NeotkoCM by Neotko): the mask checkboxes, mutually exclusive. They win
+    // over the tool picked in the toolbar. m_per_color_values shows the per-colour table of extra walls and
+    // surface depth instead of the two global fields.
+    bool                              m_rectangle_mask_active = false;
+    bool                              m_polygon_mask_active   = false;
+    bool                              m_per_color_values      = false;
+
     static const constexpr float      CursorRadiusMin = 0.1f; // cannot be zero
 
 private:
+    // Painter Pro Mode: shown only with the "Experimental features (Neotko)" preference.
+    void render_pro_mode_section(float sliders_left_width, float sliders_width, float slider_icon_width);
+
     bool on_init() override;
 
     // BBS. remove const.

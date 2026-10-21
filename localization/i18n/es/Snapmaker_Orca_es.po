@@ -39366,6 +39366,62 @@ msgid "Per-color override of \"Surface depth of painted regions\", indexed by pa
 msgstr "Valor por color de \"Profundidad de superficie de las regiones pintadas\", indexado por la ranura del color pintado. 0 usa el valor global."
 
 # AI Translated
+msgid "Pro Mode"
+msgstr "Modo Pro"
+
+# AI Translated
+msgid "Subdivides the mesh more finely where you paint, so the edge of a stroke follows the surface instead of stair-stepping. Higher values cost more memory and CPU on dense meshes."
+msgstr "Subdivide la malla con más detalle donde pintas, para que el borde del trazo siga la superficie en lugar de quedar escalonado. Los valores altos consumen más memoria y CPU en mallas densas."
+
+# AI Translated
+msgid "Paint perimeters only"
+msgstr "Pintar solo perímetros"
+
+# AI Translated
+msgid "Keeps the painted color to a ring along the outline of the painted area, about the wall count times the line width, instead of the whole area. Saves filament and color changes inside the object."
+msgstr "Limita el color pintado a un anillo a lo largo del contorno de la zona pintada, de unos perímetros por ancho de línea, en lugar de toda la zona. Ahorra filamento y cambios de color dentro del objeto."
+
+# AI Translated
+msgid "Per color"
+msgstr "Por color"
+
+# AI Translated
+msgid "Sets the extra walls and the surface depth for each painted color, in a table. 0 uses the global value."
+msgstr "Ajusta los perímetros extra y la profundidad de superficie de cada color pintado, en una tabla. 0 usa el valor global."
+
+# AI Translated
+msgid "Extra walls"
+msgstr "Perímetros extra"
+
+# AI Translated
+msgid "Adds this many walls to the painted areas only, on top of the object's wall count. Not where the painted color is the object's own. 0 disables it."
+msgstr "Añade este número de perímetros solo a las zonas pintadas, además de los perímetros del objeto. No se aplica donde el color pintado es el del propio objeto. 0 lo desactiva."
+
+# AI Translated
+msgid "Surface depth"
+msgstr "Profundidad de superficie"
+
+# AI Translated
+msgid "0 uses the global value."
+msgstr "0 usa el valor global."
+
+# AI Translated
+msgid "Rectangle mask"
+msgstr "Máscara rectangular"
+
+# AI Translated
+msgid "Drag a rectangle on the screen to paint everything under it with the selected filament. Only the faces turned towards you are painted."
+msgstr "Arrastra un rectángulo en la pantalla para pintar todo lo que quede debajo con el filamento seleccionado. Solo se pintan las caras orientadas hacia ti."
+
+# AI Translated
+msgid "Polygon mask"
+msgstr "Máscara poligonal"
+
+# AI Translated
+msgid "Click to place the vertices of a polygon on the screen, then click the first vertex again to paint everything inside it. Drag a vertex to move it. Right-click cancels. Only the faces turned towards you are painted."
+msgstr "Haz clic para colocar los vértices de un polígono en la pantalla y vuelve a hacer clic en el primer vértice para pintar todo lo que quede dentro. Arrastra un vértice para moverlo. El clic derecho cancela. Solo se pintan las caras orientadas hacia ti."
+
+# AI Translated
 msgid "Support zone gesture"
 msgstr "Gesto de la zona de soporte"
 

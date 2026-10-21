@@ -773,6 +773,24 @@ void GLGizmoMmuSegmentation::on_render_input_window(float x, float y, float bott
         }
     }
 
+    // Painter Pro Mode (ported from OrcaFS-NeotkoCM by Neotko), only with the "Experimental features (Neotko)"
+    // preference. Without it the panel and the tools are the stock ones.
+    if (wxGetApp().neotko_features_enabled()) {
+        ImGui::Separator();
+        if (ImGui::CollapsingHeader(_u8L("Pro Mode").c_str()))
+            render_pro_mode_section(sliders_left_width, sliders_width, slider_icon_width);
+        // The toolbar above sets m_tool_type every frame, so a mask overrides it here.
+        if (m_rectangle_mask_active)
+            m_tool_type = ToolType::RECTANGLE;
+        else if (m_polygon_mask_active)
+            m_tool_type = ToolType::POLYGON;
+    } else if (m_rectangle_mask_active || m_polygon_mask_active || m_precision_factor != 1.f) {
+        m_rectangle_mask_active = false;
+        m_polygon_mask_active   = false;
+        m_precision_factor      = 1.f;
+        clear_mask_state();
+    }
+
     ImGui::Separator();
 
     render_tooltip_button(x, y);
@@ -966,6 +984,7 @@ void GLGizmoMmuSegmentation::on_set_state()
     GLGizmoPainterBase::on_set_state();
 
     if (get_state() == Off) {
+        clear_mask_state(); // Painter Pro Mode: drop a mask left half drawn.
         ModelObject* mo = m_c->selection_info()->model_object();
         if (mo) Slic3r::save_object_mesh(*mo);
         m_parent.post_event(SimpleEvent(EVT_GLCANVAS_FORCE_UPDATE));
@@ -1145,6 +1164,213 @@ void GLGizmoMmuSegmentation::update_used_filaments()
                  m_used_filaments.insert((size_t)idx);
         }
     }
+}
+
+// Painter Pro Mode (ported from OrcaFS-NeotkoCM by Neotko): brush precision, paint perimeters only (the stock
+// mmu_segmented_region_max_width), extra walls and surface depth of the painted regions, globally or per colour,
+// and the rectangle and polygon masks. The options are the object's; without an object value the field shows the
+// print preset's.
+void GLGizmoMmuSegmentation::render_pro_mode_section(float sliders_left_width, float sliders_width, float slider_icon_width)
+{
+    const float drag_left_width = ImGui::GetStyle().WindowPadding.x + sliders_width - m_imgui->get_style_scaling() * 8;
+
+    ImGui::AlignTextToFramePadding();
+    m_imgui->text(_L("Precision"));
+    ImGui::SameLine(sliders_left_width);
+    ImGui::PushItemWidth(sliders_width);
+    m_imgui->bbl_slider_float_style("##precision_factor", &m_precision_factor, PrecisionFactorMin, PrecisionFactorMax, "%.0fx", 1.0f, true);
+    ImGui::SameLine(drag_left_width + sliders_left_width);
+    ImGui::PushItemWidth(1.5f * slider_icon_width);
+    ImGui::BBLDragFloat("##precision_factor_input", &m_precision_factor, 0.5f, PrecisionFactorMin, PrecisionFactorMax, "%.0fx");
+    m_precision_factor = std::clamp(std::round(m_precision_factor), PrecisionFactorMin, PrecisionFactorMax);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", _u8L("Subdivides the mesh more finely where you paint, so the edge of a stroke follows the "
+                                     "surface instead of stair-stepping. Higher values cost more memory and CPU on dense meshes.").c_str());
+
+    ModelObject *mo = m_c->selection_info() ? m_c->selection_info()->model_object() : nullptr;
+    if (mo == nullptr)
+        return;
+    const DynamicPrintConfig &print_cfg = wxGetApp().preset_bundle->prints.get_edited_preset().config;
+
+    // The object's value, or the print preset's.
+    auto get_int = [mo, &print_cfg](const char *key) {
+        return mo->config.has(key) ? mo->config.opt_int(key) : (print_cfg.has(key) ? print_cfg.opt_int(key) : 0);
+    };
+    auto set_int = [mo, &print_cfg](const char *key, int value) {
+        if (value == (print_cfg.has(key) ? print_cfg.opt_int(key) : 0))
+            mo->config.erase(key);
+        else
+            mo->config.set_key_value(key, new ConfigOptionInt(value));
+    };
+    // Per colour overrides, indexed by paint state; 0 = the global value.
+    auto per_color_get = [mo](const char *key, unsigned int state) {
+        const auto *opt = mo->config.has(key) ? dynamic_cast<const ConfigOptionInts *>(mo->config.option(key)) : nullptr;
+        return opt != nullptr && state < opt->values.size() ? opt->values[state] : 0;
+    };
+    auto per_color_set = [mo](const char *key, unsigned int state, int value) {
+        std::vector<int> values;
+        if (const auto *opt = mo->config.has(key) ? dynamic_cast<const ConfigOptionInts *>(mo->config.option(key)) : nullptr)
+            values = opt->values;
+        if (values.size() <= state)
+            values.resize(state + 1, 0);
+        values[state] = value;
+        if (std::all_of(values.begin(), values.end(), [](int v) { return v == 0; }))
+            mo->config.erase(key);
+        else
+            mo->config.set_key_value(key, new ConfigOptionInts(values));
+    };
+    auto per_color_max = [mo](const char *key) {
+        int out = 0;
+        if (const auto *opt = mo->config.has(key) ? dynamic_cast<const ConfigOptionInts *>(mo->config.option(key)) : nullptr)
+            for (int v : opt->values)
+                out = std::max(out, v);
+        return out;
+    };
+    auto changed = [](const std::string &snapshot_name) { wxGetApp().plater()->take_snapshot(snapshot_name); };
+    auto apply_changes = []() { wxGetApp().plater()->update(); };
+
+    // Paint perimeters only: the painted region is cut to a ring along its outline before the walls are generated, so
+    // the ring has to hold the walls plus the extra walls of the colour with the most.
+    const char *max_width_key   = "mmu_segmented_region_max_width";
+    const double preset_max_width = print_cfg.has(max_width_key) ? print_cfg.opt_float(max_width_key) : 0.;
+    bool perimeters_only = (mo->config.has(max_width_key) ? mo->config.opt_float(max_width_key) : preset_max_width) > 0.;
+    auto perimeters_only_width = [mo, &print_cfg, &get_int, &per_color_max]() {
+        const DynamicPrintConfig &printer_cfg = wxGetApp().preset_bundle->printers.get_edited_preset().config;
+        const auto *nozzles = printer_cfg.option<ConfigOptionFloats>("nozzle_diameter");
+        const double nozzle = nozzles != nullptr && !nozzles->values.empty() ? nozzles->values.front() : 0.4;
+        double line_width = 0.;
+        for (const char *key : {"inner_wall_line_width", "line_width"})
+            if (const auto *opt = print_cfg.option<ConfigOptionFloatsOrPercentsNullable>(key); line_width <= 0. && opt != nullptr &&
+                !opt->values.empty() && !opt->is_nil(0))
+                line_width = opt->values.front().percent ? nozzle * opt->values.front().value / 100. : opt->values.front().value;
+        if (line_width <= 0.)
+            line_width = nozzle;
+        const int wall_loops  = std::max(1, mo->config.has("wall_loops") ? mo->config.opt_int("wall_loops") : print_cfg.opt_int("wall_loops"));
+        const int extra_walls = std::max(get_int("mmu_segmented_region_extra_walls"), per_color_max("mmu_segmented_region_extra_walls_per_color"));
+        return (wall_loops + extra_walls) * line_width;
+    };
+    auto update_ring_width = [&]() {
+        if (perimeters_only)
+            mo->config.set_key_value(max_width_key, new ConfigOptionFloat(perimeters_only_width()));
+    };
+
+    if (m_imgui->bbl_checkbox(_L("Paint perimeters only"), perimeters_only)) {
+        changed(_u8L("Paint perimeters only"));
+        if (perimeters_only)
+            update_ring_width();
+        else if (preset_max_width > 0.)
+            mo->config.set_key_value(max_width_key, new ConfigOptionFloat(0.));
+        else
+            mo->config.erase(max_width_key);
+        apply_changes();
+    }
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", _u8L("Keeps the painted color to a ring along the outline of the painted area, about the wall "
+                                     "count times the line width, instead of the whole area. Saves filament and color changes "
+                                     "inside the object.").c_str());
+
+    m_imgui->bbl_checkbox(_L("Per color"), m_per_color_values);
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", _u8L("Sets the extra walls and the surface depth for each painted color, in a table. 0 uses "
+                                     "the global value.").c_str());
+
+    if (!m_per_color_values) {
+        int extra_walls = get_int("mmu_segmented_region_extra_walls");
+        ImGui::AlignTextToFramePadding();
+        m_imgui->text(_L("Extra walls"));
+        ImGui::SameLine(sliders_left_width);
+        ImGui::PushItemWidth(sliders_width);
+        if (ImGui::InputInt("##mmu_extra_walls", &extra_walls, 1, 1)) {
+            changed(_u8L("Extra walls"));
+            set_int("mmu_segmented_region_extra_walls", std::clamp(extra_walls, 0, 8));
+            update_ring_width();
+            apply_changes();
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("%s", _u8L("Adds this many walls to the painted areas only, on top of the object's wall count. "
+                                         "Not where the painted color is the object's own. 0 disables it.").c_str());
+
+        int surface_depth = get_int("mmu_segmented_region_surface_depth");
+        ImGui::AlignTextToFramePadding();
+        m_imgui->text(_L("Surface depth"));
+        ImGui::SameLine(sliders_left_width);
+        ImGui::PushItemWidth(sliders_width);
+        if (ImGui::InputInt("##mmu_surface_depth", &surface_depth, 1, 1)) {
+            changed(_u8L("Surface depth"));
+            set_int("mmu_segmented_region_surface_depth", std::clamp(surface_depth, 0, 20));
+            apply_changes();
+        }
+        if (ImGui::IsItemHovered())
+            ImGui::SetTooltip("%s", _u8L("Extends a painted top or bottom surface this many layers into the object as solid "
+                                         "infill of the painted color, following the painted outline. 0 disables it.").c_str());
+    } else {
+        // One row per filament: swatch (a click selects the color for painting), walls, depth.
+        const float swatch_size = ImGui::GetFrameHeight();
+        const float input_width = m_imgui->scaled(4.6f);
+        const float col_gap     = m_imgui->scaled(0.6f);
+        const float walls_x     = ImGui::GetCursorPosX() + swatch_size + col_gap;
+        const float depth_x     = walls_x + input_width + col_gap;
+        ImGui::AlignTextToFramePadding();
+        m_imgui->text(" ");
+        ImGui::SameLine(walls_x);
+        m_imgui->text(_L("Walls"));
+        ImGui::SameLine(depth_x);
+        m_imgui->text(_L("Depth"));
+
+        const size_t n_rows = std::min(GLGizmoMmuSegmentation::EXTRUDERS_LIMIT, m_display_filament_ids.size());
+        for (size_t row = 0; row < n_rows; ++row) {
+            const unsigned int state = m_display_filament_ids[row];
+            if (state == 0 || state > m_extruders_colors.size())
+                continue;
+            const std::string tag = std::to_string(row);
+            ImGuiColorEditFlags flags = ImGuiColorEditFlags_NoTooltip;
+            if (row != m_selected_extruder_idx)
+                flags |= ImGuiColorEditFlags_NoBorder;
+            if (ImGui::ColorButton(("##pro_color_" + tag).c_str(), ImGuiWrapper::to_ImVec4(m_extruders_colors[state - 1]), flags, ImVec2(swatch_size, swatch_size)))
+                m_selected_extruder_idx = row;
+            if (ImGui::IsItemHovered())
+                ImGui::SetTooltip(_u8L("Filament %d").c_str(), int(row + 1));
+
+            ImGui::SameLine(walls_x);
+            ImGui::PushItemWidth(input_width);
+            int walls = per_color_get("mmu_segmented_region_extra_walls_per_color", state);
+            if (ImGui::InputInt(("##pro_walls_" + tag).c_str(), &walls, 1, 1)) {
+                changed(_u8L("Extra walls"));
+                per_color_set("mmu_segmented_region_extra_walls_per_color", state, std::clamp(walls, 0, 8));
+                update_ring_width();
+                apply_changes();
+            }
+            ImGui::PopItemWidth();
+
+            ImGui::SameLine(depth_x);
+            ImGui::PushItemWidth(input_width);
+            int depth = per_color_get("mmu_segmented_region_surface_depth_per_color", state);
+            if (ImGui::InputInt(("##pro_depth_" + tag).c_str(), &depth, 1, 1)) {
+                changed(_u8L("Surface depth"));
+                per_color_set("mmu_segmented_region_surface_depth_per_color", state, std::clamp(depth, 0, 20));
+                apply_changes();
+            }
+            ImGui::PopItemWidth();
+        }
+        m_imgui->text(_L("0 uses the global value."));
+    }
+
+    // Screen-space masks, one at a time.
+    if (m_imgui->bbl_checkbox(_L("Rectangle mask"), m_rectangle_mask_active)) {
+        m_polygon_mask_active = false;
+        clear_mask_state();
+    }
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", _u8L("Drag a rectangle on the screen to paint everything under it with the selected filament. "
+                                     "Only the faces turned towards you are painted.").c_str());
+    if (m_imgui->bbl_checkbox(_L("Polygon mask"), m_polygon_mask_active)) {
+        m_rectangle_mask_active = false;
+        clear_mask_state();
+    }
+    if (ImGui::IsItemHovered())
+        ImGui::SetTooltip("%s", _u8L("Click to place the vertices of a polygon on the screen, then click the first vertex again "
+                                     "to paint everything inside it. Drag a vertex to move it. Right-click cancels. Only the "
+                                     "faces turned towards you are painted.").c_str());
 }
 
 void GLGizmoMmuSegmentation::render_filament_remap_ui(float window_width, float max_tooltip_width, float scale)
